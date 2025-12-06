@@ -1,3 +1,9 @@
+## [1.0.12](https://github.com/n24q02m/better-notion-mcp/compare/v1.0.11...v1.0.12) (2025-12-06)
+
+### Bug Fixes
+
+- Rename 'notion' to 'better-notion' in README ([c952370](https://github.com/n24q02m/better-notion-mcp/commit/c9523704b6120d5270d2db3c066adc49edfe2907))
+
 ## [1.0.11](https://github.com/n24q02m/better-notion-mcp/compare/v1.0.10...v1.0.11) (2025-12-06)
 
 ### Bug Fixes
