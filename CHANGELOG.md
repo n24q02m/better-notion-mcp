@@ -1,3 +1,9 @@
+## [1.0.11](https://github.com/n24q02m/better-notion-mcp/compare/v1.0.10...v1.0.11) (2025-12-06)
+
+### Bug Fixes
+
+- use GITHUB_TOKEN for GHCR authentication ([e67ae17](https://github.com/n24q02m/better-notion-mcp/commit/e67ae1708e74db1a12b8b48a32cccc1289a0ceff))
+
 ## [1.0.10](https://github.com/n24q02m/better-notion-mcp/compare/v1.0.9...v1.0.10) (2025-12-06)
 
 ### Bug Fixes
