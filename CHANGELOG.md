@@ -1,3 +1,9 @@
+## [1.0.13](https://github.com/n24q02m/better-notion-mcp/compare/v1.0.12...v1.0.13) (2025-12-06)
+
+### Bug Fixes
+
+- Update limitations in README and make query optional in workspace function ([a552ead](https://github.com/n24q02m/better-notion-mcp/commit/a552ead28c8efd9c94afc0cb2377d0008cc778e2))
+
 ## [1.0.12](https://github.com/n24q02m/better-notion-mcp/compare/v1.0.11...v1.0.12) (2025-12-06)
 
 ### Bug Fixes
