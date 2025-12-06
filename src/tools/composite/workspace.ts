@@ -46,12 +46,9 @@ export async function workspace(notion: Client, input: WorkspaceInput): Promise<
       }
 
       case 'search': {
-        if (!input.query) {
-          throw new NotionMCPError('query required for search action', 'VALIDATION_ERROR', 'Provide search query')
-        }
-
+        // Query is optional - empty query returns all accessible pages
         const searchParams: any = {
-          query: input.query
+          query: input.query || ''
         }
 
         if (input.filter?.object) {
