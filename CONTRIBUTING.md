@@ -6,7 +6,7 @@ Thank you for your interest in contributing to Better Notion MCP! This guide wil
 
 ### Prerequisites
 
-- **Node.js 22+** and **pnpm** (we recommend using [mise](https://mise.jdx.dev/))
+- **Node.js 22+** and **pnpm**
 - Git
 - A GitHub account
 
@@ -19,26 +19,19 @@ git clone https://github.com/YOUR_USERNAME/better-notion-mcp
 cd better-notion-mcp
 ```
 
-2. **Install mise (recommended)**
-
-```bash
-curl https://mise.run | sh
-mise trust && mise install
-```
-
-3. **Install dependencies**
+2. **Install dependencies**
 
 ```bash
 pnpm install
 ```
 
-4. **Build the project**
+3. **Build the project**
 
 ```bash
 pnpm build
 ```
 
-5. **Run tests**
+4. **Run tests**
 
 ```bash
 pnpm test

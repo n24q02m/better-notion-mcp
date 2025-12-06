@@ -98,11 +98,11 @@ Get your Notion token: <https://www.notion.so/my-integrations> → Create integr
 ```bash
 git clone https://github.com/n24q02m/better-notion-mcp
 cd better-notion-mcp
-mise trust && mise install  # Install Node.js 22 + pnpm via mise
+pnpm install
 pnpm build                  # Build the project
 ```
 
-**Prerequisites:** [mise](https://mise.jdx.dev/) for managing Node.js and pnpm versions.
+**Prerequisites:** Node.js 22+ and pnpm.
 
 ### Available Commands
 
@@ -116,14 +116,13 @@ pnpm run lint
 pnpm run format:check
 pnpm run type-check
 pnpm run check
-pnpm run changeset
 ```
 
 ## Contributing
 
 Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
-- Development workflow with changesets
+- Development workflow (verified via CI)
 - Commit convention (enforced via git hooks)
 - Testing and code quality standards
 

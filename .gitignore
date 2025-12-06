@@ -14,5 +14,3 @@ bin/
 logs_*/
 *.log
 
-# mise
-.mise.local.toml

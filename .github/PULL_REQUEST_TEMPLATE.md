@@ -26,7 +26,7 @@ Closes #(issue number)
 
 Describe the tests you ran to verify your changes:
 
-- [ ] Existing tests pass (`mise run test` or `pnpm test`)
+- [ ] Existing tests pass (`pnpm test`)
 - [ ] Added new tests for new functionality
 - [ ] Tested manually with Notion API
 - [ ] Tested with both npx and Docker methods
@@ -40,7 +40,6 @@ Describe the tests you ran to verify your changes:
 - [ ] My changes generate no new warnings or errors
 - [ ] I have added tests that prove my fix/feature works
 - [ ] New and existing unit tests pass locally
-- [ ] **I have created a changeset** (`mise run changeset` or `pnpm changeset`) for user-facing changes
 - [ ] My commits follow the [Conventional Commits](https://www.conventionalcommits.org/) specification
 
 ## Screenshots (if applicable)
