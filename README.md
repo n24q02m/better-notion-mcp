@@ -91,8 +91,6 @@ Get your Notion token: <https://www.notion.so/my-integrations> → Create integr
 - ❌ Databases, Embeds, Images, Files
 - ❌ Synced blocks, Templates
 
-For unsupported types, blocks are preserved but not converted to markdown. Use Official Notion API for advanced block types.
-
 ---
 
 ### Build from Source
