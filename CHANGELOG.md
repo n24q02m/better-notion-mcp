@@ -1,3 +1,9 @@
+## [1.0.14](https://github.com/n24q02m/better-notion-mcp/compare/v1.0.13...v1.0.14) (2025-12-06)
+
+### Bug Fixes
+
+- Remove unused folder path from workspace configuration ([9a1a6c9](https://github.com/n24q02m/better-notion-mcp/commit/9a1a6c910d3f6658614b93e93d2b5171d29510b9))
+
 ## [1.0.13](https://github.com/n24q02m/better-notion-mcp/compare/v1.0.12...v1.0.13) (2025-12-06)
 
 ### Bug Fixes
