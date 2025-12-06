@@ -37,7 +37,7 @@ Get your Notion token: <https://www.notion.so/my-integrations> → Create integr
 ```json
 {
   "mcpServers": {
-    "notion": {
+    "better-notion": {
       "command": "npx",
       "args": ["-y", "@n24q02m/better-notion-mcp@latest"],
       "env": {
@@ -53,7 +53,7 @@ Get your Notion token: <https://www.notion.so/my-integrations> → Create integr
 ```json
 {
   "mcpServers": {
-    "notion": {
+    "better-notion": {
       "command": "docker",
       "args": ["run", "-i", "--rm", "-e", "NOTION_TOKEN", "n24q02m/better-notion-mcp:latest"],
       "env": {
