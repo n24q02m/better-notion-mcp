@@ -14,6 +14,7 @@ If you discover a security vulnerability, please **DO NOT** create a public issu
 Instead, please email: **quangminh2402.dev@gmail.com**
 
 Include:
+
 1. Detailed description of the vulnerability
 2. Steps to reproduce
 3. Potential impact

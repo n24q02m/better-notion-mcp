@@ -13,4 +13,3 @@ bin/
 .env
 logs_*/
 *.log
-

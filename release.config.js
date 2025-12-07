@@ -15,8 +15,8 @@ export default {
     [
       '@semantic-release/changelog',
       {
-        changelogFile: 'CHANGELOG.md',
-      },
+        changelogFile: 'CHANGELOG.md'
+      }
     ],
 
     // Publish to npm
@@ -27,12 +27,11 @@ export default {
       '@semantic-release/git',
       {
         assets: ['CHANGELOG.md', 'package.json', 'pnpm-lock.yaml'],
-        message:
-          'chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}',
-      },
+        message: 'chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}'
+      }
     ],
 
     // Create GitHub release
-    '@semantic-release/github',
-  ],
-};
+    '@semantic-release/github'
+  ]
+}

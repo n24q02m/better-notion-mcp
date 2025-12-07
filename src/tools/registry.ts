@@ -67,7 +67,7 @@ Examples:
     name: 'databases',
     description: `Complete database & data source operations (Notion API 2025-09-03).
 
-**ARCHITECTURE NOTE:** 
+**ARCHITECTURE NOTE:**
 Notion databases now support multiple data sources. A database is a container that holds one or more data sources. Each data source has its own schema (properties) and rows (pages).
 
 **WORKFLOW:**

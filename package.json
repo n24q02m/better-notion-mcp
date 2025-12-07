@@ -25,7 +25,6 @@
     "type-check": "tsc --noEmit",
     "check": "pnpm type-check && pnpm lint && pnpm format:check",
     "release": "semantic-release",
-    "prepare": "simple-git-hooks",
     "prepublishOnly": "pnpm build",
     "docker:build": "docker build -t n24q02m/better-notion-mcp:latest .",
     "docker:push": "docker push n24q02m/better-notion-mcp:latest",
@@ -37,18 +36,6 @@
   "engines": {
     "node": ">=22.0.0",
     "pnpm": ">=9.0.0"
-  },
-  "simple-git-hooks": {
-    "pre-commit": "pnpm lint-staged"
-  },
-  "lint-staged": {
-    "*.ts": [
-      "prettier --write",
-      "eslint --fix"
-    ],
-    "*.{json,md,yml,yaml}": [
-      "prettier --write"
-    ]
   },
   "files": [
     "build/",
@@ -62,8 +49,6 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "@commitlint/cli": "^19.6.2",
-    "@commitlint/config-conventional": "^19.6.2",
     "@eslint/js": "^9.17.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
@@ -75,10 +60,8 @@
     "eslint": "^9.17.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.1",
-    "lint-staged": "^15.3.1",
     "prettier": "^3.4.2",
     "semantic-release": "^25.0.2",
-    "simple-git-hooks": "^2.12.1",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^4.0.8"

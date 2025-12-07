@@ -1,0 +1,89 @@
+# Pre-commit Hooks Configuration
+# Installation: https://pre-commit.com/
+#
+# Quick start:
+#   1. Install pre-commit: npm install -g pre-commit
+#   2. Install hooks: pre-commit install
+#   3. Run manually: pre-commit run --all-files
+#
+# Bypass checks: git commit --no-verify (use only in emergency)
+
+repos:
+  # ============================================================================
+  # TypeScript/JavaScript
+  # ============================================================================
+
+  # Prettier: Code formatter for JavaScript/TypeScript/JSON
+  - repo: local
+    hooks:
+      - id: prettier
+        name: prettier format
+        entry: bash -c 'pnpm exec prettier --write "$@"' --
+        language: system
+        types_or: [javascript, ts, json, markdown, yaml]
+        pass_filenames: true
+
+  # ESLint: Linter for JavaScript/TypeScript
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint lint
+        entry: bash -c 'pnpm exec eslint --fix "$@"' --
+        language: system
+        types: [file]
+        files: \.(ts|js)$
+        exclude: ^(build|node_modules|dist)/
+        pass_filenames: true
+
+  # TypeScript: Type checker
+  - repo: local
+    hooks:
+      - id: typescript-check
+        name: typescript type check
+        entry: bash -c "pnpm exec tsc --noEmit"
+        language: system
+        types: [ts]
+        pass_filenames: false
+
+  # ============================================================================
+  # Common Checks
+  # ============================================================================
+
+  # Check for trailing whitespace
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        name: trim trailing whitespace
+        exclude_types: [image]
+
+  # Check for files that would conflict in merge
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-merge-conflict
+        name: check for merge conflicts
+
+  # Check JSON files are valid
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-json
+        name: check JSON files
+        types: [json]
+
+  # Check YAML files are valid
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-yaml
+        name: check YAML files
+        types: [yaml]
+
+  # Ensure files end with newline
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: end-of-file-fixer
+        name: fix end of files
+        exclude_types: [image]

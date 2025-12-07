@@ -10,9 +10,7 @@
     "jsx": "react-jsx",
     "module": "es2022",
     "moduleResolution": "Bundler",
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "resolveJsonModule": true,
     "allowJs": true,
     "checkJs": false,
@@ -22,5 +20,5 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "include": [ "test/**/*.ts", "scripts/**/*.ts", "src/**/*.ts"]
+  "include": ["test/**/*.ts", "scripts/**/*.ts", "src/**/*.ts"]
 }
