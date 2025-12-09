@@ -1,3 +1,10 @@
+## [1.0.15](https://github.com/n24q02m/better-notion-mcp/compare/v1.0.14...v1.0.15) (2025-12-09)
+
+
+### Bug Fixes
+
+* update pnpm-lock.yaml to sync with package.json ([e536ce4](https://github.com/n24q02m/better-notion-mcp/commit/e536ce454730c22ea1412114ccc0f559b3213066))
+
 ## [1.0.14](https://github.com/n24q02m/better-notion-mcp/compare/v1.0.13...v1.0.14) (2025-12-06)
 
 ### Bug Fixes
