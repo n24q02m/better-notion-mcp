@@ -4,3 +4,4 @@
 [tools]
 node = "22"
 pnpm = "latest"
+pre-commit = "latest"
