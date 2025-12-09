@@ -71,7 +71,7 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
       blocks.push(createCodeBlock(codeLines.join('\n'), language))
     }
     // Bulleted list
-    else if (line.match(/^[\-\*]\s/)) {
+    else if (line.match(/^[-*]\s/)) {
       const text = line.slice(2)
       currentListType = 'bulleted'
       currentList.push(createBulletedListItem(text))
@@ -87,7 +87,7 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
       blocks.push(createQuote(line.slice(2)))
     }
     // Divider
-    else if (line.match(/^[\-\*]{3,}$/)) {
+    else if (line.match(/^[-*]{3,}$/)) {
       blocks.push(createDivider())
     }
     // Regular paragraph
@@ -131,7 +131,7 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         lines.push(`1. ${richTextToMarkdown(block.numbered_list_item.rich_text)}`)
         break
       case 'code':
-        lines.push('```' + (block.code.language || ''))
+        lines.push(`\`\`\`${block.code.language || ''}`)
         lines.push(richTextToMarkdown(block.code.rich_text))
         lines.push('```')
         break
@@ -372,5 +372,5 @@ function createDivider(): NotionBlock {
 }
 
 function isListItem(line: string): boolean {
-  return line.match(/^[\-\*]\s/) !== null || line.match(/^\d+\.\s/) !== null
+  return line.match(/^[-*]\s/) !== null || line.match(/^\d+\.\s/) !== null
 }

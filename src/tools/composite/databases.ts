@@ -3,7 +3,7 @@
  * Supports data_sources architecture
  */
 
-import { Client } from '@notionhq/client'
+import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { autoPaginate } from '../helpers/pagination.js'
 import { convertToNotionProperties } from '../helpers/properties.js'
@@ -151,7 +151,7 @@ async function getDatabase(notion: Client, input: DatabasesInput): Promise<any> 
   })
 
   // Get detailed schema from first data source
-  let schema: any = {}
+  const schema: any = {}
   let dataSourceInfo: any = null
 
   if (database.data_sources && database.data_sources.length > 0) {

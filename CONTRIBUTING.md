@@ -6,9 +6,11 @@ Thank you for your interest in contributing to Better Notion MCP! This guide wil
 
 ### Prerequisites
 
-- **Node.js 22+** and **pnpm**
+- **mise** (recommended) or **Node.js 22+** and **pnpm**
 - Git
 - A GitHub account
+
+**Recommended:** Use [mise](https://mise.jdx.dev/) to automatically manage Node.js and pnpm versions from `.mise.toml`.
 
 ### Setup Development Environment
 
@@ -19,7 +21,16 @@ git clone https://github.com/YOUR_USERNAME/better-notion-mcp
 cd better-notion-mcp
 ```
 
-2. **Install dependencies**
+2. **Install tools and dependencies**
+
+If using **mise** (recommended):
+
+```bash
+mise install      # Auto-install Node.js 22 and pnpm from .mise.toml
+pnpm install
+```
+
+Without mise, ensure you have Node.js 22+ and pnpm installed:
 
 ```bash
 pnpm install
@@ -151,12 +162,23 @@ Before submitting your PR, ensure:
 
 ## Code Style
 
+This project uses **Biome** for formatting and linting. All changes are automatically checked via pre-commit hooks and CI.
+
+**Guidelines:**
+
 - Use TypeScript strict mode
 - Follow existing patterns in the codebase
 - Write clear, descriptive variable names
 - Add comments for complex logic
 - Keep functions small and focused
 - Use meaningful type annotations
+
+**Commands:**
+
+```bash
+pnpm check         # Check formatting, linting & types
+pnpm check:fix     # Auto-fix issues
+```
 
 ## Testing
 

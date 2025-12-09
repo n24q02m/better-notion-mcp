@@ -3,7 +3,7 @@
  * Smart context-aware search across workspace
  */
 
-import { Client } from '@notionhq/client'
+import type { Client } from '@notionhq/client'
 import { withErrorHandling } from '../helpers/errors.js'
 import * as RichText from '../helpers/richtext.js'
 
@@ -85,7 +85,7 @@ function extractTitle(page: any): string {
 
   const titleProp = Object.values(page.properties).find((prop: any) => prop.type === 'title') as any
 
-  if (titleProp && titleProp.title && titleProp.title.length > 0) {
+  if (titleProp?.title && titleProp.title.length > 0) {
     return RichText.extractPlainText(titleProp.title)
   }
 

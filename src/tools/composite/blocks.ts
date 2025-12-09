@@ -3,7 +3,7 @@
  * All block operations in one unified interface
  */
 
-import { Client } from '@notionhq/client'
+import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate } from '../helpers/pagination.js'
@@ -84,7 +84,7 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
         }
 
         const newContent = newBlocks[0]
-        let updatePayload: any = {}
+        const updatePayload: any = {}
 
         // Build update based on block type
         if (

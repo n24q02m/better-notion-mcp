@@ -3,7 +3,7 @@
  * Consolidated registration for maximum coverage with minimal tools
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js'
+import type { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import { Client } from '@notionhq/client'
 
@@ -15,7 +15,7 @@ import { databases } from './composite/databases.js'
 import { pages } from './composite/pages.js'
 import { users } from './composite/users.js'
 import { workspace } from './composite/workspace.js'
-import { NotionMCPError, aiReadableMessage } from './helpers/errors.js'
+import { aiReadableMessage, NotionMCPError } from './helpers/errors.js'
 
 /**
  * 7 Mega Tools covering 75% of Official Notion API

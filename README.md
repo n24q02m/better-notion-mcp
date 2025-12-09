@@ -95,27 +95,28 @@ Get your Notion token: <https://www.notion.so/my-integrations> → Create integr
 
 ### Build from Source
 
+This project uses **mise** for tool version management. If you don't have mise installed, see [mise.jdx.dev](https://mise.jdx.dev/).
+
 ```bash
 git clone https://github.com/n24q02m/better-notion-mcp
 cd better-notion-mcp
+mise install                # Install Node.js 22 and pnpm from .mise.toml
 pnpm install
-pnpm build                  # Build the project
+pnpm build
 ```
 
-**Prerequisites:** Node.js 22+ and pnpm.
+**Prerequisites:** mise or Node.js 22+ and pnpm.
 
 ### Available Commands
 
 ```bash
-pnpm run dev
-pnpm run build
-pnpm run test
-pnpm run test:watch
-pnpm run test:coverage
-pnpm run lint
-pnpm run format:check
-pnpm run type-check
-pnpm run check
+pnpm dev                    # Run development server with auto-reload
+pnpm build                  # Build the project
+pnpm test                   # Run tests
+pnpm test:watch             # Run tests in watch mode
+pnpm test:coverage          # Run tests with coverage report
+pnpm check                  # Check formatting, linting & types (Biome + TypeScript)
+pnpm check:fix              # Auto-fix formatting and linting issues
 ```
 
 ## Contributing

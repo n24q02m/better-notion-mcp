@@ -25,20 +25,14 @@ jobs:
       - name: Setup Node.js 22
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run type checking
-        run: pnpm type-check
-
-      - name: Run linting
-        run: pnpm lint
-
-      - name: Check code formatting
-        run: pnpm format:check
+      - name: Run Biome check
+        run: pnpm check
 
       - name: Build project
         run: pnpm build
@@ -52,7 +46,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '✅ **CI Checks Passed**\n\n- Type Check: ✓\n- Lint: ✓\n- Format: ✓\n- Build: ✓\n\nReady for review!'
+              body: '✅ **CI Checks Passed**\n\n- Biome Check: ✓\n- Build: ✓\n\nReady for review!'
             })
 
       - name: Comment PR on failure

@@ -1,7 +1,7 @@
+import { chmod } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import * as esbuild from 'esbuild'
-import { chmod } from 'fs/promises'
-import { dirname, join } from 'path'
-import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 

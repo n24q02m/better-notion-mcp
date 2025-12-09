@@ -3,7 +3,7 @@
  * Manage page comments
  */
 
-import { Client } from '@notionhq/client'
+import type { Client } from '@notionhq/client'
 import { withErrorHandling } from '../helpers/errors.js'
 import { autoPaginate } from '../helpers/pagination.js'
 import * as RichText from '../helpers/richtext.js'

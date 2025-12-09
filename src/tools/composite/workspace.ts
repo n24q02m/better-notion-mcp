@@ -3,7 +3,7 @@
  * Workspace exploration and info
  */
 
-import { Client } from '@notionhq/client'
+import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { autoPaginate } from '../helpers/pagination.js'
 

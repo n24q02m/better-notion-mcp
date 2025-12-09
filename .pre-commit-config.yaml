@@ -13,26 +13,14 @@ repos:
   # TypeScript/JavaScript
   # ============================================================================
 
-  # Prettier: Code formatter for JavaScript/TypeScript/JSON
+  # Biome: Fast formatter and linter for JavaScript/TypeScript
   - repo: local
     hooks:
-      - id: prettier
-        name: prettier format
-        entry: bash -c 'pnpm exec prettier --write "$@"' --
+      - id: biome-check
+        name: biome check
+        entry: bash -c 'pnpm exec biome check --write "$@"' --
         language: system
-        types_or: [javascript, ts, json, markdown, yaml]
-        pass_filenames: true
-
-  # ESLint: Linter for JavaScript/TypeScript
-  - repo: local
-    hooks:
-      - id: eslint
-        name: eslint lint
-        entry: bash -c 'pnpm exec eslint --fix "$@"' --
-        language: system
-        types: [file]
-        files: \.(ts|js)$
-        exclude: ^(build|node_modules|dist)/
+        types_or: [javascript, ts, json]
         pass_filenames: true
 
   # TypeScript: Type checker
