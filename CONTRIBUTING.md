@@ -211,8 +211,6 @@ better-notion-mcp/
 │       ├── composite/     # Composite tools
 │       └── helpers/       # Helper utilities
 ├── scripts/               # Build scripts
-├── tests/                 # Test files
-
 └── build/                # Built output
 ```
 
