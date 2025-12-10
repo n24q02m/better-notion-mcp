@@ -29,6 +29,12 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
+      - name: Auto-merge Release PR
+        if: ${{ steps.release.outputs.pr }}
+        run: gh pr merge ${{ steps.release.outputs.pr }} --auto --squash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   publish-npm:
     name: Publish to npm
     needs: release-please
