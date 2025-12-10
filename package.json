@@ -1,7 +1,14 @@
 {
   "name": "@n24q02m/better-notion-mcp",
-  "keywords": ["notion", "api", "mcp", "server", "ai-agent", "composite-tools"],
-  "version": "1.0.15",
+  "keywords": [
+    "notion",
+    "api",
+    "mcp",
+    "server",
+    "ai-agent",
+    "composite-tools"
+  ],
+  "version": "1.1.0",
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@9.15.4",
@@ -30,7 +37,12 @@
     "node": ">=22.0.0",
     "pnpm": ">=9.0.0"
   },
-  "files": ["build/", "bin/", "README.md", "LICENSE"],
+  "files": [
+    "build/",
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.21.1",
     "@notionhq/client": "^5.3.0",

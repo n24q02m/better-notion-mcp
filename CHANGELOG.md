@@ -5,6 +5,33 @@
 
 * update pnpm-lock.yaml to sync with package.json ([e536ce4](https://github.com/n24q02m/better-notion-mcp/commit/e536ce454730c22ea1412114ccc0f559b3213066))
 
+## [1.1.0](https://github.com/n24q02m/better-notion-mcp/compare/better-notion-mcp-v1.0.15...better-notion-mcp-v1.1.0) (2025-12-10)
+
+
+### Features
+
+* Migrate from Changesets to Semantic Release for automated package publishing. ([5908581](https://github.com/n24q02m/better-notion-mcp/commit/5908581ac8a6fbe270f66cd57993cf414bd480a2))
+* reset repo ([2bf101c](https://github.com/n24q02m/better-notion-mcp/commit/2bf101c98b5eef5b3caac1922e960e555cab429c))
+
+
+### Bug Fixes
+
+* enable pnpm-lock.yaml tracking and fix pre-commit hooks ([ba6a5f4](https://github.com/n24q02m/better-notion-mcp/commit/ba6a5f452c6e89db87587a38474546ef9f011588))
+* remove test step from CI workflow (no tests yet) ([afba321](https://github.com/n24q02m/better-notion-mcp/commit/afba321a533f5a0160e59498f727b4a3911186fc))
+* Remove unused folder path from workspace configuration ([9a1a6c9](https://github.com/n24q02m/better-notion-mcp/commit/9a1a6c910d3f6658614b93e93d2b5171d29510b9))
+* Rename 'notion' to 'better-notion' in README ([c952370](https://github.com/n24q02m/better-notion-mcp/commit/c9523704b6120d5270d2db3c066adc49edfe2907))
+* streamline JSON formatting in biome.json and package.json for consistency ([3ea9266](https://github.com/n24q02m/better-notion-mcp/commit/3ea926644c7b3bccb8abe60a4c1b255ce0c96eb3))
+* trigger release 1.0.10 ([820f0a9](https://github.com/n24q02m/better-notion-mcp/commit/820f0a90e5883255383c499f89f655742eb40af2))
+* Update limitations in README and make query optional in workspace function ([a552ead](https://github.com/n24q02m/better-notion-mcp/commit/a552ead28c8efd9c94afc0cb2377d0008cc778e2))
+* update pnpm-lock.yaml to sync with package.json ([e536ce4](https://github.com/n24q02m/better-notion-mcp/commit/e536ce454730c22ea1412114ccc0f559b3213066))
+* use changesets action correctly for auto versioning ([da5fad8](https://github.com/n24q02m/better-notion-mcp/commit/da5fad8d9dcdadd03b2d0baa6cbc295688c94683))
+* use GITHUB_TOKEN for GHCR authentication ([e67ae17](https://github.com/n24q02m/better-notion-mcp/commit/e67ae1708e74db1a12b8b48a32cccc1289a0ceff))
+
+
+### Refactoring
+
+* update imports to use 'type' for type-only imports and improve code consistency ([a77443a](https://github.com/n24q02m/better-notion-mcp/commit/a77443ac7735d3e6870f0c052aac887dda5bd5e5))
+
 ## [1.0.14](https://github.com/n24q02m/better-notion-mcp/compare/v1.0.13...v1.0.14) (2025-12-06)
 
 ### Bug Fixes
