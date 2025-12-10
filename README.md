@@ -106,6 +106,7 @@ mise install
 uv venv
 uv pip install pre-commit
 uv run pre-commit install
+uv run pre-commit run --all-file
 
 pnpm install
 pnpm build

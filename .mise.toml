@@ -3,5 +3,4 @@
 
 [tools]
 node = "22"
-pnpm = "latest"
 uv = "latest"
