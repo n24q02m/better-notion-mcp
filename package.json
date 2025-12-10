@@ -5,6 +5,9 @@
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@9.15.4",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -build && node scripts/build-cli.js",
     "dev": "tsx watch scripts/start-server.ts",
