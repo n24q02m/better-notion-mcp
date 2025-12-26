@@ -1,3 +1,16 @@
+# [2.0.0](https://github.com/n24q02m/better-notion-mcp/compare/v1.1.0...v2.0.0) (2025-12-26)
+
+
+### Features
+
+* implement tiered descriptions for token optimization ([ae16cc9](https://github.com/n24q02m/better-notion-mcp/commit/ae16cc9107c086af1a15a88e87ed181670e5629d))
+
+
+### BREAKING CHANGES
+
+* Tool descriptions are now compressed by default.
+Use 'help' tool or MCP resources to access full documentation.
+
 # [1.1.0](https://github.com/n24q02m/better-notion-mcp/compare/v1.0.19...v1.1.0) (2025-12-26)
 
 
