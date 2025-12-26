@@ -95,25 +95,18 @@ Get your Notion token: <https://www.notion.so/my-integrations> → Create integr
 
 ### Build from Source
 
-This project uses **mise** for tool version management. If you don't have mise installed, see [mise.jdx.dev](https://mise.jdx.dev/).
-
 ```bash
 git clone https://github.com/n24q02m/better-notion-mcp
 cd better-notion-mcp
 
-mise trust
-mise install
+# Setup (requires mise: https://mise.jdx.dev/)
+mise run setup
 
-pnpm install
+# Build
 pnpm build
-
-uv venv
-uv pip install pre-commit
-uv run pre-commit install
-uv run pre-commit run --all-file
 ```
 
-**Prerequisites:** mise or Node.js 22+ and pnpm.
+**Prerequisites:** [mise](https://mise.jdx.dev/) only.
 
 ### Available Commands
 

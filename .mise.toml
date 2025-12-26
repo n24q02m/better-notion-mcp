@@ -1,6 +1,33 @@
-# Mise configuration for Better Notion MCP project
+# Mise configuration for Better Notion MCP
 # https://mise.jdx.dev/
+#
+# Setup: mise run setup
 
 [tools]
 node = "22"
+pnpm = "latest"
 uv = "latest"
+
+[settings]
+trusted_config_paths = ["."]
+
+[tasks.setup]
+description = "Setup development environment"
+run = """
+#!/bin/bash
+set -e
+
+echo "🔧 Installing mise tools (node, pnpm, uv)..."
+mise install
+
+echo "📦 Dependencies..."
+pnpm install
+
+echo "🪝 Pre-commit hooks..."
+uv run pre-commit install
+
+echo ""
+echo "✅ Setup complete!"
+echo "   → Dev: pnpm dev"
+echo "   → Build: pnpm build"
+"""
