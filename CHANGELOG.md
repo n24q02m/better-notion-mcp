@@ -1,3 +1,10 @@
+# [2.1.0-beta.4](https://github.com/n24q02m/better-notion-mcp/compare/v2.1.0-beta.3...v2.1.0-beta.4) (2025-12-31)
+
+
+### Bug Fixes
+
+* format keywords and files arrays in package.json ([fc221a6](https://github.com/n24q02m/better-notion-mcp/commit/fc221a629244ad11925cf0c49ab01f9c2cbe7bfd))
+
 # [2.1.0-beta.3](https://github.com/n24q02m/better-notion-mcp/compare/v2.1.0-beta.2...v2.1.0-beta.3) (2025-12-31)
 
 
