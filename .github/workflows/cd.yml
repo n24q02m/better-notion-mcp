@@ -79,21 +79,26 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: pnpm release
 
-  # Job: Publish Docker images
-  publish-docker:
-    name: Publish Docker Images
+  # Job: Build Docker images (parallel on native runners)
+  build-docker:
+    name: Build Docker (${{ matrix.platform }})
     needs: release
     if: github.event_name == 'push'
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            artifact: linux-amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            artifact: linux-arm64
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: all
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -111,63 +116,106 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (stable)
-        if: github.ref == 'refs/heads/main'
-        id: meta-stable
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            n24q02m/better-notion-mcp
-            ghcr.io/${{ github.repository }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest
-          labels: |
-            org.opencontainers.image.title=Better Notion MCP
-            org.opencontainers.image.description=Composite MCP Server for Notion - Human-Like Workflows for AI Agents
-            org.opencontainers.image.vendor=n24q02m
-
-      - name: Extract metadata (beta)
-        if: github.ref == 'refs/heads/dev'
-        id: meta-beta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            n24q02m/better-notion-mcp
-            ghcr.io/${{ github.repository }}
-          tags: |
-            type=raw,value=beta
-            type=sha,prefix=beta-
-          labels: |
-            org.opencontainers.image.title=Better Notion MCP (Beta)
-            org.opencontainers.image.description=Composite MCP Server for Notion - Human-Like Workflows for AI Agents (Beta)
-            org.opencontainers.image.vendor=n24q02m
-
-      - name: Build and push (stable)
-        if: github.ref == 'refs/heads/main'
+      - name: Build and push by digest
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta-stable.outputs.tags }}
-          labels: ${{ steps.meta-stable.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,"name=n24q02m/better-notion-mcp,ghcr.io/${{ github.repository }}",push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ github.ref_name }}-${{ matrix.artifact }}
+          cache-to: type=gha,mode=max,scope=${{ github.ref_name }}-${{ matrix.artifact }}
 
-      - name: Build and push (beta)
-        if: github.ref == 'refs/heads/dev'
-        uses: docker/build-push-action@v6
+      - name: Export digest
+        run: |
+          mkdir -p ${{ runner.temp }}/digests
+          echo "${{ steps.build.outputs.digest }}" | sed 's/^sha256://' | xargs -I{} touch "${{ runner.temp }}/digests/{}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
         with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta-beta.outputs.tags }}
-          labels: ${{ steps.meta-beta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          name: digests-${{ matrix.artifact }}
+          path: ${{ runner.temp }}/digests/*
+          retention-days: 1
+
+  # Job: Merge Docker manifests
+  merge-docker:
+    name: Merge Docker Manifests
+    needs: build-docker
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push manifest (stable)
+        if: github.ref == 'refs/heads/main'
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          # Get latest git tag for version
+          git clone --depth=1 --bare https://github.com/${{ github.repository }}.git repo.git
+          VERSION=$(git -C repo.git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "")
+          MAJOR_MINOR=$(echo "$VERSION" | cut -d. -f1,2)
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+
+          # Create manifests for Docker Hub
+          docker buildx imagetools create \
+            -t n24q02m/better-notion-mcp:latest \
+            ${VERSION:+-t n24q02m/better-notion-mcp:$VERSION} \
+            ${MAJOR_MINOR:+-t n24q02m/better-notion-mcp:$MAJOR_MINOR} \
+            ${MAJOR:+-t n24q02m/better-notion-mcp:$MAJOR} \
+            $(printf "n24q02m/better-notion-mcp@sha256:%s " *)
+
+          # Create manifests for GHCR
+          docker buildx imagetools create \
+            -t ghcr.io/${{ github.repository }}:latest \
+            ${VERSION:+-t ghcr.io/${{ github.repository }}:$VERSION} \
+            ${MAJOR_MINOR:+-t ghcr.io/${{ github.repository }}:$MAJOR_MINOR} \
+            ${MAJOR:+-t ghcr.io/${{ github.repository }}:$MAJOR} \
+            $(printf "ghcr.io/${{ github.repository }}@sha256:%s " *)
+
+      - name: Create and push manifest (beta)
+        if: github.ref == 'refs/heads/dev'
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+
+          # Create manifests for Docker Hub
+          docker buildx imagetools create \
+            -t n24q02m/better-notion-mcp:beta \
+            -t n24q02m/better-notion-mcp:beta-$SHORT_SHA \
+            $(printf "n24q02m/better-notion-mcp@sha256:%s " *)
+
+          # Create manifests for GHCR
+          docker buildx imagetools create \
+            -t ghcr.io/${{ github.repository }}:beta \
+            -t ghcr.io/${{ github.repository }}:beta-$SHORT_SHA \
+            $(printf "ghcr.io/${{ github.repository }}@sha256:%s " *)
+
+      - name: Checkout code
+        if: github.ref == 'refs/heads/main'
+        uses: actions/checkout@v6
 
       - name: Docker Hub Description
         if: github.ref == 'refs/heads/main'
