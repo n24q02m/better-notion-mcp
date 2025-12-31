@@ -1,3 +1,10 @@
+# [2.1.0-beta.5](https://github.com/n24q02m/better-notion-mcp/compare/v2.1.0-beta.4...v2.1.0-beta.5) (2025-12-31)
+
+
+### Bug Fixes
+
+* Migrate pre-commit setup to use uv for environment and package management. ([c98ebe0](https://github.com/n24q02m/better-notion-mcp/commit/c98ebe09732ed2742d0e4d819c6efb8f6e71b985))
+
 # [2.1.0-beta.4](https://github.com/n24q02m/better-notion-mcp/compare/v2.1.0-beta.3...v2.1.0-beta.4) (2025-12-31)
 
 
