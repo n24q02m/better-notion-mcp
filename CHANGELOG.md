@@ -1,3 +1,17 @@
+# [2.1.0-beta.2](https://github.com/n24q02m/better-notion-mcp/compare/v2.1.0-beta.1...v2.1.0-beta.2) (2025-12-30)
+
+
+### Bug Fixes
+
+* remove redundant line in setup tasks and clean up keywords formatting ([f176b09](https://github.com/n24q02m/better-notion-mcp/commit/f176b09432b46c4f7a3262ffcb2cfeb3ca6f916c))
+
+# [2.1.0-beta.1](https://github.com/n24q02m/better-notion-mcp/compare/v2.0.1...v2.1.0-beta.1) (2025-12-30)
+
+
+### Features
+
+* add CI and CD workflows for automated deployment and testing ([57ed3ac](https://github.com/n24q02m/better-notion-mcp/commit/57ed3ac8a4dea8482249aee7c5b56fb232f09b02))
+
 ## [2.0.1](https://github.com/n24q02m/better-notion-mcp/compare/v2.0.0...v2.0.1) (2025-12-29)
 
 

@@ -1,8 +1,15 @@
-name: Release
+name: CD
 
 on:
   push:
-    branches: [main]
+    branches: [dev, main]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Select action'
+        type: choice
+        options:
+          - 'promote-to-stable'
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -13,12 +20,39 @@ permissions:
   pull-requests: write
 
 jobs:
-  release:
-    name: Release
+  # Job: Promote dev to main (manual trigger only)
+  promote:
+    name: Promote to Stable
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'promote-to-stable'
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge dev to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin
+          git checkout main
+          git merge origin/dev --no-ff -m "chore: promote dev to main"
+          git push origin main
+
+  # Job: Release (on push to dev or main)
+  release:
+    name: Release
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      is_prerelease: ${{ contains(github.ref, 'dev') }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -26,7 +60,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: "pnpm"
@@ -45,15 +79,16 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: pnpm release
 
+  # Job: Publish Docker images
   publish-docker:
     name: Publish Docker Images
     needs: release
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -76,8 +111,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
+      - name: Extract metadata (stable)
+        if: github.ref == 'refs/heads/main'
+        id: meta-stable
         uses: docker/metadata-action@v5
         with:
           images: |
@@ -87,24 +123,54 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
           labels: |
             org.opencontainers.image.title=Better Notion MCP
             org.opencontainers.image.description=Composite MCP Server for Notion - Human-Like Workflows for AI Agents
             org.opencontainers.image.vendor=n24q02m
 
-      - name: Build and push
+      - name: Extract metadata (beta)
+        if: github.ref == 'refs/heads/dev'
+        id: meta-beta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            n24q02m/better-notion-mcp
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=beta
+            type=sha,prefix=beta-
+          labels: |
+            org.opencontainers.image.title=Better Notion MCP (Beta)
+            org.opencontainers.image.description=Composite MCP Server for Notion - Human-Like Workflows for AI Agents (Beta)
+            org.opencontainers.image.vendor=n24q02m
+
+      - name: Build and push (stable)
+        if: github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-stable.outputs.tags }}
+          labels: ${{ steps.meta-stable.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push (beta)
+        if: github.ref == 'refs/heads/dev'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta-beta.outputs.tags }}
+          labels: ${{ steps.meta-beta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Docker Hub Description
+        if: github.ref == 'refs/heads/main'
         uses: peter-evans/dockerhub-description@v5
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}

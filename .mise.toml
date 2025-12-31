@@ -13,21 +13,12 @@ trusted_config_paths = ["."]
 
 [tasks.setup]
 description = "Setup development environment"
-run = """
-#!/bin/bash
-set -e
-
-echo "🔧 Installing mise tools (node, pnpm, uv)..."
-mise install
-
-echo "📦 Dependencies..."
-pnpm install
-
-echo "🪝 Pre-commit hooks..."
-uv run pre-commit install
-
-echo ""
-echo "✅ Setup complete!"
-echo "   → Dev: pnpm dev"
-echo "   → Build: pnpm build"
-"""
+run = [
+  "mise install",
+  "pnpm install",
+  "uv run pre-commit install",
+  "pre-commit install",
+  "echo 'Setup complete!'",
+  "echo '  Dev: pnpm dev'",
+  "echo '  Build: pnpm build'"
+]
