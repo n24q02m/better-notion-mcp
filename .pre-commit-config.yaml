@@ -2,7 +2,7 @@
 # Installation: https://pre-commit.com/
 #
 # Quick start:
-#   1. Install pre-commit: npm install -g pre-commit
+#   1. Install pre-commit: uv pip install pre-commit
 #   2. Install hooks: pre-commit install
 #   3. Run manually: pre-commit run --all-files
 #
@@ -18,7 +18,7 @@ repos:
     hooks:
       - id: biome-check
         name: biome check
-        entry: pnpm exec biome check --write
+        entry: mise exec -- pnpm exec biome check --write
         language: system
         types_or: [javascript, ts, json]
         pass_filenames: true
@@ -28,7 +28,7 @@ repos:
     hooks:
       - id: typescript-check
         name: typescript type check
-        entry: pnpm exec tsc --noEmit
+        entry: mise exec -- pnpm exec tsc --noEmit
         language: system
         types: [ts]
         pass_filenames: false
@@ -39,7 +39,7 @@ repos:
 
   # Check for trailing whitespace
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
         name: trim trailing whitespace
@@ -47,14 +47,14 @@ repos:
 
   # Check for files that would conflict in merge
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: check-merge-conflict
         name: check for merge conflicts
 
   # Check JSON files are valid
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: check-json
         name: check JSON files
@@ -62,7 +62,7 @@ repos:
 
   # Check YAML files are valid
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: check-yaml
         name: check YAML files
@@ -70,7 +70,7 @@ repos:
 
   # Ensure files end with newline
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: end-of-file-fixer
         name: fix end of files

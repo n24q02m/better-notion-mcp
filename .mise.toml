@@ -16,7 +16,7 @@ description = "Setup development environment"
 run = [
   "mise install",
   "pnpm install",
-  "uv venv --clear",
+  "node scripts/clean-venv.mjs",
   "uv pip install pre-commit",
   "uv run pre-commit install",
   "echo 'Setup complete!'",
