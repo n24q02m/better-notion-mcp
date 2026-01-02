@@ -39,7 +39,34 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git fetch origin
           git checkout main
-          git merge origin/dev --no-ff -m "chore: promote dev to main"
+
+          # Attempt merge, allowing conflicts
+          git merge origin/dev --no-ff -m "chore: promote dev to main" || true
+
+          # Auto-resolve conflicts in semantic-release managed files
+          # These files will be overwritten by semantic-release anyway
+          for file in CHANGELOG.md package.json; do
+            if git diff --name-only --diff-filter=U | grep -q "^${file}$"; then
+              echo "Auto-resolving conflict in $file (accepting dev version)"
+              git checkout --theirs "$file"
+              git add "$file"
+            fi
+          done
+
+          # Check if there are remaining conflicts
+          if git diff --name-only --diff-filter=U | grep -q .; then
+            echo "Error: Unresolved conflicts in files not managed by semantic-release"
+            git diff --name-only --diff-filter=U
+            exit 1
+          fi
+
+          # Complete the merge if we resolved conflicts
+          if git diff --cached --quiet; then
+            echo "Merge completed without conflicts"
+          else
+            git commit --no-edit
+          fi
+
           git push origin main
 
   # Job: Release (on push to dev or main)
