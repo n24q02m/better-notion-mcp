@@ -1,3 +1,10 @@
+## [2.3.5](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.4...v2.3.5) (2026-01-04)
+
+
+### Bug Fixes
+
+* **cd:** prevent repo.git pollution in digests dir ([694f03c](https://github.com/n24q02m/better-notion-mcp/commit/694f03ca1593549c3fe0f42f4f5846de4875d65f))
+
 ## [2.3.4](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.3...v2.3.4) (2026-01-04)
 
 
