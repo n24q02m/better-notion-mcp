@@ -107,22 +107,6 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: pnpm release
 
-      - name: Format after release
-        run: |
-          # Fix formatting issues from semantic-release version bumps
-          if git diff --quiet; then
-            echo "No changes to format"
-          else
-            pnpm biome check --write .
-            if ! git diff --quiet; then
-              git config user.name "github-actions[bot]"
-              git config user.email "github-actions[bot]@users.noreply.github.com"
-              git add .
-              git commit -m "style: auto-format after release" --no-verify
-              git push
-            fi
-          fi
-
   # Job: Build Docker images (parallel on native runners)
   build-docker:
     name: Build Docker (${{ matrix.platform }})
