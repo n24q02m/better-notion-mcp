@@ -91,8 +91,8 @@ if (wasRemoved) {
     console.log('Note: Some files may be locked by VSCode or other processes.')
     console.log("If you experience issues, close VSCode and run 'mise run setup' again.")
   } else {
-    console.error('Error: .venv exists but is not usable, and we cannot remove it.')
-    console.error('Please close VSCode and any terminals using the venv, then try again.')
-    process.exit(1)
+    console.warn('Warning: .venv exists but is not usable, and we cannot remove it.')
+    console.warn("Skipping venv setup. Please close VSCode and run 'mise run setup' again if needed.")
+    // Don't fail the entire setup, just warn and continue
   }
 }
