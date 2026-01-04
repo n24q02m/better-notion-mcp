@@ -1,3 +1,10 @@
+## [2.3.7-beta.3](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.7-beta.2...v2.3.7-beta.3) (2026-01-04)
+
+
+### Bug Fixes
+
+* **ci:** fix package.json formatting on dev ([417bbe2](https://github.com/n24q02m/better-notion-mcp/commit/417bbe2e75ecfae043f5ca1bc458349973cc10af))
+
 ## [2.3.7-beta.2](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.7-beta.1...v2.3.7-beta.2) (2026-01-04)
 
 
