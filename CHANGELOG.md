@@ -1,3 +1,10 @@
+## [2.3.1](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.0...v2.3.1) (2026-01-04)
+
+
+### Bug Fixes
+
+* **cd:** refactor docker manifest creation ([02e3ba5](https://github.com/n24q02m/better-notion-mcp/commit/02e3ba5b9e862961adb5a3688c451dac255a8c70))
+
 # [2.3.0](https://github.com/n24q02m/better-notion-mcp/compare/v2.2.0...v2.3.0) (2026-01-04)
 
 
