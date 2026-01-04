@@ -1,3 +1,10 @@
+## [2.3.7](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.6...v2.3.7) (2026-01-04)
+
+
+### Bug Fixes
+
+* **ci:** fix package.json formatting on main ([b6f9833](https://github.com/n24q02m/better-notion-mcp/commit/b6f9833c1ea7206b898739ca874bcc3a1da6a3ad))
+
 ## [2.3.6](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.5...v2.3.6) (2026-01-04)
 
 
