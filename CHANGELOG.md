@@ -1,3 +1,10 @@
+## [2.3.10](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.9...v2.3.10) (2026-01-04)
+
+
+### Bug Fixes
+
+* **cd:** use hardcoded username for docker outputs to fix syntax error ([5d96da5](https://github.com/n24q02m/better-notion-mcp/commit/5d96da5b2abf509784a4977304a137531208d8c9))
+
 ## [2.3.9](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.8...v2.3.9) (2026-01-04)
 
 
