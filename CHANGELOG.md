@@ -6,6 +6,62 @@
 * add --clear flag to uv venv command in mise setup ([0d0e09a](https://github.com/n24q02m/better-notion-mcp/commit/0d0e09ac19acfc4caffca7b01f5fafd06a1b274a))
 * **cd:** auto-resolve merge conflicts in semantic-release managed files ([8a7ed7c](https://github.com/n24q02m/better-notion-mcp/commit/8a7ed7cc5b6deb31033eedd8475ef723bcff88ff))
 * **cd:** improve merge conflict auto-resolution in promote workflow ([8e74def](https://github.com/n24q02m/better-notion-mcp/commit/8e74defda1966c91526c7b7d9433c9ec2f389569))
+* **cd:** resolve release workflow failure and retry ([be9f5cb](https://github.com/n24q02m/better-notion-mcp/commit/be9f5cb523a1d167976e5f0a79dba172aac14312))
+* **cd:** use GH_PAT to enable workflow trigger on main ([9b93f52](https://github.com/n24q02m/better-notion-mcp/commit/9b93f524a314eaddc70e396fa4d7e25597902f15))
+* **npm:** republish after workflow failure ([451a9c0](https://github.com/n24q02m/better-notion-mcp/commit/451a9c0e5c8710b9dfede93844991bf426f91da9))
+* **release:** temporarily disable npm publish to resolve version conflict ([497b3e0](https://github.com/n24q02m/better-notion-mcp/commit/497b3e0ec0264b5b52a91e63db1b64edaf362db1))
+* **release:** trigger v2.1.0-beta.8 release ([17a6b7e](https://github.com/n24q02m/better-notion-mcp/commit/17a6b7edee754e5ba86c2487bf301aca9091981a))
+* Remove development instruction echoes from mise post-install script. ([b111228](https://github.com/n24q02m/better-notion-mcp/commit/b11122871feb0597457de21938788f0624400a89))
+* **setup:** don't fail when venv is locked but unusable ([4b83502](https://github.com/n24q02m/better-notion-mcp/commit/4b835022a52ac312408e16f9682d6cae0ffb3d35))
+
+
+### Features
+
+* **cd:** add shared scripts for promote workflow ([a36b4c9](https://github.com/n24q02m/better-notion-mcp/commit/a36b4c9feac8f7a2450bae4d5151860eb7b122c1))
+
+# [2.1.0-beta.6](https://github.com/n24q02m/better-notion-mcp/compare/v2.1.0-beta.5...v2.1.0-beta.6) (2026-01-04)
+
+
+### Bug Fixes
+
+* add --clear flag to uv venv command in mise setup ([0d0e09a](https://github.com/n24q02m/better-notion-mcp/commit/0d0e09ac19acfc4caffca7b01f5fafd06a1b274a))
+* **cd:** auto-resolve merge conflicts in semantic-release managed files ([8a7ed7c](https://github.com/n24q02m/better-notion-mcp/commit/8a7ed7cc5b6deb31033eedd8475ef723bcff88ff))
+* **cd:** improve merge conflict auto-resolution in promote workflow ([8e74def](https://github.com/n24q02m/better-notion-mcp/commit/8e74defda1966c91526c7b7d9433c9ec2f389569))
+* **cd:** resolve release workflow failure and retry ([be9f5cb](https://github.com/n24q02m/better-notion-mcp/commit/be9f5cb523a1d167976e5f0a79dba172aac14312))
+* **cd:** use GH_PAT to enable workflow trigger on main ([9b93f52](https://github.com/n24q02m/better-notion-mcp/commit/9b93f524a314eaddc70e396fa4d7e25597902f15))
+* **npm:** republish after workflow failure ([451a9c0](https://github.com/n24q02m/better-notion-mcp/commit/451a9c0e5c8710b9dfede93844991bf426f91da9))
+* Remove development instruction echoes from mise post-install script. ([b111228](https://github.com/n24q02m/better-notion-mcp/commit/b11122871feb0597457de21938788f0624400a89))
+* **setup:** don't fail when venv is locked but unusable ([4b83502](https://github.com/n24q02m/better-notion-mcp/commit/4b835022a52ac312408e16f9682d6cae0ffb3d35))
+
+
+### Features
+
+* **cd:** add shared scripts for promote workflow ([a36b4c9](https://github.com/n24q02m/better-notion-mcp/commit/a36b4c9feac8f7a2450bae4d5151860eb7b122c1))
+
+# [2.1.0-beta.6](https://github.com/n24q02m/better-notion-mcp/compare/v2.1.0-beta.5...v2.1.0-beta.6) (2026-01-04)
+
+
+### Bug Fixes
+
+* add --clear flag to uv venv command in mise setup ([0d0e09a](https://github.com/n24q02m/better-notion-mcp/commit/0d0e09ac19acfc4caffca7b01f5fafd06a1b274a))
+* **cd:** auto-resolve merge conflicts in semantic-release managed files ([8a7ed7c](https://github.com/n24q02m/better-notion-mcp/commit/8a7ed7cc5b6deb31033eedd8475ef723bcff88ff))
+* **cd:** improve merge conflict auto-resolution in promote workflow ([8e74def](https://github.com/n24q02m/better-notion-mcp/commit/8e74defda1966c91526c7b7d9433c9ec2f389569))
+* **cd:** use GH_PAT to enable workflow trigger on main ([9b93f52](https://github.com/n24q02m/better-notion-mcp/commit/9b93f524a314eaddc70e396fa4d7e25597902f15))
+* **setup:** don't fail when venv is locked but unusable ([4b83502](https://github.com/n24q02m/better-notion-mcp/commit/4b835022a52ac312408e16f9682d6cae0ffb3d35))
+
+
+### Features
+
+* **cd:** add shared scripts for promote workflow ([a36b4c9](https://github.com/n24q02m/better-notion-mcp/commit/a36b4c9feac8f7a2450bae4d5151860eb7b122c1))
+
+# [2.1.0-beta.6](https://github.com/n24q02m/better-notion-mcp/compare/v2.1.0-beta.5...v2.1.0-beta.6) (2026-01-04)
+
+
+### Bug Fixes
+
+* add --clear flag to uv venv command in mise setup ([0d0e09a](https://github.com/n24q02m/better-notion-mcp/commit/0d0e09ac19acfc4caffca7b01f5fafd06a1b274a))
+* **cd:** auto-resolve merge conflicts in semantic-release managed files ([8a7ed7c](https://github.com/n24q02m/better-notion-mcp/commit/8a7ed7cc5b6deb31033eedd8475ef723bcff88ff))
+* **cd:** improve merge conflict auto-resolution in promote workflow ([8e74def](https://github.com/n24q02m/better-notion-mcp/commit/8e74defda1966c91526c7b7d9433c9ec2f389569))
 * **setup:** don't fail when venv is locked but unusable ([4b83502](https://github.com/n24q02m/better-notion-mcp/commit/4b835022a52ac312408e16f9682d6cae0ffb3d35))
 
 

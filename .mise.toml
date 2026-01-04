@@ -19,7 +19,5 @@ run = [
   "node scripts/clean-venv.mjs",
   "uv pip install pre-commit",
   "uv run pre-commit install",
-  "echo 'Setup complete!'",
-  "echo '  Dev: pnpm dev'",
-  "echo '  Build: pnpm build'"
+  "echo 'Setup complete!'"
 ]
