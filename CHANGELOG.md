@@ -1,3 +1,10 @@
+## [2.3.3](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.2...v2.3.3) (2026-01-04)
+
+
+### Bug Fixes
+
+* **cd:** enable debug for docker manifest creation ([672cba6](https://github.com/n24q02m/better-notion-mcp/commit/672cba6eeca33f15a0f7cf04e43463d7641212a2))
+
 ## [2.3.2](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.1...v2.3.2) (2026-01-04)
 
 
