@@ -79,6 +79,26 @@ jobs:
       - name: Build project
         run: pnpm build
 
+      - name: Clean conflicting tags
+        run: |
+          # Get the next version that semantic-release would create
+          # This handles the case where a previous release partially failed
+          # and left a tag but npm already has the version
+
+          # Delete known conflicting tags (from previous failed releases)
+          CONFLICTING_TAGS="v2.1.0-beta.6"
+
+          for tag in $CONFLICTING_TAGS; do
+            if git rev-parse "$tag" >/dev/null 2>&1; then
+              echo "Deleting local tag: $tag"
+              git tag -d "$tag" || true
+            fi
+            if git ls-remote --tags origin | grep -q "refs/tags/$tag"; then
+              echo "Deleting remote tag: $tag"
+              git push origin --delete "$tag" || true
+            fi
+          done
+
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
