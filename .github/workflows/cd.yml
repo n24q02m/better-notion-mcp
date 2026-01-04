@@ -209,6 +209,7 @@ jobs:
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
+          set -x
           if [ -z "$DOCKERHUB_USERNAME" ]; then
             echo "Error: DOCKERHUB_USERNAME secret is not set!"
             exit 1
@@ -265,6 +266,7 @@ jobs:
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
+          set -x
           if [ -z "$DOCKERHUB_USERNAME" ]; then
             echo "Error: DOCKERHUB_USERNAME secret is not set!"
             exit 1
