@@ -1,3 +1,31 @@
+# [2.2.0](https://github.com/n24q02m/better-notion-mcp/compare/v2.1.0...v2.2.0) (2026-01-04)
+
+
+### Bug Fixes
+
+* add --clear flag to uv venv command in mise setup ([0d0e09a](https://github.com/n24q02m/better-notion-mcp/commit/0d0e09ac19acfc4caffca7b01f5fafd06a1b274a))
+* **cd:** auto-resolve merge conflicts in semantic-release managed files ([8a7ed7c](https://github.com/n24q02m/better-notion-mcp/commit/8a7ed7cc5b6deb31033eedd8475ef723bcff88ff))
+* **cd:** improve merge conflict auto-resolution in promote workflow ([8e74def](https://github.com/n24q02m/better-notion-mcp/commit/8e74defda1966c91526c7b7d9433c9ec2f389569))
+* **cd:** resolve release workflow failure and retry ([be9f5cb](https://github.com/n24q02m/better-notion-mcp/commit/be9f5cb523a1d167976e5f0a79dba172aac14312))
+* **cd:** use GH_PAT to enable workflow trigger on main ([9b93f52](https://github.com/n24q02m/better-notion-mcp/commit/9b93f524a314eaddc70e396fa4d7e25597902f15))
+* format keywords and files arrays in package.json ([fc221a6](https://github.com/n24q02m/better-notion-mcp/commit/fc221a629244ad11925cf0c49ab01f9c2cbe7bfd))
+* Migrate pre-commit setup to use uv for environment and package management. ([c98ebe0](https://github.com/n24q02m/better-notion-mcp/commit/c98ebe09732ed2742d0e4d819c6efb8f6e71b985))
+* **npm:** republish after workflow failure ([451a9c0](https://github.com/n24q02m/better-notion-mcp/commit/451a9c0e5c8710b9dfede93844991bf426f91da9))
+* **release:** temporarily disable npm publish to resolve version conflict ([497b3e0](https://github.com/n24q02m/better-notion-mcp/commit/497b3e0ec0264b5b52a91e63db1b64edaf362db1))
+* **release:** trigger v2.1.0-beta.8 release ([17a6b7e](https://github.com/n24q02m/better-notion-mcp/commit/17a6b7edee754e5ba86c2487bf301aca9091981a))
+* Remove development instruction echoes from mise post-install script. ([b111228](https://github.com/n24q02m/better-notion-mcp/commit/b11122871feb0597457de21938788f0624400a89))
+* **setup:** don't fail when venv is locked but unusable ([4b83502](https://github.com/n24q02m/better-notion-mcp/commit/4b835022a52ac312408e16f9682d6cae0ffb3d35))
+
+
+### Features
+
+* **cd:** add shared scripts for promote workflow ([a36b4c9](https://github.com/n24q02m/better-notion-mcp/commit/a36b4c9feac8f7a2450bae4d5151860eb7b122c1))
+
+
+### Performance Improvements
+
+* use native ARM64 runner for multi-arch Docker build ([49b440a](https://github.com/n24q02m/better-notion-mcp/commit/49b440a8a76f88206e9c59aab12b83fb514e9a38))
+
 # [2.1.0-beta.6](https://github.com/n24q02m/better-notion-mcp/compare/v2.1.0-beta.5...v2.1.0-beta.6) (2026-01-04)
 
 
