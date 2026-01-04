@@ -1,3 +1,10 @@
+## [2.3.4](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.3...v2.3.4) (2026-01-04)
+
+
+### Bug Fixes
+
+* **cd:** use dynamic docker username and validate digests ([63e3d68](https://github.com/n24q02m/better-notion-mcp/commit/63e3d68e6a2bd7f76eb7ee3743ae2b35e2ab6d2b))
+
 ## [2.3.3](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.2...v2.3.3) (2026-01-04)
 
 
