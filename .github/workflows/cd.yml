@@ -150,12 +150,17 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
-          outputs: type=image,"name=n24q02m/better-notion-mcp,ghcr.io/${{ github.repository }}",push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,"name=${{ secrets.DOCKERHUB_USERNAME }}/better-notion-mcp,ghcr.io/${{ github.repository }}",push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ github.ref_name }}-${{ matrix.artifact }}
           cache-to: type=gha,mode=max,scope=${{ github.ref_name }}-${{ matrix.artifact }}
 
       - name: Export digest
         run: |
+          echo "Digest: ${{ steps.build.outputs.digest }}"
+          if [ -z "${{ steps.build.outputs.digest }}" ]; then
+            echo "Error: Digest is empty!"
+            exit 1
+          fi
           mkdir -p ${{ runner.temp }}/digests
           echo "${{ steps.build.outputs.digest }}" | sed 's/^sha256://' | xargs -I{} touch "${{ runner.temp }}/digests/{}"
 
