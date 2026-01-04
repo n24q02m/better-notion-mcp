@@ -209,6 +209,11 @@ jobs:
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
+          if [ -z "$DOCKERHUB_USERNAME" ]; then
+            echo "Error: DOCKERHUB_USERNAME secret is not set!"
+            exit 1
+          fi
+
           # Get latest git tag for version
           git clone --depth=1 --bare https://github.com/${{ github.repository }}.git repo.git
           VERSION=$(git -C repo.git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "")
@@ -219,13 +224,24 @@ jobs:
           SOURCES_DOCKERHUB=""
           SOURCES_GHCR=""
 
+          # Check if there are any files
+          if [ -z "$(ls -A .)" ]; then
+             echo "Error: No digests found in $(pwd)"
+             ls -la
+             exit 1
+          fi
+
           for digest in *; do
             SOURCES_DOCKERHUB="$SOURCES_DOCKERHUB ${DOCKERHUB_USERNAME}/better-notion-mcp@sha256:$digest"
             SOURCES_GHCR="$SOURCES_GHCR ghcr.io/${{ github.repository }}@sha256:$digest"
           done
 
           echo "Sources DockerHub: $SOURCES_DOCKERHUB"
-          echo "Sources GHCR: $SOURCES_GHCR"
+
+          if [ -z "$SOURCES_DOCKERHUB" ]; then
+            echo "Error: No sources constructed!"
+            exit 1
+          fi
 
           # Create manifests for Docker Hub
           docker buildx imagetools create \
@@ -249,11 +265,23 @@ jobs:
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
+          if [ -z "$DOCKERHUB_USERNAME" ]; then
+            echo "Error: DOCKERHUB_USERNAME secret is not set!"
+            exit 1
+          fi
+
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
 
           # Prepare sources
           SOURCES_DOCKERHUB=""
           SOURCES_GHCR=""
+
+          # Check if there are any files
+          if [ -z "$(ls -A .)" ]; then
+             echo "Error: No digests found in $(pwd)"
+             ls -la
+             exit 1
+          fi
 
           for digest in *; do
             SOURCES_DOCKERHUB="$SOURCES_DOCKERHUB ${DOCKERHUB_USERNAME}/better-notion-mcp@sha256:$digest"
