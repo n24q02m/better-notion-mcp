@@ -221,8 +221,9 @@ jobs:
           fi
 
           # Get latest git tag for version
-          git clone --depth=1 --bare https://github.com/${{ github.repository }}.git repo.git
-          VERSION=$(git -C repo.git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "")
+          # Get latest git tag for version
+          git clone --depth=1 --bare https://github.com/${{ github.repository }}.git ${{ runner.temp }}/repo.git
+          VERSION=$(git -C ${{ runner.temp }}/repo.git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "")
           MAJOR_MINOR=$(echo "$VERSION" | cut -d. -f1,2)
           MAJOR=$(echo "$VERSION" | cut -d. -f1)
 
