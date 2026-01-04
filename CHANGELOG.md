@@ -1,3 +1,12 @@
+# [2.1.0-beta.6](https://github.com/n24q02m/better-notion-mcp/compare/v2.1.0-beta.5...v2.1.0-beta.6) (2026-01-04)
+
+
+### Bug Fixes
+
+* add --clear flag to uv venv command in mise setup ([0d0e09a](https://github.com/n24q02m/better-notion-mcp/commit/0d0e09ac19acfc4caffca7b01f5fafd06a1b274a))
+* **cd:** auto-resolve merge conflicts in semantic-release managed files ([8a7ed7c](https://github.com/n24q02m/better-notion-mcp/commit/8a7ed7cc5b6deb31033eedd8475ef723bcff88ff))
+* **cd:** improve merge conflict auto-resolution in promote workflow ([8e74def](https://github.com/n24q02m/better-notion-mcp/commit/8e74defda1966c91526c7b7d9433c9ec2f389569))
+
 # [2.1.0-beta.6](https://github.com/n24q02m/better-notion-mcp/compare/v2.1.0-beta.5...v2.1.0-beta.6) (2026-01-02)
 
 
