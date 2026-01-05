@@ -2,35 +2,30 @@
 
 **Markdown-First MCP Server for Notion - Optimized for AI Agents**
 
-[![GitHub stars](https://img.shields.io/github/stars/n24q02m/better-notion-mcp)](https://github.com/n24q02m/better-notion-mcp/stargazers)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![npm version](https://badge.fury.io/js/%40n24q02m%2Fbetter-notion-mcp.svg)](https://www.npmjs.com/package/@n24q02m/better-notion-mcp)
+[![npm](https://img.shields.io/npm/v/@n24q02m/better-notion-mcp)](https://www.npmjs.com/package/@n24q02m/better-notion-mcp)
 [![Docker](https://img.shields.io/docker/v/n24q02m/better-notion-mcp?label=docker)](https://hub.docker.com/r/n24q02m/better-notion-mcp)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## Why "Better"?
 
-**7 mega action-based tools** that consolidate Notion's 28+ REST API endpoints into composite operations optimized for AI agents.
+**8 composite tools** that consolidate Notion's 28+ REST API endpoints into action-based operations optimized for AI agents.
 
 ### vs. Official Notion MCP Server
 
-| Feature               | Better Notion MCP                                                      | Official Notion MCP                            |
-| --------------------- | ---------------------------------------------------------------------- | ---------------------------------------------- |
-| **Content Format**    | **Markdown** (human-readable)                                          | Raw JSON blocks (verbose)                      |
-| **Operations**        | **Composite actions** (create page + content + properties in 1 call)   | Atomic operations (2+ separate calls required) |
-| **Pagination**        | **Auto-pagination** (transparent)                                      | Manual cursor management                       |
-| **Bulk Operations**   | **Native batch support** (create/update/delete multiple items at once) | Loop through items manually                    |
-| **Tool Architecture** | **7 mega action-based tools** (30+ actions)                            | 28+ individual endpoint tools                  |
-| **Database Query**    | **Smart search** (auto-detect best match)                              | Manual filters + sorts required                |
-| **Token Efficiency**  | **Optimized for AI context**                                           | Standard API responses                         |
-| **Setup**             | Simple (NOTION_TOKEN only)                                             | OAuth flow or token                            |
+| Feature | Better Notion MCP | Official Notion MCP |
+|---------|-------------------|---------------------|
+| **Content Format** | **Markdown** (human-readable) | Raw JSON blocks |
+| **Operations** | **Composite actions** (1 call) | Atomic (2+ calls) |
+| **Pagination** | **Auto-pagination** | Manual cursor |
+| **Bulk Operations** | **Native batch support** | Loop manually |
+| **Tools** | **8 tools** (30+ actions) | 28+ endpoint tools |
+| **Token Efficiency** | **Optimized** | Standard |
 
 ---
 
-## Installation
+## Quick Start
 
-Get your Notion token: <https://www.notion.so/my-integrations> → Create integration → Copy token → Share pages with integration
-
-### Quick Start
+Get your token: <https://www.notion.so/my-integrations> → Create integration → Copy token → Share pages
 
 ### NPX (Recommended)
 
@@ -66,95 +61,63 @@ Get your Notion token: <https://www.notion.so/my-integrations> → Create integr
 
 ---
 
-## Tools Overview
+## Tools
 
-**7 mega tools with 30+ actions:**
-
-- **Composite Actions**: Combine operations (e.g., create page + content + properties in 1 call)
-- **Auto-Pagination**: Transparent handling of large datasets
-- **Bulk Operations**: Process multiple items efficiently
-- **Smart Search**: Auto-detect best matches in database queries
+| Tool | Actions |
+|------|---------|
+| `pages` | create, get, update, archive, restore, duplicate |
+| `databases` | create, get, query, create_page, update_page, delete_page, create_data_source, update_data_source, update_database |
+| `blocks` | get, children, append, update, delete |
+| `users` | list, get, me, from_workspace |
+| `workspace` | info, search |
+| `comments` | list, create |
+| `content_convert` | markdown-to-blocks, blocks-to-markdown |
+| `help` | Get full documentation for any tool |
 
 ---
 
-## Token Optimization (v2)
+## Token Optimization
 
 **~77% token reduction** via tiered descriptions:
 
-| Tier | Purpose | Token Cost |
-|------|---------|------------|
-| **Tier 1** | Compressed descriptions (always loaded) | ~340 tokens |
-| **Tier 2** | Full docs via `help` tool (on-demand) | ~1,500 tokens |
-| **Tier 3** | MCP Resources (for supported clients) | Same as Tier 2 |
+| Tier | Purpose | When |
+|------|---------|------|
+| **Tier 1** | Compressed descriptions | Always loaded |
+| **Tier 2** | Full docs via `help` tool | On-demand |
+| **Tier 3** | MCP Resources | Supported clients |
 
-**Usage:**
 ```json
 {"name": "help", "tool_name": "pages"}
 ```
-
-**Client Compatibility:**
-- Claude Desktop, VS Code Copilot: Full support (Tier 1 + 2 + 3)
-- Cursor, Windsurf: Via `help` tool (Tier 1 + 2)
 
 ---
 
 ## Limitations
 
-**Supported Block Types (Markdown Conversion):**
+**Supported Blocks:**
+- ✅ Headings, Paragraphs, Lists, Code blocks, Quotes, Dividers
+- ✅ Inline: bold, italic, code, strikethrough, links
 
-- ✅ Headings (H1-H3), Paragraphs, Lists (bulleted/numbered)
-- ✅ Code blocks, Quotes, Dividers
-- ✅ Inline formatting (bold, italic, code, strikethrough, links)
-
-**Unsupported Block Types:**
-
-- ❌ Tables, Toggles, Callouts, Columns
-- ❌ Databases, Embeds, Images, Files
-- ❌ Synced blocks, Templates
+**Unsupported Blocks:**
+- ❌ Tables, Toggles, Callouts, Columns, Databases, Embeds, Images, Files
 
 ---
 
-### Build from Source
+## Build from Source
 
 ```bash
 git clone https://github.com/n24q02m/better-notion-mcp
 cd better-notion-mcp
-
-# Setup (requires mise: https://mise.jdx.dev/)
 mise run setup
-
-# Build
 pnpm build
 ```
 
-**Prerequisites:** [mise](https://mise.jdx.dev/) only.
-
-### Available Commands
-
-```bash
-pnpm dev                    # Run development server with auto-reload
-pnpm build                  # Build the project
-pnpm test                   # Run tests
-pnpm test:watch             # Run tests in watch mode
-pnpm test:coverage          # Run tests with coverage report
-pnpm check                  # Check formatting, linting & types (Biome + TypeScript)
-pnpm check:fix              # Auto-fix formatting and linting issues
-```
+**Requirements:** Node.js 22+, pnpm
 
 ## Contributing
 
-Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
-
-- Development workflow (verified via CI)
-- Commit convention (enforced via git hooks)
-- Testing and code quality standards
-
----
+See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## License
 
-MIT License - See [LICENSE](LICENSE)
-
----
-
-**Star this repo if you find it useful! ⭐**
+MIT - See [LICENSE](LICENSE)
