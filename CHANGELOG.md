@@ -1,3 +1,11 @@
+## [2.3.11](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.10...v2.3.11) (2026-01-05)
+
+
+### Bug Fixes
+
+* add cd.yml to auto-resolve files for promote ([d7ae193](https://github.com/n24q02m/better-notion-mcp/commit/d7ae1938020533dd22f127198a92c11260088a22))
+* verify ci/cd workflow changes ([6802e00](https://github.com/n24q02m/better-notion-mcp/commit/6802e00c56b9da132f90ccc23cb6739e69b2617b))
+
 ## [2.3.7-beta.5](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.7-beta.4...v2.3.7-beta.5) (2026-01-05)
 
 
