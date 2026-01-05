@@ -1,17 +1,9 @@
-## [2.3.10](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.9...v2.3.10) (2026-01-04)
+## [2.3.7-beta.5](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.7-beta.4...v2.3.7-beta.5) (2026-01-05)
 
 
 ### Bug Fixes
 
-* **cd:** use hardcoded username for docker outputs to fix syntax error ([5d96da5](https://github.com/n24q02m/better-notion-mcp/commit/5d96da5b2abf509784a4977304a137531208d8c9))
-
-## [2.3.9](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.8...v2.3.9) (2026-01-04)
-
-
-### Bug Fixes
-
-* **cd:** use semantic-release/exec for biome format before git commit ([e771dff](https://github.com/n24q02m/better-notion-mcp/commit/e771dfffc23214b381f4fe471a11aa1058b7206e))
-* **ci:** fix package.json formatting on dev ([417bbe2](https://github.com/n24q02m/better-notion-mcp/commit/417bbe2e75ecfae043f5ca1bc458349973cc10af))
+* verify ci/cd workflow changes ([6802e00](https://github.com/n24q02m/better-notion-mcp/commit/6802e00c56b9da132f90ccc23cb6739e69b2617b))
 
 ## [2.3.7-beta.4](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.7-beta.3...v2.3.7-beta.4) (2026-01-04)
 
