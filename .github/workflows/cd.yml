@@ -6,14 +6,12 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: 'Select action'
+        description: "Select action"
+        required: true
+        default: "promote-to-stable"
         type: choice
         options:
-          - 'promote-to-stable'
-
-concurrency:
-  group: cd-${{ github.repository }}
-  cancel-in-progress: false
+          - promote-to-stable
 
 permissions:
   contents: write
@@ -21,11 +19,18 @@ permissions:
   id-token: write
   pull-requests: write
 
+env:
+  DOCKERHUB_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/better-notion-mcp
+  GHCR_IMAGE: ghcr.io/${{ github.repository }}
+
+concurrency:
+  group: cd-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
-  # Job: Promote dev to main (manual trigger only)
   promote:
     name: Promote to Stable
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'promote-to-stable'
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'promote-to-stable'
     runs-on: ubuntu-latest
 
     steps:
@@ -49,13 +54,13 @@ jobs:
           chmod +x .github/scripts/merge-with-auto-resolve.sh
           ./.github/scripts/merge-with-auto-resolve.sh --source=dev --target=main --files="$AUTO_RESOLVE_FILES"
 
-  # Job: Release (on push to dev or main)
   release:
-    name: Release
+    name: Semantic Release
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
-      is_prerelease: ${{ contains(github.ref, 'dev') }}
+      released: ${{ steps.check.outputs.released }}
+      version: ${{ steps.check.outputs.version }}
 
     steps:
       - name: Checkout code
@@ -80,26 +85,6 @@ jobs:
       - name: Build project
         run: pnpm build
 
-      - name: Clean conflicting tags
-        run: |
-          # Get the next version that semantic-release would create
-          # This handles the case where a previous release partially failed
-          # and left a tag but npm already has the version
-
-          # Delete known conflicting tags (from previous failed releases)
-          CONFLICTING_TAGS="v2.1.0-beta.6"
-
-          for tag in $CONFLICTING_TAGS; do
-            if git rev-parse "$tag" >/dev/null 2>&1; then
-              echo "Deleting local tag: $tag"
-              git tag -d "$tag" || true
-            fi
-            if git ls-remote --tags origin | grep -q "refs/tags/$tag"; then
-              echo "Deleting remote tag: $tag"
-              git push origin --delete "$tag" || true
-            fi
-          done
-
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -107,11 +92,21 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: pnpm release
 
-  # Job: Build Docker images (parallel on native runners)
+      - name: Check release status
+        id: check
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LATEST_TAG" ]; then
+            echo "released=true" >> $GITHUB_OUTPUT
+            echo "version=${LATEST_TAG#v}" >> $GITHUB_OUTPUT
+          else
+            echo "released=false" >> $GITHUB_OUTPUT
+          fi
+
   build-docker:
     name: Build Docker (${{ matrix.platform }})
     needs: release
-    if: github.event_name == 'push'
+    if: needs.release.outputs.released == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -150,7 +145,7 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
-          outputs: type=image,"name=${{ secrets.DOCKERHUB_USERNAME }}/better-notion-mcp,ghcr.io/${{ github.repository }}",push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,"name=${{ env.DOCKERHUB_IMAGE }},${{ env.GHCR_IMAGE }}",push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ github.ref_name }}-${{ matrix.artifact }}
           cache-to: type=gha,mode=max,scope=${{ github.ref_name }}-${{ matrix.artifact }}
 
@@ -171,11 +166,10 @@ jobs:
           path: ${{ runner.temp }}/digests/*
           retention-days: 1
 
-  # Job: Merge Docker manifests
   merge-docker:
     name: Merge Docker Manifests
-    needs: build-docker
-    if: github.event_name == 'push'
+    needs: [release, build-docker]
+    if: needs.release.outputs.released == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -202,122 +196,79 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Inspect digests
-        run: |
-          ls -R ${{ runner.temp }}/digests
-          echo "Digests content:"
-          cat ${{ runner.temp }}/digests/* || true
-
       - name: Create and push manifest (stable)
         if: github.ref == 'refs/heads/main'
         working-directory: ${{ runner.temp }}/digests
         env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          VERSION: ${{ needs.release.outputs.version }}
         run: |
-
-          if [ -z "$DOCKERHUB_USERNAME" ]; then
-            echo "Error: DOCKERHUB_USERNAME secret is not set!"
-            exit 1
-          fi
-
-          # Get latest git tag for version
-          # Get latest git tag for version
-          git clone --depth=1 --bare https://github.com/${{ github.repository }}.git ${{ runner.temp }}/repo.git
-          VERSION=$(git -C ${{ runner.temp }}/repo.git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "")
           MAJOR_MINOR=$(echo "$VERSION" | cut -d. -f1,2)
           MAJOR=$(echo "$VERSION" | cut -d. -f1)
 
           # Prepare sources
           SOURCES_DOCKERHUB=""
           SOURCES_GHCR=""
-
-          # Check if there are any files
-          if [ -z "$(ls -A .)" ]; then
-             echo "Error: No digests found in $(pwd)"
-             ls -la
-             exit 1
-          fi
-
           for digest in *; do
-            SOURCES_DOCKERHUB="$SOURCES_DOCKERHUB ${DOCKERHUB_USERNAME}/better-notion-mcp@sha256:$digest"
-            SOURCES_GHCR="$SOURCES_GHCR ghcr.io/${{ github.repository }}@sha256:$digest"
+            SOURCES_DOCKERHUB="$SOURCES_DOCKERHUB ${{ env.DOCKERHUB_IMAGE }}@sha256:$digest"
+            SOURCES_GHCR="$SOURCES_GHCR ${{ env.GHCR_IMAGE }}@sha256:$digest"
           done
-
-          echo "Sources DockerHub: $SOURCES_DOCKERHUB"
-
-          if [ -z "$SOURCES_DOCKERHUB" ]; then
-            echo "Error: No sources constructed!"
-            exit 1
-          fi
 
           # Create manifests for Docker Hub
           docker buildx imagetools create \
-            -t ${DOCKERHUB_USERNAME}/better-notion-mcp:latest \
-            ${VERSION:+-t ${DOCKERHUB_USERNAME}/better-notion-mcp:$VERSION} \
-            ${MAJOR_MINOR:+-t ${DOCKERHUB_USERNAME}/better-notion-mcp:$MAJOR_MINOR} \
-            ${MAJOR:+-t ${DOCKERHUB_USERNAME}/better-notion-mcp:$MAJOR} \
+            -t ${{ env.DOCKERHUB_IMAGE }}:latest \
+            -t ${{ env.DOCKERHUB_IMAGE }}:$VERSION \
+            -t ${{ env.DOCKERHUB_IMAGE }}:$MAJOR_MINOR \
+            -t ${{ env.DOCKERHUB_IMAGE }}:$MAJOR \
             $SOURCES_DOCKERHUB
 
           # Create manifests for GHCR
           docker buildx imagetools create \
-            -t ghcr.io/${{ github.repository }}:latest \
-            ${VERSION:+-t ghcr.io/${{ github.repository }}:$VERSION} \
-            ${MAJOR_MINOR:+-t ghcr.io/${{ github.repository }}:$MAJOR_MINOR} \
-            ${MAJOR:+-t ghcr.io/${{ github.repository }}:$MAJOR} \
+            -t ${{ env.GHCR_IMAGE }}:latest \
+            -t ${{ env.GHCR_IMAGE }}:$VERSION \
+            -t ${{ env.GHCR_IMAGE }}:$MAJOR_MINOR \
+            -t ${{ env.GHCR_IMAGE }}:$MAJOR \
             $SOURCES_GHCR
 
       - name: Create and push manifest (beta)
         if: github.ref == 'refs/heads/dev'
         working-directory: ${{ runner.temp }}/digests
         env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          VERSION: ${{ needs.release.outputs.version }}
         run: |
-
-          if [ -z "$DOCKERHUB_USERNAME" ]; then
-            echo "Error: DOCKERHUB_USERNAME secret is not set!"
-            exit 1
-          fi
-
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
 
           # Prepare sources
           SOURCES_DOCKERHUB=""
           SOURCES_GHCR=""
-
-          # Check if there are any files
-          if [ -z "$(ls -A .)" ]; then
-             echo "Error: No digests found in $(pwd)"
-             ls -la
-             exit 1
-          fi
-
           for digest in *; do
-            SOURCES_DOCKERHUB="$SOURCES_DOCKERHUB ${DOCKERHUB_USERNAME}/better-notion-mcp@sha256:$digest"
-            SOURCES_GHCR="$SOURCES_GHCR ghcr.io/${{ github.repository }}@sha256:$digest"
+            SOURCES_DOCKERHUB="$SOURCES_DOCKERHUB ${{ env.DOCKERHUB_IMAGE }}@sha256:$digest"
+            SOURCES_GHCR="$SOURCES_GHCR ${{ env.GHCR_IMAGE }}@sha256:$digest"
           done
 
           # Create manifests for Docker Hub
           docker buildx imagetools create \
-            -t ${DOCKERHUB_USERNAME}/better-notion-mcp:beta \
-            -t ${DOCKERHUB_USERNAME}/better-notion-mcp:beta-$SHORT_SHA \
+            -t ${{ env.DOCKERHUB_IMAGE }}:beta \
+            -t ${{ env.DOCKERHUB_IMAGE }}:$VERSION \
+            -t ${{ env.DOCKERHUB_IMAGE }}:beta-$SHORT_SHA \
             $SOURCES_DOCKERHUB
 
           # Create manifests for GHCR
           docker buildx imagetools create \
-            -t ghcr.io/${{ github.repository }}:beta \
-            -t ghcr.io/${{ github.repository }}:beta-$SHORT_SHA \
+            -t ${{ env.GHCR_IMAGE }}:beta \
+            -t ${{ env.GHCR_IMAGE }}:$VERSION \
+            -t ${{ env.GHCR_IMAGE }}:beta-$SHORT_SHA \
             $SOURCES_GHCR
 
       - name: Checkout code
         if: github.ref == 'refs/heads/main'
         uses: actions/checkout@v6
 
-      - name: Docker Hub Description
+      - name: Update Docker Hub Description
         if: github.ref == 'refs/heads/main'
         uses: peter-evans/dockerhub-description@v5
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: n24q02m/better-notion-mcp
+          repository: ${{ secrets.DOCKERHUB_USERNAME }}/better-notion-mcp
           short-description: ${{ github.event.repository.description }}
           readme-filepath: ./README.md
