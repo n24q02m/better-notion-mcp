@@ -4,7 +4,7 @@
 # Setup: mise run setup
 
 [tools]
-node = "22"
+node = "24"
 pnpm = "latest"
 uv = "latest"
 

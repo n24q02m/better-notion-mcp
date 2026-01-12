@@ -26,7 +26,7 @@ If applicable, add screenshots to help explain your problem.
 **Environment (please complete the following information):**
 
 - OS: [e.g. macOS, Linux, Windows]
-- Node.js version: [e.g. 22.0.0]
+- Node.js version: [e.g. 24.0.0]
 - Package version: [e.g. 1.0.9]
 - Installation method: [e.g. npx, Docker, local build]
 

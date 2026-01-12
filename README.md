@@ -112,7 +112,7 @@ mise run setup
 pnpm build
 ```
 
-**Requirements:** Node.js 22+, pnpm
+**Requirements:** Node.js 24+, pnpm
 
 ## Contributing
 

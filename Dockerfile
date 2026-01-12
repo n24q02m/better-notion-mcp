@@ -1,8 +1,8 @@
 # Better Notion MCP - Optimized for AI Agents
 # syntax=docker/dockerfile:1
 
-# Use Node.js 22 as the base image
-FROM node:22-alpine AS builder
+# Use Node.js 24 as the base image
+FROM node:24-alpine AS builder
 
 # Enable corepack for pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -23,7 +23,7 @@ COPY . .
 RUN pnpm build
 
 # Minimal image for runtime
-FROM node:22-alpine
+FROM node:24-alpine
 
 # Enable corepack for pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate

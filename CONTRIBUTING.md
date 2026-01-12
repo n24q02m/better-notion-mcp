@@ -6,7 +6,7 @@ Thank you for your interest in contributing to Better Notion MCP! This guide wil
 
 ### Prerequisites
 
-- **mise** (recommended) or **Node.js 22+** and **pnpm**
+- **mise** (recommended) or **Node.js 24+** and **pnpm**
 - Git
 - A GitHub account
 
@@ -26,11 +26,11 @@ cd better-notion-mcp
 If using **mise** (recommended):
 
 ```bash
-mise install      # Auto-install Node.js 22 and pnpm from .mise.toml
+mise install      # Auto-install Node.js 24 and pnpm from .mise.toml
 pnpm install
 ```
 
-Without mise, ensure you have Node.js 22+ and pnpm installed:
+Without mise, ensure you have Node.js 24+ and pnpm installed:
 
 ```bash
 pnpm install
