@@ -5,6 +5,7 @@
 
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
+import { processBatches } from '../helpers/batch.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate } from '../helpers/pagination.js'
 import { convertToNotionProperties } from '../helpers/properties.js'
@@ -336,9 +337,8 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<any> {
     throw new NotionMCPError('page_id or page_ids required', 'VALIDATION_ERROR', 'Provide at least one page ID')
   }
 
-  const results = []
-
-  for (const pageId of pageIds) {
+  // Process duplicates in batches to improve performance while respecting rate limits
+  const results = await processBatches(pageIds, 5, async (pageId) => {
     // Get original page
     const originalPage: any = await notion.pages.retrieve({ page_id: pageId })
 
@@ -367,12 +367,12 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<any> {
       })
     }
 
-    results.push({
+    return {
       original_id: pageId,
       duplicate_id: duplicatePage.id,
       url: duplicatePage.url
-    })
-  }
+    }
+  })
 
   return {
     action: 'duplicate',
