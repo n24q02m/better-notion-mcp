@@ -5,7 +5,7 @@
 
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
-import { autoPaginate } from '../helpers/pagination.js'
+import { autoPaginate, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
 
@@ -408,19 +408,21 @@ async function deleteDatabasePages(notion: Client, input: DatabasesInput): Promi
     throw new NotionMCPError('page_id or page_ids required', 'VALIDATION_ERROR', 'Provide page IDs to delete')
   }
 
-  const results = []
+  const results = await processBatches(
+    pageIds,
+    async (pageId) => {
+      await notion.pages.update({
+        page_id: pageId,
+        archived: true
+      })
 
-  for (const pageId of pageIds) {
-    await notion.pages.update({
-      page_id: pageId,
-      archived: true
-    })
-
-    results.push({
-      page_id: pageId,
-      deleted: true
-    })
-  }
+      return {
+        page_id: pageId,
+        deleted: true
+      }
+    },
+    { batchSize: 5, concurrency: 3 }
+  )
 
   return {
     action: 'delete_page',
