@@ -4,8 +4,8 @@
  */
 
 import type { Client } from '@notionhq/client'
-import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { processBatches } from '../helpers/batch.js'
+import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate } from '../helpers/pagination.js'
 import { convertToNotionProperties } from '../helpers/properties.js'
