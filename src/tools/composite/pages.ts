@@ -6,7 +6,7 @@
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
-import { autoPaginate } from '../helpers/pagination.js'
+import { autoPaginate, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
 
@@ -238,9 +238,9 @@ async function updatePage(notion: Client, input: PagesInput): Promise<any> {
         })
       )
 
-      for (const block of existingBlocks) {
+      await processBatches(existingBlocks, async (block) => {
         await notion.blocks.delete({ block_id: block.id })
-      }
+      })
 
       const newBlocks = markdownToBlocks(input.content)
       if (newBlocks.length > 0) {
