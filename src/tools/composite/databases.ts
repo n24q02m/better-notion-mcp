@@ -328,9 +328,7 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
     throw new NotionMCPError('pages or page_properties required', 'VALIDATION_ERROR', 'Provide items to create')
   }
 
-  const results = []
-
-  for (const item of items) {
+  const results = await processBatches(items, async (item) => {
     const properties = convertToNotionProperties(item.properties)
 
     const page = await notion.pages.create({
@@ -338,12 +336,12 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
       properties
     } as any)
 
-    results.push({
+    return {
       page_id: page.id,
       url: (page as any).url,
       created: true
-    })
-  }
+    }
+  })
 
   return {
     action: 'create_page',
@@ -367,9 +365,7 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
     throw new NotionMCPError('pages or page_id+page_properties required', 'VALIDATION_ERROR', 'Provide items to update')
   }
 
-  const results = []
-
-  for (const item of items) {
+  const results = await processBatches(items, async (item) => {
     if (!item.page_id) {
       throw new NotionMCPError('page_id required for each item', 'VALIDATION_ERROR', 'Provide page_id')
     }
@@ -381,11 +377,11 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
       properties
     })
 
-    results.push({
+    return {
       page_id: item.page_id,
       updated: true
-    })
-  }
+    }
+  })
 
   return {
     action: 'update_page',
