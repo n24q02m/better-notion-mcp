@@ -1,3 +1,10 @@
+## [2.3.12](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.11...v2.3.12) (2026-01-12)
+
+
+### Bug Fixes
+
+* update Node.js version to 24 in various files and documentation ([d1770f7](https://github.com/n24q02m/better-notion-mcp/commit/d1770f753a908afdcb97bfe0c5305941ee29ca3a))
+
 ## [2.3.7-beta.7](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.7-beta.6...v2.3.7-beta.7) (2026-01-12)
 
 

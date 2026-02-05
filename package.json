@@ -1,7 +1,7 @@
 {
   "name": "@n24q02m/better-notion-mcp",
   "keywords": ["notion", "api", "mcp", "server", "ai-agent", "composite-tools"],
-  "version": "2.3.7-beta.7",
+  "version": "2.3.12",
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@9.15.4",
