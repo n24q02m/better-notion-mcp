@@ -1,3 +1,10 @@
+## [2.3.13-beta.2](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.13-beta.1...v2.3.13-beta.2) (2026-02-05)
+
+
+### Bug Fixes
+
+* configure Python 3.13 via mise and .python-version files ([57eab74](https://github.com/n24q02m/better-notion-mcp/commit/57eab7493eb0663cf6738533bbd2b46b50752dff))
+
 ## [2.3.13-beta.1](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.12...v2.3.13-beta.1) (2026-02-05)
 
 
