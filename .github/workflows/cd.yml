@@ -47,6 +47,15 @@ jobs:
           chmod +x .github/scripts/check-ci-cd-status.sh
           ./.github/scripts/check-ci-cd-status.sh --branch=dev
 
+      - name: Sync main into dev (resolve version conflicts)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout dev
+          git fetch origin main
+          git merge origin/main --no-edit -X ours || true
+          git push origin dev
+
       - name: Create PR to promote dev to main
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
