@@ -209,8 +209,8 @@ export function parseRichText(text: string): RichText[] {
             strikethrough,
             underline: false,
             code,
-            color: 'default',
-          },
+            color: 'default'
+          }
         })
 
         // Advance regex

@@ -30,11 +30,11 @@ describe('parseRichText', () => {
   it('should parse nested formatting', () => {
     const result = parseRichText('**bold *italic***')
     // Expected behavior based on standard markdown or current impl
-    const boldPart = result.find(r => r.text.content === 'bold ')
+    const boldPart = result.find((r) => r.text.content === 'bold ')
     expect(boldPart).toBeDefined()
     expect(boldPart?.annotations.bold).toBe(true)
 
-    const italicPart = result.find(r => r.text.content === 'italic')
+    const italicPart = result.find((r) => r.text.content === 'italic')
     expect(italicPart).toBeDefined()
     expect(italicPart?.annotations.bold).toBe(true)
     expect(italicPart?.annotations.italic).toBe(true)
