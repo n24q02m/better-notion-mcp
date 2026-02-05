@@ -1,3 +1,11 @@
+## [2.3.13-beta.1](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.12...v2.3.13-beta.1) (2026-02-05)
+
+
+### Bug Fixes
+
+* **cd:** use GH_PAT for semantic-release to bypass branch protection ([#13](https://github.com/n24q02m/better-notion-mcp/issues/13)) ([8eb8909](https://github.com/n24q02m/better-notion-mcp/commit/8eb8909a232c0f1059a9ce0ec38d2280f772a85f))
+* remove duplicate import processBatches from batch.ts ([#12](https://github.com/n24q02m/better-notion-mcp/issues/12)) ([321cca9](https://github.com/n24q02m/better-notion-mcp/commit/321cca96010c33d1bf2808eaef12fee70b5812f2))
+
 ## [2.3.12](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.11...v2.3.12) (2026-01-12)
 
 
