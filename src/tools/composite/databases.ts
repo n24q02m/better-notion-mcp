@@ -5,7 +5,7 @@
 
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
-import { autoPaginate } from '../helpers/pagination.js'
+import { autoPaginate, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
 
@@ -328,9 +328,7 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
     throw new NotionMCPError('pages or page_properties required', 'VALIDATION_ERROR', 'Provide items to create')
   }
 
-  const results = []
-
-  for (const item of items) {
+  const results = await processBatches(items, async (item) => {
     const properties = convertToNotionProperties(item.properties)
 
     const page = await notion.pages.create({
@@ -338,12 +336,12 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
       properties
     } as any)
 
-    results.push({
+    return {
       page_id: page.id,
       url: (page as any).url,
       created: true
-    })
-  }
+    }
+  })
 
   return {
     action: 'create_page',
@@ -367,9 +365,7 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
     throw new NotionMCPError('pages or page_id+page_properties required', 'VALIDATION_ERROR', 'Provide items to update')
   }
 
-  const results = []
-
-  for (const item of items) {
+  const results = await processBatches(items, async (item) => {
     if (!item.page_id) {
       throw new NotionMCPError('page_id required for each item', 'VALIDATION_ERROR', 'Provide page_id')
     }
@@ -381,11 +377,11 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
       properties
     })
 
-    results.push({
+    return {
       page_id: item.page_id,
       updated: true
-    })
-  }
+    }
+  })
 
   return {
     action: 'update_page',
@@ -408,19 +404,21 @@ async function deleteDatabasePages(notion: Client, input: DatabasesInput): Promi
     throw new NotionMCPError('page_id or page_ids required', 'VALIDATION_ERROR', 'Provide page IDs to delete')
   }
 
-  const results = []
+  const results = await processBatches(
+    pageIds,
+    async (pageId) => {
+      await notion.pages.update({
+        page_id: pageId,
+        archived: true
+      })
 
-  for (const pageId of pageIds) {
-    await notion.pages.update({
-      page_id: pageId,
-      archived: true
-    })
-
-    results.push({
-      page_id: pageId,
-      deleted: true
-    })
-  }
+      return {
+        page_id: pageId,
+        deleted: true
+      }
+    },
+    { batchSize: 5, concurrency: 3 }
+  )
 
   return {
     action: 'delete_page',

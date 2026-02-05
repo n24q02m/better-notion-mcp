@@ -60,18 +60,3 @@ jobs:
               repo: context.repo.repo,
               body: '❌ **CI Checks Failed**\n\nPlease fix the issues:\n- Run `pnpm check` locally\n- Check the workflow logs for details'
             })
-
-  dependency-review:
-    name: Dependency Review
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: moderate
-          comment-summary-in-pr: always

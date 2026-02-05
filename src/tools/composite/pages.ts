@@ -6,7 +6,7 @@
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
-import { autoPaginate } from '../helpers/pagination.js'
+import { autoPaginate, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
 
@@ -238,9 +238,9 @@ async function updatePage(notion: Client, input: PagesInput): Promise<any> {
         })
       )
 
-      for (const block of existingBlocks) {
+      await processBatches(existingBlocks, async (block) => {
         await notion.blocks.delete({ block_id: block.id })
-      }
+      })
 
       const newBlocks = markdownToBlocks(input.content)
       if (newBlocks.length > 0) {
@@ -304,15 +304,17 @@ async function archivePage(notion: Client, input: PagesInput): Promise<any> {
   }
 
   const archived = input.action === 'archive'
-  const results = []
-
-  for (const pageId of pageIds) {
-    await notion.pages.update({
-      page_id: pageId,
-      archived
-    })
-    results.push({ page_id: pageId, archived })
-  }
+  const results = await processBatches(
+    pageIds,
+    async (pageId) => {
+      await notion.pages.update({
+        page_id: pageId,
+        archived
+      })
+      return { page_id: pageId, archived }
+    },
+    { batchSize: 1, concurrency: 5 }
+  )
 
   return {
     action: input.action,
@@ -336,43 +338,46 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<any> {
     throw new NotionMCPError('page_id or page_ids required', 'VALIDATION_ERROR', 'Provide at least one page ID')
   }
 
-  const results = []
+  // Process duplicates in batches to improve performance while respecting rate limits
+  const results = await processBatches(
+    pageIds,
+    async (pageId) => {
+      // Get original page
+      const originalPage: any = await notion.pages.retrieve({ page_id: pageId })
 
-  for (const pageId of pageIds) {
-    // Get original page
-    const originalPage: any = await notion.pages.retrieve({ page_id: pageId })
+      // Get original content
+      const originalBlocks = await autoPaginate((cursor) =>
+        notion.blocks.children.list({
+          block_id: pageId,
+          start_cursor: cursor,
+          page_size: 100
+        })
+      )
 
-    // Get original content
-    const originalBlocks = await autoPaginate((cursor) =>
-      notion.blocks.children.list({
-        block_id: pageId,
-        start_cursor: cursor,
-        page_size: 100
+      // Create duplicate
+      const duplicatePage: any = await notion.pages.create({
+        parent: originalPage.parent,
+        properties: originalPage.properties,
+        icon: originalPage.icon,
+        cover: originalPage.cover
       })
-    )
 
-    // Create duplicate
-    const duplicatePage: any = await notion.pages.create({
-      parent: originalPage.parent,
-      properties: originalPage.properties,
-      icon: originalPage.icon,
-      cover: originalPage.cover
-    })
+      // Copy content
+      if (originalBlocks.length > 0) {
+        await notion.blocks.children.append({
+          block_id: duplicatePage.id,
+          children: originalBlocks as any
+        })
+      }
 
-    // Copy content
-    if (originalBlocks.length > 0) {
-      await notion.blocks.children.append({
-        block_id: duplicatePage.id,
-        children: originalBlocks as any
-      })
-    }
-
-    results.push({
-      original_id: pageId,
-      duplicate_id: duplicatePage.id,
-      url: duplicatePage.url
-    })
-  }
+      return {
+        original_id: pageId,
+        duplicate_id: duplicatePage.id,
+        url: duplicatePage.url
+      }
+    },
+    { batchSize: 5, concurrency: 3 }
+  )
 
   return {
     action: 'duplicate',
