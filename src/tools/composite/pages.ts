@@ -6,7 +6,7 @@
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
-import { autoPaginate, processBatches } from '../helpers/pagination.js'
+import { autoPaginate, batchItems, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
 
@@ -364,10 +364,13 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<any> {
 
       // Copy content
       if (originalBlocks.length > 0) {
-        await notion.blocks.children.append({
-          block_id: duplicatePage.id,
-          children: originalBlocks as any
-        })
+        const batches = batchItems(originalBlocks, 100)
+        for (const batch of batches) {
+          await notion.blocks.children.append({
+            block_id: duplicatePage.id,
+            children: batch as any
+          })
+        }
       }
 
       return {
