@@ -161,23 +161,43 @@ export function parseRichText(text: string): RichText[] {
   let code = false
   let strikethrough = false
 
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i]
-    const next = text[i + 1]
+  // Regex to find next special character
+  // Note: we want to match `[` to check for links.
+  const tokenRegex = /(\*\*|\*|~~|`|\[)/g
 
-    // Link [text](url)
-    if (char === '[') {
-      const closeBracket = text.indexOf(']', i)
+  let lastIndex = 0
+  let match: RegExpExecArray | null = null
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    match = tokenRegex.exec(text)
+    if (match === null) {
+      break
+    }
+
+    const index = match.index
+    const token = match[0]
+
+    // Append text before the token
+    if (index > lastIndex) {
+      current += text.slice(lastIndex, index)
+    }
+
+    // Handle tokens
+    if (token === '[') {
+      // Potential link
+      const closeBracket = text.indexOf(']', index)
       const openParen = closeBracket !== -1 ? text.indexOf('(', closeBracket) : -1
       const closeParen = openParen !== -1 ? text.indexOf(')', openParen) : -1
 
       if (closeBracket !== -1 && openParen === closeBracket + 1 && closeParen !== -1) {
+        // Flush current text
         if (current) {
           richText.push(createRichText(current, { bold, italic, code, strikethrough }))
           current = ''
         }
 
-        const linkText = text.slice(i + 1, closeBracket)
+        const linkText = text.slice(index + 1, closeBracket)
         const linkUrl = text.slice(openParen + 1, closeParen)
 
         richText.push({
@@ -189,55 +209,53 @@ export function parseRichText(text: string): RichText[] {
             strikethrough,
             underline: false,
             code,
-            color: 'default'
-          }
+            color: 'default',
+          },
         })
 
-        i = closeParen
-        continue
+        // Advance regex
+        const newIndex = closeParen + 1
+        tokenRegex.lastIndex = newIndex
+        lastIndex = newIndex
+      } else {
+        // Not a link, treat [ as text
+        current += '['
+        lastIndex = index + 1
       }
-    }
-
-    // Bold **text**
-    if (char === '*' && next === '*') {
+    } else if (token === '**') {
       if (current) {
         richText.push(createRichText(current, { bold, italic, code, strikethrough }))
         current = ''
       }
       bold = !bold
-      i++ // Skip next *
-      continue
-    }
-    // Italic *text*
-    else if (char === '*' && next !== '*') {
+      lastIndex = index + 2
+    } else if (token === '*') {
       if (current) {
         richText.push(createRichText(current, { bold, italic, code, strikethrough }))
         current = ''
       }
       italic = !italic
-      continue
-    }
-    // Code `text`
-    else if (char === '`') {
-      if (current) {
-        richText.push(createRichText(current, { bold, italic, code, strikethrough }))
-        current = ''
-      }
-      code = !code
-      continue
-    }
-    // Strikethrough ~~text~~
-    else if (char === '~' && next === '~') {
+      lastIndex = index + 1
+    } else if (token === '~~') {
       if (current) {
         richText.push(createRichText(current, { bold, italic, code, strikethrough }))
         current = ''
       }
       strikethrough = !strikethrough
-      i++ // Skip next ~
-      continue
+      lastIndex = index + 2
+    } else if (token === '`') {
+      if (current) {
+        richText.push(createRichText(current, { bold, italic, code, strikethrough }))
+        current = ''
+      }
+      code = !code
+      lastIndex = index + 1
     }
+  }
 
-    current += char
+  // Append remaining text
+  if (lastIndex < text.length) {
+    current += text.slice(lastIndex)
   }
 
   if (current) {
