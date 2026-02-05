@@ -42,7 +42,7 @@ jobs:
 
       - name: Check CI/CD status on dev branch
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           chmod +x .github/scripts/check-ci-cd-status.sh
           ./.github/scripts/check-ci-cd-status.sh --branch=dev
@@ -202,7 +202,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GH_PAT }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push by digest
         id: build
@@ -259,7 +259,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GH_PAT }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create and push manifest (stable)
         if: github.ref == 'refs/heads/main'
