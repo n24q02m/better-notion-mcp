@@ -239,9 +239,9 @@ async function updatePage(notion: Client, input: PagesInput): Promise<any> {
         })
       )
 
-      for (const block of existingBlocks) {
+      await processBatches(existingBlocks, async (block) => {
         await notion.blocks.delete({ block_id: block.id })
-      }
+      })
 
       const newBlocks = markdownToBlocks(input.content)
       if (newBlocks.length > 0) {
