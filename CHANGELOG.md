@@ -4,6 +4,20 @@
 ### Bug Fixes
 
 * **cd:** checkout main branch for PR merge release ([b8bb99e](https://github.com/n24q02m/better-notion-mcp/commit/b8bb99e5d54a1e7b49c6a31b006f88738925d724))
+* **cd:** use dry-run check to prevent workflow failure when no release needed ([f1f8ac0](https://github.com/n24q02m/better-notion-mcp/commit/f1f8ac0c84e9edf31e9ff2523720790efe277357))
+
+
+### Features
+
+* promote dev to main (v2.3.14-beta.1) ([#23](https://github.com/n24q02m/better-notion-mcp/issues/23)) ([9292290](https://github.com/n24q02m/better-notion-mcp/commit/9292290726fd47e0ec0a6180edda41aecb80de4b)), closes [#11](https://github.com/n24q02m/better-notion-mcp/issues/11)
+* promote dev to main (v2.4.0-beta.2) ([#31](https://github.com/n24q02m/better-notion-mcp/issues/31)) ([76a845e](https://github.com/n24q02m/better-notion-mcp/commit/76a845eba4b39616fbf882c1f243c5cf451b09e7))
+
+# [2.4.0-beta.1](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.12...v2.4.0-beta.1) (2026-02-05)
+
+
+### Bug Fixes
+
+* **cd:** checkout main branch for PR merge release ([b8bb99e](https://github.com/n24q02m/better-notion-mcp/commit/b8bb99e5d54a1e7b49c6a31b006f88738925d724))
 
 
 ### Features
