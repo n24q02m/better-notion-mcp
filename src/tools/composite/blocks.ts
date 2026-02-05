@@ -12,6 +12,7 @@ export interface BlocksInput {
   action: 'get' | 'children' | 'append' | 'update' | 'delete'
   block_id: string
   content?: string // Markdown format
+  limit?: number // Max children to fetch (default: unlimited)
 }
 
 /**
@@ -38,20 +39,24 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
       }
 
       case 'children': {
-        const blocksList = await autoPaginate((cursor) =>
-          notion.blocks.children.list({
-            block_id: input.block_id,
-            start_cursor: cursor,
-            page_size: 100
-          })
+        const maxPages = input.limit ? Math.ceil(input.limit / 100) : 0
+        const blocksList = await autoPaginate(
+          (cursor) =>
+            notion.blocks.children.list({
+              block_id: input.block_id,
+              start_cursor: cursor,
+              page_size: 100
+            }),
+          { maxPages }
         )
-        const markdown = blocksToMarkdown(blocksList as any)
+        const finalBlocks = input.limit ? blocksList.slice(0, input.limit) : blocksList
+        const markdown = blocksToMarkdown(finalBlocks as any)
         return {
           action: 'children',
           block_id: input.block_id,
-          total_children: blocksList.length,
+          total_children: finalBlocks.length,
           markdown,
-          blocks: blocksList
+          blocks: finalBlocks
         }
       }
 
