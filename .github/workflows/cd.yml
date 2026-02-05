@@ -136,6 +136,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GH_PAT }}
+          ref: ${{ github.event_name == 'pull_request' && 'main' || github.ref }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
