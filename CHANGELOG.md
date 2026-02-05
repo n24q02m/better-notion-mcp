@@ -1,3 +1,10 @@
+# [2.4.0-beta.1](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.12...v2.4.0-beta.1) (2026-02-05)
+
+
+### Features
+
+* promote dev to main (v2.3.14-beta.1) ([#23](https://github.com/n24q02m/better-notion-mcp/issues/23)) ([9292290](https://github.com/n24q02m/better-notion-mcp/commit/9292290726fd47e0ec0a6180edda41aecb80de4b)), closes [#11](https://github.com/n24q02m/better-notion-mcp/issues/11)
+
 ## [2.3.13-beta.2](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.13-beta.1...v2.3.13-beta.2) (2026-02-05)
 
 
