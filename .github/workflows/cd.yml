@@ -155,6 +155,7 @@ jobs:
         run: pnpm build
 
       - name: Release
+        id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           GIT_AUTHOR_NAME: github-actions[bot]
@@ -163,18 +164,31 @@ jobs:
           GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm release
+        run: |
+          npx semantic-release --dry-run > release-output.txt 2>&1 || true
+          if grep -qE "Published release|Release notes for" release-output.txt; then
+            pnpm release
+          else
+            echo "No new commits to release"
+          fi
 
       - name: Check release status
         id: check
         run: |
+          git fetch --tags
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -n "$LATEST_TAG" ]; then
+          CURRENT_COMMIT=$(git rev-parse HEAD)
+          TAG_COMMIT=$(git rev-list -n 1 "$LATEST_TAG" 2>/dev/null || echo "")
+
+          if [ -n "$LATEST_TAG" ] && [ "$CURRENT_COMMIT" = "$TAG_COMMIT" ]; then
             echo "released=true" >> $GITHUB_OUTPUT
             echo "version=${LATEST_TAG#v}" >> $GITHUB_OUTPUT
+            echo "New release detected: $LATEST_TAG"
           else
             echo "released=false" >> $GITHUB_OUTPUT
+            echo "No new release"
           fi
+
 
   build-docker:
     name: Build Docker (${{ matrix.platform }})
