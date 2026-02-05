@@ -7,7 +7,7 @@ import type { Client } from '@notionhq/client'
 import { processBatches } from '../helpers/batch.js'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
-import { autoPaginate } from '../helpers/pagination.js'
+import { autoPaginate, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
 
@@ -305,15 +305,17 @@ async function archivePage(notion: Client, input: PagesInput): Promise<any> {
   }
 
   const archived = input.action === 'archive'
-  const results = []
-
-  for (const pageId of pageIds) {
-    await notion.pages.update({
-      page_id: pageId,
-      archived
-    })
-    results.push({ page_id: pageId, archived })
-  }
+  const results = await processBatches(
+    pageIds,
+    async (pageId) => {
+      await notion.pages.update({
+        page_id: pageId,
+        archived
+      })
+      return { page_id: pageId, archived }
+    },
+    { batchSize: 1, concurrency: 5 }
+  )
 
   return {
     action: input.action,
