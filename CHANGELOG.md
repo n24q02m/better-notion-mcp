@@ -1,3 +1,10 @@
+# [2.4.0-beta.2](https://github.com/n24q02m/better-notion-mcp/compare/v2.4.0-beta.1...v2.4.0-beta.2) (2026-02-05)
+
+
+### Bug Fixes
+
+* Use GITHUB_TOKEN instead of GH_PAT for GitHub Container Registry authentication and CI/CD status checks. ([a0fcbca](https://github.com/n24q02m/better-notion-mcp/commit/a0fcbcac922c3b8a850c3f735d0943dca8b8cc6b))
+
 # [2.4.0-beta.1](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.12...v2.4.0-beta.1) (2026-02-05)
 
 
