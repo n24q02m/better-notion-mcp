@@ -71,9 +71,9 @@ jobs:
           # Get latest release version from dev
           LATEST_TAG=$(git describe --tags --abbrev=0 origin/dev 2>/dev/null || echo "")
           if [ -z "$LATEST_TAG" ]; then
-            PR_TITLE="chore: promote dev to main"
+            PR_TITLE="feat: promote dev to main"
           else
-            PR_TITLE="chore: promote dev to main ($LATEST_TAG)"
+            PR_TITLE="feat: promote dev to main ($LATEST_TAG)"
           fi
 
           # Create PR
