@@ -245,21 +245,23 @@ async function queryDatabase(notion: Client, input: DatabasesInput): Promise<any
   if (input.sorts) queryParams.sorts = input.sorts
 
   // Fetch with pagination
-  const allResults = await autoPaginate(async (cursor) => {
-    const response: any = await (notion as any).dataSources.query({
-      ...queryParams,
-      start_cursor: cursor,
-      page_size: 100
-    })
-    return {
-      results: response.results,
-      next_cursor: response.next_cursor,
-      has_more: response.has_more
-    }
-  })
+  const allResults = await autoPaginate(
+    async (cursor, pageSize) => {
+      const response: any = await (notion as any).dataSources.query({
+        ...queryParams,
+        start_cursor: cursor,
+        page_size: pageSize || 100
+      })
+      return {
+        results: response.results,
+        next_cursor: response.next_cursor,
+        has_more: response.has_more
+      }
+    },
+    { limit: input.limit }
+  )
 
-  // Limit results if specified
-  const results = input.limit ? allResults.slice(0, input.limit) : allResults
+  const results = allResults
 
   // Format results
   const formattedResults = results.map((page: any) => {
