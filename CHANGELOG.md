@@ -8,6 +8,24 @@
 * **cd:** use dry-run check to prevent workflow failure when no release needed ([f1f8ac0](https://github.com/n24q02m/better-notion-mcp/commit/f1f8ac0c84e9edf31e9ff2523720790efe277357))
 * **cd:** use npx semantic-release directly to standardize with other repos ([09dd1be](https://github.com/n24q02m/better-notion-mcp/commit/09dd1be30eb218428fc138909dc98d2b52786177))
 * resolve biome lint errors and revert unsafe dry-run check ([0e1a8d9](https://github.com/n24q02m/better-notion-mcp/commit/0e1a8d9ba88a0b9518b7bd3fb601a9fe00ee0419))
+* trigger new release after manual tag bump ([185f940](https://github.com/n24q02m/better-notion-mcp/commit/185f940834f2092fba0f4824f7838f2ba1663a5c))
+
+
+### Features
+
+* promote dev to main (v2.3.14-beta.1) ([#23](https://github.com/n24q02m/better-notion-mcp/issues/23)) ([9292290](https://github.com/n24q02m/better-notion-mcp/commit/9292290726fd47e0ec0a6180edda41aecb80de4b)), closes [#11](https://github.com/n24q02m/better-notion-mcp/issues/11)
+* promote dev to main (v2.4.0-beta.2) ([#31](https://github.com/n24q02m/better-notion-mcp/issues/31)) ([76a845e](https://github.com/n24q02m/better-notion-mcp/commit/76a845eba4b39616fbf882c1f243c5cf451b09e7))
+
+# [2.4.0-beta.1](https://github.com/n24q02m/better-notion-mcp/compare/v2.3.12...v2.4.0-beta.1) (2026-02-05)
+
+
+### Bug Fixes
+
+* **cd:** checkout main branch for PR merge release ([b8bb99e](https://github.com/n24q02m/better-notion-mcp/commit/b8bb99e5d54a1e7b49c6a31b006f88738925d724))
+* **cd:** simplify release step - run semantic-release directly with || true ([6ff7e15](https://github.com/n24q02m/better-notion-mcp/commit/6ff7e155360093aad3f2dadfb7bdbf6a56f84ebc))
+* **cd:** use dry-run check to prevent workflow failure when no release needed ([f1f8ac0](https://github.com/n24q02m/better-notion-mcp/commit/f1f8ac0c84e9edf31e9ff2523720790efe277357))
+* **cd:** use npx semantic-release directly to standardize with other repos ([09dd1be](https://github.com/n24q02m/better-notion-mcp/commit/09dd1be30eb218428fc138909dc98d2b52786177))
+* resolve biome lint errors and revert unsafe dry-run check ([0e1a8d9](https://github.com/n24q02m/better-notion-mcp/commit/0e1a8d9ba88a0b9518b7bd3fb601a9fe00ee0419))
 
 
 ### Features
