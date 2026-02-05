@@ -3,6 +3,9 @@ name: CD
 on:
   push:
     branches: [dev, main]
+  pull_request:
+    types: [closed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       action:
@@ -91,9 +94,37 @@ jobs:
 
           ### Latest beta version: $LATEST_TAG"
 
+  restore-dev:
+    name: Restore Dev Branch
+    needs: [release]
+    if: |
+      (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Restore dev branch from main
+        run: |
+          if git ls-remote --exit-code --heads origin dev; then
+            echo "Dev branch already exists, skipping"
+            exit 0
+          fi
+
+          git checkout -b dev
+          git push origin dev
+          echo "✅ Dev branch restored from main"
+
   release:
     name: Semantic Release
-    if: github.event_name == 'push'
+    if: |
+      (github.event_name == 'push') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev')
     runs-on: ubuntu-latest
     outputs:
       released: ${{ steps.check.outputs.released }}
