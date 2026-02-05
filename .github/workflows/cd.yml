@@ -42,7 +42,7 @@ jobs:
 
       - name: Check CI/CD status on dev branch
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           chmod +x .github/scripts/check-ci-cd-status.sh
           ./.github/scripts/check-ci-cd-status.sh --branch=dev
@@ -90,6 +90,30 @@ jobs:
           - ✅ CD workflow passed on dev
 
           ### Latest beta version: $LATEST_TAG"
+
+  restore-dev:
+    name: Restore Dev Branch
+    needs: [release]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Restore dev branch from main
+        run: |
+          if git ls-remote --exit-code --heads origin dev; then
+            echo "Dev branch already exists, skipping"
+            exit 0
+          fi
+
+          git checkout -b dev
+          git push origin dev
+          echo "✅ Dev branch restored from main"
 
   release:
     name: Semantic Release
@@ -178,7 +202,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GH_PAT }}
 
       - name: Build and push by digest
         id: build
@@ -235,7 +259,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GH_PAT }}
 
       - name: Create and push manifest (stable)
         if: github.ref == 'refs/heads/main'
