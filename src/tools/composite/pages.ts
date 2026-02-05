@@ -4,6 +4,7 @@
  */
 
 import type { Client } from '@notionhq/client'
+import { processBatches } from '../helpers/batch.js'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate, processBatches } from '../helpers/pagination.js'
@@ -304,15 +305,17 @@ async function archivePage(notion: Client, input: PagesInput): Promise<any> {
   }
 
   const archived = input.action === 'archive'
-  const results = []
-
-  for (const pageId of pageIds) {
-    await notion.pages.update({
-      page_id: pageId,
-      archived
-    })
-    results.push({ page_id: pageId, archived })
-  }
+  const results = await processBatches(
+    pageIds,
+    async (pageId) => {
+      await notion.pages.update({
+        page_id: pageId,
+        archived
+      })
+      return { page_id: pageId, archived }
+    },
+    { batchSize: 1, concurrency: 5 }
+  )
 
   return {
     action: input.action,
@@ -336,9 +339,8 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<any> {
     throw new NotionMCPError('page_id or page_ids required', 'VALIDATION_ERROR', 'Provide at least one page ID')
   }
 
-  const results = []
-
-  for (const pageId of pageIds) {
+  // Process duplicates in batches to improve performance while respecting rate limits
+  const results = await processBatches(pageIds, 5, async (pageId) => {
     // Get original page
     const originalPage: any = await notion.pages.retrieve({ page_id: pageId })
 
@@ -367,12 +369,12 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<any> {
       })
     }
 
-    results.push({
+    return {
       original_id: pageId,
       duplicate_id: duplicatePage.id,
       url: duplicatePage.url
-    })
-  }
+    }
+  })
 
   return {
     action: 'duplicate',
