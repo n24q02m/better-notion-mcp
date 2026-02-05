@@ -19,23 +19,18 @@ export interface PagesInput {
 
   // Create/Update params
   title?: string
-  content?: string // Markdown
-  append_content?: string
-  prepend_content?: string
   parent_id?: string
   properties?: Record<string, any>
+  content?: string
+  append_content?: string
+  prepend_content?: string
   icon?: string
   cover?: string
-
-  // Archive/Restore params
   archived?: boolean
 }
 
-/**
- * Unified pages tool - handles all page operations
- */
-export async function pages(notion: Client, input: PagesInput): Promise<any> {
-  return withErrorHandling(async () => {
+export function pages(notion: Client, input: PagesInput) {
+  return withErrorHandling(async (input: PagesInput) => {
     switch (input.action) {
       case 'create':
         return await createPage(notion, input)
@@ -60,7 +55,7 @@ export async function pages(notion: Client, input: PagesInput): Promise<any> {
           'Supported actions: create, get, update, archive, restore, move, duplicate'
         )
     }
-  })()
+  })(input)
 }
 
 /**
@@ -230,17 +225,25 @@ async function updatePage(notion: Client, input: PagesInput): Promise<any> {
   if (input.content || input.append_content || input.prepend_content) {
     if (input.content) {
       // Replace all content
-      const existingBlocks = await autoPaginate((cursor) =>
-        notion.blocks.children.list({
+      const existingBlocks = await autoPaginate(async (cursor) => {
+        const blocks = await notion.blocks.children.list({
           block_id: input.page_id!,
           start_cursor: cursor,
           page_size: 100
         })
-      )
-
-      await processBatches(existingBlocks, async (block) => {
-        await notion.blocks.delete({ block_id: block.id })
+        return {
+          ...blocks,
+          results: blocks.results.map((b: any) => ({ id: b.id }))
+        }
       })
+
+      await processBatches(
+        existingBlocks,
+        async (block) => {
+          await notion.blocks.delete({ block_id: block.id })
+        },
+        { concurrency: 5 }
+      )
 
       const newBlocks = markdownToBlocks(input.content)
       if (newBlocks.length > 0) {
