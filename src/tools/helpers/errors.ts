@@ -26,6 +26,26 @@ export class NotionMCPError extends Error {
 }
 
 /**
+ * Sanitize error object to remove sensitive information
+ */
+function sanitizeErrorDetails(error: any): any {
+  if (!error || typeof error !== 'object') return error
+
+  // whitelist safe properties
+  const safe: any = {
+    message: error.message,
+    name: error.name,
+    code: error.code
+  }
+
+  // Add status if available (common in HTTP errors)
+  if (error.status) safe.status = error.status
+  if (error.response?.status) safe.status = error.response.status
+
+  return safe
+}
+
+/**
  * Enhance Notion API error with helpful context
  */
 export function enhanceError(error: any): NotionMCPError {
@@ -48,7 +68,7 @@ export function enhanceError(error: any): NotionMCPError {
     error.message || 'Unknown error occurred',
     'UNKNOWN_ERROR',
     'Please check your request and try again',
-    error
+    sanitizeErrorDetails(error)
   )
 }
 
@@ -59,14 +79,13 @@ function handleNotionError(error: any): NotionMCPError {
   const code = error.code
   const message = error.message || 'Unknown Notion API error'
 
-  // Log full error for debugging
+  // Log error code and message only to avoid leaking sensitive data
   console.error(
     'Notion API Error:',
     JSON.stringify(
       {
         code,
         message,
-        body: error.body,
         status: error.status
       },
       null,

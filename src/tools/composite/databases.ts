@@ -328,9 +328,7 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
     throw new NotionMCPError('pages or page_properties required', 'VALIDATION_ERROR', 'Provide items to create')
   }
 
-  const results = []
-
-  for (const item of items) {
+  const results = await processBatches(items, async (item) => {
     const properties = convertToNotionProperties(item.properties)
 
     const page = await notion.pages.create({
@@ -338,12 +336,12 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
       properties
     } as any)
 
-    results.push({
+    return {
       page_id: page.id,
       url: (page as any).url,
       created: true
-    })
-  }
+    }
+  })
 
   return {
     action: 'create_page',
