@@ -61,6 +61,8 @@
     }
   ],
   "packages": {
-    ".": {}
+    ".": {
+      "include-component-in-tag": false
+    }
   }
 }
