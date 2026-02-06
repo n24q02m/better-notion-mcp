@@ -119,6 +119,14 @@
 
 * promote dev to main (v2.3.14-beta.1) ([#23](https://github.com/n24q02m/better-notion-mcp/issues/23)) ([9292290](https://github.com/n24q02m/better-notion-mcp/commit/9292290726fd47e0ec0a6180edda41aecb80de4b)), closes [#11](https://github.com/n24q02m/better-notion-mcp/issues/11)
 
+## [3.0.1-beta](https://github.com/n24q02m/better-notion-mcp/compare/better-notion-mcp-v3.0.0...better-notion-mcp-v3.0.1-beta) (2026-02-06)
+
+
+### Bug Fixes
+
+* add .gitattributes for consistent line endings ([81c3565](https://github.com/n24q02m/better-notion-mcp/commit/81c3565849de1a6871264c5cf19305337a760c0f))
+* add prerelease versioning strategy to beta config ([03076b6](https://github.com/n24q02m/better-notion-mcp/commit/03076b605beb0f9e148c6686d63a785f48259e05))
+
 ## [3.0.0](https://github.com/n24q02m/better-notion-mcp/compare/better-notion-mcp-v2.4.0...better-notion-mcp-v3.0.0) (2026-02-06)
 
 
