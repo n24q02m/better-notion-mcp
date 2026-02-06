@@ -22,3 +22,19 @@ run = [
   "uv run pre-commit install",
   "echo 'Setup complete!'"
 ]
+
+[tasks.lint]
+description = "Run all quality checks (biome + tsc)"
+run = "pnpm check"
+
+[tasks.test]
+description = "Run tests"
+run = "pnpm test"
+
+[tasks.fix]
+description = "Auto-fix formatting and linting issues"
+run = "pnpm check:fix"
+
+[tasks.dev]
+description = "Run MCP server locally"
+run = "pnpm dev"

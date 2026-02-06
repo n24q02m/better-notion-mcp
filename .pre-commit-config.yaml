@@ -37,7 +37,6 @@ repos:
   # Common Checks
   # ============================================================================
 
-  # Check for trailing whitespace
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -45,33 +44,21 @@ repos:
         name: trim trailing whitespace
         exclude_types: [image]
 
-  # Check for files that would conflict in merge
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
-    hooks:
       - id: check-merge-conflict
         name: check for merge conflicts
 
-  # Check JSON files are valid
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
-    hooks:
       - id: check-json
         name: check JSON files
         types: [json]
 
-  # Check YAML files are valid
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
-    hooks:
       - id: check-yaml
         name: check YAML files
         types: [yaml]
 
-  # Ensure files end with newline
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
-    hooks:
+      - id: check-toml
+        name: check TOML files
+        types: [toml]
+
       - id: end-of-file-fixer
         name: fix end of files
         exclude_types: [image]

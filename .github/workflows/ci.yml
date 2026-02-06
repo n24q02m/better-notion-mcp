@@ -11,8 +11,8 @@ permissions:
   pull-requests: write
 
 jobs:
-  lint-and-check:
-    name: Lint, Type Check & Build
+  lint-and-test:
+    name: Lint, Test & Build
     runs-on: ubuntu-latest
 
     steps:
@@ -34,29 +34,23 @@ jobs:
       - name: Run Biome check
         run: pnpm check
 
+      - name: Run tests
+        run: pnpm test
+
       - name: Build project
         run: pnpm build
 
-      - name: Comment PR on success
-        if: success() && github.event_name == 'pull_request'
-        uses: actions/github-script@v8
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '✅ **CI Checks Passed**\n\n- Biome Check: ✓\n- Build: ✓\n\nReady for review!'
-            })
+  dependency-review:
+    name: Dependency Review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
 
-      - name: Comment PR on failure
-        if: failure() && github.event_name == 'pull_request'
-        uses: actions/github-script@v8
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
         with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '❌ **CI Checks Failed**\n\nPlease fix the issues:\n- Run `pnpm check` locally\n- Check the workflow logs for details'
-            })
+          fail-on-severity: moderate
+          comment-summary-in-pr: always
