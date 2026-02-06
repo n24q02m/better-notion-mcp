@@ -119,6 +119,14 @@
 
 * promote dev to main (v2.3.14-beta.1) ([#23](https://github.com/n24q02m/better-notion-mcp/issues/23)) ([9292290](https://github.com/n24q02m/better-notion-mcp/commit/9292290726fd47e0ec0a6180edda41aecb80de4b)), closes [#11](https://github.com/n24q02m/better-notion-mcp/issues/11)
 
+## [3.0.1-beta.1](https://github.com/n24q02m/better-notion-mcp/compare/v3.0.1-beta...v3.0.1-beta.1) (2026-02-06)
+
+
+### Bug Fixes
+
+* remove component prefix from release tags ([47d3b6e](https://github.com/n24q02m/better-notion-mcp/commit/47d3b6e0d2d0140510b3ed2672c8c191be51bc20))
+* trigger release-please re-evaluation after tag restoration ([d8496ac](https://github.com/n24q02m/better-notion-mcp/commit/d8496ac98f474d7d9524467f34ad0393360769a0))
+
 ## [3.0.1-beta](https://github.com/n24q02m/better-notion-mcp/compare/better-notion-mcp-v3.0.0...better-notion-mcp-v3.0.1-beta) (2026-02-06)
 
 
