@@ -20,7 +20,7 @@ repos:
         name: biome check
         entry: mise exec -- pnpm exec biome check --write
         language: system
-        types_or: [javascript, ts, json]
+        types_or: [javascript, ts, tsx, jsx, json, css]
         pass_filenames: true
 
   # TypeScript: Type checker
@@ -29,6 +29,16 @@ repos:
       - id: typescript-check
         name: typescript type check
         entry: mise exec -- pnpm exec tsc --noEmit
+        language: system
+        types: [ts]
+        pass_filenames: false
+
+  # Test: Run tests
+  - repo: local
+    hooks:
+      - id: test
+        name: test (TypeScript)
+        entry: mise exec -- pnpm test
         language: system
         types: [ts]
         pass_filenames: false
