@@ -119,6 +119,13 @@
 
 * promote dev to main (v2.3.14-beta.1) ([#23](https://github.com/n24q02m/better-notion-mcp/issues/23)) ([9292290](https://github.com/n24q02m/better-notion-mcp/commit/9292290726fd47e0ec0a6180edda41aecb80de4b)), closes [#11](https://github.com/n24q02m/better-notion-mcp/issues/11)
 
+## [3.1.0-beta.1](https://github.com/n24q02m/better-notion-mcp/compare/v3.0.1-beta.1...v3.1.0-beta.1) (2026-02-08)
+
+
+### Features
+
+* enhance pre-commit configuration with additional file types and testing hook ([b26f1f9](https://github.com/n24q02m/better-notion-mcp/commit/b26f1f9576dfeb1bc29931acc5dee436db1fa7b0))
+
 ## [3.0.1-beta.1](https://github.com/n24q02m/better-notion-mcp/compare/v3.0.1-beta...v3.0.1-beta.1) (2026-02-06)
 
 
