@@ -1,7 +1,14 @@
 {
   "name": "@n24q02m/better-notion-mcp",
-  "keywords": ["notion", "api", "mcp", "server", "ai-agent", "composite-tools"],
-  "version": "2.4.0-beta.2",
+  "keywords": [
+    "notion",
+    "api",
+    "mcp",
+    "server",
+    "ai-agent",
+    "composite-tools"
+  ],
+  "version": "3.1.0-beta.1",
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@9.15.4",
@@ -21,7 +28,6 @@
     "type-check": "tsc --noEmit",
     "check": "biome check . && pnpm type-check",
     "check:fix": "biome check --write . && pnpm type-check",
-    "release": "semantic-release",
     "prepublishOnly": "pnpm build",
     "docker:build": "docker build -t n24q02m/better-notion-mcp:latest .",
     "docker:push": "docker push n24q02m/better-notion-mcp:latest",
@@ -34,7 +40,12 @@
     "node": ">=24.0.0",
     "pnpm": ">=9.0.0"
   },
-  "files": ["build/", "bin/", "README.md", "LICENSE"],
+  "files": [
+    "build/",
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.21.1",
     "@notionhq/client": "^5.3.0",
@@ -42,17 +53,9 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.8",
-    "@semantic-release/changelog": "^6.0.3",
-    "@semantic-release/commit-analyzer": "^13.0.1",
-    "@semantic-release/exec": "^7.1.0",
-    "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^12.0.2",
-    "@semantic-release/npm": "^13.1.2",
-    "@semantic-release/release-notes-generator": "^14.1.0",
     "@types/node": "^24.10.0",
     "@vitest/coverage-v8": "^4.0.8",
     "esbuild": "^0.25.12",
-    "semantic-release": "^25.0.2",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^4.0.8"

@@ -3,9 +3,6 @@ name: CD
 on:
   push:
     branches: [dev, main]
-  pull_request:
-    types: [closed]
-    branches: [main]
   workflow_dispatch:
     inputs:
       action:
@@ -31,11 +28,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ============================================================
+  # Promote: Tạo PR từ dev -> main
+  # ============================================================
   promote:
     name: Promote to Stable
     if: github.event_name == 'workflow_dispatch' && inputs.action == 'promote-to-stable'
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -50,20 +49,10 @@ jobs:
           chmod +x .github/scripts/check-ci-cd-status.sh
           ./.github/scripts/check-ci-cd-status.sh --branch=dev
 
-      - name: Sync main into dev (resolve version conflicts)
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout dev
-          git fetch origin main
-          git merge origin/main --no-edit -X ours || true
-          git push origin dev
-
       - name: Create PR to promote dev to main
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          # Check if PR already exists
           EXISTING_PR=$(gh pr list --base main --head dev --json number --jq '.[0].number')
           if [ -n "$EXISTING_PR" ]; then
             echo "PR #$EXISTING_PR already exists for dev -> main"
@@ -71,7 +60,6 @@ jobs:
             exit 0
           fi
 
-          # Get latest release version from dev
           LATEST_TAG=$(git describe --tags --abbrev=0 origin/dev 2>/dev/null || echo "")
           if [ -z "$LATEST_TAG" ]; then
             PR_TITLE="feat: promote dev to main"
@@ -79,7 +67,6 @@ jobs:
             PR_TITLE="feat: promote dev to main ($LATEST_TAG)"
           fi
 
-          # Create PR
           gh pr create \
             --base main \
             --head dev \
@@ -89,53 +76,63 @@ jobs:
           This PR promotes the latest changes from \`dev\` branch to \`main\`.
 
           ### Pre-checks passed:
-          - ✅ CI workflow passed on dev
-          - ✅ CD workflow passed on dev
+          - CI workflow passed on dev
+          - CD workflow passed on dev
 
           ### Latest beta version: $LATEST_TAG"
 
-  restore-dev:
-    name: Restore Dev Branch
-    needs: [release]
-    if: |
-      (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout main
-        uses: actions/checkout@v6
-        with:
-          ref: main
-          fetch-depth: 0
-          token: ${{ secrets.GH_PAT }}
-
-      - name: Restore dev branch from main
-        run: |
-          if git ls-remote --exit-code --heads origin dev; then
-            echo "Dev branch already exists, skipping"
-            exit 0
-          fi
-
-          git checkout -b dev
-          git push origin dev
-          echo "✅ Dev branch restored from main"
-
-  release:
-    name: Semantic Release
-    if: |
-      (github.event_name == 'push') ||
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev')
+  # ============================================================
+  # Release: release-please tạo Release PR + GitHub Release
+  # ============================================================
+  release-beta:
+    name: Release (Beta)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     outputs:
-      released: ${{ steps.check.outputs.released }}
-      version: ${{ steps.check.outputs.version }}
+      released: ${{ steps.release.outputs.release_created }}
+      version: ${{ steps.release.outputs.version }}
+      tag: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          token: ${{ secrets.GH_PAT }}
+          config-file: release-please-config-beta.json
+          manifest-file: .release-please-manifest.json
+          target-branch: dev
 
+  release-stable:
+    name: Release (Stable)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      released: ${{ steps.release.outputs.release_created }}
+      version: ${{ steps.release.outputs.version }}
+      tag: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          token: ${{ secrets.GH_PAT }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          target-branch: main
+
+  # ============================================================
+  # Publish: npm
+  # ============================================================
+  publish-npm:
+    name: Publish to npm
+    needs: [release-beta, release-stable]
+    if: |
+      always() && !cancelled() &&
+      (needs.release-beta.outputs.released == 'true' || needs.release-stable.outputs.released == 'true')
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
-          token: ${{ secrets.GH_PAT }}
+          ref: ${{ github.ref }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -153,32 +150,27 @@ jobs:
       - name: Build project
         run: pnpm build
 
-      - name: Release
+      - name: Publish (stable)
+        if: github.ref == 'refs/heads/main'
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-          GIT_AUTHOR_NAME: github-actions[bot]
-          GIT_AUTHOR_EMAIL: github-actions[bot]@users.noreply.github.com
-          GIT_COMMITTER_NAME: github-actions[bot]
-          GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm release
+        run: pnpm publish --no-git-checks
 
-      - name: Check release status
-        id: check
-        run: |
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -n "$LATEST_TAG" ]; then
-            echo "released=true" >> $GITHUB_OUTPUT
-            echo "version=${LATEST_TAG#v}" >> $GITHUB_OUTPUT
-          else
-            echo "released=false" >> $GITHUB_OUTPUT
-          fi
+      - name: Publish (beta)
+        if: github.ref == 'refs/heads/dev'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm publish --no-git-checks --tag beta
 
+  # ============================================================
+  # Docker: Build multi-arch images
+  # ============================================================
   build-docker:
     name: Build Docker (${{ matrix.platform }})
-    needs: release
-    if: needs.release.outputs.released == 'true'
+    needs: [release-beta, release-stable]
+    if: |
+      always() && !cancelled() &&
+      (needs.release-beta.outputs.released == 'true' || needs.release-stable.outputs.released == 'true')
     strategy:
       fail-fast: false
       matrix:
@@ -190,7 +182,6 @@ jobs:
             runner: ubuntu-24.04-arm
             artifact: linux-arm64
     runs-on: ${{ matrix.runner }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -238,12 +229,17 @@ jobs:
           path: ${{ runner.temp }}/digests/*
           retention-days: 1
 
+  # ============================================================
+  # Docker: Merge manifests
+  # ============================================================
   merge-docker:
     name: Merge Docker Manifests
-    needs: [release, build-docker]
-    if: needs.release.outputs.released == 'true'
+    needs: [release-beta, release-stable, build-docker]
+    if: |
+      always() && !cancelled() &&
+      (needs.release-beta.outputs.released == 'true' || needs.release-stable.outputs.released == 'true') &&
+      needs.build-docker.result == 'success'
     runs-on: ubuntu-latest
-
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
@@ -272,12 +268,11 @@ jobs:
         if: github.ref == 'refs/heads/main'
         working-directory: ${{ runner.temp }}/digests
         env:
-          VERSION: ${{ needs.release.outputs.version }}
+          VERSION: ${{ needs.release-stable.outputs.version }}
         run: |
           MAJOR_MINOR=$(echo "$VERSION" | cut -d. -f1,2)
           MAJOR=$(echo "$VERSION" | cut -d. -f1)
 
-          # Prepare sources
           SOURCES_DOCKERHUB=""
           SOURCES_GHCR=""
           for digest in *; do
@@ -285,7 +280,6 @@ jobs:
             SOURCES_GHCR="$SOURCES_GHCR ${{ env.GHCR_IMAGE }}@sha256:$digest"
           done
 
-          # Create manifests for Docker Hub
           docker buildx imagetools create \
             -t ${{ env.DOCKERHUB_IMAGE }}:latest \
             -t ${{ env.DOCKERHUB_IMAGE }}:$VERSION \
@@ -293,7 +287,6 @@ jobs:
             -t ${{ env.DOCKERHUB_IMAGE }}:$MAJOR \
             $SOURCES_DOCKERHUB
 
-          # Create manifests for GHCR
           docker buildx imagetools create \
             -t ${{ env.GHCR_IMAGE }}:latest \
             -t ${{ env.GHCR_IMAGE }}:$VERSION \
@@ -305,11 +298,10 @@ jobs:
         if: github.ref == 'refs/heads/dev'
         working-directory: ${{ runner.temp }}/digests
         env:
-          VERSION: ${{ needs.release.outputs.version }}
+          VERSION: ${{ needs.release-beta.outputs.version }}
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
 
-          # Prepare sources
           SOURCES_DOCKERHUB=""
           SOURCES_GHCR=""
           for digest in *; do
@@ -317,14 +309,12 @@ jobs:
             SOURCES_GHCR="$SOURCES_GHCR ${{ env.GHCR_IMAGE }}@sha256:$digest"
           done
 
-          # Create manifests for Docker Hub
           docker buildx imagetools create \
             -t ${{ env.DOCKERHUB_IMAGE }}:beta \
             -t ${{ env.DOCKERHUB_IMAGE }}:$VERSION \
             -t ${{ env.DOCKERHUB_IMAGE }}:beta-$SHORT_SHA \
             $SOURCES_DOCKERHUB
 
-          # Create manifests for GHCR
           docker buildx imagetools create \
             -t ${{ env.GHCR_IMAGE }}:beta \
             -t ${{ env.GHCR_IMAGE }}:$VERSION \
@@ -344,3 +334,28 @@ jobs:
           repository: ${{ secrets.DOCKERHUB_USERNAME }}/better-notion-mcp
           short-description: ${{ github.event.repository.description }}
           readme-filepath: ./README.md
+
+  # ============================================================
+  # Sync: Tái tạo dev branch từ main sau stable release
+  # ============================================================
+  sync-dev:
+    name: Sync Dev from Main
+    needs: [release-stable, merge-docker]
+    if: |
+      always() && !cancelled() &&
+      needs.release-stable.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Recreate dev branch from main
+        run: |
+          git push origin --delete dev || true
+          git checkout -b dev
+          git push origin dev
+          echo "Dev branch recreated from main"

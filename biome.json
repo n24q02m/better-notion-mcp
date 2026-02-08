@@ -20,7 +20,16 @@
     "bracketSpacing": true,
     "expand": "auto",
     "useEditorconfig": true,
-    "includes": ["**", "!**/node_modules", "!**/build", "!**/dist", "!**/coverage", "!**/*.log", "!**/.env"]
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/build",
+      "!**/dist",
+      "!**/coverage",
+      "!**/*.log",
+      "!**/.env",
+      "!package.json"
+    ]
   },
   "linter": {
     "enabled": true,
