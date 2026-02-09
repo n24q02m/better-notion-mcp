@@ -119,6 +119,18 @@
 
 * promote dev to main (v2.3.14-beta.1) ([#23](https://github.com/n24q02m/better-notion-mcp/issues/23)) ([9292290](https://github.com/n24q02m/better-notion-mcp/commit/9292290726fd47e0ec0a6180edda41aecb80de4b)), closes [#11](https://github.com/n24q02m/better-notion-mcp/issues/11)
 
+## [2.5.0](https://github.com/n24q02m/better-notion-mcp/compare/v2.4.0...v2.5.0) (2026-02-09)
+
+
+### Features
+
+* promote dev to main (v2.4.1-beta) ([#44](https://github.com/n24q02m/better-notion-mcp/issues/44)) ([a4b7d96](https://github.com/n24q02m/better-notion-mcp/commit/a4b7d96e5fc74bb38dd192046b34427ba19ff7e1))
+
+
+### Bug Fixes
+
+* **release:** reset manifest to stable version ([60f67a1](https://github.com/n24q02m/better-notion-mcp/commit/60f67a100aaa16e9560c7d374aa57096a844a77c))
+
 ## [2.4.1-beta](https://github.com/n24q02m/better-notion-mcp/compare/v2.4.0...v2.4.1-beta) (2026-02-09)
 
 
