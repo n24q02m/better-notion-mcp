@@ -64,5 +64,6 @@
     ".": {
       "include-component-in-tag": false
     }
-  }
+  },
+  "prerelease": false
 }
