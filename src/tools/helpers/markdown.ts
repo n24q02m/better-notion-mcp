@@ -131,7 +131,7 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         lines.push(`1. ${richTextToMarkdown(block.numbered_list_item.rich_text)}`)
         break
       case 'code':
-        lines.push(`\`\`\`${block.code.language || ''}`)
+        lines.push('```' + (block.code.language || ''))
         lines.push(richTextToMarkdown(block.code.rich_text))
         lines.push('```')
         break
@@ -160,6 +160,7 @@ export function parseRichText(text: string): RichText[] {
   let italic = false
   let code = false
   let strikethrough = false
+  let nextLinkCheck = 0
 
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
@@ -167,34 +168,53 @@ export function parseRichText(text: string): RichText[] {
 
     // Link [text](url)
     if (char === '[') {
-      const closeBracket = text.indexOf(']', i)
-      const openParen = closeBracket !== -1 ? text.indexOf('(', closeBracket) : -1
-      const closeParen = openParen !== -1 ? text.indexOf(')', openParen) : -1
+      if (i >= nextLinkCheck) {
+        const closeBracket = text.indexOf(']', i)
 
-      if (closeBracket !== -1 && openParen === closeBracket + 1 && closeParen !== -1) {
-        if (current) {
-          richText.push(createRichText(current, { bold, italic, code, strikethrough }))
-          current = ''
-        }
+        if (closeBracket === -1) {
+          nextLinkCheck = text.length
+        } else {
+          // Check if followed by (
+          const openParen = closeBracket + 1 < text.length && text[closeBracket + 1] === '(' ? closeBracket + 1 : -1
 
-        const linkText = text.slice(i + 1, closeBracket)
-        const linkUrl = text.slice(openParen + 1, closeParen)
+          if (openParen !== -1) {
+            const closeParen = text.indexOf(')', openParen)
 
-        richText.push({
-          type: 'text',
-          text: { content: linkText, link: { url: linkUrl } },
-          annotations: {
-            bold,
-            italic,
-            strikethrough,
-            underline: false,
-            code,
-            color: 'default'
+            if (closeParen !== -1) {
+              // Valid link
+              if (current) {
+                richText.push(createRichText(current, { bold, italic, code, strikethrough }))
+                current = ''
+              }
+
+              const linkText = text.slice(i + 1, closeBracket)
+              const linkUrl = text.slice(openParen + 1, closeParen)
+
+              richText.push({
+                type: 'text',
+                text: { content: linkText, link: { url: linkUrl } },
+                annotations: {
+                  bold,
+                  italic,
+                  strikethrough,
+                  underline: false,
+                  code,
+                  color: 'default'
+                }
+              })
+
+              i = closeParen
+              nextLinkCheck = i + 1
+              continue
+            } else {
+              // No closing paren, so no links possible
+              nextLinkCheck = text.length
+            }
+          } else {
+            // ] found but not followed by (, so skip until that ]
+            nextLinkCheck = closeBracket
           }
-        })
-
-        i = closeParen
-        continue
+        }
       }
     }
 
@@ -262,7 +282,7 @@ function richTextToMarkdown(richText: RichText[]): string {
 
       if (annotations.bold) text = `**${text}**`
       if (annotations.italic) text = `*${text}*`
-      if (annotations.code) text = `\`${text}\``
+      if (annotations.code) text = '`' + text + '`'
       if (annotations.strikethrough) text = `~~${text}~~`
       if (rt.text.link) text = `[${text}](${rt.text.link.url})`
       return text
