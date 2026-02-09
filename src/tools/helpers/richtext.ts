@@ -161,7 +161,7 @@ export function splitText(content: string, maxLength: number = 2000): RichTextIt
 /**
  * Merge multiple rich text items
  */
-export function mergeRichText(...items: RichTextItem[]): RichTextItem[] {
+export function mergeRichText(...items: (RichTextItem | RichTextItem[])[]): RichTextItem[] {
   return items.flat()
 }
 
