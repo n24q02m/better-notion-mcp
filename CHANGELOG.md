@@ -119,6 +119,13 @@
 
 * promote dev to main (v2.3.14-beta.1) ([#23](https://github.com/n24q02m/better-notion-mcp/issues/23)) ([9292290](https://github.com/n24q02m/better-notion-mcp/commit/9292290726fd47e0ec0a6180edda41aecb80de4b)), closes [#11](https://github.com/n24q02m/better-notion-mcp/issues/11)
 
+## [2.5.1-beta](https://github.com/n24q02m/better-notion-mcp/compare/v2.5.0...v2.5.1-beta) (2026-02-09)
+
+
+### Bug Fixes
+
+* format manifest file for biome ([d230282](https://github.com/n24q02m/better-notion-mcp/commit/d230282eea9b9b5f14163793e2b531953b42b909))
+
 ## [2.5.0](https://github.com/n24q02m/better-notion-mcp/compare/v2.4.0...v2.5.0) (2026-02-09)
 
 
