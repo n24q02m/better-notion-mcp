@@ -119,6 +119,13 @@
 
 * promote dev to main (v2.3.14-beta.1) ([#23](https://github.com/n24q02m/better-notion-mcp/issues/23)) ([9292290](https://github.com/n24q02m/better-notion-mcp/commit/9292290726fd47e0ec0a6180edda41aecb80de4b)), closes [#11](https://github.com/n24q02m/better-notion-mcp/issues/11)
 
+## [2.5.2-beta](https://github.com/n24q02m/better-notion-mcp/compare/v2.5.1...v2.5.2-beta) (2026-02-12)
+
+
+### Bug Fixes
+
+* **cd:** add git config identity for sync-dev step ([d70a0db](https://github.com/n24q02m/better-notion-mcp/commit/d70a0dbf0c8d71b443f5a9683a881ec81492ef2d))
+
 ## [2.5.1](https://github.com/n24q02m/better-notion-mcp/compare/v2.5.0...v2.5.1) (2026-02-09)
 
 
