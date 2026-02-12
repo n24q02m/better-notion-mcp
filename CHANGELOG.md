@@ -119,6 +119,18 @@
 
 * promote dev to main (v2.3.14-beta.1) ([#23](https://github.com/n24q02m/better-notion-mcp/issues/23)) ([9292290](https://github.com/n24q02m/better-notion-mcp/commit/9292290726fd47e0ec0a6180edda41aecb80de4b)), closes [#11](https://github.com/n24q02m/better-notion-mcp/issues/11)
 
+## [2.5.3](https://github.com/n24q02m/better-notion-mcp/compare/v2.5.2...v2.5.3) (2026-02-12)
+
+
+### Bug Fixes
+
+* **cd:** auto-resolve merge conflicts in promote workflow ([5f0f832](https://github.com/n24q02m/better-notion-mcp/commit/5f0f83218c355f11943903b0e23d781761d37eff))
+
+
+### Documentation
+
+* add CODEOWNERS ([8cd87ee](https://github.com/n24q02m/better-notion-mcp/commit/8cd87eec07589ee643e34a1561dca6270ae14368))
+
 ## [2.5.2](https://github.com/n24q02m/better-notion-mcp/compare/v2.5.1...v2.5.2) (2026-02-12)
 
 
