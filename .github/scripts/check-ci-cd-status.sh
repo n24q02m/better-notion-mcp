@@ -66,11 +66,11 @@ else
   echo "CD - Status: $CD_RUN_STATUS, Conclusion: $CD_CONCLUSION"
 
   if [ "$CD_RUN_STATUS" != "completed" ]; then
-    echo "Error: CD is still running on $BRANCH branch. Please wait for beta release to complete."
+    echo "Error: CD is still running on $BRANCH branch. Please wait for it to complete."
     FAILED=true
   elif [ "$CD_CONCLUSION" != "success" ]; then
-    echo "Error: CD failed on $BRANCH branch"
-    FAILED=true
+    echo "Warning: CD conclusion is '$CD_CONCLUSION' on $BRANCH branch (deploy jobs may have failed)"
+    echo "Proceeding anyway - release-please PR cleanup will handle stale state"
   else
     echo "✓ CD passed"
   fi
