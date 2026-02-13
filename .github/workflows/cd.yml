@@ -49,6 +49,13 @@ jobs:
           chmod +x .github/scripts/check-ci-cd-status.sh
           ./.github/scripts/check-ci-cd-status.sh --branch=dev
 
+      - name: Cleanup stale release PRs on main
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          chmod +x .github/scripts/cleanup-release-prs.sh
+          ./.github/scripts/cleanup-release-prs.sh --branch=main
+
       - name: Merge and create promote PR
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
@@ -56,14 +63,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           PROMOTE_BRANCH="promote/dev-to-main"
-
-          # Close stale release-please PRs on main
-          STALE_PRS=$(gh pr list --base main --label "autorelease: pending" --json number --jq '.[].number')
-          for pr in $STALE_PRS; do
-            echo "Closing stale release PR #$pr"
-            gh pr close "$pr" --comment "Closed by promote workflow."
-          done
-          git push origin --delete release-please--branches--main 2>/dev/null || true
 
           # Close any existing promote PRs
           OLD_PRS=$(gh pr list --base main --head "$PROMOTE_BRANCH" --json number --jq '.[].number')
@@ -377,6 +376,14 @@ jobs:
           ref: main
           fetch-depth: 0
           token: ${{ secrets.GH_PAT }}
+
+      - name: Cleanup stale release PRs
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          chmod +x .github/scripts/cleanup-release-prs.sh
+          ./.github/scripts/cleanup-release-prs.sh --branch=dev
+          ./.github/scripts/cleanup-release-prs.sh --branch=main
 
       - name: Sync beta manifest and recreate dev
         run: |
