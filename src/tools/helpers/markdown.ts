@@ -155,7 +155,7 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
  */
 export function parseRichText(text: string): RichText[] {
   const richText: RichText[] = []
-  let current = ''
+  let startIndex = 0
   let bold = false
   let italic = false
   let code = false
@@ -172,9 +172,8 @@ export function parseRichText(text: string): RichText[] {
       const closeParen = openParen !== -1 ? text.indexOf(')', openParen) : -1
 
       if (closeBracket !== -1 && openParen === closeBracket + 1 && closeParen !== -1) {
-        if (current) {
-          richText.push(createRichText(current, { bold, italic, code, strikethrough }))
-          current = ''
+        if (i > startIndex) {
+          richText.push(createRichText(text.slice(startIndex, i), { bold, italic, code, strikethrough }))
         }
 
         const linkText = text.slice(i + 1, closeBracket)
@@ -194,54 +193,49 @@ export function parseRichText(text: string): RichText[] {
         })
 
         i = closeParen
+        startIndex = i + 1
         continue
       }
     }
 
     // Bold **text**
     if (char === '*' && next === '*') {
-      if (current) {
-        richText.push(createRichText(current, { bold, italic, code, strikethrough }))
-        current = ''
+      if (i > startIndex) {
+        richText.push(createRichText(text.slice(startIndex, i), { bold, italic, code, strikethrough }))
       }
       bold = !bold
       i++ // Skip next *
-      continue
+      startIndex = i + 1
     }
     // Italic *text*
     else if (char === '*' && next !== '*') {
-      if (current) {
-        richText.push(createRichText(current, { bold, italic, code, strikethrough }))
-        current = ''
+      if (i > startIndex) {
+        richText.push(createRichText(text.slice(startIndex, i), { bold, italic, code, strikethrough }))
       }
       italic = !italic
-      continue
+      startIndex = i + 1
     }
     // Code `text`
     else if (char === '`') {
-      if (current) {
-        richText.push(createRichText(current, { bold, italic, code, strikethrough }))
-        current = ''
+      if (i > startIndex) {
+        richText.push(createRichText(text.slice(startIndex, i), { bold, italic, code, strikethrough }))
       }
       code = !code
-      continue
+      startIndex = i + 1
     }
     // Strikethrough ~~text~~
     else if (char === '~' && next === '~') {
-      if (current) {
-        richText.push(createRichText(current, { bold, italic, code, strikethrough }))
-        current = ''
+      if (i > startIndex) {
+        richText.push(createRichText(text.slice(startIndex, i), { bold, italic, code, strikethrough }))
       }
       strikethrough = !strikethrough
       i++ // Skip next ~
-      continue
+      startIndex = i + 1
     }
-
-    current += char
   }
 
-  if (current) {
-    richText.push(createRichText(current, { bold, italic, code, strikethrough }))
+  if (startIndex < text.length) {
+    richText.push(createRichText(text.slice(startIndex), { bold, italic, code, strikethrough }))
   }
 
   return richText.length > 0 ? richText : [createRichText(text)]
