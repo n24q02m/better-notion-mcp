@@ -27,6 +27,10 @@ export interface RichText {
   href?: string | null
 }
 
+const BULLET_LIST_REGEX = /^[-*]\s/
+const NUMBERED_LIST_REGEX = /^\d+\.\s/
+const DIVIDER_REGEX = /^[-*]{3,}$/
+
 /**
  * Convert markdown string to Notion blocks
  */
@@ -71,14 +75,14 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
       blocks.push(createCodeBlock(codeLines.join('\n'), language))
     }
     // Bulleted list
-    else if (line.match(/^[-*]\s/)) {
+    else if (line.match(BULLET_LIST_REGEX)) {
       const text = line.slice(2)
       currentListType = 'bulleted'
       currentList.push(createBulletedListItem(text))
     }
     // Numbered list
-    else if (line.match(/^\d+\.\s/)) {
-      const text = line.replace(/^\d+\.\s/, '')
+    else if (line.match(NUMBERED_LIST_REGEX)) {
+      const text = line.replace(NUMBERED_LIST_REGEX, '')
       currentListType = 'numbered'
       currentList.push(createNumberedListItem(text))
     }
@@ -87,7 +91,7 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
       blocks.push(createQuote(line.slice(2)))
     }
     // Divider
-    else if (line.match(/^[-*]{3,}$/)) {
+    else if (line.match(DIVIDER_REGEX)) {
       blocks.push(createDivider())
     }
     // Regular paragraph
@@ -372,5 +376,5 @@ function createDivider(): NotionBlock {
 }
 
 function isListItem(line: string): boolean {
-  return line.match(/^[-*]\s/) !== null || line.match(/^\d+\.\s/) !== null
+  return line.match(BULLET_LIST_REGEX) !== null || line.match(NUMBERED_LIST_REGEX) !== null
 }
