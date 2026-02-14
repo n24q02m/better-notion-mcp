@@ -126,14 +126,13 @@ It is mandatory to use correct commit types so the release system knows how to b
 1. Just create a Pull Request with your changes.
 2. Ensure your commit messages follow the convention above (enforced by `commitlint`).
 3. Merge the PR to `main`.
-4. The CI pipeline will automatically:
-   - Analyze the new commits.
-   - Determine the next version number.
-   - Generate release notes.
-   - Update `CHANGELOG.md`.
-   - Publish to npm.
-   - Create a GitHub Release.
-   - Build and push Docker images.
+4. A maintainer triggers the CD workflow manually via **workflow_dispatch**:
+   - Choose `beta` or `stable` release type.
+   - PSR analyzes commits since the last release.
+   - Bumps version, updates `CHANGELOG.md`, creates a tag.
+   - Publishes to npm.
+   - Creates a GitHub Release.
+   - Builds and pushes Docker images.
 
 You do **not** need to create manual tags or changelog entries.
 
