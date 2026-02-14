@@ -119,6 +119,13 @@
 
 * promote dev to main (v2.3.14-beta.1) ([#23](https://github.com/n24q02m/better-notion-mcp/issues/23)) ([9292290](https://github.com/n24q02m/better-notion-mcp/commit/9292290726fd47e0ec0a6180edda41aecb80de4b)), closes [#11](https://github.com/n24q02m/better-notion-mcp/issues/11)
 
+## [2.5.4-beta.1](https://github.com/n24q02m/better-notion-mcp/compare/v2.5.4-beta...v2.5.4-beta.1) (2026-02-14)
+
+
+### Bug Fixes
+
+* **cd:** make scripts executable and clean working tree before promote merge ([99e0656](https://github.com/n24q02m/better-notion-mcp/commit/99e065687dc63590b855f8380b4f6e38e7582d06))
+
 ## [2.5.4-beta](https://github.com/n24q02m/better-notion-mcp/compare/v2.5.3...v2.5.4-beta) (2026-02-14)
 
 
