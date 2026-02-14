@@ -119,6 +119,14 @@
 
 * promote dev to main (v2.3.14-beta.1) ([#23](https://github.com/n24q02m/better-notion-mcp/issues/23)) ([9292290](https://github.com/n24q02m/better-notion-mcp/commit/9292290726fd47e0ec0a6180edda41aecb80de4b)), closes [#11](https://github.com/n24q02m/better-notion-mcp/issues/11)
 
+## [2.5.4-beta](https://github.com/n24q02m/better-notion-mcp/compare/v2.5.3...v2.5.4-beta) (2026-02-14)
+
+
+### Bug Fixes
+
+* **ci:** exclude release-please manifests from Biome formatter ([9715039](https://github.com/n24q02m/better-notion-mcp/commit/97150391ba5a6d3369a403d363dc0ab288bf770d))
+* remove unnecessary corepack from runtime, upgrade artifact actions v4 to v6/v7 ([b737476](https://github.com/n24q02m/better-notion-mcp/commit/b737476f85d177a69b3fa430cd4558653d5fe921))
+
 ## [2.5.3](https://github.com/n24q02m/better-notion-mcp/compare/v2.5.2...v2.5.3) (2026-02-13)
 
 
