@@ -1,5 +1,5 @@
 {
-  "name": "Development Ruleset",
+  "name": "Main Ruleset",
   "target": "branch",
   "source_type": "Repository",
   "source": "n24q02m/better-notion-mcp",
@@ -7,7 +7,7 @@
   "conditions": {
     "ref_name": {
       "exclude": [],
-      "include": ["refs/heads/dev"]
+      "include": ["~DEFAULT_BRANCH"]
     }
   },
   "rules": [
@@ -23,13 +23,34 @@
     {
       "type": "pull_request",
       "parameters": {
-        "required_approving_review_count": 0,
+        "required_approving_review_count": 1,
         "dismiss_stale_reviews_on_push": true,
         "required_reviewers": [],
         "require_code_owner_review": true,
         "require_last_push_approval": false,
         "required_review_thread_resolution": false,
         "allowed_merge_methods": ["squash"]
+      }
+    },
+    {
+      "type": "update"
+    },
+    {
+      "type": "code_quality",
+      "parameters": {
+        "severity": "errors"
+      }
+    },
+    {
+      "type": "code_scanning",
+      "parameters": {
+        "code_scanning_tools": [
+          {
+            "tool": "CodeQL",
+            "security_alerts_threshold": "high_or_higher",
+            "alerts_threshold": "errors"
+          }
+        ]
       }
     }
   ],

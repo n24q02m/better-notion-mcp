@@ -1,199 +1,94 @@
 name: CD
 
 on:
-  push:
-    branches: [dev, main]
   workflow_dispatch:
     inputs:
-      action:
-        description: "Select action"
+      release_type:
+        description: "Release type"
         required: true
-        default: "promote-to-stable"
         type: choice
         options:
-          - promote-to-stable
+          - beta
+          - stable
 
 permissions:
   contents: write
   packages: write
-  id-token: write
-  pull-requests: write
 
 env:
   DOCKERHUB_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/better-notion-mcp
   GHCR_IMAGE: ghcr.io/${{ github.repository }}
 
 concurrency:
-  group: cd-${{ github.repository }}
+  group: release
   cancel-in-progress: false
 
 jobs:
-  # ============================================================
-  # Promote: Tạo PR từ dev -> main
-  # ============================================================
-  promote:
-    name: Promote to Stable
-    if: github.event_name == 'workflow_dispatch' && inputs.action == 'promote-to-stable'
+  # ============================================================================
+  # Release: PSR phân tích commits → bump version → CHANGELOG → tag → Release
+  # ============================================================================
+  release:
+    name: Semantic Release
     runs-on: ubuntu-latest
+    outputs:
+      released: ${{ steps.release.outputs.released }}
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+      is_prerelease: ${{ steps.release.outputs.is_prerelease }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
+          token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
-          token: ${{ secrets.GH_PAT }}
 
-      - name: Check CI/CD status on dev branch
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./.github/scripts/check-ci-cd-status.sh --branch=dev
-
-      - name: Cleanup stale release PRs on main
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-        run: ./.github/scripts/cleanup-release-prs.sh --branch=main
-
-      - name: Merge and create promote PR
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          PROMOTE_BRANCH="promote/dev-to-main"
-
-          # Close any existing promote PRs
-          OLD_PRS=$(gh pr list --base main --head "$PROMOTE_BRANCH" --json number --jq '.[].number')
-          for pr in $OLD_PRS; do
-            echo "Closing old promote PR #$pr"
-            gh pr close "$pr"
-          done
-
-          # Save main's release-please manifest
-          MAIN_MANIFEST=$(cat .release-please-manifest.json)
-
-          # Discard any working tree modifications before branch switch
-          git checkout -- .
-
-          # Create promote branch from main, merge dev (auto-resolve conflicts)
-          git checkout -B "$PROMOTE_BRANCH" origin/main
-          git merge origin/dev -X theirs --no-edit \
-            -m "feat: promote dev to main"
-
-          # Restore main's manifest (release-please needs stable baseline)
-          echo "$MAIN_MANIFEST" > .release-please-manifest.json
-          git add .release-please-manifest.json
-          git diff --staged --quiet || \
-            git commit -m "chore: preserve stable release-please manifest"
-
-          git push origin "$PROMOTE_BRANCH" --force
-
-          # Create PR
-          LATEST_TAG=$(git describe --tags --abbrev=0 origin/dev 2>/dev/null || echo "")
-          PR_TITLE="feat: promote dev to main${LATEST_TAG:+ ($LATEST_TAG)}"
-
-          gh pr create \
-            --base main \
-            --head "$PROMOTE_BRANCH" \
-            --title "$PR_TITLE" \
-            --body "## Promote dev to main
-
-          Automated merge of \`dev\` into \`main\` with conflicts auto-resolved.
-
-          ### Pre-checks passed:
-          - CI workflow passed on dev
-          - CD workflow passed on dev
-
-          ### Latest beta version: ${LATEST_TAG:-N/A}"
-
-  # ============================================================
-  # Release: release-please tạo Release PR + GitHub Release
-  # ============================================================
-  release-beta:
-    name: Release (Beta)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
-    runs-on: ubuntu-latest
-    outputs:
-      released: ${{ steps.release.outputs.release_created }}
-      version: ${{ steps.release.outputs.version }}
-      tag: ${{ steps.release.outputs.tag_name }}
-    steps:
-      - uses: googleapis/release-please-action@v4
+      - uses: python-semantic-release/python-semantic-release@v10
         id: release
         with:
-          token: ${{ secrets.GH_PAT }}
-          config-file: release-please-config-beta.json
-          manifest-file: .release-please-manifest-beta.json
-          target-branch: dev
+          github_token: ${{ secrets.GH_PAT }}
+          prerelease: ${{ inputs.release_type == 'beta' }}
+          prerelease_token: beta
 
-  release-stable:
-    name: Release (Stable)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    outputs:
-      released: ${{ steps.release.outputs.release_created }}
-      version: ${{ steps.release.outputs.version }}
-      tag: ${{ steps.release.outputs.tag_name }}
-    steps:
-      - uses: googleapis/release-please-action@v4
-        id: release
+      - uses: python-semantic-release/publish-action@v10
+        if: steps.release.outputs.released == 'true'
         with:
-          token: ${{ secrets.GH_PAT }}
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
-          target-branch: main
+          github_token: ${{ secrets.GH_PAT }}
+          tag: ${{ steps.release.outputs.tag }}
 
-  # ============================================================
-  # Publish: npm
-  # ============================================================
+  # ============================================================================
+  # Publish to npm
+  # ============================================================================
   publish-npm:
     name: Publish to npm
-    needs: [release-beta, release-stable]
-    if: |
-      always() && !cancelled() &&
-      (needs.release-beta.outputs.released == 'true' || needs.release-stable.outputs.released == 'true')
+    needs: release
+    if: needs.release.outputs.released == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ needs.release.outputs.tag }}
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: "24"
-          cache: "pnpm"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
 
-      - name: Build project
-        run: pnpm build
+      - run: pnpm build
 
-      - name: Publish (stable)
-        if: github.ref == 'refs/heads/main'
+      - run: pnpm publish --no-git-checks --tag ${{ needs.release.outputs.is_prerelease == 'true' && 'beta' || 'latest' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm publish --no-git-checks
 
-      - name: Publish (beta)
-        if: github.ref == 'refs/heads/dev'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm publish --no-git-checks --tag beta
-
-  # ============================================================
-  # Docker: Build multi-arch images
-  # ============================================================
+  # ============================================================================
+  # Build Docker (multi-arch)
+  # ============================================================================
   build-docker:
     name: Build Docker (${{ matrix.platform }})
-    needs: [release-beta, release-stable]
-    if: |
-      always() && !cancelled() &&
-      (needs.release-beta.outputs.released == 'true' || needs.release-stable.outputs.released == 'true')
+    needs: release
+    if: needs.release.outputs.released == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -206,28 +101,25 @@ jobs:
             artifact: linux-arm64
     runs-on: ${{ matrix.runner }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.release.outputs.tag }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+      - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push by digest
+      - uses: docker/build-push-action@v6
         id: build
-        uses: docker/build-push-action@v6
         with:
           context: .
           platforms: ${{ matrix.platform }}
@@ -235,168 +127,68 @@ jobs:
           cache-from: type=gha,scope=${{ github.ref_name }}-${{ matrix.artifact }}
           cache-to: type=gha,mode=max,scope=${{ github.ref_name }}-${{ matrix.artifact }}
 
-      - name: Export digest
-        run: |
-          echo "Digest: ${{ steps.build.outputs.digest }}"
-          if [ -z "${{ steps.build.outputs.digest }}" ]; then
-            echo "Error: Digest is empty!"
-            exit 1
-          fi
+      - run: |
           mkdir -p ${{ runner.temp }}/digests
-          echo "${{ steps.build.outputs.digest }}" | sed 's/^sha256://' | xargs -I{} touch "${{ runner.temp }}/digests/{}"
+          echo "${{ steps.build.outputs.digest }}" > "${{ runner.temp }}/digests/${{ matrix.artifact }}"
 
-      - name: Upload digest
-        uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ matrix.artifact }}
+          name: digest-${{ matrix.artifact }}
           path: ${{ runner.temp }}/digests/*
-          retention-days: 1
 
-  # ============================================================
-  # Docker: Merge manifests
-  # ============================================================
+  # ============================================================================
+  # Merge Docker Manifests
+  # ============================================================================
   merge-docker:
     name: Merge Docker Manifests
-    needs: [release-beta, release-stable, build-docker]
-    if: |
-      always() && !cancelled() &&
-      (needs.release-beta.outputs.released == 'true' || needs.release-stable.outputs.released == 'true') &&
-      needs.build-docker.result == 'success'
+    needs: [release, build-docker]
     runs-on: ubuntu-latest
     steps:
-      - name: Download digests
-        uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v4
         with:
+          pattern: digest-*
           path: ${{ runner.temp }}/digests
-          pattern: digests-*
           merge-multiple: true
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+      - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create and push manifest (stable)
-        if: github.ref == 'refs/heads/main'
-        working-directory: ${{ runner.temp }}/digests
+      - name: Create and push manifests
         env:
-          VERSION: ${{ needs.release-stable.outputs.version }}
+          VERSION: ${{ needs.release.outputs.version }}
+          IS_PRERELEASE: ${{ needs.release.outputs.is_prerelease }}
         run: |
-          MAJOR_MINOR=$(echo "$VERSION" | cut -d. -f1,2)
-          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            TAGS="beta ${VERSION}"
+          else
+            MAJOR=$(echo "$VERSION" | cut -d. -f1)
+            MINOR=$(echo "$VERSION" | cut -d. -f1-2)
+            TAGS="latest ${VERSION} ${MINOR} ${MAJOR}"
+          fi
 
-          SOURCES_DOCKERHUB=""
-          SOURCES_GHCR=""
-          for digest in *; do
-            SOURCES_DOCKERHUB="$SOURCES_DOCKERHUB ${{ env.DOCKERHUB_IMAGE }}@sha256:$digest"
-            SOURCES_GHCR="$SOURCES_GHCR ${{ env.GHCR_IMAGE }}@sha256:$digest"
+          DIGESTS=$(cat ${{ runner.temp }}/digests/*)
+
+          for IMAGE in "$DOCKERHUB_IMAGE" "$GHCR_IMAGE"; do
+            TAG_ARGS=""
+            for TAG in $TAGS; do
+              TAG_ARGS="$TAG_ARGS -t ${IMAGE}:${TAG}"
+            done
+            docker buildx imagetools create $TAG_ARGS \
+              $(echo "$DIGESTS" | xargs -I{} echo "${IMAGE}@{}")
           done
 
-          docker buildx imagetools create \
-            -t ${{ env.DOCKERHUB_IMAGE }}:latest \
-            -t ${{ env.DOCKERHUB_IMAGE }}:$VERSION \
-            -t ${{ env.DOCKERHUB_IMAGE }}:$MAJOR_MINOR \
-            -t ${{ env.DOCKERHUB_IMAGE }}:$MAJOR \
-            $SOURCES_DOCKERHUB
-
-          docker buildx imagetools create \
-            -t ${{ env.GHCR_IMAGE }}:latest \
-            -t ${{ env.GHCR_IMAGE }}:$VERSION \
-            -t ${{ env.GHCR_IMAGE }}:$MAJOR_MINOR \
-            -t ${{ env.GHCR_IMAGE }}:$MAJOR \
-            $SOURCES_GHCR
-
-      - name: Create and push manifest (beta)
-        if: github.ref == 'refs/heads/dev'
-        working-directory: ${{ runner.temp }}/digests
-        env:
-          VERSION: ${{ needs.release-beta.outputs.version }}
-        run: |
-          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-
-          SOURCES_DOCKERHUB=""
-          SOURCES_GHCR=""
-          for digest in *; do
-            SOURCES_DOCKERHUB="$SOURCES_DOCKERHUB ${{ env.DOCKERHUB_IMAGE }}@sha256:$digest"
-            SOURCES_GHCR="$SOURCES_GHCR ${{ env.GHCR_IMAGE }}@sha256:$digest"
-          done
-
-          docker buildx imagetools create \
-            -t ${{ env.DOCKERHUB_IMAGE }}:beta \
-            -t ${{ env.DOCKERHUB_IMAGE }}:$VERSION \
-            -t ${{ env.DOCKERHUB_IMAGE }}:beta-$SHORT_SHA \
-            $SOURCES_DOCKERHUB
-
-          docker buildx imagetools create \
-            -t ${{ env.GHCR_IMAGE }}:beta \
-            -t ${{ env.GHCR_IMAGE }}:$VERSION \
-            -t ${{ env.GHCR_IMAGE }}:beta-$SHORT_SHA \
-            $SOURCES_GHCR
-
-      - name: Checkout code
-        if: github.ref == 'refs/heads/main'
-        uses: actions/checkout@v6
-
-      - name: Update Docker Hub Description
-        if: github.ref == 'refs/heads/main'
+      - name: Update DockerHub description
         uses: peter-evans/dockerhub-description@v5
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ secrets.DOCKERHUB_USERNAME }}/better-notion-mcp
+          repository: ${{ env.DOCKERHUB_IMAGE }}
           short-description: ${{ github.event.repository.description }}
-          readme-filepath: ./README.md
-
-  # ============================================================
-  # Sync: Tái tạo dev branch từ main sau stable release
-  # ============================================================
-  sync-dev:
-    name: Sync Dev from Main
-    needs: [release-stable, merge-docker]
-    if: |
-      always() && !cancelled() &&
-      needs.release-stable.outputs.released == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout main
-        uses: actions/checkout@v6
-        with:
-          ref: main
-          fetch-depth: 0
-          token: ${{ secrets.GH_PAT }}
-
-      - name: Cleanup stale release PRs
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-        run: |
-          ./.github/scripts/cleanup-release-prs.sh --branch=dev
-          ./.github/scripts/cleanup-release-prs.sh --branch=main
-
-      - name: Sync beta manifest and recreate dev
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          cp .release-please-manifest.json .release-please-manifest-beta.json
-          git add .release-please-manifest-beta.json
-          git diff --cached --quiet || git commit -m "chore: sync beta manifest from stable [skip ci]"
-          git push origin main
-
-          # Clean up promote branch
-          git push origin --delete promote/dev-to-main 2>/dev/null || true
-
-          git push origin --delete dev || true
-          git checkout -b dev
-          git push origin dev
-          echo "Dev branch recreated from main"

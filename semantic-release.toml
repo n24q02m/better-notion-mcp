@@ -1,0 +1,12 @@
+[semantic_release]
+version_variables = ["package.json:version"]
+tag_format = "v{version}"
+commit_message = "chore(release): v{version}"
+build_command = "pnpm build"
+major_on_zero = false
+
+[semantic_release.changelog]
+changelog_file = "CHANGELOG.md"
+
+[semantic_release.remote]
+type = "github"
