@@ -1,15 +1,13 @@
-
-import { describe, it, expect, vi } from 'vitest'
-import { registerTools } from './registry.js'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js'
+import { describe, expect, it, vi } from 'vitest'
+import { registerTools } from './registry.js'
 
 // Mock SDK
 vi.mock('@modelcontextprotocol/sdk/server/index.js', () => {
   return {
     Server: class MockServer {
       requestHandlers = new Map()
-      constructor() {}
       setRequestHandler(schema: any, handler: any) {
         this.requestHandlers.set(schema, handler)
       }
@@ -19,9 +17,7 @@ vi.mock('@modelcontextprotocol/sdk/server/index.js', () => {
 })
 
 vi.mock('@notionhq/client', () => ({
-    Client: class MockClient {
-        constructor() {}
-    }
+  Client: class MockClient {}
 }))
 
 describe('Security: Tool Registry', () => {
@@ -36,7 +32,7 @@ describe('Security: Tool Registry', () => {
       params: {
         name: 'help',
         arguments: {
-            tool_name: '../../package.json' // Try to traverse up
+          tool_name: '../../package.json' // Try to traverse up
         }
       }
     }
@@ -59,7 +55,7 @@ describe('Security: Tool Registry', () => {
       params: {
         name: 'help',
         arguments: {
-            tool_name: 'pages'
+          tool_name: 'pages'
         }
       }
     }
@@ -67,7 +63,7 @@ describe('Security: Tool Registry', () => {
     const result = await handler(request)
     // If it fails, it should not be due to invalid tool name
     if (result.isError) {
-         expect(result.content[0].text).not.toContain('Invalid tool name')
+      expect(result.content[0].text).not.toContain('Invalid tool name')
     }
   })
 })

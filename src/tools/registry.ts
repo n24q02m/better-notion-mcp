@@ -323,7 +323,11 @@ export function registerTools(server: Server, notionToken: string) {
           const toolName = (args as { tool_name: string }).tool_name
 
           if (!VALID_DOCS.includes(toolName)) {
-            throw new NotionMCPError(`Invalid tool name: ${toolName}`, 'INVALID_TOOL', `Available tools: ${VALID_DOCS.join(', ')}`)
+            throw new NotionMCPError(
+              `Invalid tool name: ${toolName}`,
+              'INVALID_TOOL',
+              `Available tools: ${VALID_DOCS.join(', ')}`
+            )
           }
 
           const docFile = `${toolName}.md`
