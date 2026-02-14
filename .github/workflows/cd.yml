@@ -45,6 +45,7 @@ jobs:
         id: release
         with:
           github_token: ${{ secrets.GH_PAT }}
+          config_file: semantic-release.toml
           prerelease: ${{ inputs.release_type == 'beta' }}
           prerelease_token: beta
 
@@ -184,6 +185,10 @@ jobs:
             docker buildx imagetools create $TAG_ARGS \
               $(echo "$DIGESTS" | xargs -I{} echo "${IMAGE}@{}")
           done
+
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: README.md
 
       - name: Update DockerHub description
         uses: peter-evans/dockerhub-description@v5
