@@ -45,16 +45,12 @@ jobs:
       - name: Check CI/CD status on dev branch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          chmod +x .github/scripts/check-ci-cd-status.sh
-          ./.github/scripts/check-ci-cd-status.sh --branch=dev
+        run: ./.github/scripts/check-ci-cd-status.sh --branch=dev
 
       - name: Cleanup stale release PRs on main
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
-        run: |
-          chmod +x .github/scripts/cleanup-release-prs.sh
-          ./.github/scripts/cleanup-release-prs.sh --branch=main
+        run: ./.github/scripts/cleanup-release-prs.sh --branch=main
 
       - name: Merge and create promote PR
         env:
@@ -73,6 +69,9 @@ jobs:
 
           # Save main's release-please manifest
           MAIN_MANIFEST=$(cat .release-please-manifest.json)
+
+          # Discard any working tree modifications before branch switch
+          git checkout -- .
 
           # Create promote branch from main, merge dev (auto-resolve conflicts)
           git checkout -B "$PROMOTE_BRANCH" origin/main
@@ -247,7 +246,7 @@ jobs:
           echo "${{ steps.build.outputs.digest }}" | sed 's/^sha256://' | xargs -I{} touch "${{ runner.temp }}/digests/{}"
 
       - name: Upload digest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: digests-${{ matrix.artifact }}
           path: ${{ runner.temp }}/digests/*
@@ -266,7 +265,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: ${{ runner.temp }}/digests
           pattern: digests-*
@@ -381,7 +380,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          chmod +x .github/scripts/cleanup-release-prs.sh
           ./.github/scripts/cleanup-release-prs.sh --branch=dev
           ./.github/scripts/cleanup-release-prs.sh --branch=main
 

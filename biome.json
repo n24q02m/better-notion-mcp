@@ -28,7 +28,8 @@
       "!**/coverage",
       "!**/*.log",
       "!**/.env",
-      "!package.json"
+      "!package.json",
+      "!.release-please-manifest*.json"
     ]
   },
   "linter": {

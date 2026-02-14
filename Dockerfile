@@ -25,9 +25,6 @@ RUN pnpm build
 # Minimal image for runtime
 FROM node:24-alpine
 
-# Enable corepack for pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
 # Copy built package from builder stage
 COPY --from=builder /app/build /usr/local/lib/node_modules/@n24q02m/better-notion-mcp/build
 COPY --from=builder /app/bin /usr/local/lib/node_modules/@n24q02m/better-notion-mcp/bin
