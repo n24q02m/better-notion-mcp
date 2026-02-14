@@ -51,7 +51,7 @@ const RESOURCES = [
  * 7 Mega Tools covering 75% of Official Notion API
  * Compressed descriptions for token optimization (~77% reduction)
  */
-const TOOLS = [
+export const TOOLS = [
   {
     name: 'pages',
     description:
@@ -77,7 +77,10 @@ const TOOLS = [
         archived: { type: 'boolean', description: 'Archive status' }
       },
       required: ['action']
-    }
+    },
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: false
   },
   {
     name: 'databases',
@@ -120,7 +123,10 @@ const TOOLS = [
         pages: { type: 'array', items: { type: 'object' }, description: 'Array of pages for bulk create/update' }
       },
       required: ['action']
-    }
+    },
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: false
   },
   {
     name: 'blocks',
@@ -138,7 +144,10 @@ const TOOLS = [
         content: { type: 'string', description: 'Markdown content (for append/update)' }
       },
       required: ['action', 'block_id']
-    }
+    },
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: false
   },
   {
     name: 'users',
@@ -154,7 +163,10 @@ const TOOLS = [
         user_id: { type: 'string', description: 'User ID (for get action)' }
       },
       required: ['action']
-    }
+    },
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true
   },
   {
     name: 'workspace',
@@ -185,7 +197,10 @@ const TOOLS = [
         limit: { type: 'number', description: 'Max results' }
       },
       required: ['action']
-    }
+    },
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true
   },
   {
     name: 'comments',
@@ -199,7 +214,10 @@ const TOOLS = [
         content: { type: 'string', description: 'Comment content (for create)' }
       },
       required: ['action']
-    }
+    },
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false
   },
   {
     name: 'content_convert',
@@ -215,7 +233,10 @@ const TOOLS = [
         content: { description: 'Content to convert (string or array/JSON string)' }
       },
       required: ['direction', 'content']
-    }
+    },
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true
   },
   {
     name: 'help',
@@ -230,7 +251,10 @@ const TOOLS = [
         }
       },
       required: ['tool_name']
-    }
+    },
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true
   }
 ]
 
