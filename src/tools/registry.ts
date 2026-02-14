@@ -48,6 +48,11 @@ const RESOURCES = [
 ]
 
 /**
+ * Valid tools for help documentation
+ */
+const VALID_DOCS = ['pages', 'databases', 'blocks', 'users', 'workspace', 'comments', 'content_convert']
+
+/**
  * 7 Mega Tools covering 75% of Official Notion API
  * Compressed descriptions for token optimization (~77% reduction)
  */
@@ -316,6 +321,11 @@ export function registerTools(server: Server, notionToken: string) {
           break
         case 'help': {
           const toolName = (args as { tool_name: string }).tool_name
+
+          if (!VALID_DOCS.includes(toolName)) {
+            throw new NotionMCPError(`Invalid tool name: ${toolName}`, 'INVALID_TOOL', `Available tools: ${VALID_DOCS.join(', ')}`)
+          }
+
           const docFile = `${toolName}.md`
           try {
             const content = readFileSync(join(DOCS_DIR, docFile), 'utf-8')
