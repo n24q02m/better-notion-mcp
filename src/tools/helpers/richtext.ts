@@ -147,12 +147,9 @@ export function splitText(content: string, maxLength: number = 2000): RichTextIt
   }
 
   const chunks: RichTextItem[] = []
-  let remaining = content
-
-  while (remaining.length > 0) {
-    const chunk = remaining.slice(0, maxLength)
-    chunks.push(text(chunk))
-    remaining = remaining.slice(maxLength)
+  // Optimization: Use loop with indices to avoid O(N^2) string copying behavior of repeated slice()
+  for (let i = 0; i < content.length; i += maxLength) {
+    chunks.push(text(content.slice(i, i + maxLength)))
   }
 
   return chunks
