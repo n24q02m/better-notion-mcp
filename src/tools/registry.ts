@@ -56,6 +56,9 @@ const TOOLS = [
     name: 'pages',
     description:
       'Page lifecycle: create, get, update, archive, restore, duplicate. Requires parent_id for create. Returns markdown content for get.',
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: false,
     inputSchema: {
       type: 'object',
       properties: {
@@ -83,6 +86,9 @@ const TOOLS = [
     name: 'databases',
     description:
       'Database operations: create, get, query, create_page, update_page, delete_page, create_data_source, update_data_source, update_database. Databases contain data sources with schema and rows.',
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: false,
     inputSchema: {
       type: 'object',
       properties: {
@@ -126,6 +132,9 @@ const TOOLS = [
     name: 'blocks',
     description:
       'Block-level content: get, children, append, update, delete. Page IDs are valid block IDs. Use for precise edits.',
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: false,
     inputSchema: {
       type: 'object',
       properties: {
@@ -143,6 +152,9 @@ const TOOLS = [
   {
     name: 'users',
     description: 'User info: list, get, me, from_workspace. Use from_workspace if list fails due to permissions.',
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
     inputSchema: {
       type: 'object',
       properties: {
@@ -160,6 +172,9 @@ const TOOLS = [
     name: 'workspace',
     description:
       'Workspace: info, search. Search returns pages/databases shared with integration. Use filter.object for type.',
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
     inputSchema: {
       type: 'object',
       properties: {
@@ -190,6 +205,9 @@ const TOOLS = [
   {
     name: 'comments',
     description: 'Comments: list, create. Use page_id for new discussion, discussion_id for replies.',
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: false,
     inputSchema: {
       type: 'object',
       properties: {
@@ -204,6 +222,9 @@ const TOOLS = [
   {
     name: 'content_convert',
     description: 'Convert: markdown-to-blocks, blocks-to-markdown. Most tools handle markdown automatically.',
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
     inputSchema: {
       type: 'object',
       properties: {
@@ -220,6 +241,9 @@ const TOOLS = [
   {
     name: 'help',
     description: 'Get full documentation for a tool. Use when compressed descriptions are insufficient.',
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
     inputSchema: {
       type: 'object',
       properties: {

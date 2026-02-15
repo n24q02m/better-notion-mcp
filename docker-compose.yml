@@ -4,3 +4,4 @@ services:
     stdin_open: true
     tty: true
     restart: unless-stopped
+    mem_limit: 512m
