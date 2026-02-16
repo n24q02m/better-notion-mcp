@@ -54,6 +54,7 @@ const RESOURCES = [
 const TOOLS = [
   {
     name: 'pages',
+    destructiveHint: true,
     description:
       'Page lifecycle: create, get, update, archive, restore, duplicate. Requires parent_id for create. Returns markdown content for get.',
     inputSchema: {
@@ -81,6 +82,7 @@ const TOOLS = [
   },
   {
     name: 'databases',
+    destructiveHint: true,
     description:
       'Database operations: create, get, query, create_page, update_page, delete_page, create_data_source, update_data_source, update_database. Databases contain data sources with schema and rows.',
     inputSchema: {
@@ -124,6 +126,7 @@ const TOOLS = [
   },
   {
     name: 'blocks',
+    destructiveHint: true,
     description:
       'Block-level content: get, children, append, update, delete. Page IDs are valid block IDs. Use for precise edits.',
     inputSchema: {
@@ -142,6 +145,8 @@ const TOOLS = [
   },
   {
     name: 'users',
+    readOnlyHint: true,
+    idempotentHint: true,
     description: 'User info: list, get, me, from_workspace. Use from_workspace if list fails due to permissions.',
     inputSchema: {
       type: 'object',
@@ -158,6 +163,8 @@ const TOOLS = [
   },
   {
     name: 'workspace',
+    readOnlyHint: true,
+    idempotentHint: true,
     description:
       'Workspace: info, search. Search returns pages/databases shared with integration. Use filter.object for type.',
     inputSchema: {
@@ -189,6 +196,7 @@ const TOOLS = [
   },
   {
     name: 'comments',
+    destructiveHint: true,
     description: 'Comments: list, create. Use page_id for new discussion, discussion_id for replies.',
     inputSchema: {
       type: 'object',
@@ -203,6 +211,8 @@ const TOOLS = [
   },
   {
     name: 'content_convert',
+    readOnlyHint: true,
+    idempotentHint: true,
     description: 'Convert: markdown-to-blocks, blocks-to-markdown. Most tools handle markdown automatically.',
     inputSchema: {
       type: 'object',
@@ -219,6 +229,8 @@ const TOOLS = [
   },
   {
     name: 'help',
+    readOnlyHint: true,
+    idempotentHint: true,
     description: 'Get full documentation for a tool. Use when compressed descriptions are insufficient.',
     inputSchema: {
       type: 'object',
