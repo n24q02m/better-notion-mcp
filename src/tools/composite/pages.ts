@@ -345,15 +345,6 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<any> {
       // Get original page
       const originalPage: any = await notion.pages.retrieve({ page_id: pageId })
 
-      // Get original content
-      const originalBlocks = await autoPaginate((cursor) =>
-        notion.blocks.children.list({
-          block_id: pageId,
-          start_cursor: cursor,
-          page_size: 100
-        })
-      )
-
       // Create duplicate
       const duplicatePage: any = await notion.pages.create({
         parent: originalPage.parent,
@@ -362,12 +353,26 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<any> {
         cover: originalPage.cover
       })
 
-      // Copy content
-      if (originalBlocks.length > 0) {
-        await notion.blocks.children.append({
-          block_id: duplicatePage.id,
-          children: originalBlocks as any
+      // Copy content (streamed to avoid memory issues and API limits)
+      let cursor: string | undefined
+      let hasMore = true
+
+      while (hasMore) {
+        const response: any = await notion.blocks.children.list({
+          block_id: pageId,
+          start_cursor: cursor,
+          page_size: 100
         })
+
+        if (response.results.length > 0) {
+          await notion.blocks.children.append({
+            block_id: duplicatePage.id,
+            children: response.results
+          })
+        }
+
+        cursor = response.next_cursor
+        hasMore = response.has_more
       }
 
       return {
