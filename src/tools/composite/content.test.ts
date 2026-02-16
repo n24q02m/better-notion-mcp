@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { contentConvert } from './content.js'
 
 describe('content tool', () => {
@@ -14,12 +14,14 @@ describe('content tool', () => {
   })
 
   it('should convert blocks to markdown', async () => {
-    const blocks = [{
-      type: 'heading_1',
-      heading_1: {
-        rich_text: [{ type: 'text', text: { content: 'Hello' }, plain_text: 'Hello' }]
+    const blocks = [
+      {
+        type: 'heading_1',
+        heading_1: {
+          rich_text: [{ type: 'text', text: { content: 'Hello' }, plain_text: 'Hello' }]
+        }
       }
-    }]
+    ]
 
     const result = await contentConvert({
       direction: 'blocks-to-markdown',

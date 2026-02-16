@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { commentsManage } from './comments.js'
 
 // Mock autoPaginate
@@ -59,17 +59,21 @@ describe('comments tool', () => {
       content: 'New comment'
     })
 
-    expect(mockNotion.comments.create).toHaveBeenCalledWith(expect.objectContaining({
-      parent: { page_id: 'page-1' },
-      rich_text: expect.any(Array)
-    }))
+    expect(mockNotion.comments.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        parent: { page_id: 'page-1' },
+        rich_text: expect.any(Array)
+      })
+    )
     expect(result.created).toBe(true)
   })
 
   it('should throw error if content missing for create', async () => {
-    await expect(commentsManage(mockNotion, {
-      action: 'create',
-      page_id: 'page-1'
-    })).rejects.toThrow('content required')
+    await expect(
+      commentsManage(mockNotion, {
+        action: 'create',
+        page_id: 'page-1'
+      })
+    ).rejects.toThrow('content required')
   })
 })

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { workspace } from './workspace.js'
 
 vi.mock('../helpers/pagination.js', () => ({
@@ -55,9 +55,11 @@ describe('workspace tool', () => {
       query: 'test'
     })
 
-    expect(mockNotion.search).toHaveBeenCalledWith(expect.objectContaining({
-      query: 'test'
-    }))
+    expect(mockNotion.search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: 'test'
+      })
+    )
     expect(result.results).toHaveLength(1)
     expect(result.results[0].title).toBe('Page Title')
   })

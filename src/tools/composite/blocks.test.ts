@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { blocks } from './blocks.js'
 
 // Mock autoPaginate since it's used in 'children' action
