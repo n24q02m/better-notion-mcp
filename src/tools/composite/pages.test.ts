@@ -45,20 +45,22 @@ describe('Pages Tool', () => {
     const result = await pages(mockNotion as any, input)
 
     // Verify Notion API call
-    expect(mockNotion.pages.create).toHaveBeenCalledWith(expect.objectContaining({
-      parent: { type: 'page_id', page_id: 'parent123' },
-      properties: {
-        title: {
-          title: [
-            expect.objectContaining({
-              text: expect.objectContaining({
-                content: 'New Page'
+    expect(mockNotion.pages.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        parent: { type: 'page_id', page_id: 'parent123' },
+        properties: {
+          title: {
+            title: [
+              expect.objectContaining({
+                text: expect.objectContaining({
+                  content: 'New Page'
+                })
               })
-            })
-          ]
+            ]
+          }
         }
-      }
-    }))
+      })
+    )
 
     // Verify result
     expect(result).toEqual({
