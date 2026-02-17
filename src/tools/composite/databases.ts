@@ -322,6 +322,17 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
 
   const dataSourceId = database.data_sources[0].id
 
+  // Fetch schema for property type mapping
+  const dataSource: any = await (notion as any).dataSources.retrieve({
+    data_source_id: dataSourceId
+  })
+  const schema: Record<string, string> = {}
+  if (dataSource.properties) {
+    for (const [name, prop] of Object.entries(dataSource.properties)) {
+      schema[name] = (prop as any).type
+    }
+  }
+
   const items = input.pages || (input.page_properties ? [{ properties: input.page_properties }] : [])
 
   if (items.length === 0) {
@@ -329,7 +340,7 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
   }
 
   const results = await processBatches(items, async (item) => {
-    const properties = convertToNotionProperties(item.properties)
+    const properties = convertToNotionProperties(item.properties, schema)
 
     const page = await notion.pages.create({
       parent: { type: 'data_source_id', data_source_id: dataSourceId },

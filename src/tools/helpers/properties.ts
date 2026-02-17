@@ -9,7 +9,10 @@ import * as RichText from './richtext.js'
  * Convert simple property values to Notion API format
  * Handles auto-detection of property types and conversion
  */
-export function convertToNotionProperties(properties: Record<string, any>): Record<string, any> {
+export function convertToNotionProperties(
+  properties: Record<string, any>,
+  schema?: Record<string, string>
+): Record<string, any> {
   const converted: Record<string, any> = {}
 
   for (const [key, value] of Object.entries(properties)) {
@@ -20,13 +23,26 @@ export function convertToNotionProperties(properties: Record<string, any>): Reco
 
     // Auto-detect property type and convert
     if (typeof value === 'string') {
-      // Title properties
-      if (key === 'Name' || key === 'Title' || key.toLowerCase() === 'title') {
+      // Use schema type if available
+      const schemaType = schema?.[key]
+
+      if (schemaType === 'title') {
         converted[key] = { title: [RichText.text(value)] }
-      }
-      // All other strings default to select
-      // Note: User can override by passing Notion format directly
-      else {
+      } else if (schemaType === 'rich_text') {
+        converted[key] = { rich_text: [RichText.text(value)] }
+      } else if (schemaType === 'date') {
+        converted[key] = { date: { start: value } }
+      } else if (schemaType === 'url') {
+        converted[key] = { url: value }
+      } else if (schemaType === 'email') {
+        converted[key] = { email: value }
+      } else if (schemaType === 'phone_number') {
+        converted[key] = { phone_number: value }
+      } else if (key === 'Name' || key === 'Title' || key.toLowerCase() === 'title') {
+        // Fallback: guess title from key name
+        converted[key] = { title: [RichText.text(value)] }
+      } else {
+        // Fallback: default to select
         converted[key] = { select: { name: value } }
       }
     } else if (typeof value === 'number') {

@@ -117,10 +117,10 @@ function handleNotionError(error: any): NotionMCPError {
 
     case 'validation_error':
       return new NotionMCPError(
-        'Invalid request parameters',
+        error.body?.message || 'Invalid request parameters',
         'VALIDATION_ERROR',
         'Check the API documentation for valid parameter formats',
-        error.details
+        error.body
       )
 
     case 'rate_limited':
