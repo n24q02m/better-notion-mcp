@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { pages } from './pages.js'
 
 describe('pages tool - duplicate', () => {
@@ -26,7 +26,8 @@ describe('pages tool - duplicate', () => {
       },
       blocks: {
         children: {
-          list: vi.fn()
+          list: vi
+            .fn()
             .mockResolvedValueOnce({
               results: blocks.slice(0, 100),
               next_cursor: 'cursor-1',

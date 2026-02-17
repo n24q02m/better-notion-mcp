@@ -354,7 +354,7 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<any> {
       })
 
       // Copy content (streaming)
-      let cursor: string | undefined = undefined
+      let cursor: string | undefined
       let hasMore = true
 
       while (hasMore) {
