@@ -90,6 +90,20 @@ Get your token: <https://www.notion.so/my-integrations> â†’ Create integration â
 {"name": "help", "tool_name": "pages"}
 ```
 
+### MCP Resources (Tier 3)
+
+Clients that support MCP Resources can load full tool documentation:
+
+| URI | Description |
+|-----|-------------|
+| `notion://docs/pages` | Pages tool docs |
+| `notion://docs/databases` | Databases tool docs |
+| `notion://docs/blocks` | Blocks tool docs |
+| `notion://docs/users` | Users tool docs |
+| `notion://docs/workspace` | Workspace tool docs |
+| `notion://docs/comments` | Comments tool docs |
+| `notion://docs/content_convert` | Content Convert tool docs |
+
 ---
 
 ## Limitations
