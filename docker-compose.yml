@@ -5,4 +5,5 @@ services:
     stdin_open: true
     environment:
       NOTION_TOKEN: ${NOTION_TOKEN}
+    mem_limit: 512m
     restart: unless-stopped
