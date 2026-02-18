@@ -27,25 +27,25 @@
 
 Get your token: <https://www.notion.so/my-integrations> → Create integration → Copy token → Share pages
 
-### npx (Recommended)
+### Option 1: npx (Recommended)
 
-```json
+```jsonc
 {
   "mcpServers": {
     "better-notion": {
       "command": "npx",
       "args": ["-y", "@n24q02m/better-notion-mcp@latest"],
       "env": {
-        "NOTION_TOKEN": "ntn_..."
+        "NOTION_TOKEN": "ntn_..."                  // required: Notion integration token
       }
     }
   }
 }
 ```
 
-### Docker
+### Option 2: Docker
 
-```json
+```jsonc
 {
   "mcpServers": {
     "better-notion": {
@@ -53,11 +53,11 @@ Get your token: <https://www.notion.so/my-integrations> → Create integration �
       "args": [
         "run", "-i", "--rm",
         "--name", "mcp-notion",
-        "-e", "NOTION_TOKEN",
+        "-e", "NOTION_TOKEN",                      // required: pass-through from env below
         "n24q02m/better-notion-mcp:latest"
       ],
       "env": {
-        "NOTION_TOKEN": "ntn_..."
+        "NOTION_TOKEN": "ntn_..."                  // required: Notion integration token
       }
     }
   }
