@@ -375,6 +375,16 @@ export function registerTools(server: Server, notionToken: string) {
           break
         case 'help': {
           const toolName = (args as { tool_name: string }).tool_name
+          const validTools = ['pages', 'databases', 'blocks', 'users', 'workspace', 'comments', 'content_convert']
+
+          if (!validTools.includes(toolName)) {
+            throw new NotionMCPError(
+              `Invalid tool name: ${toolName}`,
+              'INVALID_TOOL_NAME',
+              `Available tools: ${validTools.join(', ')}`
+            )
+          }
+
           const docFile = `${toolName}.md`
           try {
             const content = readFileSync(join(DOCS_DIR, docFile), 'utf-8')
