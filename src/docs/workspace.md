@@ -5,7 +5,7 @@ Workspace: info, search.
 
 ## Important
 - Search returns only content **shared with integration**
-- Use `filter.object = "data_source"` for databases
+- Use `filter.object = "database"` for databases
 
 ## Actions
 
@@ -22,7 +22,7 @@ Returns bot owner, workspace details.
 
 Search databases:
 ```json
-{"action": "search", "query": "tasks", "filter": {"object": "data_source"}}
+{"action": "search", "query": "tasks", "filter": {"object": "database"}}
 ```
 
 Sort results:
@@ -32,7 +32,7 @@ Sort results:
 
 ## Parameters
 - `query` - Search query
-- `filter.object` - "page" or "data_source"
+- `filter.object` - "page" or "database"
 - `sort.direction` - "ascending" or "descending"
 - `sort.timestamp` - "last_edited_time" or "created_time"
 - `limit` - Max results

@@ -48,7 +48,7 @@ const RESOURCES = [
 ]
 
 /**
- * 7 Mega Tools covering 75% of Official Notion API
+ * 8 Tools covering 75% of Official Notion API
  * Compressed descriptions for token optimization (~77% reduction)
  */
 const TOOLS = [
@@ -76,7 +76,10 @@ const TOOLS = [
         title: { type: 'string', description: 'Page title' },
         content: { type: 'string', description: 'Markdown content' },
         append_content: { type: 'string', description: 'Markdown to append' },
-        prepend_content: { type: 'string', description: 'Markdown to prepend' },
+        prepend_content: {
+          type: 'string',
+          description: '[Deprecated] Not supported by Notion API — use blocks tool to insert at specific position'
+        },
         parent_id: { type: 'string', description: 'Parent page or database ID' },
         properties: { type: 'object', description: 'Page properties (for database pages)' },
         icon: { type: 'string', description: 'Emoji icon' },
@@ -207,7 +210,7 @@ const TOOLS = [
         filter: {
           type: 'object',
           properties: {
-            object: { type: 'string', enum: ['page', 'data_source'] }
+            object: { type: 'string', enum: ['page', 'database'] }
           }
         },
         sort: {

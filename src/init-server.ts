@@ -3,9 +3,25 @@
  * Using composite tools for human-friendly AI agent interactions
  */
 
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { registerTools } from './tools/registry.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
+function getVersion(): string {
+  try {
+    const pkgPath = join(__dirname, '..', 'package.json')
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
+    return pkg.version ?? '0.0.0'
+  } catch {
+    return '0.0.0'
+  }
+}
 
 export async function initServer() {
   // Get Notion token from environment
@@ -21,7 +37,7 @@ export async function initServer() {
   const server = new Server(
     {
       name: '@n24q02m/better-notion-mcp',
-      version: '1.0.0'
+      version: getVersion()
     },
     {
       capabilities: {

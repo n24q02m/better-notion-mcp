@@ -21,7 +21,6 @@ export interface PagesInput {
   title?: string
   content?: string // Markdown
   append_content?: string
-  prepend_content?: string
   parent_id?: string
   properties?: Record<string, any>
   icon?: string
@@ -57,7 +56,7 @@ export async function pages(notion: Client, input: PagesInput): Promise<any> {
         throw new NotionMCPError(
           `Unknown action: ${input.action}`,
           'VALIDATION_ERROR',
-          'Supported actions: create, get, update, archive, restore, move, duplicate'
+          'Supported actions: create, get, update, archive, restore, duplicate'
         )
     }
   })()
@@ -227,7 +226,7 @@ async function updatePage(notion: Client, input: PagesInput): Promise<any> {
   }
 
   // Handle content updates
-  if (input.content || input.append_content || input.prepend_content) {
+  if (input.content || input.append_content) {
     if (input.content) {
       // Replace all content
       const existingBlocks = await autoPaginate((cursor) =>
@@ -256,31 +255,6 @@ async function updatePage(notion: Client, input: PagesInput): Promise<any> {
           block_id: input.page_id,
           children: blocks as any
         })
-      }
-    } else if (input.prepend_content) {
-      const existingBlocks = await autoPaginate((cursor) =>
-        notion.blocks.children.list({
-          block_id: input.page_id!,
-          start_cursor: cursor,
-          page_size: 1
-        })
-      )
-
-      const newBlocks = markdownToBlocks(input.prepend_content)
-      if (newBlocks.length > 0) {
-        const firstBlockId = existingBlocks[0]?.id
-        if (firstBlockId) {
-          await notion.blocks.children.append({
-            block_id: input.page_id,
-            children: newBlocks as any,
-            after: undefined
-          })
-        } else {
-          await notion.blocks.children.append({
-            block_id: input.page_id,
-            children: newBlocks as any
-          })
-        }
       }
     }
   }

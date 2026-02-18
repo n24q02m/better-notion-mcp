@@ -27,7 +27,7 @@
 
 Get your token: <https://www.notion.so/my-integrations> → Create integration → Copy token → Share pages
 
-### Option 1: Minimal npx (Recommended)
+### npx (Recommended)
 
 ```json
 {
@@ -43,7 +43,7 @@ Get your token: <https://www.notion.so/my-integrations> → Create integration �
 }
 ```
 
-### Option 2: Minimal Docker
+### Docker
 
 ```json
 {
@@ -58,48 +58,6 @@ Get your token: <https://www.notion.so/my-integrations> → Create integration �
       ],
       "env": {
         "NOTION_TOKEN": "ntn_..."
-      }
-    }
-  }
-}
-```
-
-### Option 3: Full npx
-
-All options (same as minimal -- configure via Notion integration settings).
-
-```jsonc
-{
-  "mcpServers": {
-    "better-notion": {
-      "command": "npx",
-      "args": ["-y", "@n24q02m/better-notion-mcp@latest"],
-      "env": {
-        "NOTION_TOKEN": "ntn_...",
-        "LOG_LEVEL": "debug"       // optional: debug logging
-      }
-    }
-  }
-}
-```
-
-### Option 4: Full Docker
-
-```jsonc
-{
-  "mcpServers": {
-    "better-notion": {
-      "command": "docker",
-      "args": [
-        "run", "-i", "--rm",
-        "--name", "mcp-notion",
-        "-e", "NOTION_TOKEN",
-        "-e", "LOG_LEVEL",
-        "n24q02m/better-notion-mcp:latest"
-      ],
-      "env": {
-        "NOTION_TOKEN": "ntn_...",
-        "LOG_LEVEL": "debug"
       }
     }
   }
