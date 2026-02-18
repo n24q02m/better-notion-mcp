@@ -6,7 +6,7 @@
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
-import { autoPaginate } from '../helpers/pagination.js'
+import { autoPaginate, batchItems } from '../helpers/pagination.js'
 
 export interface BlocksInput {
   action: 'get' | 'children' | 'append' | 'update' | 'delete'
@@ -60,10 +60,15 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
           throw new NotionMCPError('content required for append', 'VALIDATION_ERROR', 'Provide markdown content')
         }
         const blocksList = markdownToBlocks(input.content)
-        await notion.blocks.children.append({
-          block_id: input.block_id,
-          children: blocksList as any
-        })
+
+        const chunks = batchItems(blocksList, 100)
+        for (const chunk of chunks) {
+          await notion.blocks.children.append({
+            block_id: input.block_id,
+            children: chunk as any
+          })
+        }
+
         return {
           action: 'append',
           block_id: input.block_id,

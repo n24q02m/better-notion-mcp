@@ -6,7 +6,7 @@
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
-import { autoPaginate, processBatches } from '../helpers/pagination.js'
+import { autoPaginate, batchItems, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
 
@@ -110,10 +110,13 @@ async function createPage(notion: Client, input: PagesInput): Promise<any> {
   if (input.content) {
     const blocks = markdownToBlocks(input.content)
     if (blocks.length > 0) {
-      await notion.blocks.children.append({
-        block_id: page.id,
-        children: blocks as any
-      })
+      const chunks = batchItems(blocks, 100)
+      for (const chunk of chunks) {
+        await notion.blocks.children.append({
+          block_id: page.id,
+          children: chunk as any
+        })
+      }
     }
   }
 
@@ -243,18 +246,24 @@ async function updatePage(notion: Client, input: PagesInput): Promise<any> {
 
       const newBlocks = markdownToBlocks(input.content)
       if (newBlocks.length > 0) {
-        await notion.blocks.children.append({
-          block_id: input.page_id,
-          children: newBlocks as any
-        })
+        const chunks = batchItems(newBlocks, 100)
+        for (const chunk of chunks) {
+          await notion.blocks.children.append({
+            block_id: input.page_id,
+            children: chunk as any
+          })
+        }
       }
     } else if (input.append_content) {
       const blocks = markdownToBlocks(input.append_content)
       if (blocks.length > 0) {
-        await notion.blocks.children.append({
-          block_id: input.page_id,
-          children: blocks as any
-        })
+        const chunks = batchItems(blocks, 100)
+        for (const chunk of chunks) {
+          await notion.blocks.children.append({
+            block_id: input.page_id,
+            children: chunk as any
+          })
+        }
       }
     }
   }
@@ -352,10 +361,13 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<any> {
 
       // Copy content
       if (originalBlocks.length > 0) {
-        await notion.blocks.children.append({
-          block_id: duplicatePage.id,
-          children: originalBlocks as any
-        })
+        const chunks = batchItems(originalBlocks, 100)
+        for (const chunk of chunks) {
+          await notion.blocks.children.append({
+            block_id: duplicatePage.id,
+            children: chunk as any
+          })
+        }
       }
 
       return {
