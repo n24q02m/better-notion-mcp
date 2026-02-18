@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { enhanceError } from './errors'
 
 describe('Error Handling Security', () => {
-  it('should not leak sensitive details in generic errors', () => {
+  it('test_enhanceError_generic_error_no_leak', () => {
     const sensitiveError = {
       message: 'Something went wrong',
       name: 'GenericError',

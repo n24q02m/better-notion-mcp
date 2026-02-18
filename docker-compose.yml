@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    image: n24q02m/better-notion-mcp:latest
+    container_name: better-notion-mcp
+    environment:
+      - NOTION_TOKEN=${NOTION_TOKEN}
+    deploy:
+      resources:
+        limits:
+          memory: 512m

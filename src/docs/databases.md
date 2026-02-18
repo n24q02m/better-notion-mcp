@@ -47,7 +47,7 @@ Database operations: create, get, query, create_page, update_page, delete_page, 
 ### update_database
 Update database container metadata. To update schema properties, use `update_data_source` instead.
 ```json
-{"action": "update_database", "database_id": "xxx", "title": "Updated Title", "icon": "📋"}
+{"action": "update_database", "database_id": "xxx", "title": "Updated Title"}
 ```
 
 ### create_data_source

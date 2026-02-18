@@ -5,7 +5,7 @@
 
 [tools]
 node = "24"
-pnpm = "latest"
+pnpm = "9.15.4"
 uv = "latest"
 python = "3.13"
 
