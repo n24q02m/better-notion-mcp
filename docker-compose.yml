@@ -1,8 +1,0 @@
-services:
-  better-notion-mcp:
-    build: .
-    # image: n24q02m/better-notion-mcp:latest  # Use pre-built image instead of build
-    stdin_open: true
-    environment:
-      NOTION_TOKEN: ${NOTION_TOKEN}
-    restart: unless-stopped

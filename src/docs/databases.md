@@ -44,6 +44,21 @@ Database operations: create, get, query, create_page, update_page, delete_page, 
 {"action": "delete_page", "page_ids": ["yyy", "zzz"]}
 ```
 
+### update_database
+```json
+{"action": "update_database", "database_id": "xxx", "title": "Updated Title", "properties": {"Priority": {"select": {"options": [{"name": "High"}, {"name": "Low"}]}}}}
+```
+
+### create_data_source
+```json
+{"action": "create_data_source", "database_id": "xxx", "title": "Q2 Data", "properties": {"Status": {"select": {"options": [{"name": "Active"}]}}}}
+```
+
+### update_data_source
+```json
+{"action": "update_data_source", "data_source_id": "xxx", "title": "Renamed Source", "properties": {"Status": {"select": {"options": [{"name": "Active"}, {"name": "Archived"}]}}}}
+```
+
 ## Parameters
 - `database_id` - Database ID
 - `data_source_id` - Data source ID

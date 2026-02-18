@@ -4,8 +4,9 @@
 User info: list, get, me, from_workspace.
 
 ## Important
-- `list` may fail without user:read permission
-- Use `from_workspace` as fallback (extracts from page metadata)
+- `list` and `get` require **Enterprise plan** or explicit `read_user` capability granted by workspace admin. Most integrations will get "Integration does not have ability to..." error.
+- Use `me` to get the bot's own info (always works).
+- Use `from_workspace` as a reliable fallback — extracts users from created_by/last_edited_by metadata in accessible pages (no special permissions needed).
 
 ## Actions
 
