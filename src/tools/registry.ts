@@ -264,7 +264,7 @@ const TOOLS = [
           enum: ['markdown-to-blocks', 'blocks-to-markdown'],
           description: 'Conversion direction'
         },
-        content: { description: 'Content to convert (string or array/JSON string)' }
+        content: { type: 'string', description: 'Content to convert (string or array/JSON string)' }
       },
       required: ['direction', 'content']
     }

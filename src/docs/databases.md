@@ -63,10 +63,16 @@ Update database container metadata. To update schema properties, use `update_dat
 ## Parameters
 - `database_id` - Database ID
 - `data_source_id` - Data source ID
-- `parent_id` - Parent page ID
-- `title` - Title
-- `properties` - Schema properties
+- `parent_id` - Parent page ID (for create/update_database)
+- `title` - Title (for database or data source)
+- `description` - Description
+- `properties` - Schema properties (for create/update data source)
+- `is_inline` - Display as inline (boolean, for create/update_database)
+- `icon` - Emoji icon (for update_database)
+- `cover` - Cover image URL (for update_database)
 - `filters` / `sorts` / `limit` - Query options
 - `search` - Smart search across text fields
+- `page_id` - Single page ID (for update_page)
+- `page_ids` - Multiple page IDs (for delete_page)
+- `page_properties` - Properties to update (for update_page)
 - `pages` - Array of pages for bulk operations
-- `page_properties` - Properties to update

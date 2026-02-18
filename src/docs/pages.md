@@ -44,8 +44,10 @@ Page lifecycle: create, get, update, archive, restore, duplicate.
 - `page_ids` - Multiple page IDs for batch operations
 - `title` - Page title
 - `content` - Markdown content
-- `append_content` / `prepend_content` - Markdown to add
+- `append_content` - Markdown to append
+- `prepend_content` - [Deprecated] Not supported by Notion API. Use blocks tool to insert at specific position
 - `parent_id` - Parent page or database ID
 - `properties` - Page properties (for database pages)
 - `icon` - Emoji icon
 - `cover` - Cover image URL
+- `archived` - Archive status (boolean, for update action)
