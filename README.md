@@ -50,7 +50,7 @@ Get your token: <https://www.notion.so/my-integrations> â†’ Create integration â
   "mcpServers": {
     "better-notion": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "NOTION_TOKEN", "n24q02m/better-notion-mcp:latest"],
+      "args": ["run", "-i", "--rm", "--name", "mcp-notion", "-e", "NOTION_TOKEN", "n24q02m/better-notion-mcp:latest"],
       "env": {
         "NOTION_TOKEN": "your_token_here"
       }
