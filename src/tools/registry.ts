@@ -1,5 +1,5 @@
 /**
- * Tool Registry - 7 Mega Tools
+ * Tool Registry - 8 Composite Tools
  * Consolidated registration for maximum coverage with minimal tools
  */
 

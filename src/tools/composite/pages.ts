@@ -354,9 +354,23 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<any> {
         })
       )
 
+      // Sanitize parent - API response may include extra fields that
+      // the create endpoint rejects (e.g. database_id in data_source parent)
+      const rawParent = originalPage.parent
+      let parent: any
+      if (rawParent.type === 'data_source_id') {
+        parent = { type: 'data_source_id', data_source_id: rawParent.data_source_id }
+      } else if (rawParent.type === 'database_id') {
+        parent = { type: 'database_id', database_id: rawParent.database_id }
+      } else if (rawParent.type === 'page_id') {
+        parent = { type: 'page_id', page_id: rawParent.page_id }
+      } else {
+        parent = rawParent
+      }
+
       // Create duplicate
       const duplicatePage: any = await notion.pages.create({
-        parent: originalPage.parent,
+        parent,
         properties: originalPage.properties,
         icon: originalPage.icon,
         cover: originalPage.cover
