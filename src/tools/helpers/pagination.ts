@@ -42,17 +42,6 @@ export async function autoPaginate<T>(
 }
 
 /**
- * Fetch single page with cursor
- */
-export async function fetchPage<T>(
-  fetchFn: (cursor?: string, pageSize?: number) => Promise<PaginatedResponse<T>>,
-  cursor?: string,
-  pageSize: number = 100
-): Promise<PaginatedResponse<T>> {
-  return await fetchFn(cursor, pageSize)
-}
-
-/**
  * Create cursor handler for manual pagination
  */
 export function createCursorHandler() {
