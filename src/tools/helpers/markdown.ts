@@ -270,13 +270,6 @@ function richTextToMarkdown(richText: RichText[]): string {
     .join('')
 }
 
-/**
- * Extract plain text from rich text
- */
-export function extractPlainText(richText: RichText[]): string {
-  return richText.map((rt) => rt.text.content).join('')
-}
-
 // Helper creators
 function createRichText(
   content: string,
