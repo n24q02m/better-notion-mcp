@@ -372,15 +372,7 @@ export function registerTools(server: Server, notionToken: string) {
           break
         case 'help': {
           const toolName = (args as { tool_name: string }).tool_name
-          const VALID_DOCS = [
-            'pages',
-            'databases',
-            'blocks',
-            'users',
-            'workspace',
-            'comments',
-            'content_convert'
-          ]
+          const VALID_DOCS = ['pages', 'databases', 'blocks', 'users', 'workspace', 'comments', 'content_convert']
 
           if (!VALID_DOCS.includes(toolName)) {
             throw new NotionMCPError(
