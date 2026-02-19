@@ -69,3 +69,42 @@ export function convertToNotionProperties(
 
   return converted
 }
+
+/**
+ * Extract simplified values from Notion API properties
+ * Converts complex Notion property objects into simple values
+ */
+export function extractProperties(properties: Record<string, any>): Record<string, any> {
+  const extracted: Record<string, any> = {}
+
+  for (const [key, prop] of Object.entries(properties)) {
+    const p = prop as any
+
+    if (p.type === 'title' && p.title) {
+      extracted[key] = p.title.map((t: any) => t.plain_text).join('')
+    } else if (p.type === 'rich_text' && p.rich_text) {
+      extracted[key] = p.rich_text.map((t: any) => t.plain_text).join('')
+    } else if (p.type === 'select' && p.select) {
+      extracted[key] = p.select.name
+    } else if (p.type === 'multi_select' && p.multi_select) {
+      extracted[key] = p.multi_select.map((s: any) => s.name)
+    } else if (p.type === 'number') {
+      extracted[key] = p.number
+    } else if (p.type === 'checkbox') {
+      extracted[key] = p.checkbox
+    } else if (p.type === 'url') {
+      extracted[key] = p.url
+    } else if (p.type === 'email') {
+      extracted[key] = p.email
+    } else if (p.type === 'phone_number') {
+      extracted[key] = p.phone_number
+    } else if (p.type === 'date' && p.date) {
+      extracted[key] = p.date.start + (p.date.end ? ` to ${p.date.end}` : '')
+    } else {
+      // Fallback for unsupported or simple properties
+      extracted[key] = p[p.type]
+    }
+  }
+
+  return extracted
+}
