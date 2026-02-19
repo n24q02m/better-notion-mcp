@@ -35,6 +35,13 @@ const DOCS_DIR = __dirname.endsWith('bin')
   : join(__dirname, '..', 'docs')
 
 /**
+ * Helper to read documentation file
+ */
+export function readDocumentation(filename: string): string {
+  return readFileSync(join(DOCS_DIR, filename), 'utf-8')
+}
+
+/**
  * Documentation resources for full tool details
  */
 const RESOURCES = [
@@ -327,7 +334,7 @@ export function registerTools(server: Server, notionToken: string) {
       )
     }
 
-    const content = readFileSync(join(DOCS_DIR, resource.file), 'utf-8')
+    const content = readDocumentation(resource.file)
     return {
       contents: [{ uri, mimeType: 'text/markdown', text: content }]
     }
@@ -377,7 +384,7 @@ export function registerTools(server: Server, notionToken: string) {
           const toolName = (args as { tool_name: string }).tool_name
           const docFile = `${toolName}.md`
           try {
-            const content = readFileSync(join(DOCS_DIR, docFile), 'utf-8')
+            const content = readDocumentation(docFile)
             result = { tool: toolName, documentation: content }
           } catch {
             throw new NotionMCPError(`Documentation not found for: ${toolName}`, 'DOC_NOT_FOUND', 'Check tool_name')
