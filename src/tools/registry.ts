@@ -16,13 +16,13 @@ import {
 import { Client } from '@notionhq/client'
 
 // Import mega tools
-import { blocks } from './composite/blocks.js'
-import { commentsManage } from './composite/comments.js'
-import { contentConvert } from './composite/content.js'
-import { databases } from './composite/databases.js'
-import { pages } from './composite/pages.js'
-import { users } from './composite/users.js'
-import { workspace } from './composite/workspace.js'
+import { type BlocksInput, blocks } from './composite/blocks.js'
+import { type CommentsManageInput, commentsManage } from './composite/comments.js'
+import { type ContentConvertInput, contentConvert } from './composite/content.js'
+import { type DatabasesInput, databases } from './composite/databases.js'
+import { type PagesInput, pages } from './composite/pages.js'
+import { type UsersInput, users } from './composite/users.js'
+import { type WorkspaceInput, workspace } from './composite/workspace.js'
 import { aiReadableMessage, NotionMCPError } from './helpers/errors.js'
 
 // Get docs directory path - works for both bundled CLI and unbundled code
@@ -296,6 +296,10 @@ const TOOLS = [
 /**
  * Register all tools with MCP server
  */
+export interface HelpInput {
+  tool_name: string
+}
+
 export function registerTools(server: Server, notionToken: string) {
   const notion = new Client({
     auth: notionToken,
@@ -353,28 +357,28 @@ export function registerTools(server: Server, notionToken: string) {
 
       switch (name) {
         case 'pages':
-          result = await pages(notion, args as any)
+          result = await pages(notion, args as unknown as PagesInput)
           break
         case 'databases':
-          result = await databases(notion, args as any)
+          result = await databases(notion, args as unknown as DatabasesInput)
           break
         case 'blocks':
-          result = await blocks(notion, args as any)
+          result = await blocks(notion, args as unknown as BlocksInput)
           break
         case 'users':
-          result = await users(notion, args as any)
+          result = await users(notion, args as unknown as UsersInput)
           break
         case 'workspace':
-          result = await workspace(notion, args as any)
+          result = await workspace(notion, args as unknown as WorkspaceInput)
           break
         case 'comments':
-          result = await commentsManage(notion, args as any)
+          result = await commentsManage(notion, args as unknown as CommentsManageInput)
           break
         case 'content_convert':
-          result = await contentConvert(args as any)
+          result = await contentConvert(args as unknown as ContentConvertInput)
           break
         case 'help': {
-          const toolName = (args as { tool_name: string }).tool_name
+          const toolName = (args as unknown as HelpInput).tool_name
           const docFile = `${toolName}.md`
           try {
             const content = readFileSync(join(DOCS_DIR, docFile), 'utf-8')
