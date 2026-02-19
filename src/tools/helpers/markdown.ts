@@ -3,28 +3,14 @@
  * Converts markdown text to Notion block format
  */
 
+import { extractPlainText, type RichTextItem } from './richtext.js'
+
+export { extractPlainText }
+
 export interface NotionBlock {
   object: 'block'
   type: string
   [key: string]: any
-}
-
-export interface RichText {
-  type: 'text'
-  text: {
-    content: string
-    link?: { url: string } | null
-  }
-  annotations: {
-    bold: boolean
-    italic: boolean
-    strikethrough: boolean
-    underline: boolean
-    code: boolean
-    color: string
-  }
-  plain_text?: string
-  href?: string | null
 }
 
 /**
@@ -153,8 +139,8 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
 /**
  * Parse inline markdown formatting to rich text
  */
-export function parseRichText(text: string): RichText[] {
-  const richText: RichText[] = []
+export function parseRichText(text: string): RichTextItem[] {
+  const richText: RichTextItem[] = []
   let current = ''
   let bold = false
   let italic = false
@@ -250,7 +236,7 @@ export function parseRichText(text: string): RichText[] {
 /**
  * Convert rich text array to plain markdown
  */
-function richTextToMarkdown(richText: RichText[]): string {
+function richTextToMarkdown(richText: RichTextItem[]): string {
   if (!richText || !Array.isArray(richText)) return ''
 
   return richText
@@ -270,18 +256,11 @@ function richTextToMarkdown(richText: RichText[]): string {
     .join('')
 }
 
-/**
- * Extract plain text from rich text
- */
-export function extractPlainText(richText: RichText[]): string {
-  return richText.map((rt) => rt.text.content).join('')
-}
-
 // Helper creators
 function createRichText(
   content: string,
   annotations: { bold?: boolean; italic?: boolean; code?: boolean; strikethrough?: boolean } = {}
-): RichText {
+): RichTextItem {
   return {
     type: 'text',
     text: { content, link: null },
