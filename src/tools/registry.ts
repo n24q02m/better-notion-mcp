@@ -34,8 +34,6 @@ const DOCS_DIR = __dirname.endsWith('bin')
   ? join(__dirname, '..', 'build', 'src', 'docs')
   : join(__dirname, '..', 'docs')
 
-const VALID_DOCS = ['pages', 'databases', 'blocks', 'users', 'workspace', 'comments', 'content_convert'] as const
-
 /**
  * Documentation resources for full tool details
  */
@@ -227,7 +225,7 @@ const TOOLS = [
       properties: {
         tool_name: {
           type: 'string',
-          enum: VALID_DOCS,
+          enum: ['pages', 'databases', 'blocks', 'users', 'workspace', 'comments', 'content_convert'],
           description: 'Tool to get documentation for'
         }
       },
@@ -318,15 +316,6 @@ export function registerTools(server: Server, notionToken: string) {
           break
         case 'help': {
           const toolName = (args as { tool_name: string }).tool_name
-
-          if (!VALID_DOCS.includes(toolName as any)) {
-            throw new NotionMCPError(
-              `Invalid tool name: ${toolName}`,
-              'VALIDATION_ERROR',
-              `Available tools: ${VALID_DOCS.join(', ')}`
-            )
-          }
-
           const docFile = `${toolName}.md`
           try {
             const content = readFileSync(join(DOCS_DIR, docFile), 'utf-8')
