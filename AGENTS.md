@@ -77,7 +77,6 @@ import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 
 - Custom `NotionMCPError` class: `message`, `code`, `suggestion`, `details`
 - `withErrorHandling()` HOF wrapper for all composite tool functions
-- `retryWithBackoff()` for transient failures
 - `suggestFixes()` for AI-readable error recovery hints
 - Error details sanitized to prevent secret leakage
 
