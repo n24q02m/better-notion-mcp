@@ -131,7 +131,7 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         lines.push(`1. ${richTextToMarkdown(block.numbered_list_item.rich_text)}`)
         break
       case 'code':
-        lines.push(`\`\`\`${block.code.language || ''}`)
+        lines.push(`\`\`\`\`\`\`${block.code.language || ''}`)
         lines.push(richTextToMarkdown(block.code.rich_text))
         lines.push('```')
         break
@@ -161,24 +161,53 @@ export function parseRichText(text: string): RichText[] {
   let code = false
   let strikethrough = false
 
+  // Optimization: Track the next valid closing bracket to avoid quadratic scanning
+  // -2: uninitialized
+  // -1: no more brackets
+  // >=0: index of next bracket
+  let nextCloseBracket = -2
+  let nextCloseBracketIsValid = false
+  let nextCloseParen = -1
+
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
     const next = text[i + 1]
 
     // Link [text](url)
     if (char === '[') {
-      const closeBracket = text.indexOf(']', i)
-      const openParen = closeBracket !== -1 ? text.indexOf('(', closeBracket) : -1
-      const closeParen = openParen !== -1 ? text.indexOf(')', openParen) : -1
+      // Find the next closing bracket if we haven't already or if we moved past it
+      if (nextCloseBracket === -1) {
+        // No more brackets, treat as text
+      } else if (nextCloseBracket === -2 || nextCloseBracket < i) {
+        nextCloseBracket = text.indexOf(']', i)
+        nextCloseBracketIsValid = false
 
-      if (closeBracket !== -1 && openParen === closeBracket + 1 && closeParen !== -1) {
+        if (nextCloseBracket !== -1) {
+          // Check validity ONCE
+          const openParen = nextCloseBracket + 1
+          if (text[openParen] === '(') {
+            const closeParen = text.indexOf(')', openParen)
+            if (closeParen !== -1) {
+              nextCloseBracketIsValid = true
+              nextCloseParen = closeParen
+            } else {
+              // No closing paren found anywhere later, so NO future link is possible
+              nextCloseBracket = -1
+            }
+          }
+        }
+      }
+
+      // Use cached result
+      if (nextCloseBracket !== -1 && nextCloseBracketIsValid) {
+        // Found a complete link structure: [ ... ]( ... )
         if (current) {
           richText.push(createRichText(current, { bold, italic, code, strikethrough }))
           current = ''
         }
 
-        const linkText = text.slice(i + 1, closeBracket)
-        const linkUrl = text.slice(openParen + 1, closeParen)
+        const linkText = text.slice(i + 1, nextCloseBracket)
+        const linkUrl = text.slice(nextCloseBracket + 2, nextCloseParen)
 
         richText.push({
           type: 'text',
@@ -193,9 +222,11 @@ export function parseRichText(text: string): RichText[] {
           }
         })
 
-        i = closeParen
+        i = nextCloseParen
+        // We consumed the link, continue to next iteration
         continue
       }
+      // If invalid, treat [ as text (fall through)
     }
 
     // Bold **text**
