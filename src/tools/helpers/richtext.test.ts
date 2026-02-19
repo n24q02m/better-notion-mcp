@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { splitText, extractPlainText } from './richtext'
+import { extractPlainText, splitText } from './richtext'
 
 describe('splitText', () => {
   it('should return a single chunk if content is within limit', () => {
@@ -67,6 +67,6 @@ describe('splitText', () => {
     const chunks = splitText(content, 2)
 
     expect(chunks).toHaveLength(3)
-    expect(chunks.map(c => c.text.content)).toEqual(['ab', 'cd', 'ef'])
+    expect(chunks.map((c) => c.text.content)).toEqual(['ab', 'cd', 'ef'])
   })
 })
