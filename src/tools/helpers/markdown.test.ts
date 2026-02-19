@@ -12,8 +12,7 @@ describe('Markdown Helper', () => {
     })
 
     it('should convert headings', () => {
-      const markdown =
-        '# Heading 1\n## Heading 2\n### Heading 3'
+      const markdown = '# Heading 1\n## Heading 2\n### Heading 3'
       const blocks = markdownToBlocks(markdown)
       expect(blocks).toHaveLength(3)
       expect(blocks[0].type).toBe('heading_1')
