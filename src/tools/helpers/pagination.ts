@@ -12,6 +12,7 @@ export interface PaginatedResponse<T> {
 export interface PaginationOptions {
   maxPages?: number // Max pages to fetch (0 = unlimited)
   pageSize?: number // Items per page (default: 100)
+  limit?: number // Max items to fetch (0 = unlimited)
 }
 
 /**
@@ -21,7 +22,7 @@ export async function autoPaginate<T>(
   fetchFn: (cursor?: string, pageSize?: number) => Promise<PaginatedResponse<T>>,
   options: PaginationOptions = {}
 ): Promise<T[]> {
-  const { maxPages = 0, pageSize = 100 } = options
+  const { maxPages = 0, pageSize = 100, limit = 0 } = options
   const allResults: T[] = []
   let cursor: string | null = null
   let pageCount = 0
@@ -36,9 +37,14 @@ export async function autoPaginate<T>(
     if (maxPages > 0 && pageCount >= maxPages) {
       break
     }
+
+    // Stop if limit reached
+    if (limit > 0 && allResults.length >= limit) {
+      break
+    }
   } while (cursor !== null)
 
-  return allResults
+  return limit > 0 ? allResults.slice(0, limit) : allResults
 }
 
 /**
