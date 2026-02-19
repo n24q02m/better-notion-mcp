@@ -89,16 +89,53 @@ export async function processBatches<T, R>(
   processFn: (item: T) => Promise<R>,
   options: { batchSize?: number; concurrency?: number } = {}
 ): Promise<R[]> {
-  const { batchSize = 10, concurrency = 3 } = options
-  const batches = batchItems(items, batchSize)
-  const results: R[] = []
+  const { batchSize = 1, concurrency = 3 } = options
+  const limit = Math.max(1, batchSize * concurrency)
 
-  for (let i = 0; i < batches.length; i += concurrency) {
-    const currentBatches = batches.slice(i, i + concurrency)
-    const batchPromises = currentBatches.map((batch) => Promise.all(batch.map(processFn)))
-    const batchResults = await Promise.all(batchPromises)
-    results.push(...batchResults.flat())
+  if (items.length === 0) {
+    return []
   }
 
-  return results
+  // Use sliding window concurrency
+  return new Promise<R[]>((resolve, reject) => {
+    const results = new Array<R>(items.length)
+    let currentIndex = 0
+    let activeCount = 0
+    let rejected = false
+    let completedCount = 0
+
+    const next = () => {
+      if (rejected) return
+
+      // Check completion
+      if (completedCount === items.length) {
+        resolve(results)
+        return
+      }
+
+      // Start new tasks
+      while (currentIndex < items.length && activeCount < limit) {
+        if (rejected) break
+
+        const index = currentIndex
+        currentIndex++
+        activeCount++
+
+        processFn(items[index])
+          .then((res) => {
+            if (rejected) return
+            results[index] = res
+            activeCount--
+            completedCount++
+            next()
+          })
+          .catch((err) => {
+            rejected = true
+            reject(err)
+          })
+      }
+    }
+
+    next()
+  })
 }
