@@ -4,7 +4,8 @@ import { blocksToMarkdown, extractPlainText, markdownToBlocks } from './markdown
 describe('Markdown Helper', () => {
   describe('markdownToBlocks', () => {
     it('should convert paragraphs', () => {
-      const markdown = 'This is a paragraph.'
+      const markdown =
+       'This is a paragraph.'
       const blocks = markdownToBlocks(markdown)
       expect(blocks).toHaveLength(1)
       expect(blocks[0].type).toBe('paragraph')
@@ -12,7 +13,8 @@ describe('Markdown Helper', () => {
     })
 
     it('should convert headings', () => {
-      const markdown = '# Heading 1\n## Heading 2\n### Heading 3'
+      const markdown =
+        '# Heading 1\n## Heading 2\n### Heading 3'
       const blocks = markdownToBlocks(markdown)
       expect(blocks).toHaveLength(3)
       expect(blocks[0].type).toBe('heading_1')
@@ -24,7 +26,8 @@ describe('Markdown Helper', () => {
     })
 
     it('should convert quotes', () => {
-      const markdown = '> This is a quote'
+      const markdown =
+       '> This is a quote'
       const blocks = markdownToBlocks(markdown)
       expect(blocks).toHaveLength(1)
       expect(blocks[0].type).toBe('quote')
@@ -32,14 +35,16 @@ describe('Markdown Helper', () => {
     })
 
     it('should convert dividers', () => {
-      const markdown = '---'
+      const markdown =
+       '---'
       const blocks = markdownToBlocks(markdown)
       expect(blocks).toHaveLength(1)
       expect(blocks[0].type).toBe('divider')
     })
 
     it('should handle multiple empty lines', () => {
-      const markdown = 'Paragraph 1\n\n\nParagraph 2'
+      const markdown =
+       'Paragraph 1\n\n\nParagraph 2'
       const blocks = markdownToBlocks(markdown)
       expect(blocks).toHaveLength(2)
       expect(blocks[0].type).toBe('paragraph')
@@ -47,7 +52,8 @@ describe('Markdown Helper', () => {
     })
 
     it('should convert bulleted lists', () => {
-      const markdown = '- Item 1\n* Item 2\n- Item 3'
+      const markdown =
+       '- Item 1\n* Item 2\n- Item 3'
       const blocks = markdownToBlocks(markdown)
       expect(blocks).toHaveLength(3)
       expect(blocks[0].type).toBe('bulleted_list_item')
@@ -57,7 +63,8 @@ describe('Markdown Helper', () => {
     })
 
     it('should convert numbered lists', () => {
-      const markdown = '1. First\n2. Second'
+      const markdown =
+       '1. First\n2. Second'
       const blocks = markdownToBlocks(markdown)
       expect(blocks).toHaveLength(2)
       expect(blocks[0].type).toBe('numbered_list_item')
@@ -67,7 +74,8 @@ describe('Markdown Helper', () => {
     })
 
     it('should convert code blocks', () => {
-      const markdown = '```typescript\nconst x = 1;\nconsole.log(x);\n```'
+      const markdown =
+       '```typescript\nconst x = 1;\nconsole.log(x);\n```'
       const blocks = markdownToBlocks(markdown)
       expect(blocks).toHaveLength(1)
       expect(blocks[0].type).toBe('code')
@@ -76,7 +84,8 @@ describe('Markdown Helper', () => {
     })
 
     it('should convert code blocks without language', () => {
-      const markdown = '```\nplain text code\n```'
+      const markdown =
+       '```\nplain text code\n```'
       const blocks = markdownToBlocks(markdown)
       expect(blocks).toHaveLength(1)
       expect(blocks[0].type).toBe('code')
@@ -85,7 +94,8 @@ describe('Markdown Helper', () => {
     })
 
     it('should parse rich text (bold, italic, code, strikethrough)', () => {
-      const markdown = 'This is **bold**, *italic*, `code`, and ~~strikethrough~~.'
+      const markdown =
+       'This is **bold**, *italic*, `code`, and ~~strikethrough~~.'
       const blocks = markdownToBlocks(markdown)
       expect(blocks).toHaveLength(1)
       const richText = blocks[0].paragraph.rich_text
@@ -125,7 +135,8 @@ describe('Markdown Helper', () => {
     })
 
     it('should parse links', () => {
-      const markdown = 'Click [here](https://example.com) for more info.'
+      const markdown =
+       'Click [here](https://example.com) for more info.'
       const blocks = markdownToBlocks(markdown)
       expect(blocks).toHaveLength(1)
       const richText = blocks[0].paragraph.rich_text
@@ -139,7 +150,8 @@ describe('Markdown Helper', () => {
     })
 
     it('should perform round trip conversion', () => {
-      const markdown = '# Heading\n\nParagraph with **bold** and *italic*.\n\n- List item 1\n- List item 2\n\n> Quote block\n\n---\n\n```javascript\nconsole.log("code");\n```'
+      const markdown =
+        '# Heading\n\nParagraph with **bold** and *italic*.\n\n- List item 1\n- List item 2\n\n> Quote block\n\n---\n\n```javascript\nconsole.log("code");\n```'
       const blocks = markdownToBlocks(markdown)
       const convertedMarkdown = blocksToMarkdown(blocks)
 
@@ -160,7 +172,8 @@ describe('Markdown Helper', () => {
 
   describe('extractPlainText', () => {
     it('should extract plain text from rich text', () => {
-      const markdown = 'Text with **bold** and [link](url)'
+      const markdown =
+       'Text with **bold** and [link](url)'
       const blocks = markdownToBlocks(markdown)
       const richText = blocks[0].paragraph.rich_text
       const plainText = extractPlainText(richText)
