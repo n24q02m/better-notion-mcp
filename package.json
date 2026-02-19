@@ -47,18 +47,18 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.21.1",
-    "@notionhq/client": "^5.3.0",
-    "zod": "^4.1.12"
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@notionhq/client": "^5.4.0",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.8",
-    "@types/node": "^24.10.0",
-    "@vitest/coverage-v8": "^4.0.8",
+    "@types/node": "^24.10.1",
+    "@vitest/coverage-v8": "^4.0.15",
     "esbuild": "^0.25.12",
-    "tsx": "^4.20.6",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.8"
+    "vitest": "^4.0.15"
   },
   "description": "Better MCP server for Notion API with composite tools optimized for AI agents",
   "main": "build/src/init-server.js",
