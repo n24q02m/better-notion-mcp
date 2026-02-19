@@ -76,7 +76,7 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
           throw new NotionMCPError('content required for update', 'VALIDATION_ERROR', 'Provide markdown content')
         }
         const block: any = await notion.blocks.retrieve({ block_id: input.block_id })
-        const blockType = block.type
+        const currentType = block.type
         const newBlocks = markdownToBlocks(input.content)
 
         if (newBlocks.length === 0) {
@@ -84,28 +84,37 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
         }
 
         const newContent = newBlocks[0]
+        const targetType = newContent.type
         const updatePayload: any = {}
 
-        // Build update based on block type
-        if (
-          [
-            'paragraph',
-            'heading_1',
-            'heading_2',
-            'heading_3',
-            'bulleted_list_item',
-            'numbered_list_item',
-            'quote'
-          ].includes(blockType)
-        ) {
-          updatePayload[blockType] = {
-            rich_text: (newContent as any)[blockType]?.rich_text || []
-          }
-        } else {
+        const supportedTypes = [
+          'paragraph',
+          'heading_1',
+          'heading_2',
+          'heading_3',
+          'bulleted_list_item',
+          'numbered_list_item',
+          'quote'
+        ]
+
+        // Ensure we are updating a supported block type
+        if (!supportedTypes.includes(currentType)) {
           throw new NotionMCPError(
-            `Block type '${blockType}' cannot be updated`,
+            `Block type '${currentType}' cannot be updated`,
             'VALIDATION_ERROR',
             'Only text blocks can be updated'
+          )
+        }
+
+        // Check if the target block type is supported for update/conversion
+        if (supportedTypes.includes(targetType)) {
+          updatePayload.type = targetType
+          updatePayload[targetType] = (newContent as any)[targetType]
+        } else {
+          throw new NotionMCPError(
+            `Markdown parsed to unsupported type '${targetType}' for update`,
+            'VALIDATION_ERROR',
+            `Update only supports: ${supportedTypes.join(', ')}`
           )
         }
 
@@ -117,7 +126,7 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
         return {
           action: 'update',
           block_id: input.block_id,
-          type: blockType,
+          type: targetType,
           updated: true
         }
       }
