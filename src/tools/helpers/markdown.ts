@@ -31,13 +31,23 @@ export interface RichText {
  * Convert markdown string to Notion blocks
  */
 export function markdownToBlocks(markdown: string): NotionBlock[] {
-  const lines = markdown.split('\n')
   const blocks: NotionBlock[] = []
   let currentList: NotionBlock[] = []
   let currentListType: 'bulleted' | 'numbered' | null = null
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
+  let cursor = 0
+  const length = markdown.length
+
+  while (cursor <= length) {
+    if (cursor > length) break
+
+    let lineEnd = markdown.indexOf('\n', cursor)
+    if (lineEnd === -1) {
+      lineEnd = length
+    }
+
+    const line = markdown.slice(cursor, lineEnd)
+    let nextCursor = lineEnd + 1
 
     // Flush list if we're not in a list anymore
     if (currentListType && !isListItem(line)) {
@@ -48,6 +58,7 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
 
     // Skip empty lines
     if (!line.trim()) {
+      cursor = nextCursor
       continue
     }
 
@@ -63,10 +74,24 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
     else if (line.startsWith('```')) {
       const language = line.slice(3).trim()
       const codeLines: string[] = []
-      i++
-      while (i < lines.length && !lines[i].startsWith('```')) {
-        codeLines.push(lines[i])
-        i++
+
+      // Iterate to find closing ```
+      while (nextCursor <= length) {
+        if (nextCursor > length) break
+
+        let nextLineEnd = markdown.indexOf('\n', nextCursor)
+        if (nextLineEnd === -1) nextLineEnd = length
+
+        const nextLine = markdown.slice(nextCursor, nextLineEnd)
+        const nextNextCursor = nextLineEnd + 1
+
+        if (nextLine.startsWith('```')) {
+          nextCursor = nextNextCursor
+          break
+        }
+
+        codeLines.push(nextLine)
+        nextCursor = nextNextCursor
       }
       blocks.push(createCodeBlock(codeLines.join('\n'), language))
     }
@@ -94,6 +119,8 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
     else {
       blocks.push(createParagraph(line))
     }
+
+    cursor = nextCursor
   }
 
   // Flush remaining list
