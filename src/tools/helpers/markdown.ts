@@ -296,8 +296,7 @@ function createRichText(
   }
 }
 
-function createHeading(level: 1 | 2 | 3, text: string): NotionBlock {
-  const type = `heading_${level}` as 'heading_1' | 'heading_2' | 'heading_3'
+function createBlock(type: string, text: string): NotionBlock {
   return {
     object: 'block',
     type,
@@ -308,37 +307,25 @@ function createHeading(level: 1 | 2 | 3, text: string): NotionBlock {
   }
 }
 
+function createHeading(level: 1 | 2 | 3, text: string): NotionBlock {
+  const type = `heading_${level}` as 'heading_1' | 'heading_2' | 'heading_3'
+  return createBlock(type, text)
+}
+
 function createParagraph(text: string): NotionBlock {
-  return {
-    object: 'block',
-    type: 'paragraph',
-    paragraph: {
-      rich_text: parseRichText(text),
-      color: 'default'
-    }
-  }
+  return createBlock('paragraph', text)
 }
 
 function createBulletedListItem(text: string): NotionBlock {
-  return {
-    object: 'block',
-    type: 'bulleted_list_item',
-    bulleted_list_item: {
-      rich_text: parseRichText(text),
-      color: 'default'
-    }
-  }
+  return createBlock('bulleted_list_item', text)
 }
 
 function createNumberedListItem(text: string): NotionBlock {
-  return {
-    object: 'block',
-    type: 'numbered_list_item',
-    numbered_list_item: {
-      rich_text: parseRichText(text),
-      color: 'default'
-    }
-  }
+  return createBlock('numbered_list_item', text)
+}
+
+function createQuote(text: string): NotionBlock {
+  return createBlock('quote', text)
 }
 
 function createCodeBlock(code: string, language: string): NotionBlock {
@@ -348,17 +335,6 @@ function createCodeBlock(code: string, language: string): NotionBlock {
     code: {
       rich_text: [createRichText(code)],
       language: language || 'plain text'
-    }
-  }
-}
-
-function createQuote(text: string): NotionBlock {
-  return {
-    object: 'block',
-    type: 'quote',
-    quote: {
-      rich_text: parseRichText(text),
-      color: 'default'
     }
   }
 }
