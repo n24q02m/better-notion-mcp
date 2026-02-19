@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { contentConvert } from './content.js'
-import { markdownToBlocks, blocksToMarkdown } from '../helpers/markdown.js'
 
 // Mock the markdown helpers
 vi.mock('../helpers/markdown.js', () => ({
@@ -102,12 +102,12 @@ describe('contentConvert', () => {
     })
 
     it('should throw error if content is number', async () => {
-        const input = {
-            direction: 'blocks-to-markdown' as const,
-            content: 123 as any
-        }
+      const input = {
+        direction: 'blocks-to-markdown' as const,
+        content: 123 as any
+      }
 
-        await expect(contentConvert(input)).rejects.toThrow('Content must be an array')
+      await expect(contentConvert(input)).rejects.toThrow('Content must be an array')
     })
   })
 
