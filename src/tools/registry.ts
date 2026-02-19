@@ -336,7 +336,7 @@ export function registerTools(server: Server, notionToken: string) {
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: requestArgs } = request.params
-    let args = requestArgs
+    let args: any = requestArgs
 
     if (!args) {
       return {

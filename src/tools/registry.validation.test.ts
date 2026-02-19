@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { registerTools } from './registry.js'
 import { CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { registerTools } from './registry.js'
 
 // Mock the dependencies
 vi.mock('@modelcontextprotocol/sdk/server/index.js', () => ({
@@ -15,9 +15,7 @@ vi.mock('@modelcontextprotocol/sdk/server/index.js', () => ({
 }))
 
 vi.mock('@notionhq/client', () => ({
-  Client: class {
-    constructor() {}
-  }
+  Client: class {}
 }))
 
 // Mock the tool implementations
