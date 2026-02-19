@@ -53,24 +53,6 @@ export async function fetchPage<T>(
 }
 
 /**
- * Create cursor handler for manual pagination
- */
-export function createCursorHandler() {
-  let currentCursor: string | null = null
-
-  return {
-    getCursor: () => currentCursor,
-    setCursor: (cursor: string | null) => {
-      currentCursor = cursor
-    },
-    reset: () => {
-      currentCursor = null
-    },
-    hasMore: () => currentCursor !== null
-  }
-}
-
-/**
  * Batch items into chunks
  */
 export function batchItems<T>(items: T[], batchSize: number): T[][] {
