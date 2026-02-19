@@ -298,10 +298,6 @@ async function archivePage(notion: Client, input: PagesInput): Promise<any> {
 }
 
 /**
- * Move page to new parent
- * Maps to: PATCH /v1/pages/{id}
- */
-/**
  * Duplicate page
  * Maps to: GET /v1/pages/{id} + POST /v1/pages + GET/PATCH /v1/blocks
  */
