@@ -14,6 +14,8 @@ export interface PaginationOptions {
   pageSize?: number // Items per page (default: 100)
 }
 
+const SAFETY_LIMIT = 1000 // Prevent infinite loops
+
 /**
  * Fetch all pages automatically
  */
@@ -34,6 +36,12 @@ export async function autoPaginate<T>(
 
     // Stop if max pages reached
     if (maxPages > 0 && pageCount >= maxPages) {
+      break
+    }
+
+    // Safety break
+    if (pageCount >= SAFETY_LIMIT) {
+      console.warn(`[AutoPaginate] Safety limit of ${SAFETY_LIMIT} pages reached. Stopping pagination.`)
       break
     }
   } while (cursor !== null)
