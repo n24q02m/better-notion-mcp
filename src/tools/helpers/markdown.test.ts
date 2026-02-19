@@ -1,4 +1,3 @@
-
 import { describe, expect, it } from 'vitest'
 import { parseRichText } from './markdown'
 
@@ -162,12 +161,12 @@ describe('parseRichText', () => {
   })
 
   it('handles nested structures correctly', () => {
-     // [ a [ b ](url)
-     // Should parse as link text " a [ b " with url "url"
-     const text = '[ a [ b ](url)'
-     const result = parseRichText(text)
-     expect(result[0].text.content).toBe(' a [ b ')
-     expect(result[0].text.link?.url).toBe('url')
+    // [ a [ b ](url)
+    // Should parse as link text " a [ b " with url "url"
+    const text = '[ a [ b ](url)'
+    const result = parseRichText(text)
+    expect(result[0].text.content).toBe(' a [ b ')
+    expect(result[0].text.link?.url).toBe('url')
   })
 
   it('handles multiple links', () => {
@@ -182,13 +181,13 @@ describe('parseRichText', () => {
   })
 
   it('handles formatting inside link text', () => {
-     // Note: current parser might not support formatting inside link text because it treats link text as raw slice?
-     // Let's check implementation.
-     // const linkText = text.slice(i + 1, nextCloseBracket)
-     // parseRichText is not recursive here. It returns linkText as content.
-     // So **bold** inside link text is treated as literal **bold**.
-     const text = '[**bold**](url)'
-     const result = parseRichText(text)
-     expect(result[0].text.content).toBe('**bold**')
+    // Note: current parser might not support formatting inside link text because it treats link text as raw slice?
+    // Let's check implementation.
+    // const linkText = text.slice(i + 1, nextCloseBracket)
+    // parseRichText is not recursive here. It returns linkText as content.
+    // So **bold** inside link text is treated as literal **bold**.
+    const text = '[**bold**](url)'
+    const result = parseRichText(text)
+    expect(result[0].text.content).toBe('**bold**')
   })
 })
