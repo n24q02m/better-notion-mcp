@@ -82,23 +82,44 @@ export function batchItems<T>(items: T[], batchSize: number): T[][] {
 }
 
 /**
- * Process items in batches with concurrency limit
+ * Process items with concurrency limit.
+ * Uses a sliding window for better performance.
+ * Effective concurrency = (batchSize ?? 1) * (concurrency ?? 3).
+ * Default concurrency is 3 (safe for Notion API).
  */
 export async function processBatches<T, R>(
   items: T[],
   processFn: (item: T) => Promise<R>,
   options: { batchSize?: number; concurrency?: number } = {}
 ): Promise<R[]> {
-  const { batchSize = 10, concurrency = 3 } = options
-  const batches = batchItems(items, batchSize)
-  const results: R[] = []
+  const batchSize = Math.max(1, options.batchSize ?? 1)
+  const concurrency = Math.max(1, options.concurrency ?? 3)
+  const limit = batchSize * concurrency
 
-  for (let i = 0; i < batches.length; i += concurrency) {
-    const currentBatches = batches.slice(i, i + concurrency)
-    const batchPromises = currentBatches.map((batch) => Promise.all(batch.map(processFn)))
-    const batchResults = await Promise.all(batchPromises)
-    results.push(...batchResults.flat())
+  const results: Promise<R>[] = []
+  const executing: Set<Promise<void>> = new Set()
+
+  for (const item of items) {
+    const p = processFn(item)
+    results.push(p)
+
+    // Only manage concurrency if we have more items than the limit
+    if (limit < items.length) {
+      // Create a tracking promise that removes itself when done
+      // We catch errors here to avoid race() throwing - Promise.all handles errors
+      const e = p
+        .then(() => {})
+        .catch(() => {})
+        .finally(() => {
+          executing.delete(e)
+        })
+      executing.add(e)
+
+      if (executing.size >= limit) {
+        await Promise.race(executing)
+      }
+    }
   }
 
-  return results
+  return Promise.all(results)
 }
