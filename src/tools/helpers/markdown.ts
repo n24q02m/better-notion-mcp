@@ -161,24 +161,45 @@ export function parseRichText(text: string): RichText[] {
   let code = false
   let strikethrough = false
 
+  // Optimization: Cache the next link components to avoid O(N^2) searching
+  let nextCloseBracket = -1
+  let nextOpenParen = -1
+  let nextCloseParen = -1
+  // Tracks if we've searched for next link components relative to current position
+  // If we search and find nothing, we can stop searching.
+  let noMoreLinks = false
+
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
     const next = text[i + 1]
 
     // Link [text](url)
     if (char === '[') {
-      const closeBracket = text.indexOf(']', i)
-      const openParen = closeBracket !== -1 ? text.indexOf('(', closeBracket) : -1
-      const closeParen = openParen !== -1 ? text.indexOf(')', openParen) : -1
+      if (!noMoreLinks) {
+        // If our cached close bracket is behind us, we need to find the next one
+        if (nextCloseBracket < i) {
+          nextCloseBracket = text.indexOf(']', i)
 
-      if (closeBracket !== -1 && openParen === closeBracket + 1 && closeParen !== -1) {
+          if (nextCloseBracket === -1) {
+            noMoreLinks = true
+          } else {
+            // Found a bracket, look for parens
+            nextOpenParen = text.indexOf('(', nextCloseBracket)
+            // Only look for close paren if we have an open paren
+            nextCloseParen = nextOpenParen !== -1 ? text.indexOf(')', nextOpenParen) : -1
+          }
+        }
+      }
+
+      // Check if we have a valid link structure: [ ... ](...)
+      if (!noMoreLinks && nextCloseBracket !== -1 && nextOpenParen === nextCloseBracket + 1 && nextCloseParen !== -1) {
         if (current) {
           richText.push(createRichText(current, { bold, italic, code, strikethrough }))
           current = ''
         }
 
-        const linkText = text.slice(i + 1, closeBracket)
-        const linkUrl = text.slice(openParen + 1, closeParen)
+        const linkText = text.slice(i + 1, nextCloseBracket)
+        const linkUrl = text.slice(nextOpenParen + 1, nextCloseParen)
 
         richText.push({
           type: 'text',
@@ -193,7 +214,9 @@ export function parseRichText(text: string): RichText[] {
           }
         })
 
-        i = closeParen
+        i = nextCloseParen
+        // After parsing a link, nextCloseBracket is definitely < i (it was at the end of the link text)
+        // So next iteration will naturally refresh the cache if needed.
         continue
       }
     }
