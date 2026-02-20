@@ -113,17 +113,6 @@ Clients that support MCP Resources can load full tool documentation:
 
 ---
 
-## Limitations
-
-**Supported Blocks:**
-- ✅ Headings, Paragraphs, Lists, Code blocks, Quotes, Dividers
-- ✅ Inline: bold, italic, code, strikethrough, links
-
-**Unsupported Blocks:**
-- ❌ Tables, Toggles, Callouts, Columns, Databases, Embeds, Images, Files
-
----
-
 ## Build from Source
 
 ```bash
