@@ -25,6 +25,7 @@ import { pages } from './composite/pages.js'
 import { users } from './composite/users.js'
 import { workspace } from './composite/workspace.js'
 import { aiReadableMessage, NotionMCPError } from './helpers/errors.js'
+import { TOOL_SCHEMAS } from './schemas.js'
 
 // Get docs directory path - works for both bundled CLI and unbundled code
 const __filename = fileURLToPath(import.meta.url)
@@ -375,7 +376,8 @@ export function registerTools(server: Server, notionToken: string) {
   })
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params
+    const { name, arguments: requestArgs } = request.params
+    let args: any = requestArgs
 
     if (!args) {
       return {
@@ -390,6 +392,11 @@ export function registerTools(server: Server, notionToken: string) {
     }
 
     try {
+      const schema = TOOL_SCHEMAS[name]
+      if (schema) {
+        args = schema.parse(args)
+      }
+
       let result
 
       switch (name) {
