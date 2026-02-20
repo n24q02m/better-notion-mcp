@@ -6,7 +6,7 @@
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
-import { autoPaginate, processBatches } from '../helpers/pagination.js'
+import { autoPaginate, batchItems, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
 
@@ -339,33 +339,59 @@ async function updatePage(notion: Client, input: PagesInput): Promise<any> {
   // Handle content updates
   if (input.content || input.append_content) {
     if (input.content) {
-      // Replace all content
-      const existingBlocks = await autoPaginate((cursor) =>
-        notion.blocks.children.list({
+      // Replace all content: Pipeline deletion while fetching to optimize speed and memory
+      let cursor: string | null = null
+      let deletePromise: Promise<any> | null = null
+
+      do {
+        const response = await notion.blocks.children.list({
           block_id: input.page_id!,
-          start_cursor: cursor,
+          start_cursor: cursor || undefined,
           page_size: 100
         })
-      )
 
-      await processBatches(existingBlocks, async (block) => {
-        await notion.blocks.delete({ block_id: block.id })
-      })
+        // Wait for previous batch deletion to finish before starting new one
+        if (deletePromise) {
+          await deletePromise
+        }
+
+        // Start deleting current batch in background
+        if (response.results.length > 0) {
+          deletePromise = processBatches(response.results, async (block: any) => {
+            await notion.blocks.delete({ block_id: block.id })
+          })
+        }
+
+        cursor = response.next_cursor
+      } while (cursor)
+
+      // Wait for final batch
+      if (deletePromise) {
+        await deletePromise
+      }
 
       const newBlocks = markdownToBlocks(input.content)
       if (newBlocks.length > 0) {
-        await notion.blocks.children.append({
-          block_id: input.page_id,
-          children: newBlocks as any
-        })
+        // Append in chunks of 100 to respect Notion API limits
+        const batches = batchItems(newBlocks, 100)
+        for (const batch of batches) {
+          await notion.blocks.children.append({
+            block_id: input.page_id,
+            children: batch as any
+          })
+        }
       }
     } else if (input.append_content) {
       const blocks = markdownToBlocks(input.append_content)
       if (blocks.length > 0) {
-        await notion.blocks.children.append({
-          block_id: input.page_id,
-          children: blocks as any
-        })
+        // Append in chunks of 100 to respect Notion API limits
+        const batches = batchItems(blocks, 100)
+        for (const batch of batches) {
+          await notion.blocks.children.append({
+            block_id: input.page_id,
+            children: batch as any
+          })
+        }
       }
     }
   }
