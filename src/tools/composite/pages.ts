@@ -11,7 +11,7 @@ import { convertToNotionProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
 
 export interface PagesInput {
-  action: 'create' | 'get' | 'update' | 'archive' | 'restore' | 'duplicate'
+  action: 'create' | 'get' | 'get_property' | 'update' | 'move' | 'archive' | 'restore' | 'duplicate'
 
   // Common params
   page_id?: string
@@ -25,6 +25,9 @@ export interface PagesInput {
   properties?: Record<string, any>
   icon?: string
   cover?: string
+
+  // get_property params
+  property_id?: string
 
   // Archive/Restore params
   archived?: boolean
@@ -42,8 +45,14 @@ export async function pages(notion: Client, input: PagesInput): Promise<any> {
       case 'get':
         return await getPage(notion, input)
 
+      case 'get_property':
+        return await getPageProperty(notion, input)
+
       case 'update':
         return await updatePage(notion, input)
+
+      case 'move':
+        return await movePage(notion, input)
 
       case 'archive':
       case 'restore':
@@ -56,7 +65,7 @@ export async function pages(notion: Client, input: PagesInput): Promise<any> {
         throw new NotionMCPError(
           `Unknown action: ${input.action}`,
           'VALIDATION_ERROR',
-          'Supported actions: create, get, update, archive, restore, duplicate'
+          'Supported actions: create, get, get_property, update, move, archive, restore, duplicate'
         )
     }
   })()
@@ -171,6 +180,29 @@ async function getPage(notion: Client, input: PagesInput): Promise<any> {
       properties[key] = p.phone_number
     } else if (p.type === 'date' && p.date) {
       properties[key] = p.date.start + (p.date.end ? ` to ${p.date.end}` : '')
+    } else if (p.type === 'relation' && p.relation) {
+      properties[key] = p.relation.map((r: any) => r.id)
+    } else if (p.type === 'rollup' && p.rollup) {
+      properties[key] = p.rollup
+    } else if (p.type === 'people' && p.people) {
+      properties[key] = p.people.map((person: any) => person.name || person.id)
+    } else if (p.type === 'files' && p.files) {
+      properties[key] = p.files.map((f: any) => f.file?.url || f.external?.url || f.name)
+    } else if (p.type === 'formula' && p.formula) {
+      const formula = p.formula
+      properties[key] = formula[formula.type]
+    } else if (p.type === 'created_time') {
+      properties[key] = p.created_time
+    } else if (p.type === 'last_edited_time') {
+      properties[key] = p.last_edited_time
+    } else if (p.type === 'created_by' && p.created_by) {
+      properties[key] = p.created_by.name || p.created_by.id
+    } else if (p.type === 'last_edited_by' && p.last_edited_by) {
+      properties[key] = p.last_edited_by.name || p.last_edited_by.id
+    } else if (p.type === 'status' && p.status) {
+      properties[key] = p.status.name
+    } else if (p.type === 'unique_id' && p.unique_id) {
+      properties[key] = p.unique_id.prefix ? `${p.unique_id.prefix}-${p.unique_id.number}` : p.unique_id.number
     }
   }
 
@@ -184,6 +216,85 @@ async function getPage(notion: Client, input: PagesInput): Promise<any> {
     properties,
     content: markdown,
     block_count: blocks.length
+  }
+}
+
+/**
+ * Retrieve a page property item (supports paginated properties like relation, rollup, rich_text)
+ * Maps to: GET /v1/pages/{id}/properties/{property_id}
+ */
+async function getPageProperty(notion: Client, input: PagesInput): Promise<any> {
+  if (!input.page_id) {
+    throw new NotionMCPError('page_id is required for get_property action', 'VALIDATION_ERROR', 'Provide page_id')
+  }
+
+  if (!input.property_id) {
+    throw new NotionMCPError(
+      'property_id is required for get_property action',
+      'VALIDATION_ERROR',
+      'Provide property_id (from page properties metadata)'
+    )
+  }
+
+  // Fetch with auto-pagination for paginated property items
+  const allResults = await autoPaginate(async (cursor) => {
+    const response: any = await notion.pages.properties.retrieve({
+      page_id: input.page_id!,
+      property_id: input.property_id!,
+      start_cursor: cursor,
+      page_size: 100
+    } as any)
+
+    // Non-paginated property items return the value directly (no results array)
+    if (!response.results) {
+      return {
+        results: [response],
+        next_cursor: null,
+        has_more: false
+      }
+    }
+
+    return {
+      results: response.results,
+      next_cursor: response.next_cursor,
+      has_more: response.has_more
+    }
+  })
+
+  // Format results based on property type
+  const firstResult = allResults[0] as any
+  const propertyType = firstResult?.type
+
+  let value: any
+  switch (propertyType) {
+    case 'title':
+    case 'rich_text':
+      value = allResults.map((item: any) => item[propertyType]?.plain_text || '').join('')
+      break
+    case 'relation':
+      value = allResults.map((item: any) => item.relation?.id).filter(Boolean)
+      break
+    case 'rollup':
+      value = firstResult.rollup
+      break
+    case 'people':
+      value = allResults.map((item: any) => ({
+        id: item.people?.id,
+        name: item.people?.name
+      }))
+      break
+    default:
+      // For non-paginated types, return the raw value
+      value = firstResult?.[propertyType] ?? firstResult
+      break
+  }
+
+  return {
+    action: 'get_property',
+    page_id: input.page_id,
+    property_id: input.property_id,
+    type: propertyType,
+    value
   }
 }
 
@@ -267,6 +378,39 @@ async function updatePage(notion: Client, input: PagesInput): Promise<any> {
 }
 
 /**
+ * Move page to a new parent
+ * Maps to: POST /v1/pages/{id}/move
+ */
+async function movePage(notion: Client, input: PagesInput): Promise<any> {
+  if (!input.page_id) {
+    throw new NotionMCPError('page_id is required for move action', 'VALIDATION_ERROR', 'Provide page_id')
+  }
+
+  if (!input.parent_id) {
+    throw new NotionMCPError(
+      'parent_id is required for move action',
+      'VALIDATION_ERROR',
+      'Provide parent_id (target page ID to move into)'
+    )
+  }
+
+  const normalizedParentId = input.parent_id.replace(/-/g, '')
+
+  // SDK types don't include parent in UpdatePageParameters, but the API supports it
+  await (notion.pages as any).update({
+    page_id: input.page_id,
+    parent: { type: 'page_id', page_id: normalizedParentId }
+  })
+
+  return {
+    action: 'move',
+    page_id: input.page_id,
+    new_parent_id: normalizedParentId,
+    moved: true
+  }
+}
+
+/**
  * Archive or restore page
  * Maps to: PATCH /v1/pages/{id}
  */
@@ -297,10 +441,6 @@ async function archivePage(notion: Client, input: PagesInput): Promise<any> {
   }
 }
 
-/**
- * Move page to new parent
- * Maps to: PATCH /v1/pages/{id}
- */
 /**
  * Duplicate page
  * Maps to: GET /v1/pages/{id} + POST /v1/pages + GET/PATCH /v1/blocks
@@ -343,7 +483,7 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<any> {
       }
 
       // Create duplicate
-      const duplicatePage: any = await notion.pages.create({
+      const duplicatedPage: any = await notion.pages.create({
         parent,
         properties: originalPage.properties,
         icon: originalPage.icon,
@@ -353,15 +493,15 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<any> {
       // Copy content
       if (originalBlocks.length > 0) {
         await notion.blocks.children.append({
-          block_id: duplicatePage.id,
+          block_id: duplicatedPage.id,
           children: originalBlocks as any
         })
       }
 
       return {
         original_id: pageId,
-        duplicate_id: duplicatePage.id,
-        url: duplicatePage.url
+        duplicate_id: duplicatedPage.id,
+        url: duplicatedPage.url
       }
     },
     { batchSize: 5, concurrency: 3 }

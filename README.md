@@ -8,7 +8,7 @@
 
 ## Why "Better"?
 
-**8 composite tools** that consolidate Notion's 28+ REST API endpoints into action-based operations optimized for AI agents.
+**9 composite tools** that consolidate Notion's 28+ REST API endpoints into action-based operations optimized for AI agents.
 
 ### vs. Official Notion MCP Server
 
@@ -18,7 +18,7 @@
 | **Operations** | **Composite actions** (1 call) | Atomic (2+ calls) |
 | **Pagination** | **Auto-pagination** | Manual cursor |
 | **Bulk Operations** | **Native batch support** | Loop manually |
-| **Tools** | **8 tools** (30+ actions) | 28+ endpoint tools |
+| **Tools** | **9 tools** (39 actions) | 28+ endpoint tools |
 | **Token Efficiency** | **Optimized** | Standard |
 
 ---
@@ -70,13 +70,14 @@ Get your token: <https://www.notion.so/my-integrations> â†’ Create integration â
 
 | Tool | Actions |
 |------|---------|
-| `pages` | create, get, update, archive, restore, duplicate |
-| `databases` | create, get, query, create_page, update_page, delete_page, create_data_source, update_data_source, update_database |
+| `pages` | create, get, get_property, update, move, archive, restore, duplicate |
+| `databases` | create, get, query, create_page, update_page, delete_page, create_data_source, update_data_source, update_database, list_templates |
 | `blocks` | get, children, append, update, delete |
 | `users` | list, get, me, from_workspace |
 | `workspace` | info, search |
-| `comments` | list, create |
+| `comments` | list, get, create |
 | `content_convert` | markdown-to-blocks, blocks-to-markdown |
+| `file_uploads` | create, send, complete, retrieve, list |
 | `help` | Get full documentation for any tool |
 
 ---
@@ -108,6 +109,7 @@ Clients that support MCP Resources can load full tool documentation:
 | `notion://docs/workspace` | Workspace tool docs |
 | `notion://docs/comments` | Comments tool docs |
 | `notion://docs/content_convert` | Content Convert tool docs |
+| `notion://docs/file_uploads` | File Uploads tool docs |
 
 ---
 

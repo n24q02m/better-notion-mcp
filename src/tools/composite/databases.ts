@@ -20,6 +20,7 @@ export interface DatabasesInput {
     | 'create_data_source'
     | 'update_data_source'
     | 'update_database'
+    | 'list_templates'
 
   // Common params
   database_id?: string
@@ -85,11 +86,14 @@ export async function databases(notion: Client, input: DatabasesInput): Promise<
       case 'update_database':
         return await updateDatabaseContainer(notion, input)
 
+      case 'list_templates':
+        return await listDataSourceTemplates(notion, input)
+
       default:
         throw new NotionMCPError(
           `Unknown action: ${input.action}`,
           'VALIDATION_ERROR',
-          'Supported actions: create, get, query, create_page, update_page, delete_page, create_data_source, update_data_source, update_database'
+          'Supported actions: create, get, query, create_page, update_page, delete_page, create_data_source, update_data_source, update_database, list_templates'
         )
     }
   })()
@@ -566,5 +570,55 @@ async function updateDatabaseContainer(notion: Client, input: DatabasesInput): P
     action: 'update_database',
     database_id: input.database_id,
     updated: true
+  }
+}
+
+/**
+ * List data source templates
+ * Maps to: GET /v1/data_sources/{id}/templates (API 2025-09-03)
+ */
+async function listDataSourceTemplates(notion: Client, input: DatabasesInput): Promise<any> {
+  if (!input.database_id) {
+    throw new NotionMCPError(
+      'database_id required for list_templates action',
+      'VALIDATION_ERROR',
+      'Provide database_id'
+    )
+  }
+
+  // Get data source ID from database
+  const database: any = await notion.databases.retrieve({
+    database_id: input.database_id
+  })
+
+  if (!database.data_sources || database.data_sources.length === 0) {
+    throw new NotionMCPError('No data sources found in database', 'VALIDATION_ERROR', 'Database has no data sources')
+  }
+
+  const dataSourceId = input.data_source_id || database.data_sources[0].id
+
+  const templates = await autoPaginate(async (cursor) => {
+    const response: any = await (notion as any).dataSources.listTemplates({
+      data_source_id: dataSourceId,
+      start_cursor: cursor,
+      page_size: 100
+    })
+    return {
+      results: response.templates || response.results,
+      next_cursor: response.next_cursor,
+      has_more: response.has_more
+    }
+  })
+
+  return {
+    action: 'list_templates',
+    database_id: input.database_id,
+    data_source_id: dataSourceId,
+    total: templates.length,
+    templates: templates.map((t: any) => ({
+      template_id: t.id,
+      title: t.properties?.title?.title?.[0]?.plain_text || t.properties?.Name?.title?.[0]?.plain_text || 'Untitled',
+      properties: t.properties
+    }))
   }
 }
