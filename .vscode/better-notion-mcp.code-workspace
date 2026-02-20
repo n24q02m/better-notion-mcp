@@ -2,18 +2,6 @@
   "folders": [
     {
       "path": ".."
-    },
-    {
-      "path": "../../better-mem0-mcp"
-    },
-    {
-      "path": "../../EchoVault"
-    },
-    {
-      "path": "../../wet-mcp"
     }
-  ],
-  "settings": {
-    "github.copilot.chat.codeGeneration.useInstructionFiles": true
-  }
+  ]
 }

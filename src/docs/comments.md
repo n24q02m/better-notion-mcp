@@ -1,7 +1,7 @@
 # Comments Tool - Full Documentation
 
 ## Overview
-Comments: list, create.
+Comments: list, get, create.
 
 ## Threading
 - Use `page_id` for new discussion
@@ -12,6 +12,12 @@ Comments: list, create.
 ### list
 ```json
 {"action": "list", "page_id": "xxx"}
+```
+
+### get
+Retrieve a single comment by its ID.
+```json
+{"action": "get", "comment_id": "xxx"}
 ```
 
 ### create (new discussion)
@@ -26,5 +32,6 @@ Comments: list, create.
 
 ## Parameters
 - `page_id` - Page ID
+- `comment_id` - Comment ID (for get action)
 - `discussion_id` - Discussion ID (for replies)
 - `content` - Comment content

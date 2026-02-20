@@ -13,7 +13,7 @@ export interface WorkspaceInput {
   // Search params
   query?: string
   filter?: {
-    object?: 'page' | 'database'
+    object?: 'page' | 'data_source'
     property?: string
     value?: any
   }

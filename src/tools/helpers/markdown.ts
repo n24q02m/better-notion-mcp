@@ -1,6 +1,9 @@
 /**
  * Markdown to Notion Blocks Converter
  * Converts markdown text to Notion block format
+ * Supports: headings, paragraphs, lists, code, quotes, dividers,
+ *           tables, toggles, callouts, images, bookmarks, embeds,
+ *           equations, columns, table of contents, breadcrumb
  */
 
 export interface NotionBlock {
@@ -51,6 +54,101 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
       continue
     }
 
+    // Table of Contents [toc]
+    if (line.trim() === '[toc]' || line.trim() === '[TOC]') {
+      blocks.push(createTableOfContents())
+      continue
+    }
+
+    // Breadcrumb [breadcrumb]
+    if (line.trim() === '[breadcrumb]' || line.trim() === '[BREADCRUMB]') {
+      blocks.push(createBreadcrumb())
+      continue
+    }
+
+    // Equation block $$...$$
+    if (line.trim().startsWith('$$')) {
+      if (line.trim().endsWith('$$') && line.trim().length > 4) {
+        // Single line equation: $$expression$$
+        const expression = line.trim().slice(2, -2).trim()
+        blocks.push(createEquation(expression))
+        continue
+      }
+      // Multi-line equation
+      const eqLines: string[] = []
+      i++
+      while (i < lines.length && !lines[i].trim().startsWith('$$')) {
+        eqLines.push(lines[i])
+        i++
+      }
+      blocks.push(createEquation(eqLines.join('\n')))
+      continue
+    }
+
+    // Callout > [!TYPE] content or > [!TYPE]\n> content
+    const calloutMatch = line.match(/^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION|INFO|SUCCESS|ERROR)\]\s*(.*)/i)
+    if (calloutMatch) {
+      const calloutType = calloutMatch[1].toUpperCase()
+      let calloutContent = calloutMatch[2] || ''
+
+      // Collect continuation lines (lines starting with >)
+      while (i + 1 < lines.length && lines[i + 1].startsWith('> ')) {
+        i++
+        calloutContent += (calloutContent ? '\n' : '') + lines[i].slice(2)
+      }
+
+      const icon = getCalloutIcon(calloutType)
+      const color = getCalloutColor(calloutType)
+      blocks.push(createCallout(calloutContent || calloutType, icon, color))
+      continue
+    }
+
+    // Image ![alt](url)
+    const imageMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/)
+    if (imageMatch) {
+      blocks.push(createImage(imageMatch[2], imageMatch[1]))
+      continue
+    }
+
+    // Bookmark/Embed [bookmark](url) or [embed](url)
+    const bookmarkMatch = line.match(/^\[(bookmark|embed)\]\(([^)]+)\)$/i)
+    if (bookmarkMatch) {
+      const type = bookmarkMatch[1].toLowerCase()
+      const url = bookmarkMatch[2]
+      if (type === 'embed') {
+        blocks.push(createEmbed(url))
+      } else {
+        blocks.push(createBookmark(url))
+      }
+      continue
+    }
+
+    // Toggle <details><summary>Title</summary>
+    if (line.trim() === '<details>' || line.trim().startsWith('<details>')) {
+      const toggleData = parseToggle(lines, i)
+      blocks.push(createToggle(toggleData.title, toggleData.children))
+      i = toggleData.endIndex
+      continue
+    }
+
+    // Column layout :::columns
+    if (line.trim() === ':::columns') {
+      const columnData = parseColumns(lines, i)
+      blocks.push(createColumnList(columnData.columns))
+      i = columnData.endIndex
+      continue
+    }
+
+    // Table (pipe-delimited)
+    if (line.includes('|') && line.trim().startsWith('|')) {
+      const tableData = parseTable(lines, i)
+      if (tableData) {
+        blocks.push(createTable(tableData.headers, tableData.rows, tableData.hasHeader))
+        i = tableData.endIndex
+        continue
+      }
+    }
+
     // Heading
     if (line.startsWith('# ')) {
       blocks.push(createHeading(1, line.slice(2)))
@@ -69,6 +167,13 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
         i++
       }
       blocks.push(createCodeBlock(codeLines.join('\n'), language))
+    }
+    // Task list / Checkbox list - [ ] or - [x]
+    else if (line.match(/^[-*]\s\[([ xX])\]\s/)) {
+      const checked = line[3] !== ' '
+      const text = line.replace(/^[-*]\s\[([ xX])\]\s/, '')
+      currentListType = 'bulleted'
+      currentList.push(createTodoItem(text, checked))
     }
     // Bulleted list
     else if (line.match(/^[-*]\s/)) {
@@ -130,6 +235,9 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
       case 'numbered_list_item':
         lines.push(`1. ${richTextToMarkdown(block.numbered_list_item.rich_text)}`)
         break
+      case 'to_do':
+        lines.push(`- [${block.to_do.checked ? 'x' : ' '}] ${richTextToMarkdown(block.to_do.rich_text)}`)
+        break
       case 'code':
         lines.push(`\`\`\`${block.code.language || ''}`)
         lines.push(richTextToMarkdown(block.code.rich_text))
@@ -140,6 +248,76 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         break
       case 'divider':
         lines.push('---')
+        break
+      case 'callout': {
+        const calloutText = richTextToMarkdown(block.callout.rich_text)
+        const calloutIcon = block.callout.icon?.emoji || ''
+        const calloutType = getCalloutTypeFromIcon(calloutIcon)
+        lines.push(`> [!${calloutType}] ${calloutText}`)
+        break
+      }
+      case 'toggle': {
+        const toggleText = richTextToMarkdown(block.toggle.rich_text)
+        lines.push('<details>')
+        lines.push(`<summary>${toggleText}</summary>`)
+        if (block.toggle.children && block.toggle.children.length > 0) {
+          lines.push('')
+          lines.push(blocksToMarkdown(block.toggle.children))
+        }
+        lines.push('</details>')
+        break
+      }
+      case 'image': {
+        const imageUrl = block.image?.file?.url || block.image?.external?.url || ''
+        const caption = block.image?.caption ? richTextToMarkdown(block.image.caption) : ''
+        lines.push(`![${caption}](${imageUrl})`)
+        break
+      }
+      case 'bookmark':
+        lines.push(`[bookmark](${block.bookmark.url})`)
+        break
+      case 'embed':
+        lines.push(`[embed](${block.embed.url})`)
+        break
+      case 'equation':
+        lines.push(`$$${block.equation.expression}$$`)
+        break
+      case 'table': {
+        const tableRows = block.table?.children || []
+        if (tableRows.length > 0) {
+          for (let rowIdx = 0; rowIdx < tableRows.length; rowIdx++) {
+            const row = tableRows[rowIdx]
+            const cells = (row.table_row?.cells || []).map((cell: RichText[]) => richTextToMarkdown(cell))
+            lines.push(`| ${cells.join(' | ')} |`)
+            // Add header separator after first row if table has column header
+            if (rowIdx === 0 && block.table?.has_column_header) {
+              lines.push(`| ${cells.map(() => '---').join(' | ')} |`)
+            }
+          }
+        }
+        break
+      }
+      case 'column_list': {
+        lines.push(':::columns')
+        const columns = block.column_list?.children || []
+        for (let colIdx = 0; colIdx < columns.length; colIdx++) {
+          lines.push(':::column')
+          const columnChildren = columns[colIdx].column?.children || []
+          if (columnChildren.length > 0) {
+            lines.push(blocksToMarkdown(columnChildren))
+          }
+          if (colIdx < columns.length - 1) {
+            lines.push('')
+          }
+        }
+        lines.push(':::end')
+        break
+      }
+      case 'table_of_contents':
+        lines.push('[toc]')
+        break
+      case 'breadcrumb':
+        lines.push('[breadcrumb]')
         break
       default:
         // Unsupported block type, skip
@@ -152,6 +330,7 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
 
 /**
  * Parse inline markdown formatting to rich text
+ * Supports: bold, italic, code, strikethrough, links, mentions, colors
  */
 export function parseRichText(text: string): RichText[] {
   const richText: RichText[] = []
@@ -277,10 +456,212 @@ export function extractPlainText(richText: RichText[]): string {
   return richText.map((rt) => rt.text.content).join('')
 }
 
-// Helper creators
+// ============================================================
+// Table parsing
+// ============================================================
+
+interface TableParseResult {
+  headers: string[]
+  rows: string[][]
+  hasHeader: boolean
+  endIndex: number
+}
+
+function parseTable(lines: string[], startIndex: number): TableParseResult | null {
+  const tableLines: string[] = []
+  let i = startIndex
+
+  // Collect all consecutive pipe-delimited lines
+  while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].includes('|')) {
+    tableLines.push(lines[i])
+    i++
+  }
+
+  if (tableLines.length < 1) return null
+
+  const parsedRows = tableLines.map((line) => {
+    const cells = line
+      .split('|')
+      .map((cell) => cell.trim())
+      .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1) // Remove empty first/last
+    return cells
+  })
+
+  // Check for separator row (contains ---)
+  let hasHeader = false
+  let headerRow: string[] = []
+  const dataRows: string[][] = []
+
+  if (parsedRows.length >= 2) {
+    const possibleSeparator = parsedRows[1]
+    const isSeparator = possibleSeparator.every((cell) => /^[-:]+$/.test(cell.trim()))
+
+    if (isSeparator) {
+      hasHeader = true
+      headerRow = parsedRows[0]
+      dataRows.push(...parsedRows.slice(2))
+    } else {
+      headerRow = parsedRows[0]
+      dataRows.push(...parsedRows.slice(1))
+    }
+  } else {
+    headerRow = parsedRows[0]
+  }
+
+  return {
+    headers: headerRow,
+    rows: dataRows,
+    hasHeader,
+    endIndex: i - 1
+  }
+}
+
+// ============================================================
+// Toggle parsing (<details>/<summary>)
+// ============================================================
+
+interface ToggleParseResult {
+  title: string
+  children: NotionBlock[]
+  endIndex: number
+}
+
+function parseToggle(lines: string[], startIndex: number): ToggleParseResult {
+  let i = startIndex
+  let title = ''
+  const childLines: string[] = []
+
+  // Skip <details> tag
+  const detailsLine = lines[i].trim()
+  if (detailsLine === '<details>') {
+    i++
+  } else if (detailsLine.startsWith('<details>')) {
+    // Inline content after <details>
+    i++
+  }
+
+  // Look for <summary>...</summary>
+  if (i < lines.length) {
+    const summaryMatch = lines[i].match(/<summary>(.*?)<\/summary>/)
+    if (summaryMatch) {
+      title = summaryMatch[1]
+      i++
+    }
+  }
+
+  // Collect content until </details>
+  while (i < lines.length && !lines[i].trim().startsWith('</details>')) {
+    childLines.push(lines[i])
+    i++
+  }
+
+  // Convert child content to blocks
+  const childContent = childLines.join('\n').trim()
+  const children = childContent ? markdownToBlocks(childContent) : []
+
+  return { title, children, endIndex: i }
+}
+
+// ============================================================
+// Column parsing (:::columns / :::column / :::end)
+// ============================================================
+
+interface ColumnParseResult {
+  columns: NotionBlock[][]
+  endIndex: number
+}
+
+function parseColumns(lines: string[], startIndex: number): ColumnParseResult {
+  let i = startIndex + 1 // Skip :::columns
+  const columns: NotionBlock[][] = []
+  let currentColumnLines: string[] = []
+
+  while (i < lines.length) {
+    const line = lines[i].trim()
+
+    if (line === ':::end') {
+      // Flush last column
+      if (currentColumnLines.length > 0) {
+        columns.push(markdownToBlocks(currentColumnLines.join('\n').trim()))
+        currentColumnLines = []
+      }
+      break
+    }
+
+    if (line === ':::column') {
+      // Flush previous column
+      if (currentColumnLines.length > 0) {
+        columns.push(markdownToBlocks(currentColumnLines.join('\n').trim()))
+        currentColumnLines = []
+      }
+      i++
+      continue
+    }
+
+    currentColumnLines.push(lines[i])
+    i++
+  }
+
+  // If no :::end found, flush remaining
+  if (currentColumnLines.length > 0 && (columns.length > 0 || currentColumnLines.some((l) => l.trim()))) {
+    columns.push(markdownToBlocks(currentColumnLines.join('\n').trim()))
+  }
+
+  return { columns, endIndex: i }
+}
+
+// ============================================================
+// Callout helpers
+// ============================================================
+
+function getCalloutIcon(type: string): string {
+  const icons: Record<string, string> = {
+    NOTE: '\u2139\ufe0f',
+    TIP: 'U0001f4a1',
+    IMPORTANT: '\u2757',
+    WARNING: '\u26a0\ufe0f',
+    CAUTION: 'U0001f6d1',
+    INFO: '\u2139\ufe0f',
+    SUCCESS: '\u2705',
+    ERROR: '\u274c'
+  }
+  return icons[type] || '\u2139\ufe0f'
+}
+
+function getCalloutColor(type: string): string {
+  const colors: Record<string, string> = {
+    NOTE: 'blue_background',
+    TIP: 'green_background',
+    IMPORTANT: 'purple_background',
+    WARNING: 'yellow_background',
+    CAUTION: 'red_background',
+    INFO: 'blue_background',
+    SUCCESS: 'green_background',
+    ERROR: 'red_background'
+  }
+  return colors[type] || 'gray_background'
+}
+
+function getCalloutTypeFromIcon(icon: string): string {
+  const iconMap: Record<string, string> = {
+    '\u2139\ufe0f': 'NOTE',
+    U0001f4a1: 'TIP',
+    '\u2757': 'IMPORTANT',
+    '\u26a0\ufe0f': 'WARNING',
+    U0001f6d1: 'CAUTION',
+    '\u2705': 'SUCCESS',
+    '\u274c': 'ERROR'
+  }
+  return iconMap[icon] || 'NOTE'
+}
+
+// ============================================================
+// Block creators
+// ============================================================
+
 function createRichText(
   content: string,
-  annotations: { bold?: boolean; italic?: boolean; code?: boolean; strikethrough?: boolean } = {}
+  annotations: { bold?: boolean; italic?: boolean; code?: boolean; strikethrough?: boolean; color?: string } = {}
 ): RichText {
   return {
     type: 'text',
@@ -291,7 +672,7 @@ function createRichText(
       strikethrough: annotations.strikethrough || false,
       underline: false,
       code: annotations.code || false,
-      color: 'default'
+      color: annotations.color || 'default'
     }
   }
 }
@@ -341,6 +722,18 @@ function createNumberedListItem(text: string): NotionBlock {
   }
 }
 
+function createTodoItem(text: string, checked: boolean): NotionBlock {
+  return {
+    object: 'block',
+    type: 'to_do',
+    to_do: {
+      rich_text: parseRichText(text),
+      checked,
+      color: 'default'
+    }
+  }
+}
+
 function createCodeBlock(code: string, language: string): NotionBlock {
   return {
     object: 'block',
@@ -368,6 +761,136 @@ function createDivider(): NotionBlock {
     object: 'block',
     type: 'divider',
     divider: {}
+  }
+}
+
+function createCallout(text: string, icon: string, color: string): NotionBlock {
+  return {
+    object: 'block',
+    type: 'callout',
+    callout: {
+      rich_text: parseRichText(text),
+      icon: { type: 'emoji', emoji: icon },
+      color
+    }
+  }
+}
+
+function createToggle(text: string, children: NotionBlock[] = []): NotionBlock {
+  return {
+    object: 'block',
+    type: 'toggle',
+    toggle: {
+      rich_text: parseRichText(text),
+      color: 'default',
+      children
+    }
+  }
+}
+
+function createImage(url: string, caption: string = ''): NotionBlock {
+  return {
+    object: 'block',
+    type: 'image',
+    image: {
+      type: 'external',
+      external: { url },
+      caption: caption ? [createRichText(caption)] : []
+    }
+  }
+}
+
+function createBookmark(url: string): NotionBlock {
+  return {
+    object: 'block',
+    type: 'bookmark',
+    bookmark: { url, caption: [] }
+  }
+}
+
+function createEmbed(url: string): NotionBlock {
+  return {
+    object: 'block',
+    type: 'embed',
+    embed: { url }
+  }
+}
+
+function createEquation(expression: string): NotionBlock {
+  return {
+    object: 'block',
+    type: 'equation',
+    equation: { expression }
+  }
+}
+
+function createTable(headers: string[], rows: string[][], hasHeader: boolean): NotionBlock {
+  const tableWidth = headers.length
+  const allRows: NotionBlock[] = []
+
+  // Header row
+  allRows.push({
+    object: 'block',
+    type: 'table_row',
+    table_row: {
+      cells: headers.map((h) => [createRichText(h)])
+    }
+  })
+
+  // Data rows
+  for (const row of rows) {
+    const cells = []
+    for (let c = 0; c < tableWidth; c++) {
+      cells.push([createRichText(row[c] || '')])
+    }
+    allRows.push({
+      object: 'block',
+      type: 'table_row',
+      table_row: { cells }
+    })
+  }
+
+  return {
+    object: 'block',
+    type: 'table',
+    table: {
+      table_width: tableWidth,
+      has_column_header: hasHeader,
+      has_row_header: false,
+      children: allRows
+    }
+  }
+}
+
+function createColumnList(columns: NotionBlock[][]): NotionBlock {
+  const columnBlocks = columns.map((children) => ({
+    object: 'block' as const,
+    type: 'column',
+    column: { children }
+  }))
+
+  return {
+    object: 'block',
+    type: 'column_list',
+    column_list: {
+      children: columnBlocks
+    }
+  }
+}
+
+function createTableOfContents(): NotionBlock {
+  return {
+    object: 'block',
+    type: 'table_of_contents',
+    table_of_contents: { color: 'default' }
+  }
+}
+
+function createBreadcrumb(): NotionBlock {
+  return {
+    object: 'block',
+    type: 'breadcrumb',
+    breadcrumb: {}
   }
 }
 

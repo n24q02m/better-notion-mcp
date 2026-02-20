@@ -1,16 +1,16 @@
 # Databases Tool - Full Documentation
 
 ## Overview
-Database operations: create, get, query, create_page, update_page, delete_page, create_data_source, update_data_source, update_database.
+Database operations: create, get, query, create_page, update_page, delete_page, create_data_source, update_data_source, update_database, list_templates.
 
 ## Architecture
 - **Database** = container holding one or more data sources
 - **Data Source** = has schema (properties) and rows (pages)
 
 ## Workflow
-1. create → Creates database + initial data source
-2. get → Retrieves data_source_id
-3. query/create_page/update_page → Uses data_source_id (auto-fetched)
+1. create -> Creates database + initial data source
+2. get -> Retrieves data_source_id
+3. query/create_page/update_page -> Uses data_source_id (auto-fetched)
 
 ## Actions
 
@@ -47,7 +47,7 @@ Database operations: create, get, query, create_page, update_page, delete_page, 
 ### update_database
 Update database container metadata. To update schema properties, use `update_data_source` instead.
 ```json
-{"action": "update_database", "database_id": "xxx", "title": "Updated Title", "icon": "📋"}
+{"action": "update_database", "database_id": "xxx", "title": "Updated Title", "icon": "clipboard"}
 ```
 
 ### create_data_source
@@ -59,6 +59,13 @@ Update database container metadata. To update schema properties, use `update_dat
 ```json
 {"action": "update_data_source", "data_source_id": "xxx", "title": "Renamed Source", "properties": {"Status": {"select": {"options": [{"name": "Active"}, {"name": "Archived"}]}}}}
 ```
+
+### list_templates
+List all templates for a database's data source.
+```json
+{"action": "list_templates", "database_id": "xxx"}
+```
+Optionally specify `data_source_id` to target a specific data source (defaults to first).
 
 ## Parameters
 - `database_id` - Database ID

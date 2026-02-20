@@ -1,5 +1,5 @@
 /**
- * Tool Registry - 8 Composite Tools
+ * Tool Registry - 9 Composite Tools
  * Consolidated registration for maximum coverage with minimal tools
  */
 
@@ -20,6 +20,7 @@ import { blocks } from './composite/blocks.js'
 import { commentsManage } from './composite/comments.js'
 import { contentConvert } from './composite/content.js'
 import { databases } from './composite/databases.js'
+import { fileUploads } from './composite/file-uploads.js'
 import { pages } from './composite/pages.js'
 import { users } from './composite/users.js'
 import { workspace } from './composite/workspace.js'
@@ -44,18 +45,19 @@ const RESOURCES = [
   { uri: 'notion://docs/users', name: 'Users Tool Docs', file: 'users.md' },
   { uri: 'notion://docs/workspace', name: 'Workspace Tool Docs', file: 'workspace.md' },
   { uri: 'notion://docs/comments', name: 'Comments Tool Docs', file: 'comments.md' },
-  { uri: 'notion://docs/content_convert', name: 'Content Convert Tool Docs', file: 'content_convert.md' }
+  { uri: 'notion://docs/content_convert', name: 'Content Convert Tool Docs', file: 'content_convert.md' },
+  { uri: 'notion://docs/file_uploads', name: 'File Uploads Tool Docs', file: 'file_uploads.md' }
 ]
 
 /**
- * 8 Tools covering 75% of Official Notion API
+ * 9 Tools covering ~95% of Official Notion API
  * Compressed descriptions for token optimization (~77% reduction)
  */
 const TOOLS = [
   {
     name: 'pages',
     description:
-      'Page lifecycle: create, get, update, archive, restore, duplicate. Requires parent_id for create. Returns markdown content for get.',
+      'Page lifecycle: create, get, get_property, update, move, archive, restore, duplicate. Requires parent_id for create. Returns markdown content for get.',
     annotations: {
       title: 'Pages',
       readOnlyHint: false,
@@ -68,7 +70,7 @@ const TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'get', 'update', 'archive', 'restore', 'duplicate'],
+          enum: ['create', 'get', 'get_property', 'update', 'move', 'archive', 'restore', 'duplicate'],
           description: 'Action to perform'
         },
         page_id: { type: 'string', description: 'Page ID (required for most actions)' },
@@ -82,6 +84,7 @@ const TOOLS = [
         },
         parent_id: { type: 'string', description: 'Parent page or database ID' },
         properties: { type: 'object', description: 'Page properties (for database pages)' },
+        property_id: { type: 'string', description: 'Property ID (for get_property action)' },
         icon: { type: 'string', description: 'Emoji icon' },
         cover: { type: 'string', description: 'Cover image URL' },
         archived: { type: 'boolean', description: 'Archive status' }
@@ -92,7 +95,7 @@ const TOOLS = [
   {
     name: 'databases',
     description:
-      'Database operations: create, get, query, create_page, update_page, delete_page, create_data_source, update_data_source, update_database. Databases contain data sources with schema and rows.',
+      'Database operations: create, get, query, create_page, update_page, delete_page, create_data_source, update_data_source, update_database, list_templates. Databases contain data sources with schema and rows.',
     annotations: {
       title: 'Databases',
       readOnlyHint: false,
@@ -114,7 +117,8 @@ const TOOLS = [
             'delete_page',
             'create_data_source',
             'update_data_source',
-            'update_database'
+            'update_database',
+            'list_templates'
           ],
           description: 'Action to perform'
         },
@@ -142,7 +146,7 @@ const TOOLS = [
   {
     name: 'blocks',
     description:
-      'Block-level content: get, children, append, update, delete. Page IDs are valid block IDs. Use for precise edits.',
+      'Block-level content: get, children, append, update, delete. Page IDs are valid block IDs. Use for precise edits. Supports tables, toggles, callouts, images, equations via markdown.',
     annotations: {
       title: 'Blocks',
       readOnlyHint: false,
@@ -210,7 +214,11 @@ const TOOLS = [
         filter: {
           type: 'object',
           properties: {
-            object: { type: 'string', enum: ['page', 'database'] }
+            object: {
+              type: 'string',
+              enum: ['page', 'data_source'],
+              description: 'Filter by type: page or data_source (database)'
+            }
           }
         },
         sort: {
@@ -227,7 +235,8 @@ const TOOLS = [
   },
   {
     name: 'comments',
-    description: 'Comments: list, create. Use page_id for new discussion, discussion_id for replies.',
+    description:
+      'Comments: list, get, create. Use page_id for new discussion, discussion_id for replies, comment_id for get.',
     annotations: {
       title: 'Comments',
       readOnlyHint: false,
@@ -238,9 +247,10 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
+        action: { type: 'string', enum: ['list', 'get', 'create'], description: 'Action to perform' },
         page_id: { type: 'string', description: 'Page ID' },
+        comment_id: { type: 'string', description: 'Comment ID (for get action)' },
         discussion_id: { type: 'string', description: 'Discussion ID (for replies)' },
-        action: { type: 'string', enum: ['list', 'create'], description: 'Action to perform' },
         content: { type: 'string', description: 'Comment content (for create)' }
       },
       required: ['action']
@@ -270,6 +280,37 @@ const TOOLS = [
     }
   },
   {
+    name: 'file_uploads',
+    description:
+      'File uploads: create, send, complete, retrieve, list. Upload files to Notion (max 20MB direct, multi-part for larger). Use base64 content for send.',
+    annotations: {
+      title: 'File Uploads',
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false
+    },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['create', 'send', 'complete', 'retrieve', 'list'],
+          description: 'Action to perform'
+        },
+        file_upload_id: { type: 'string', description: 'File upload ID (from create step)' },
+        filename: { type: 'string', description: 'Filename (for create)' },
+        content_type: { type: 'string', description: 'MIME type (for create, e.g. "image/png")' },
+        mode: { type: 'string', enum: ['single', 'multi_part'], description: 'Upload mode (default: single)' },
+        number_of_parts: { type: 'number', description: 'Number of parts (for multi_part mode)' },
+        part_number: { type: 'number', description: 'Part number (for send in multi_part mode)' },
+        file_content: { type: 'string', description: 'Base64-encoded file content (for send)' },
+        limit: { type: 'number', description: 'Max results for list' }
+      },
+      required: ['action']
+    }
+  },
+  {
     name: 'help',
     description: 'Get full documentation for a tool. Use when compressed descriptions are insufficient.',
     annotations: {
@@ -284,7 +325,7 @@ const TOOLS = [
       properties: {
         tool_name: {
           type: 'string',
-          enum: ['pages', 'databases', 'blocks', 'users', 'workspace', 'comments', 'content_convert'],
+          enum: ['pages', 'databases', 'blocks', 'users', 'workspace', 'comments', 'content_convert', 'file_uploads'],
           description: 'Tool to get documentation for'
         }
       },
@@ -372,6 +413,9 @@ export function registerTools(server: Server, notionToken: string) {
           break
         case 'content_convert':
           result = await contentConvert(args as any)
+          break
+        case 'file_uploads':
+          result = await fileUploads(notion, args as any)
           break
         case 'help': {
           const toolName = (args as { tool_name: string }).tool_name

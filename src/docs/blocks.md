@@ -8,6 +8,38 @@ Block-level content: get, children, append, update, delete.
 - Use for **precise edits** within pages
 - For full page content, use pages tool instead
 
+## Supported Block Types
+The markdown converter supports these Notion block types:
+
+| Block Type | Markdown Syntax |
+|------------|----------------|
+| Headings (1-3) | `# H1`, `## H2`, `### H3` |
+| Paragraph | Plain text |
+| Bulleted list | `- item` or `* item` |
+| Numbered list | `1. item` |
+| To-do / Checkbox | `- [ ] task` or `- [x] done` |
+| Code block | `` ```language `` ... `` ``` `` |
+| Quote | `> text` |
+| Divider | `---` or `***` |
+| Callout | `> [!NOTE] text`, `> [!TIP]`, `> [!WARNING]`, `> [!IMPORTANT]`, `> [!CAUTION]`, `> [!INFO]`, `> [!SUCCESS]`, `> [!ERROR]` |
+| Toggle | `<details><summary>Title</summary>content</details>` |
+| Table | Pipe-delimited `\| col1 \| col2 \|` with optional header separator |
+| Image | `![alt text](url)` |
+| Bookmark | `[bookmark](url)` |
+| Embed | `[embed](url)` |
+| Equation | `$$expression$$` (inline) or `$$\n...\n$$` (multi-line) |
+| Columns | `:::columns` / `:::column` / `:::end` |
+| Table of Contents | `[toc]` |
+| Breadcrumb | `[breadcrumb]` |
+
+## Rich Text Formatting
+Inline formatting within any text content:
+- **Bold**: `**text**`
+- *Italic*: `*text*`
+- `Code`: `` `text` ``
+- ~~Strikethrough~~: `~~text~~`
+- Links: `[text](url)`
+
 ## Actions
 
 ### get
