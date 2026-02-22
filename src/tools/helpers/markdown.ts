@@ -340,40 +340,60 @@ export function parseRichText(text: string): RichText[] {
   let code = false
   let strikethrough = false
 
+  // Optimization: Cache the position of the next closing bracket
+  // to avoid O(N^2) behavior when scanning strings with many opening brackets
+  let nextCloseBracket = -1
+  let noMoreCloseBrackets = false
+
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
     const next = text[i + 1]
 
     // Link [text](url)
     if (char === '[') {
-      const closeBracket = text.indexOf(']', i)
-      const openParen = closeBracket !== -1 ? text.indexOf('(', closeBracket) : -1
-      const closeParen = openParen !== -1 ? text.indexOf(')', openParen) : -1
-
-      if (closeBracket !== -1 && openParen === closeBracket + 1 && closeParen !== -1) {
-        if (current) {
-          richText.push(createRichText(current, { bold, italic, code, strikethrough }))
-          current = ''
+      // Optimization: Check if we have a cached close bracket or if we know there are none
+      if (!noMoreCloseBrackets && nextCloseBracket < i) {
+        nextCloseBracket = text.indexOf(']', i)
+        if (nextCloseBracket === -1) {
+          noMoreCloseBrackets = true
         }
+      }
 
-        const linkText = text.slice(i + 1, closeBracket)
-        const linkUrl = text.slice(openParen + 1, closeParen)
+      if (nextCloseBracket !== -1) {
+        // Optimization: Check for ( immediately after ] using direct access
+        // instead of indexOf to avoid unnecessary scanning
+        if (text[nextCloseBracket + 1] === '(') {
+          const openParen = nextCloseBracket + 1
+          const closeParen = text.indexOf(')', openParen)
 
-        richText.push({
-          type: 'text',
-          text: { content: linkText, link: { url: linkUrl } },
-          annotations: {
-            bold,
-            italic,
-            strikethrough,
-            underline: false,
-            code,
-            color: 'default'
+          if (closeParen !== -1) {
+            if (current) {
+              richText.push(createRichText(current, { bold, italic, code, strikethrough }))
+              current = ''
+            }
+
+            const linkText = text.slice(i + 1, nextCloseBracket)
+            const linkUrl = text.slice(openParen + 1, closeParen)
+
+            richText.push({
+              type: 'text',
+              text: { content: linkText, link: { url: linkUrl } },
+              annotations: {
+                bold,
+                italic,
+                strikethrough,
+                underline: false,
+                code,
+                color: 'default'
+              }
+            })
+
+            i = closeParen
+            // Reset state isn't strictly necessary since i advanced past nextCloseBracket,
+            // so the next iteration will re-scan for a new bracket naturally.
+            continue
           }
-        })
-
-        i = closeParen
-        continue
+        }
       }
     }
 
