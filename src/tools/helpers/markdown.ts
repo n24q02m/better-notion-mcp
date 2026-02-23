@@ -340,13 +340,24 @@ export function parseRichText(text: string): RichText[] {
   let code = false
   let strikethrough = false
 
+  // Optimization: Cache next closing bracket position to avoid O(N^2) search
+  let nextCloseBracket = -1
+  let noMoreCloseBrackets = false
+
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
     const next = text[i + 1]
 
     // Link [text](url)
     if (char === '[') {
-      const closeBracket = text.indexOf(']', i)
+      if (!noMoreCloseBrackets && nextCloseBracket < i) {
+        nextCloseBracket = text.indexOf(']', i)
+        if (nextCloseBracket === -1) {
+          noMoreCloseBrackets = true
+        }
+      }
+
+      const closeBracket = noMoreCloseBrackets ? -1 : nextCloseBracket
       const openParen = closeBracket !== -1 ? text.indexOf('(', closeBracket) : -1
       const closeParen = openParen !== -1 ? text.indexOf(')', openParen) : -1
 
