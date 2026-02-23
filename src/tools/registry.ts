@@ -36,6 +36,20 @@ const DOCS_DIR = __dirname.endsWith('bin')
   : join(__dirname, '..', 'docs')
 
 /**
+ * Valid tools for documentation - strict allowlist to prevent path traversal
+ */
+const VALID_DOC_TOOLS = [
+  'pages',
+  'databases',
+  'blocks',
+  'users',
+  'workspace',
+  'comments',
+  'content_convert',
+  'file_uploads'
+]
+
+/**
  * Documentation resources for full tool details
  */
 const RESOURCES = [
@@ -419,6 +433,15 @@ export function registerTools(server: Server, notionToken: string) {
           break
         case 'help': {
           const toolName = (args as { tool_name: string }).tool_name
+
+          if (!VALID_DOC_TOOLS.includes(toolName)) {
+            throw new NotionMCPError(
+              `Invalid tool name: ${toolName}`,
+              'INVALID_ARGUMENT',
+              `Available: ${VALID_DOC_TOOLS.join(', ')}`
+            )
+          }
+
           const docFile = `${toolName}.md`
           try {
             const content = readFileSync(join(DOCS_DIR, docFile), 'utf-8')
