@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { join } from 'node:path'
 
 const { MockClient } = vi.hoisted(() => ({
   MockClient: vi.fn()
