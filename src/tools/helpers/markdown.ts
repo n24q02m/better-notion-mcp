@@ -30,180 +30,56 @@ export interface RichText {
   href?: string | null
 }
 
+type BlockParser = (lines: string[], index: number) => { block: NotionBlock | null; endIndex: number } | null
+
 /**
  * Convert markdown string to Notion blocks
  */
 export function markdownToBlocks(markdown: string): NotionBlock[] {
   const lines = markdown.split('\n')
   const blocks: NotionBlock[] = []
-  let currentList: NotionBlock[] = []
-  let currentListType: 'bulleted' | 'numbered' | null = null
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
-
-    // Flush list if we're not in a list anymore
-    if (currentListType && !isListItem(line)) {
-      blocks.push(...currentList)
-      currentList = []
-      currentListType = null
-    }
 
     // Skip empty lines
     if (!line.trim()) {
       continue
     }
 
-    // Table of Contents [toc]
-    if (line.trim() === '[toc]' || line.trim() === '[TOC]') {
-      blocks.push(createTableOfContents())
-      continue
-    }
+    const parsers: BlockParser[] = [
+      parseTableOfContents,
+      parseBreadcrumb,
+      parseEquation,
+      parseCallout,
+      parseImage,
+      parseBookmarkOrEmbed,
+      parseToggleBlock,
+      parseColumnListBlock,
+      parseTableBlock,
+      parseHeading,
+      parseCodeBlock,
+      parseList,
+      parseQuote,
+      parseDivider
+    ]
 
-    // Breadcrumb [breadcrumb]
-    if (line.trim() === '[breadcrumb]' || line.trim() === '[BREADCRUMB]') {
-      blocks.push(createBreadcrumb())
-      continue
-    }
-
-    // Equation block $$...$$
-    if (line.trim().startsWith('$$')) {
-      if (line.trim().endsWith('$$') && line.trim().length > 4) {
-        // Single line equation: $$expression$$
-        const expression = line.trim().slice(2, -2).trim()
-        blocks.push(createEquation(expression))
-        continue
-      }
-      // Multi-line equation
-      const eqLines: string[] = []
-      i++
-      while (i < lines.length && !lines[i].trim().startsWith('$$')) {
-        eqLines.push(lines[i])
-        i++
-      }
-      blocks.push(createEquation(eqLines.join('\n')))
-      continue
-    }
-
-    // Callout > [!TYPE] content or > [!TYPE]\n> content
-    const calloutMatch = line.match(/^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION|INFO|SUCCESS|ERROR)\]\s*(.*)/i)
-    if (calloutMatch) {
-      const calloutType = calloutMatch[1].toUpperCase()
-      let calloutContent = calloutMatch[2] || ''
-
-      // Collect continuation lines (lines starting with >)
-      while (i + 1 < lines.length && lines[i + 1].startsWith('> ')) {
-        i++
-        calloutContent += (calloutContent ? '\n' : '') + lines[i].slice(2)
-      }
-
-      const icon = getCalloutIcon(calloutType)
-      const color = getCalloutColor(calloutType)
-      blocks.push(createCallout(calloutContent || calloutType, icon, color))
-      continue
-    }
-
-    // Image ![alt](url)
-    const imageMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/)
-    if (imageMatch) {
-      blocks.push(createImage(imageMatch[2], imageMatch[1]))
-      continue
-    }
-
-    // Bookmark/Embed [bookmark](url) or [embed](url)
-    const bookmarkMatch = line.match(/^\[(bookmark|embed)\]\(([^)]+)\)$/i)
-    if (bookmarkMatch) {
-      const type = bookmarkMatch[1].toLowerCase()
-      const url = bookmarkMatch[2]
-      if (type === 'embed') {
-        blocks.push(createEmbed(url))
-      } else {
-        blocks.push(createBookmark(url))
-      }
-      continue
-    }
-
-    // Toggle <details><summary>Title</summary>
-    if (line.trim() === '<details>' || line.trim().startsWith('<details>')) {
-      const toggleData = parseToggle(lines, i)
-      blocks.push(createToggle(toggleData.title, toggleData.children))
-      i = toggleData.endIndex
-      continue
-    }
-
-    // Column layout :::columns
-    if (line.trim() === ':::columns') {
-      const columnData = parseColumns(lines, i)
-      blocks.push(createColumnList(columnData.columns))
-      i = columnData.endIndex
-      continue
-    }
-
-    // Table (pipe-delimited)
-    if (line.includes('|') && line.trim().startsWith('|')) {
-      const tableData = parseTable(lines, i)
-      if (tableData) {
-        blocks.push(createTable(tableData.headers, tableData.rows, tableData.hasHeader))
-        i = tableData.endIndex
-        continue
+    let matched = false
+    for (const parser of parsers) {
+      const result = parser(lines, i)
+      if (result) {
+        if (result.block) {
+          blocks.push(result.block)
+        }
+        i = result.endIndex
+        matched = true
+        break
       }
     }
 
-    // Heading
-    if (line.startsWith('# ')) {
-      blocks.push(createHeading(1, line.slice(2)))
-    } else if (line.startsWith('## ')) {
-      blocks.push(createHeading(2, line.slice(3)))
-    } else if (line.startsWith('### ')) {
-      blocks.push(createHeading(3, line.slice(4)))
-    }
-    // Code block
-    else if (line.startsWith('```')) {
-      const language = line.slice(3).trim()
-      const codeLines: string[] = []
-      i++
-      while (i < lines.length && !lines[i].startsWith('```')) {
-        codeLines.push(lines[i])
-        i++
-      }
-      blocks.push(createCodeBlock(codeLines.join('\n'), language))
-    }
-    // Task list / Checkbox list - [ ] or - [x]
-    else if (line.match(/^[-*]\s\[([ xX])\]\s/)) {
-      const checked = line[3] !== ' '
-      const text = line.replace(/^[-*]\s\[([ xX])\]\s/, '')
-      currentListType = 'bulleted'
-      currentList.push(createTodoItem(text, checked))
-    }
-    // Bulleted list
-    else if (line.match(/^[-*]\s/)) {
-      const text = line.slice(2)
-      currentListType = 'bulleted'
-      currentList.push(createBulletedListItem(text))
-    }
-    // Numbered list
-    else if (line.match(/^\d+\.\s/)) {
-      const text = line.replace(/^\d+\.\s/, '')
-      currentListType = 'numbered'
-      currentList.push(createNumberedListItem(text))
-    }
-    // Quote
-    else if (line.startsWith('> ')) {
-      blocks.push(createQuote(line.slice(2)))
-    }
-    // Divider
-    else if (line.match(/^[-*]{3,}$/)) {
-      blocks.push(createDivider())
-    }
-    // Regular paragraph
-    else {
+    if (!matched) {
       blocks.push(createParagraph(line))
     }
-  }
-
-  // Flush remaining list
-  if (currentList.length > 0) {
-    blocks.push(...currentList)
   }
 
   return blocks
@@ -457,7 +333,197 @@ export function extractPlainText(richText: RichText[]): string {
 }
 
 // ============================================================
-// Table parsing
+// Block Parsers
+// ============================================================
+
+function parseTableOfContents(lines: string[], index: number) {
+  const line = lines[index].trim()
+  if (line === '[toc]' || line === '[TOC]') {
+    return { block: createTableOfContents(), endIndex: index }
+  }
+  return null
+}
+
+function parseBreadcrumb(lines: string[], index: number) {
+  const line = lines[index].trim()
+  if (line === '[breadcrumb]' || line === '[BREADCRUMB]') {
+    return { block: createBreadcrumb(), endIndex: index }
+  }
+  return null
+}
+
+function parseEquation(lines: string[], index: number) {
+  const line = lines[index].trim()
+  if (!line.startsWith('$$')) return null
+
+  // Single line equation: $$expression$$
+  if (line.endsWith('$$') && line.length > 4) {
+    const expression = line.slice(2, -2).trim()
+    return { block: createEquation(expression), endIndex: index }
+  }
+
+  // Multi-line equation
+  const eqLines: string[] = []
+  let i = index + 1
+  while (i < lines.length && !lines[i].trim().startsWith('$$')) {
+    eqLines.push(lines[i])
+    i++
+  }
+  // Consume the closing $$
+  if (i < lines.length && lines[i].trim().startsWith('$$')) {
+    // optional: check if line is just $$ or $$...
+    // current logic just stops at $$
+  }
+  return { block: createEquation(eqLines.join('\n')), endIndex: i }
+}
+
+function parseCallout(lines: string[], index: number) {
+  const line = lines[index]
+  const calloutMatch = line.match(/^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION|INFO|SUCCESS|ERROR)\]\s*(.*)/i)
+  if (!calloutMatch) return null
+
+  const calloutType = calloutMatch[1].toUpperCase()
+  let calloutContent = calloutMatch[2] || ''
+  let i = index
+
+  // Collect continuation lines (lines starting with >)
+  while (i + 1 < lines.length && lines[i + 1].startsWith('> ')) {
+    i++
+    calloutContent += (calloutContent ? '\n' : '') + lines[i].slice(2)
+  }
+
+  const icon = getCalloutIcon(calloutType)
+  const color = getCalloutColor(calloutType)
+  return { block: createCallout(calloutContent || calloutType, icon, color), endIndex: i }
+}
+
+function parseImage(lines: string[], index: number) {
+  const line = lines[index]
+  const imageMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/)
+  if (imageMatch) {
+    return { block: createImage(imageMatch[2], imageMatch[1]), endIndex: index }
+  }
+  return null
+}
+
+function parseBookmarkOrEmbed(lines: string[], index: number) {
+  const line = lines[index]
+  const match = line.match(/^\[(bookmark|embed)\]\(([^)]+)\)$/i)
+  if (match) {
+    const type = match[1].toLowerCase()
+    const url = match[2]
+    return {
+      block: type === 'embed' ? createEmbed(url) : createBookmark(url),
+      endIndex: index
+    }
+  }
+  return null
+}
+
+function parseToggleBlock(lines: string[], index: number) {
+  const line = lines[index].trim()
+  if (line === '<details>' || line.startsWith('<details>')) {
+    const result = parseToggle(lines, index)
+    return { block: createToggle(result.title, result.children), endIndex: result.endIndex }
+  }
+  return null
+}
+
+function parseColumnListBlock(lines: string[], index: number) {
+  const line = lines[index].trim()
+  if (line === ':::columns') {
+    const result = parseColumns(lines, index)
+    return { block: createColumnList(result.columns), endIndex: result.endIndex }
+  }
+  return null
+}
+
+function parseTableBlock(lines: string[], index: number) {
+  const line = lines[index].trim()
+  if (line.includes('|') && line.startsWith('|')) {
+    const result = parseTable(lines, index)
+    if (result) {
+      return {
+        block: createTable(result.headers, result.rows, result.hasHeader),
+        endIndex: result.endIndex
+      }
+    }
+  }
+  return null
+}
+
+function parseHeading(lines: string[], index: number) {
+  const line = lines[index]
+  if (line.startsWith('# ')) {
+    return { block: createHeading(1, line.slice(2)), endIndex: index }
+  } else if (line.startsWith('## ')) {
+    return { block: createHeading(2, line.slice(3)), endIndex: index }
+  } else if (line.startsWith('### ')) {
+    return { block: createHeading(3, line.slice(4)), endIndex: index }
+  }
+  return null
+}
+
+function parseCodeBlock(lines: string[], index: number) {
+  const line = lines[index]
+  if (line.startsWith('```')) {
+    const language = line.slice(3).trim()
+    const codeLines: string[] = []
+    let i = index + 1
+    while (i < lines.length && !lines[i].startsWith('```')) {
+      codeLines.push(lines[i])
+      i++
+    }
+    // i is now at closing ``` or end of file
+    return { block: createCodeBlock(codeLines.join('\n'), language), endIndex: i }
+  }
+  return null
+}
+
+function parseList(lines: string[], index: number) {
+  const line = lines[index]
+
+  // Task list
+  const taskMatch = line.match(/^[-*]\s\[([ xX])\]\s/)
+  if (taskMatch) {
+    const checked = taskMatch[1] !== ' '
+    const text = line.replace(/^[-*]\s\[([ xX])\]\s/, '')
+    return { block: createTodoItem(text, checked), endIndex: index }
+  }
+
+  // Bulleted list
+  if (line.match(/^[-*]\s/)) {
+    const text = line.slice(2)
+    return { block: createBulletedListItem(text), endIndex: index }
+  }
+
+  // Numbered list
+  if (line.match(/^\d+\.\s/)) {
+    const text = line.replace(/^\d+\.\s/, '')
+    return { block: createNumberedListItem(text), endIndex: index }
+  }
+
+  return null
+}
+
+function parseQuote(lines: string[], index: number) {
+  const line = lines[index]
+  if (line.startsWith('> ')) {
+    return { block: createQuote(line.slice(2)), endIndex: index }
+  }
+  return null
+}
+
+function parseDivider(lines: string[], index: number) {
+  const line = lines[index]
+  if (line.match(/^[-*]{3,}$/)) {
+    return { block: createDivider(), endIndex: index }
+  }
+  return null
+}
+
+// ============================================================
+// Multi-line Helpers
 // ============================================================
 
 interface TableParseResult {
@@ -516,10 +582,6 @@ function parseTable(lines: string[], startIndex: number): TableParseResult | nul
   }
 }
 
-// ============================================================
-// Toggle parsing (<details>/<summary>)
-// ============================================================
-
 interface ToggleParseResult {
   title: string
   children: NotionBlock[]
@@ -561,10 +623,6 @@ function parseToggle(lines: string[], startIndex: number): ToggleParseResult {
 
   return { title, children, endIndex: i }
 }
-
-// ============================================================
-// Column parsing (:::columns / :::column / :::end)
-// ============================================================
 
 interface ColumnParseResult {
   columns: NotionBlock[][]
@@ -892,8 +950,4 @@ function createBreadcrumb(): NotionBlock {
     type: 'breadcrumb',
     breadcrumb: {}
   }
-}
-
-function isListItem(line: string): boolean {
-  return line.match(/^[-*]\s/) !== null || line.match(/^\d+\.\s/) !== null
 }
