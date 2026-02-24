@@ -6,29 +6,15 @@
  *           equations, columns, table of contents, breadcrumb
  */
 
+import type { RichTextItem } from './richtext'
+
 export interface NotionBlock {
   object: 'block'
   type: string
   [key: string]: any
 }
 
-export interface RichText {
-  type: 'text'
-  text: {
-    content: string
-    link?: { url: string } | null
-  }
-  annotations: {
-    bold: boolean
-    italic: boolean
-    strikethrough: boolean
-    underline: boolean
-    code: boolean
-    color: string
-  }
-  plain_text?: string
-  href?: string | null
-}
+export type RichText = RichTextItem
 
 /**
  * Convert markdown string to Notion blocks
