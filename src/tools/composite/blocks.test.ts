@@ -199,6 +199,155 @@ describe('blocks', () => {
         })
       )
     })
+    it('should update heading_2 block', async () => {
+      mockNotion.blocks.retrieve.mockResolvedValue({
+        id: 'block-1',
+        type: 'heading_2',
+        has_children: false,
+        archived: false,
+        heading_2: { rich_text: [], color: 'default' }
+      })
+      mockNotion.blocks.update.mockResolvedValue({})
+
+      const result = await blocks(mockNotion as any, {
+        action: 'update',
+        block_id: 'block-1',
+        content: '## Heading 2'
+      })
+
+      expect(result).toEqual({
+        action: 'update',
+        block_id: 'block-1',
+        type: 'heading_2',
+        updated: true
+      })
+      expect(mockNotion.blocks.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          block_id: 'block-1',
+          heading_2: { rich_text: expect.any(Array) }
+        })
+      )
+    })
+
+    it('should update heading_3 block', async () => {
+      mockNotion.blocks.retrieve.mockResolvedValue({
+        id: 'block-1',
+        type: 'heading_3',
+        has_children: false,
+        archived: false,
+        heading_3: { rich_text: [], color: 'default' }
+      })
+      mockNotion.blocks.update.mockResolvedValue({})
+
+      const result = await blocks(mockNotion as any, {
+        action: 'update',
+        block_id: 'block-1',
+        content: '### Heading 3'
+      })
+
+      expect(result).toEqual({
+        action: 'update',
+        block_id: 'block-1',
+        type: 'heading_3',
+        updated: true
+      })
+      expect(mockNotion.blocks.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          block_id: 'block-1',
+          heading_3: { rich_text: expect.any(Array) }
+        })
+      )
+    })
+
+    it('should update bulleted_list_item block', async () => {
+      mockNotion.blocks.retrieve.mockResolvedValue({
+        id: 'block-1',
+        type: 'bulleted_list_item',
+        has_children: false,
+        archived: false,
+        bulleted_list_item: { rich_text: [], color: 'default' }
+      })
+      mockNotion.blocks.update.mockResolvedValue({})
+
+      const result = await blocks(mockNotion as any, {
+        action: 'update',
+        block_id: 'block-1',
+        content: '- Bullet item'
+      })
+
+      expect(result).toEqual({
+        action: 'update',
+        block_id: 'block-1',
+        type: 'bulleted_list_item',
+        updated: true
+      })
+      expect(mockNotion.blocks.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          block_id: 'block-1',
+          bulleted_list_item: { rich_text: expect.any(Array) }
+        })
+      )
+    })
+
+    it('should update numbered_list_item block', async () => {
+      mockNotion.blocks.retrieve.mockResolvedValue({
+        id: 'block-1',
+        type: 'numbered_list_item',
+        has_children: false,
+        archived: false,
+        numbered_list_item: { rich_text: [], color: 'default' }
+      })
+      mockNotion.blocks.update.mockResolvedValue({})
+
+      const result = await blocks(mockNotion as any, {
+        action: 'update',
+        block_id: 'block-1',
+        content: '1. Numbered item'
+      })
+
+      expect(result).toEqual({
+        action: 'update',
+        block_id: 'block-1',
+        type: 'numbered_list_item',
+        updated: true
+      })
+      expect(mockNotion.blocks.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          block_id: 'block-1',
+          numbered_list_item: { rich_text: expect.any(Array) }
+        })
+      )
+    })
+
+    it('should update quote block', async () => {
+      mockNotion.blocks.retrieve.mockResolvedValue({
+        id: 'block-1',
+        type: 'quote',
+        has_children: false,
+        archived: false,
+        quote: { rich_text: [], color: 'default' }
+      })
+      mockNotion.blocks.update.mockResolvedValue({})
+
+      const result = await blocks(mockNotion as any, {
+        action: 'update',
+        block_id: 'block-1',
+        content: '> Quote text'
+      })
+
+      expect(result).toEqual({
+        action: 'update',
+        block_id: 'block-1',
+        type: 'quote',
+        updated: true
+      })
+      expect(mockNotion.blocks.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          block_id: 'block-1',
+          quote: { rich_text: expect.any(Array) }
+        })
+      )
+    })
 
     it('should throw for unsupported block type', async () => {
       mockNotion.blocks.retrieve.mockResolvedValue({
