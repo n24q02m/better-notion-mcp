@@ -40,17 +40,17 @@ describe('workspace', () => {
     })
 
     it('should handle bot without name', async () => {
-        mockNotion.users.retrieve.mockResolvedValue({
-          object: 'user',
-          id: 'bot-id',
-          type: 'bot',
-          bot: {}
-        })
-
-        const result = await workspace(mockNotion as any, { action: 'info' })
-
-        expect(result.bot.name).toBe('Bot')
+      mockNotion.users.retrieve.mockResolvedValue({
+        object: 'user',
+        id: 'bot-id',
+        type: 'bot',
+        bot: {}
       })
+
+      const result = await workspace(mockNotion as any, { action: 'info' })
+
+      expect(result.bot.name).toBe('Bot')
+    })
   })
 
   describe('search', () => {
@@ -83,9 +83,11 @@ describe('workspace', () => {
       const result = await workspace(mockNotion as any, { action: 'search', query: 'test query' })
 
       expect(result.query).toBe('test query')
-      expect(mockNotion.search).toHaveBeenCalledWith(expect.objectContaining({
-        query: 'test query'
-      }))
+      expect(mockNotion.search).toHaveBeenCalledWith(
+        expect.objectContaining({
+          query: 'test query'
+        })
+      )
     })
 
     it('should apply filters and sorting', async () => {
@@ -101,16 +103,18 @@ describe('workspace', () => {
         sort: { direction: 'ascending', timestamp: 'created_time' }
       })
 
-      expect(mockNotion.search).toHaveBeenCalledWith(expect.objectContaining({
-        filter: {
-          value: 'page',
-          property: 'object'
-        },
-        sort: {
-          direction: 'ascending',
-          timestamp: 'created_time'
-        }
-      }))
+      expect(mockNotion.search).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filter: {
+            value: 'page',
+            property: 'object'
+          },
+          sort: {
+            direction: 'ascending',
+            timestamp: 'created_time'
+          }
+        })
+      )
     })
 
     it('should return mapped results for pages', async () => {
@@ -145,24 +149,24 @@ describe('workspace', () => {
     })
 
     it('should return mapped results for databases', async () => {
-        const db = {
-          object: 'database',
-          id: 'db-1',
-          url: 'https://notion.so/db-1',
-          last_edited_time: '2023-01-01T00:00:00.000Z',
-          title: [{ plain_text: 'Database Title' }]
-        }
+      const db = {
+        object: 'database',
+        id: 'db-1',
+        url: 'https://notion.so/db-1',
+        last_edited_time: '2023-01-01T00:00:00.000Z',
+        title: [{ plain_text: 'Database Title' }]
+      }
 
-        mockNotion.search.mockResolvedValue({
-          results: [db],
-          next_cursor: null,
-          has_more: false
-        })
-
-        const result = await workspace(mockNotion as any, { action: 'search' })
-
-        expect(result.results[0].title).toBe('Database Title')
+      mockNotion.search.mockResolvedValue({
+        results: [db],
+        next_cursor: null,
+        has_more: false
       })
+
+      const result = await workspace(mockNotion as any, { action: 'search' })
+
+      expect(result.results[0].title).toBe('Database Title')
+    })
 
     it('should handle untitled pages', async () => {
       const page = {
@@ -185,11 +189,13 @@ describe('workspace', () => {
     })
 
     it('should respect limit parameter', async () => {
-      const results = Array(5).fill(null).map((_, i) => ({
-        object: 'page',
-        id: `page-${i}`,
-        properties: { title: { title: [{ plain_text: `Page ${i}` }] } }
-      }))
+      const results = Array(5)
+        .fill(null)
+        .map((_, i) => ({
+          object: 'page',
+          id: `page-${i}`,
+          properties: { title: { title: [{ plain_text: `Page ${i}` }] } }
+        }))
 
       mockNotion.search.mockResolvedValue({
         results,
@@ -208,8 +214,9 @@ describe('workspace', () => {
 
   describe('validation', () => {
     it('should throw on unknown action', async () => {
-      await expect(workspace(mockNotion as any, { action: 'invalid' as any }))
-        .rejects.toThrow('Unknown action: invalid')
+      await expect(workspace(mockNotion as any, { action: 'invalid' as any })).rejects.toThrow(
+        'Unknown action: invalid'
+      )
     })
   })
 })
