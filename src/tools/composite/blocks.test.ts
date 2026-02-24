@@ -223,6 +223,43 @@ describe('blocks', () => {
         'content required for update'
       )
     })
+
+    it('should update block content even if markdown produces different block type', async () => {
+      mockNotion.blocks.retrieve.mockResolvedValue({
+        id: 'block-1',
+        type: 'paragraph',
+        has_children: false,
+        archived: false,
+        paragraph: { rich_text: [{ text: { content: 'Old content' } }] }
+      })
+      mockNotion.blocks.update.mockResolvedValue({})
+
+      // Update paragraph with heading markdown
+      const result = await blocks(mockNotion as any, {
+        action: 'update',
+        block_id: 'block-1',
+        content: '# New Heading'
+      })
+
+      expect(result).toEqual({
+        action: 'update',
+        block_id: 'block-1',
+        type: 'paragraph',
+        updated: true
+      })
+
+      // Should extract rich_text from heading_1 and apply to paragraph
+      expect(mockNotion.blocks.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          block_id: 'block-1',
+          paragraph: {
+            rich_text: expect.arrayContaining([
+              expect.objectContaining({ text: expect.objectContaining({ content: 'New Heading' }) })
+            ])
+          }
+        })
+      )
+    })
   })
 
   describe('delete', () => {

@@ -98,8 +98,19 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
             'quote'
           ].includes(blockType)
         ) {
+          const newBlockType = newContent.type
+          const newRichText = (newContent as any)[newBlockType]?.rich_text
+
+          if (!newRichText) {
+            throw new NotionMCPError(
+              `Cannot update block type '${blockType}' with content of type '${newBlockType}'`,
+              'VALIDATION_ERROR',
+              'Content mismatch'
+            )
+          }
+
           updatePayload[blockType] = {
-            rich_text: (newContent as any)[blockType]?.rich_text || []
+            rich_text: newRichText
           }
         } else {
           throw new NotionMCPError(
