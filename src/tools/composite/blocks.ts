@@ -8,6 +8,16 @@ import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate } from '../helpers/pagination.js'
 
+const SUPPORTED_UPDATE_BLOCK_TYPES = [
+  'paragraph',
+  'heading_1',
+  'heading_2',
+  'heading_3',
+  'bulleted_list_item',
+  'numbered_list_item',
+  'quote'
+] as const
+
 export interface BlocksInput {
   action: 'get' | 'children' | 'append' | 'update' | 'delete'
   block_id: string
@@ -87,17 +97,7 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
         const updatePayload: any = {}
 
         // Build update based on block type
-        if (
-          [
-            'paragraph',
-            'heading_1',
-            'heading_2',
-            'heading_3',
-            'bulleted_list_item',
-            'numbered_list_item',
-            'quote'
-          ].includes(blockType)
-        ) {
+        if ((SUPPORTED_UPDATE_BLOCK_TYPES as readonly string[]).includes(blockType)) {
           updatePayload[blockType] = {
             rich_text: (newContent as any)[blockType]?.rich_text || []
           }
@@ -105,7 +105,7 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
           throw new NotionMCPError(
             `Block type '${blockType}' cannot be updated`,
             'VALIDATION_ERROR',
-            'Only text blocks can be updated'
+            `Only text blocks can be updated: ${SUPPORTED_UPDATE_BLOCK_TYPES.join(', ')}`
           )
         }
 
