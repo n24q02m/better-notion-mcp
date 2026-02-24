@@ -31,12 +31,13 @@ export class NotionMCPError extends Error {
 function sanitizeErrorDetails(error: any): any {
   if (!error || typeof error !== 'object') return error
 
-  // whitelist safe properties
-  const safe: any = {
-    message: error.message,
-    name: error.name,
-    code: error.code
-  }
+  const safe: any = {}
+
+  // Whitelist safe properties
+  if (error.message) safe.message = error.message
+  if (error.name) safe.name = error.name
+  if (error.code) safe.code = error.code
+  if (error.path) safe.path = error.path // Common in validation errors
 
   // Add status if available (common in HTTP errors)
   if (error.status) safe.status = error.status
@@ -117,10 +118,10 @@ function handleNotionError(error: any): NotionMCPError {
 
     case 'validation_error':
       return new NotionMCPError(
-        error.body?.message || 'Invalid request parameters',
+        sanitizeErrorDetails(error.body)?.message || 'Invalid request parameters',
         'VALIDATION_ERROR',
         'Check the API documentation for valid parameter formats',
-        error.body
+        sanitizeErrorDetails(error.body)
       )
 
     case 'rate_limited':
