@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+early_access: false
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "!dist/**"
+    - "!build/**"
+    - "!bin/**"
+    - "!pnpm-lock.yaml"
+    - "!**/*.generated.*"
+  path_instructions:
+    - path: "src/tools/composite/**"
+      instructions: "Review for MCP composite tool patterns: withErrorHandling wrapper, retryWithBackoff for transient failures, proper Notion API error handling."
+    - path: "src/tools/helpers/**"
+      instructions: "Review for Notion API best practices: pagination handling, richtext conversion accuracy, markdown fidelity."
+
+chat:
+  auto_reply: true
