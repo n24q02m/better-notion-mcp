@@ -72,3 +72,14 @@ repos:
       - id: end-of-file-fixer
         name: fix end of files
         exclude_types: [image]
+
+  # ============================================================================
+  # Commit Message Enforcement
+  # ============================================================================
+  - repo: local
+    hooks:
+      - id: enforce-commit
+        name: Enforce feat and fix commit prefixes
+        entry: bash scripts/enforce-commit.sh
+        language: system
+        stages: [commit-msg]
