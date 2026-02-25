@@ -25,6 +25,7 @@ import { pages } from './composite/pages.js'
 import { users } from './composite/users.js'
 import { workspace } from './composite/workspace.js'
 import { aiReadableMessage, NotionMCPError } from './helpers/errors.js'
+import { wrapToolResult } from './helpers/security.js'
 
 // Get docs directory path - works for both bundled CLI and unbundled code
 const __filename = fileURLToPath(import.meta.url)
@@ -436,11 +437,12 @@ export function registerTools(server: Server, notionToken: string) {
           )
       }
 
+      const jsonText = JSON.stringify(result, null, 2)
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(result, null, 2)
+            text: wrapToolResult(name, jsonText)
           }
         ]
       }

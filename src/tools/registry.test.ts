@@ -279,9 +279,9 @@ describe('registerTools', () => {
       })
 
       expect(pages).toHaveBeenCalledWith(expect.any(Object), { action: 'get', page_id: 'page-123' })
-      expect(result).toEqual({
-        content: [{ type: 'text', text: JSON.stringify(mockResult, null, 2) }]
-      })
+      expect(result.content[0].text).toContain(JSON.stringify(mockResult, null, 2))
+      expect(result.content[0].text).toContain('<untrusted_notion_content>')
+      expect(result.content[0].text).toContain('[SECURITY:')
     })
 
     it('should route databases tool correctly', async () => {
@@ -294,7 +294,8 @@ describe('registerTools', () => {
       })
 
       expect(databases).toHaveBeenCalledWith(expect.any(Object), { action: 'query', database_id: 'db-1' })
-      expect(result.content[0].text).toBe(JSON.stringify(mockResult, null, 2))
+      expect(result.content[0].text).toContain(JSON.stringify(mockResult, null, 2))
+      expect(result.content[0].text).toContain('<untrusted_notion_content>')
     })
 
     it('should route blocks tool correctly', async () => {
@@ -307,7 +308,8 @@ describe('registerTools', () => {
       })
 
       expect(blocks).toHaveBeenCalledWith(expect.any(Object), { action: 'get', block_id: 'block-1' })
-      expect(result.content[0].text).toBe(JSON.stringify(mockResult, null, 2))
+      expect(result.content[0].text).toContain(JSON.stringify(mockResult, null, 2))
+      expect(result.content[0].text).toContain('<untrusted_notion_content>')
     })
 
     it('should route users tool correctly', async () => {
@@ -346,7 +348,8 @@ describe('registerTools', () => {
       })
 
       expect(commentsManage).toHaveBeenCalledWith(expect.any(Object), { action: 'list', page_id: 'page-1' })
-      expect(result.content[0].text).toBe(JSON.stringify(mockResult, null, 2))
+      expect(result.content[0].text).toContain(JSON.stringify(mockResult, null, 2))
+      expect(result.content[0].text).toContain('<untrusted_notion_content>')
     })
 
     it('should route content_convert tool without notion client', async () => {
@@ -456,9 +459,8 @@ describe('registerTools', () => {
         params: { name: 'pages', arguments: { action: 'get', page_id: 'p-1' } }
       })
 
-      expect(result).toEqual({
-        content: [{ type: 'text', text: JSON.stringify({ ok: true }, null, 2) }]
-      })
+      expect(result.content[0].text).toContain(JSON.stringify({ ok: true }, null, 2))
+      expect(result.content[0].text).toContain('<untrusted_notion_content>')
       expect(result.isError).toBeUndefined()
     })
   })
