@@ -1031,6 +1031,38 @@ describe('parseRichText', () => {
     const result = parseRichText('plain')
     expect(result[0].text.link).toBeNull()
   })
+
+  it('should handle nested brackets efficiently (performance check)', () => {
+    const N = 50000
+    const input = '['.repeat(N)
+    const start = performance.now()
+    const result = parseRichText(input)
+    const end = performance.now()
+
+    expect(result).toHaveLength(1)
+    expect(result[0].text.content).toBe(input)
+    // Should be extremely fast with O(N) optimization (< 10ms typically)
+    // Without optimization, this would take ~30-50ms for 50k
+    // For larger N like 1M, diff is huge (8s vs 100ms)
+    // We use a loose upper bound to avoid flaky tests in CI
+    expect(end - start).toBeLessThan(500)
+  })
+
+  it('should parse multiple links correctly', () => {
+    const result = parseRichText('[link1](url1) [link2](url2)')
+    expect(result).toHaveLength(3)
+    expect(result[0].text.link?.url).toBe('url1')
+    expect(result[1].text.content).toBe(' ')
+    expect(result[2].text.link?.url).toBe('url2')
+  })
+
+  it('should not parse nested brackets as link if paren is missing', () => {
+    const result = parseRichText('[a [b]](url)')
+    // Should be parsed as plain text because first ] is not followed by (
+    expect(result).toHaveLength(1)
+    expect(result[0].text.content).toBe('[a [b]](url)')
+    expect(result[0].text.link).toBeNull()
+  })
 })
 
 // ============================================================
