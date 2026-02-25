@@ -24,7 +24,6 @@ vi.mock('@notionhq/client', () => ({
   Client: MockClient
 }))
 
-import { readFileSync } from 'node:fs'
 import { registerTools } from './registry.js'
 
 function createMockServer() {
@@ -54,8 +53,8 @@ describe('Security: Tool Registry', () => {
 
       const result = await handler({
         params: {
-            name: 'help',
-            arguments: { tool_name: maliciousToolName }
+          name: 'help',
+          arguments: { tool_name: maliciousToolName }
         }
       })
 
