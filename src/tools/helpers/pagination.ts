@@ -72,6 +72,7 @@ export function createCursorHandler() {
 
 /**
  * Batch items into chunks
+ * @deprecated logic moved to processBatches sliding window, but kept for compatibility
  */
 export function batchItems<T>(items: T[], batchSize: number): T[][] {
   const batches: T[][] = []
@@ -82,23 +83,67 @@ export function batchItems<T>(items: T[], batchSize: number): T[][] {
 }
 
 /**
- * Process items in batches with concurrency limit
+ * Process items with controlled concurrency.
+ *
+ * Uses a sliding window approach (p-limit style) instead of batches to maximize throughput
+ * while respecting rate limits. The effective concurrency limit is calculated as
+ * `batchSize * concurrency` to preserve backward compatibility with existing callers.
+ *
+ * Default behavior (no options): Concurrency limit = 3 (1 * 3).
+ * Explicit behavior (e.g. { batchSize: 5, concurrency: 2 }): Concurrency limit = 10.
  */
 export async function processBatches<T, R>(
   items: T[],
   processFn: (item: T) => Promise<R>,
   options: { batchSize?: number; concurrency?: number } = {}
 ): Promise<R[]> {
-  const { batchSize = 10, concurrency = 3 } = options
-  const batches = batchItems(items, batchSize)
-  const results: R[] = []
+  const { batchSize = 1, concurrency = 3 } = options
+  const limit = Math.max(1, batchSize * concurrency)
 
-  for (let i = 0; i < batches.length; i += concurrency) {
-    const currentBatches = batches.slice(i, i + concurrency)
-    const batchPromises = currentBatches.map((batch) => Promise.all(batch.map(processFn)))
-    const batchResults = await Promise.all(batchPromises)
-    results.push(...batchResults.flat())
+  if (items.length === 0) {
+    return []
   }
 
-  return results
+  // Use sliding window concurrency
+  return new Promise<R[]>((resolve, reject) => {
+    const results = new Array<R>(items.length)
+    let currentIndex = 0
+    let activeCount = 0
+    let rejected = false
+    let completedCount = 0
+
+    const next = () => {
+      if (rejected) return
+
+      // Check completion
+      if (completedCount === items.length) {
+        resolve(results)
+        return
+      }
+
+      // Start new tasks
+      while (currentIndex < items.length && activeCount < limit) {
+        if (rejected) break
+
+        const index = currentIndex
+        currentIndex++
+        activeCount++
+
+        processFn(items[index])
+          .then((res) => {
+            if (rejected) return
+            results[index] = res
+            activeCount--
+            completedCount++
+            next()
+          })
+          .catch((err) => {
+            rejected = true
+            reject(err)
+          })
+      }
+    }
+
+    next()
+  })
 }
