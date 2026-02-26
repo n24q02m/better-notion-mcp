@@ -161,40 +161,69 @@ export function parseRichText(text: string): RichText[] {
   let code = false
   let strikethrough = false
 
+  // Optimization: track next closing bracket/paren to avoid O(N^2) scans
+  // -1: unknown/not searched yet
+  // -2: known to not exist
+  // >= 0: index of next occurrence
+  let nextCloseBracket = -1
+  let nextCloseParen = -1
+
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
     const next = text[i + 1]
 
     // Link [text](url)
     if (char === '[') {
-      const closeBracket = text.indexOf(']', i)
-      const openParen = closeBracket !== -1 ? text.indexOf('(', closeBracket) : -1
-      const closeParen = openParen !== -1 ? text.indexOf(')', openParen) : -1
+      // Find ]
+      if (nextCloseBracket < i && nextCloseBracket !== -2) {
+        nextCloseBracket = text.indexOf(']', i)
+        if (nextCloseBracket === -1) nextCloseBracket = -2
+      }
 
-      if (closeBracket !== -1 && openParen === closeBracket + 1 && closeParen !== -1) {
-        if (current) {
-          richText.push(createRichText(current, { bold, italic, code, strikethrough }))
-          current = ''
-        }
+      if (nextCloseBracket !== -2) {
+        const closeBracket = nextCloseBracket
 
-        const linkText = text.slice(i + 1, closeBracket)
-        const linkUrl = text.slice(openParen + 1, closeParen)
+        // Check for ( immediately after ]
+        // Optimized: direct access instead of indexOf scan
+        const hasOpenParen = closeBracket + 1 < text.length && text[closeBracket + 1] === '('
 
-        richText.push({
-          type: 'text',
-          text: { content: linkText, link: { url: linkUrl } },
-          annotations: {
-            bold,
-            italic,
-            strikethrough,
-            underline: false,
-            code,
-            color: 'default'
+        if (hasOpenParen) {
+          const openParen = closeBracket + 1
+
+          // Find )
+          if (nextCloseParen < openParen && nextCloseParen !== -2) {
+             nextCloseParen = text.indexOf(')', openParen)
+             if (nextCloseParen === -1) nextCloseParen = -2
           }
-        })
 
-        i = closeParen
-        continue
+          if (nextCloseParen !== -2) {
+            const closeParen = nextCloseParen
+
+            if (current) {
+              richText.push(createRichText(current, { bold, italic, code, strikethrough }))
+              current = ''
+            }
+
+            const linkText = text.slice(i + 1, closeBracket)
+            const linkUrl = text.slice(openParen + 1, closeParen)
+
+            richText.push({
+              type: 'text',
+              text: { content: linkText, link: { url: linkUrl } },
+              annotations: {
+                bold,
+                italic,
+                strikethrough,
+                underline: false,
+                code,
+                color: 'default'
+              }
+            })
+
+            i = closeParen
+            continue
+          }
+        }
       }
     }
 
@@ -246,6 +275,7 @@ export function parseRichText(text: string): RichText[] {
 
   return richText.length > 0 ? richText : [createRichText(text)]
 }
+
 
 /**
  * Convert rich text array to plain markdown
