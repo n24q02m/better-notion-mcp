@@ -3,7 +3,7 @@
  * Consolidated registration for maximum coverage with minimal tools
  */
 
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js'
@@ -28,11 +28,31 @@ import { aiReadableMessage, NotionMCPError } from './helpers/errors.js'
 // Get docs directory path - works for both bundled CLI and unbundled code
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
-// For bundled CLI: __dirname = /bin/, docs at /build/src/docs/
-// For unbundled: __dirname = /build/src/tools/, docs at /build/src/docs/
-const DOCS_DIR = __dirname.endsWith('bin')
-  ? join(__dirname, '..', 'build', 'src', 'docs')
-  : join(__dirname, '..', 'docs')
+
+/**
+ * Robustly find documentation directory by checking multiple potential locations.
+ * Avoids fragile check like __dirname.endsWith('bin').
+ */
+function getDocsDir(currentDir: string): string {
+  const potentialPaths = [
+    // Standard relative path (source and some build structures)
+    join(currentDir, '..', 'docs'),
+    // Bundled CLI path (when running from bin/)
+    join(currentDir, '..', 'build', 'src', 'docs'),
+    // Source fallback (when running from deep within src)
+    join(currentDir, '..', 'src', 'docs')
+  ]
+
+  for (const path of potentialPaths) {
+    if (existsSync(join(path, 'pages.md'))) {
+      return path
+    }
+  }
+
+  throw new Error(`Documentation directory not found. Searched: ${potentialPaths.join(', ')}`)
+}
+
+const DOCS_DIR = getDocsDir(__dirname)
 
 /**
  * Documentation resources for full tool details
