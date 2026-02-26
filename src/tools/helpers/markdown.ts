@@ -340,40 +340,55 @@ export function parseRichText(text: string): RichText[] {
   let code = false
   let strikethrough = false
 
+  // Cache state for link parsing to avoid O(N^2) complexity
+  let nextCloseBracket = -1
+  let noMoreCloseBrackets = false
+
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
     const next = text[i + 1]
 
     // Link [text](url)
     if (char === '[') {
-      const closeBracket = text.indexOf(']', i)
-      const openParen = closeBracket !== -1 ? text.indexOf('(', closeBracket) : -1
-      const closeParen = openParen !== -1 ? text.indexOf(')', openParen) : -1
-
-      if (closeBracket !== -1 && openParen === closeBracket + 1 && closeParen !== -1) {
-        if (current) {
-          richText.push(createRichText(current, { bold, italic, code, strikethrough }))
-          current = ''
+      if (!noMoreCloseBrackets && nextCloseBracket < i) {
+        nextCloseBracket = text.indexOf(']', i)
+        if (nextCloseBracket === -1) {
+          noMoreCloseBrackets = true
         }
+      }
 
-        const linkText = text.slice(i + 1, closeBracket)
-        const linkUrl = text.slice(openParen + 1, closeParen)
+      if (nextCloseBracket !== -1) {
+        // Optimization: direct check instead of scanning for '('
+        const openParenIndex = nextCloseBracket + 1
+        if (openParenIndex < text.length && text[openParenIndex] === '(') {
+          const closeParen = text.indexOf(')', openParenIndex)
 
-        richText.push({
-          type: 'text',
-          text: { content: linkText, link: { url: linkUrl } },
-          annotations: {
-            bold,
-            italic,
-            strikethrough,
-            underline: false,
-            code,
-            color: 'default'
+          if (closeParen !== -1) {
+            if (current) {
+              richText.push(createRichText(current, { bold, italic, code, strikethrough }))
+              current = ''
+            }
+
+            const linkText = text.slice(i + 1, nextCloseBracket)
+            const linkUrl = text.slice(openParenIndex + 1, closeParen)
+
+            richText.push({
+              type: 'text',
+              text: { content: linkText, link: { url: linkUrl } },
+              annotations: {
+                bold,
+                italic,
+                strikethrough,
+                underline: false,
+                code,
+                color: 'default'
+              }
+            })
+
+            i = closeParen
+            continue
           }
-        })
-
-        i = closeParen
-        continue
+        }
       }
     }
 
