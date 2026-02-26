@@ -7,7 +7,7 @@ import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate, processBatches } from '../helpers/pagination.js'
-import { convertToNotionProperties } from '../helpers/properties.js'
+import { convertToNotionProperties, extractPageProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
 
 export interface PagesInput {
@@ -157,54 +157,7 @@ async function getPage(notion: Client, input: PagesInput): Promise<any> {
   const markdown = blocksToMarkdown(blocks as any)
 
   // Extract properties
-  const properties: any = {}
-  for (const [key, prop] of Object.entries(page.properties)) {
-    const p = prop as any
-    if (p.type === 'title' && p.title) {
-      properties[key] = p.title.map((t: any) => t.plain_text).join('')
-    } else if (p.type === 'rich_text' && p.rich_text) {
-      properties[key] = p.rich_text.map((t: any) => t.plain_text).join('')
-    } else if (p.type === 'select' && p.select) {
-      properties[key] = p.select.name
-    } else if (p.type === 'multi_select' && p.multi_select) {
-      properties[key] = p.multi_select.map((s: any) => s.name)
-    } else if (p.type === 'number') {
-      properties[key] = p.number
-    } else if (p.type === 'checkbox') {
-      properties[key] = p.checkbox
-    } else if (p.type === 'url') {
-      properties[key] = p.url
-    } else if (p.type === 'email') {
-      properties[key] = p.email
-    } else if (p.type === 'phone_number') {
-      properties[key] = p.phone_number
-    } else if (p.type === 'date' && p.date) {
-      properties[key] = p.date.start + (p.date.end ? ` to ${p.date.end}` : '')
-    } else if (p.type === 'relation' && p.relation) {
-      properties[key] = p.relation.map((r: any) => r.id)
-    } else if (p.type === 'rollup' && p.rollup) {
-      properties[key] = p.rollup
-    } else if (p.type === 'people' && p.people) {
-      properties[key] = p.people.map((person: any) => person.name || person.id)
-    } else if (p.type === 'files' && p.files) {
-      properties[key] = p.files.map((f: any) => f.file?.url || f.external?.url || f.name)
-    } else if (p.type === 'formula' && p.formula) {
-      const formula = p.formula
-      properties[key] = formula[formula.type]
-    } else if (p.type === 'created_time') {
-      properties[key] = p.created_time
-    } else if (p.type === 'last_edited_time') {
-      properties[key] = p.last_edited_time
-    } else if (p.type === 'created_by' && p.created_by) {
-      properties[key] = p.created_by.name || p.created_by.id
-    } else if (p.type === 'last_edited_by' && p.last_edited_by) {
-      properties[key] = p.last_edited_by.name || p.last_edited_by.id
-    } else if (p.type === 'status' && p.status) {
-      properties[key] = p.status.name
-    } else if (p.type === 'unique_id' && p.unique_id) {
-      properties[key] = p.unique_id.prefix ? `${p.unique_id.prefix}-${p.unique_id.number}` : p.unique_id.number
-    }
-  }
+  const properties = extractPageProperties(page.properties)
 
   return {
     action: 'get',
