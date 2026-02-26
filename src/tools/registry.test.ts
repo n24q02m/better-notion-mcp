@@ -396,6 +396,17 @@ describe('registerTools', () => {
       expect(parsed.documentation).toBe('# Pages Documentation\n\nFull docs here.')
     })
 
+    it('should return error for help tool with invalid tool_name', async () => {
+      const handler = server.getHandler(3)
+
+      const result = await handler({
+        params: { name: 'help', arguments: { tool_name: '../../README' } }
+      })
+
+      expect(result.isError).toBe(true)
+      expect(result.content[0].text).toContain('Invalid tool name: ../../README')
+    })
+
     it('should return isError for help tool when doc file is missing', async () => {
       const handler = server.getHandler(3)
       vi.mocked(readFileSync).mockImplementation(() => {
