@@ -121,14 +121,23 @@ async function sendFileUpload(notion: Client, input: FileUploadsInput): Promise<
     )
   }
 
+  // Auto-retrieve content_type and filename from upload session if not provided
+  let contentType = input.content_type
+  let filename = input.filename
+  if (!contentType || !filename) {
+    const uploadInfo: any = await (notion as any).fileUploads.retrieve({
+      file_upload_id: input.file_upload_id
+    })
+    contentType = contentType || uploadInfo.content_type || 'application/octet-stream'
+    filename = filename || uploadInfo.filename || 'file'
+  }
+
   const fileBuffer = Buffer.from(input.file_content, 'base64')
-  const blob = new Blob([fileBuffer], {
-    type: input.content_type || 'application/octet-stream'
-  })
+  const blob = new Blob([fileBuffer], { type: contentType })
 
   const params: any = {
     file_upload_id: input.file_upload_id,
-    file: { data: blob, filename: input.filename || 'file' }
+    file: { data: blob, filename }
   }
 
   if (input.part_number !== undefined) {

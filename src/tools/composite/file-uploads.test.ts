@@ -94,6 +94,10 @@ describe('fileUploads', () => {
   describe('send', () => {
     it('should send file content', async () => {
       const base64Content = Buffer.from('hello world').toString('base64')
+      mockNotion.fileUploads.retrieve.mockResolvedValue({
+        content_type: 'text/plain',
+        filename: 'test.txt'
+      })
       mockNotion.fileUploads.send.mockResolvedValue({ status: 'uploaded' })
 
       const result = await fileUploads(mockNotion as any, {
@@ -108,16 +112,24 @@ describe('fileUploads', () => {
         part_number: undefined,
         status: 'uploaded'
       })
+      // Should auto-retrieve content_type and filename from upload session
+      expect(mockNotion.fileUploads.retrieve).toHaveBeenCalledWith({
+        file_upload_id: 'upload-123'
+      })
       const callArgs = mockNotion.fileUploads.send.mock.calls[0][0]
       expect(callArgs.file_upload_id).toBe('upload-123')
       expect(callArgs.file).toEqual({
         data: expect.any(Blob),
-        filename: 'file'
+        filename: 'test.txt'
       })
     })
 
     it('should send with part_number', async () => {
       const base64Content = Buffer.from('part data').toString('base64')
+      mockNotion.fileUploads.retrieve.mockResolvedValue({
+        content_type: 'application/zip',
+        filename: 'large-file.zip'
+      })
       mockNotion.fileUploads.send.mockResolvedValue({ status: 'uploaded' })
 
       const result = await fileUploads(mockNotion as any, {
@@ -132,9 +144,27 @@ describe('fileUploads', () => {
       expect(callArgs.file_upload_id).toBe('upload-123')
       expect(callArgs.file).toEqual({
         data: expect.any(Blob),
-        filename: 'file'
+        filename: 'large-file.zip'
       })
       expect(callArgs.part_number).toBe('2')
+    })
+
+    it('should use provided content_type and filename without calling retrieve', async () => {
+      const base64Content = Buffer.from('data').toString('base64')
+      mockNotion.fileUploads.send.mockResolvedValue({ status: 'uploaded' })
+
+      await fileUploads(mockNotion as any, {
+        action: 'send',
+        file_upload_id: 'upload-123',
+        file_content: base64Content,
+        content_type: 'image/png',
+        filename: 'screenshot.png'
+      })
+
+      // Should NOT call retrieve when both content_type and filename are provided
+      expect(mockNotion.fileUploads.retrieve).not.toHaveBeenCalled()
+      const callArgs = mockNotion.fileUploads.send.mock.calls[0][0]
+      expect(callArgs.file.filename).toBe('screenshot.png')
     })
 
     it('should throw without file_upload_id', async () => {
