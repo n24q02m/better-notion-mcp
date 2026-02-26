@@ -23,6 +23,15 @@ export interface RichTextItem {
 
 export type Color = 'default' | 'gray' | 'brown' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | 'red'
 
+const DEFAULT_ANNOTATIONS: RichTextItem['annotations'] = {
+  bold: false,
+  italic: false,
+  strikethrough: false,
+  underline: false,
+  code: false,
+  color: 'default'
+}
+
 /**
  * Create simple rich text
  */
@@ -30,14 +39,7 @@ export function text(content: string): RichTextItem {
   return {
     type: 'text',
     text: { content, link: null },
-    annotations: {
-      bold: false,
-      italic: false,
-      strikethrough: false,
-      underline: false,
-      code: false,
-      color: 'default'
-    }
+    annotations: { ...DEFAULT_ANNOTATIONS }
   }
 }
 
@@ -46,8 +48,9 @@ export function text(content: string): RichTextItem {
  */
 export function bold(content: string): RichTextItem {
   return {
-    ...text(content),
-    annotations: { ...text(content).annotations, bold: true }
+    type: 'text',
+    text: { content, link: null },
+    annotations: { ...DEFAULT_ANNOTATIONS, bold: true }
   }
 }
 
@@ -56,8 +59,9 @@ export function bold(content: string): RichTextItem {
  */
 export function italic(content: string): RichTextItem {
   return {
-    ...text(content),
-    annotations: { ...text(content).annotations, italic: true }
+    type: 'text',
+    text: { content, link: null },
+    annotations: { ...DEFAULT_ANNOTATIONS, italic: true }
   }
 }
 
@@ -66,8 +70,9 @@ export function italic(content: string): RichTextItem {
  */
 export function code(content: string): RichTextItem {
   return {
-    ...text(content),
-    annotations: { ...text(content).annotations, code: true }
+    type: 'text',
+    text: { content, link: null },
+    annotations: { ...DEFAULT_ANNOTATIONS, code: true }
   }
 }
 
@@ -78,14 +83,7 @@ export function link(content: string, url: string): RichTextItem {
   return {
     type: 'text',
     text: { content, link: { url } },
-    annotations: {
-      bold: false,
-      italic: false,
-      strikethrough: false,
-      underline: false,
-      code: false,
-      color: 'default'
-    }
+    annotations: { ...DEFAULT_ANNOTATIONS }
   }
 }
 
@@ -94,8 +92,9 @@ export function link(content: string, url: string): RichTextItem {
  */
 export function colored(content: string, color: Color): RichTextItem {
   return {
-    ...text(content),
-    annotations: { ...text(content).annotations, color }
+    type: 'text',
+    text: { content, link: null },
+    annotations: { ...DEFAULT_ANNOTATIONS, color }
   }
 }
 
