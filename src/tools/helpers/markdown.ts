@@ -161,24 +161,57 @@ export function parseRichText(text: string): RichText[] {
   let code = false
   let strikethrough = false
 
+  // Optimization state to prevent O(N^2) behavior
+  let nextCloseBracket = -1
+  let nextCloseBracketIsValid = false
+  let nextOpenParen = -1
+  let nextCloseParen = -1
+  let noMoreCloseBrackets = false
+  let noMoreCloseParens = false
+
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
     const next = text[i + 1]
 
     // Link [text](url)
     if (char === '[') {
-      const closeBracket = text.indexOf(']', i)
-      const openParen = closeBracket !== -1 ? text.indexOf('(', closeBracket) : -1
-      const closeParen = openParen !== -1 ? text.indexOf(')', openParen) : -1
+      // Optimization: Cache finding the next closing bracket
+      if (nextCloseBracket < i) {
+        if (!noMoreCloseBrackets) {
+          nextCloseBracket = text.indexOf(']', i)
 
-      if (closeBracket !== -1 && openParen === closeBracket + 1 && closeParen !== -1) {
+          if (nextCloseBracket === -1) {
+            noMoreCloseBrackets = true
+          } else {
+            // Check validity of the found bracket as a link closer
+            nextCloseBracketIsValid = false // Reset validity
+
+            // Check for '(' immediately after ']'
+            if (nextCloseBracket + 1 < text.length && text[nextCloseBracket + 1] === '(') {
+              // Check for ')'
+              if (!noMoreCloseParens) {
+                nextOpenParen = nextCloseBracket + 1
+                nextCloseParen = text.indexOf(')', nextOpenParen)
+
+                if (nextCloseParen !== -1) {
+                  nextCloseBracketIsValid = true
+                } else {
+                  noMoreCloseParens = true
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (nextCloseBracket !== -1 && nextCloseBracketIsValid) {
         if (current) {
           richText.push(createRichText(current, { bold, italic, code, strikethrough }))
           current = ''
         }
 
-        const linkText = text.slice(i + 1, closeBracket)
-        const linkUrl = text.slice(openParen + 1, closeParen)
+        const linkText = text.slice(i + 1, nextCloseBracket)
+        const linkUrl = text.slice(nextOpenParen + 1, nextCloseParen)
 
         richText.push({
           type: 'text',
@@ -193,7 +226,9 @@ export function parseRichText(text: string): RichText[] {
           }
         })
 
-        i = closeParen
+        i = nextCloseParen
+        // Reset cache as we've consumed this link
+        nextCloseBracket = -1
         continue
       }
     }
