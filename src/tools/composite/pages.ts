@@ -9,6 +9,7 @@ import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
+import { isSafeUrl } from '../helpers/security.js'
 
 export interface PagesInput {
   action: 'create' | 'get' | 'get_property' | 'update' | 'move' | 'archive' | 'restore' | 'duplicate'
@@ -111,7 +112,15 @@ async function createPage(notion: Client, input: PagesInput): Promise<any> {
 
   const pageData: any = { parent, properties }
   if (input.icon) pageData.icon = { type: 'emoji', emoji: input.icon }
-  if (input.cover) pageData.cover = { type: 'external', external: { url: input.cover } }
+  if (input.cover) {
+    if (!isSafeUrl(input.cover)) {
+      throw new NotionMCPError(
+        'Invalid cover URL. Only http/https/mailto/tel URLs are allowed.',
+        'VALIDATION_ERROR'
+      )
+    }
+    pageData.cover = { type: 'external', external: { url: input.cover } }
+  }
 
   const page = await notion.pages.create(pageData)
 
@@ -311,7 +320,15 @@ async function updatePage(notion: Client, input: PagesInput): Promise<any> {
 
   // Update metadata
   if (input.icon) updates.icon = { type: 'emoji', emoji: input.icon }
-  if (input.cover) updates.cover = { type: 'external', external: { url: input.cover } }
+  if (input.cover) {
+    if (!isSafeUrl(input.cover)) {
+      throw new NotionMCPError(
+        'Invalid cover URL. Only http/https/mailto/tel URLs are allowed.',
+        'VALIDATION_ERROR'
+      )
+    }
+    updates.cover = { type: 'external', external: { url: input.cover } }
+  }
   if (input.archived !== undefined) updates.archived = input.archived
 
   // Update properties

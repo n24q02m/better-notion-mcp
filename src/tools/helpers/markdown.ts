@@ -6,6 +6,8 @@
  *           equations, columns, table of contents, breadcrumb
  */
 
+import { isSafeUrl } from './security.js'
+
 export interface NotionBlock {
   object: 'block'
   type: string
@@ -106,8 +108,13 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
     // Image ![alt](url)
     const imageMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/)
     if (imageMatch) {
-      blocks.push(createImage(imageMatch[2], imageMatch[1]))
-      continue
+      const url = imageMatch[2]
+      const alt = imageMatch[1]
+      if (isSafeUrl(url)) {
+        blocks.push(createImage(url, alt))
+        continue
+      }
+      // If unsafe URL, fall through to paragraph
     }
 
     // Bookmark/Embed [bookmark](url) or [embed](url)
@@ -115,12 +122,16 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
     if (bookmarkMatch) {
       const type = bookmarkMatch[1].toLowerCase()
       const url = bookmarkMatch[2]
-      if (type === 'embed') {
-        blocks.push(createEmbed(url))
-      } else {
-        blocks.push(createBookmark(url))
+
+      if (isSafeUrl(url)) {
+        if (type === 'embed') {
+          blocks.push(createEmbed(url))
+        } else {
+          blocks.push(createBookmark(url))
+        }
+        continue
       }
-      continue
+      // If unsafe URL, fall through to paragraph
     }
 
     // Toggle <details><summary>Title</summary>
@@ -363,18 +374,23 @@ export function parseRichText(text: string): RichText[] {
           const linkText = text.slice(i + 1, closeBracket)
           const linkUrl = text.slice(closeBracket + 2, closeParen)
 
-          richText.push({
-            type: 'text',
-            text: { content: linkText, link: { url: linkUrl } },
-            annotations: {
-              bold,
-              italic,
-              strikethrough,
-              underline: false,
-              code,
-              color: 'default'
-            }
-          })
+          if (isSafeUrl(linkUrl)) {
+            richText.push({
+              type: 'text',
+              text: { content: linkText, link: { url: linkUrl } },
+              annotations: {
+                bold,
+                italic,
+                strikethrough,
+                underline: false,
+                code,
+                color: 'default'
+              }
+            })
+          } else {
+            // Unsafe URL - treat as plain text without link
+            richText.push(createRichText(linkText, { bold, italic, code, strikethrough }))
+          }
 
           i = closeParen
           continue

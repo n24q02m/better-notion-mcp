@@ -8,6 +8,7 @@ import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { autoPaginate, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
+import { isSafeUrl } from '../helpers/security.js'
 
 export interface DatabasesInput {
   action:
@@ -550,6 +551,12 @@ async function updateDatabaseContainer(notion: Client, input: DatabasesInput): P
   }
 
   if (input.cover) {
+    if (!isSafeUrl(input.cover)) {
+      throw new NotionMCPError(
+        'Invalid cover URL. Only http/https/mailto/tel URLs are allowed.',
+        'VALIDATION_ERROR'
+      )
+    }
     updates.cover = { type: 'external', external: { url: input.cover } }
   }
 
