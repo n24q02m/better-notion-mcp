@@ -1,0 +1,11 @@
+name: List Gemini Models
+on: [push]
+jobs:
+  test-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch models
+        run: |
+          curl "https://generativelanguage.googleapis.com/v1beta/models?key=${{ secrets.GEMINI_API_KEY }}" \
+          -H 'Content-Type: application/json' > models.json
+          cat models.json | grep -i "name\|displayName"
