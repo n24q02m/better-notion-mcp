@@ -1,4 +1,4 @@
-name: Qodo PR-Agent (Gemini)
+name: Qodo PR-Agent (Gemini 3 Flash)
 
 on:
   pull_request:
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   pr_agent_job:
-    if: \${{ github.event.sender.type != 'Bot' }}
+    if: ${{ github.event.sender.type != 'Bot' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -23,23 +23,22 @@ jobs:
         id: read_file
         run: |
           if [ -f ".github/best_practices.md" ]; then
-            INSTRUCTIONS=\$(cat .github/best_practices.md)
-            RANDOM_EOF=\$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-            echo "CUSTOM_INSTRUCTIONS<<\$RANDOM_EOF" >> "\$GITHUB_ENV"
-            echo "\$INSTRUCTIONS" >> "\$GITHUB_ENV"
-            echo "\$RANDOM_EOF" >> "\$GITHUB_ENV"
+            INSTRUCTIONS=$(cat .github/best_practices.md)
+            RANDOM_EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+            echo "CUSTOM_INSTRUCTIONS<<$RANDOM_EOF" >> "$GITHUB_ENV"
+            echo "$INSTRUCTIONS" >> "$GITHUB_ENV"
+            echo "$RANDOM_EOF" >> "$GITHUB_ENV"
           fi
 
       - name: PR Agent action step
         uses: qodo-ai/pr-agent@main
         env:
-          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-          GOOGLE_AI_STUDIO.GEMINI_API_KEY: \${{ secrets.GEMINI_API_KEY }}
-          config.model: "gemini/gemini-1.5-pro"
-          config.fallback_models: '["gemini/gemini-1.5-flash"]'
-          pr_reviewer.extra_instructions: \${{ env.CUSTOM_INSTRUCTIONS }}
-          pr_code_suggestions.extra_instructions: \${{ env.CUSTOM_INSTRUCTIONS }}
-          pr_description.extra_instructions: \${{ env.CUSTOM_INSTRUCTIONS }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOOGLE_AI_STUDIO.GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          config.model: "gemini/gemini-1.5-flash"
+          pr_reviewer.extra_instructions: ${{ env.CUSTOM_INSTRUCTIONS }}
+          pr_code_suggestions.extra_instructions: ${{ env.CUSTOM_INSTRUCTIONS }}
+          pr_description.extra_instructions: ${{ env.CUSTOM_INSTRUCTIONS }}
           github_action_config.auto_review: "true"
           github_action_config.auto_describe: "true"
           github_action_config.auto_improve: "true"
