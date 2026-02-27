@@ -24,27 +24,27 @@ vi.mock('../helpers/properties.js', async (importOriginal) => {
     extractPageProperties: vi.fn((props: any) => {
       const extracted: any = {}
       for (const [key, val] of Object.entries(props)) {
-         if (val && typeof val === 'object' && 'title' in val) {
-             extracted[key] = (val as any).title[0]?.plain_text || ''
-         } else if (val && typeof val === 'object' && 'select' in val) {
-             extracted[key] = (val as any).select?.name || ''
-         } else if (val && typeof val === 'object' && 'rich_text' in val) {
-             extracted[key] = (val as any).rich_text[0]?.plain_text || ''
-         } else if (val && typeof val === 'object' && 'multi_select' in val) {
-             extracted[key] = (val as any).multi_select.map((x: any) => x.name)
-         } else if (val && typeof val === 'object' && 'number' in val) {
-             extracted[key] = (val as any).number
-         } else if (val && typeof val === 'object' && 'checkbox' in val) {
-             extracted[key] = (val as any).checkbox
-         } else if (val && typeof val === 'object' && 'url' in val) {
-             extracted[key] = (val as any).url
-         } else if (val && typeof val === 'object' && 'email' in val) {
-             extracted[key] = (val as any).email
-         } else if (val && typeof val === 'object' && 'phone_number' in val) {
-             extracted[key] = (val as any).phone_number
-         } else if (val && typeof val === 'object' && 'date' in val) {
-             extracted[key] = (val as any).date.start + ((val as any).date.end ? ` to ${(val as any).date.end}` : '')
-         }
+        if (val && typeof val === 'object' && 'title' in val) {
+          extracted[key] = (val as any).title[0]?.plain_text || ''
+        } else if (val && typeof val === 'object' && 'select' in val) {
+          extracted[key] = (val as any).select?.name || ''
+        } else if (val && typeof val === 'object' && 'rich_text' in val) {
+          extracted[key] = (val as any).rich_text[0]?.plain_text || ''
+        } else if (val && typeof val === 'object' && 'multi_select' in val) {
+          extracted[key] = (val as any).multi_select.map((x: any) => x.name)
+        } else if (val && typeof val === 'object' && 'number' in val) {
+          extracted[key] = (val as any).number
+        } else if (val && typeof val === 'object' && 'checkbox' in val) {
+          extracted[key] = (val as any).checkbox
+        } else if (val && typeof val === 'object' && 'url' in val) {
+          extracted[key] = (val as any).url
+        } else if (val && typeof val === 'object' && 'email' in val) {
+          extracted[key] = (val as any).email
+        } else if (val && typeof val === 'object' && 'phone_number' in val) {
+          extracted[key] = (val as any).phone_number
+        } else if (val && typeof val === 'object' && 'date' in val) {
+          extracted[key] = (val as any).date.start + ((val as any).date.end ? ` to ${(val as any).date.end}` : '')
+        }
       }
       return extracted
     })

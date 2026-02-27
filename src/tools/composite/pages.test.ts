@@ -16,7 +16,7 @@ vi.mock('../helpers/properties.js', async (importOriginal) => {
   const original = await importOriginal<typeof import('../helpers/properties.js')>()
   return {
     ...original,
-    convertToNotionProperties: vi.fn((props: any) => props),
+    convertToNotionProperties: vi.fn((props: any) => props)
   }
 })
 
