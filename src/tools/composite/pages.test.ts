@@ -12,9 +12,13 @@ vi.mock('../helpers/markdown.js', () => ({
   })
 }))
 
-vi.mock('../helpers/properties.js', () => ({
-  convertToNotionProperties: vi.fn((props: any) => props)
-}))
+vi.mock('../helpers/properties.js', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../helpers/properties.js')>()
+  return {
+    ...original,
+    convertToNotionProperties: vi.fn((props: any) => props),
+  }
+})
 
 function createMockNotion() {
   return {

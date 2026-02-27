@@ -6,7 +6,7 @@
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { autoPaginate, processBatches } from '../helpers/pagination.js'
-import { convertToNotionProperties } from '../helpers/properties.js'
+import { convertToNotionProperties, extractPageProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
 
 export interface DatabasesInput {
@@ -267,34 +267,12 @@ async function queryDatabase(notion: Client, input: DatabasesInput): Promise<any
 
   // Format results
   const formattedResults = results.map((page: any) => {
-    const props: any = { page_id: page.id, url: page.url }
-
-    for (const [key, prop] of Object.entries(page.properties)) {
-      const p = prop as any
-      if (p.type === 'title' && p.title) {
-        props[key] = p.title.map((t: any) => t.plain_text).join('')
-      } else if (p.type === 'rich_text' && p.rich_text) {
-        props[key] = p.rich_text.map((t: any) => t.plain_text).join('')
-      } else if (p.type === 'select' && p.select) {
-        props[key] = p.select.name
-      } else if (p.type === 'multi_select' && p.multi_select) {
-        props[key] = p.multi_select.map((s: any) => s.name)
-      } else if (p.type === 'number') {
-        props[key] = p.number
-      } else if (p.type === 'checkbox') {
-        props[key] = p.checkbox
-      } else if (p.type === 'url') {
-        props[key] = p.url
-      } else if (p.type === 'email') {
-        props[key] = p.email
-      } else if (p.type === 'phone_number') {
-        props[key] = p.phone_number
-      } else if (p.type === 'date' && p.date) {
-        props[key] = p.date.start + (p.date.end ? ` to ${p.date.end}` : '')
-      }
+    const extracted = extractPageProperties(page.properties)
+    return {
+      page_id: page.id,
+      url: page.url,
+      ...extracted
     }
-
-    return props
   })
 
   return {

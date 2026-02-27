@@ -1,6 +1,56 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { databases } from './databases'
 
+// Helper to create rich text objects for mocks
+const richText = (content: string) => ({
+  type: 'text',
+  text: { content, link: null },
+  plain_text: content,
+  annotations: {
+    bold: false,
+    italic: false,
+    strikethrough: false,
+    underline: false,
+    code: false,
+    color: 'default'
+  }
+})
+
+vi.mock('../helpers/properties.js', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../helpers/properties.js')>()
+  return {
+    ...original,
+    convertToNotionProperties: vi.fn((props: any) => props),
+    extractPageProperties: vi.fn((props: any) => {
+      const extracted: any = {}
+      for (const [key, val] of Object.entries(props)) {
+         if (val && typeof val === 'object' && 'title' in val) {
+             extracted[key] = (val as any).title[0]?.plain_text || ''
+         } else if (val && typeof val === 'object' && 'select' in val) {
+             extracted[key] = (val as any).select?.name || ''
+         } else if (val && typeof val === 'object' && 'rich_text' in val) {
+             extracted[key] = (val as any).rich_text[0]?.plain_text || ''
+         } else if (val && typeof val === 'object' && 'multi_select' in val) {
+             extracted[key] = (val as any).multi_select.map((x: any) => x.name)
+         } else if (val && typeof val === 'object' && 'number' in val) {
+             extracted[key] = (val as any).number
+         } else if (val && typeof val === 'object' && 'checkbox' in val) {
+             extracted[key] = (val as any).checkbox
+         } else if (val && typeof val === 'object' && 'url' in val) {
+             extracted[key] = (val as any).url
+         } else if (val && typeof val === 'object' && 'email' in val) {
+             extracted[key] = (val as any).email
+         } else if (val && typeof val === 'object' && 'phone_number' in val) {
+             extracted[key] = (val as any).phone_number
+         } else if (val && typeof val === 'object' && 'date' in val) {
+             extracted[key] = (val as any).date.start + ((val as any).date.end ? ` to ${(val as any).date.end}` : '')
+         }
+      }
+      return extracted
+    })
+  }
+})
+
 const mockNotion = {
   databases: {
     create: vi.fn(),
@@ -193,7 +243,7 @@ describe('databases', () => {
             id: 'page-1',
             url: 'https://notion.so/page-1',
             properties: {
-              Name: { type: 'title', title: [{ plain_text: 'Item 1' }] },
+              Name: { type: 'title', title: [richText('Item 1')] },
               Status: { type: 'select', select: { name: 'Active' } }
             }
           }
@@ -309,8 +359,8 @@ describe('databases', () => {
             id: 'page-2',
             url: 'https://notion.so/page-2',
             properties: {
-              Name: { type: 'title', title: [{ plain_text: 'Test' }] },
-              Desc: { type: 'rich_text', rich_text: [{ plain_text: 'A desc' }] },
+              Name: { type: 'title', title: [richText('Test')] },
+              Desc: { type: 'rich_text', rich_text: [richText('A desc')] },
               Tags: { type: 'multi_select', multi_select: [{ name: 'X' }, { name: 'Y' }] },
               Count: { type: 'number', number: 42 },
               Done: { type: 'checkbox', checkbox: true },
