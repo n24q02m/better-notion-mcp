@@ -271,7 +271,18 @@ describe('registerTools', () => {
 
     it('should route pages tool correctly', async () => {
       const handler = server.getHandler(3)
-      const mockResult = { action: 'get', page_id: 'page-123', title: 'Test' }
+      const mockResult = {
+        action: 'get',
+        page_id: 'page-123',
+        title: 'Test',
+        url: 'https://notion.so/page-123',
+        created_time: '2023-01-01T00:00:00.000Z',
+        last_edited_time: '2023-01-02T00:00:00.000Z',
+        archived: false,
+        properties: {},
+        content: '# Test Content',
+        block_count: 5
+      } as any
       vi.mocked(pages).mockResolvedValue(mockResult)
 
       const result = await handler({
@@ -453,7 +464,7 @@ describe('registerTools', () => {
 
     it('should return well-formed success response structure', async () => {
       const handler = server.getHandler(3)
-      vi.mocked(pages).mockResolvedValue({ ok: true })
+      vi.mocked(pages).mockResolvedValue({ ok: true } as any)
 
       const result = await handler({
         params: { name: 'pages', arguments: { action: 'get', page_id: 'p-1' } }

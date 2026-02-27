@@ -10,6 +10,67 @@ import { autoPaginate, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
 
+export interface CreatePageResult {
+  action: 'create'
+  page_id: string
+  url: string
+  created: true
+}
+
+export interface GetPageResult {
+  action: 'get'
+  page_id: string
+  url: string
+  created_time: string
+  last_edited_time: string
+  archived: boolean
+  properties: Record<string, any>
+  content: string
+  block_count: number
+}
+
+export interface GetPagePropertyResult {
+  action: 'get_property'
+  page_id: string
+  property_id: string
+  type: string
+  value: any
+}
+
+export interface UpdatePageResult {
+  action: 'update'
+  page_id: string
+  updated: true
+}
+
+export interface MovePageResult {
+  action: 'move'
+  page_id: string
+  new_parent_id: string
+  moved: true
+}
+
+export interface ArchivePageResult {
+  action: 'archive' | 'restore'
+  processed: number
+  results: Array<{ page_id: string; archived: boolean }>
+}
+
+export interface DuplicatePageResult {
+  action: 'duplicate'
+  processed: number
+  results: Array<{ original_id: string; duplicate_id: string; url: string }>
+}
+
+export type PagesResult =
+  | CreatePageResult
+  | GetPageResult
+  | GetPagePropertyResult
+  | UpdatePageResult
+  | MovePageResult
+  | ArchivePageResult
+  | DuplicatePageResult
+
 export interface PagesInput {
   action: 'create' | 'get' | 'get_property' | 'update' | 'move' | 'archive' | 'restore' | 'duplicate'
 
@@ -36,7 +97,7 @@ export interface PagesInput {
 /**
  * Unified pages tool - handles all page operations
  */
-export async function pages(notion: Client, input: PagesInput): Promise<any> {
+export async function pages(notion: Client, input: PagesInput): Promise<PagesResult> {
   return withErrorHandling(async () => {
     switch (input.action) {
       case 'create':
@@ -75,7 +136,7 @@ export async function pages(notion: Client, input: PagesInput): Promise<any> {
  * Create page with title and content
  * Maps to: POST /v1/pages + PATCH /v1/blocks/{id}/children
  */
-async function createPage(notion: Client, input: PagesInput): Promise<any> {
+async function createPage(notion: Client, input: PagesInput): Promise<CreatePageResult> {
   if (!input.title) {
     throw new NotionMCPError('title is required for create action', 'VALIDATION_ERROR', 'Provide page title')
   }
@@ -138,7 +199,7 @@ async function createPage(notion: Client, input: PagesInput): Promise<any> {
  * Get page with full content as markdown
  * Maps to: GET /v1/pages/{id} + GET /v1/blocks/{id}/children
  */
-async function getPage(notion: Client, input: PagesInput): Promise<any> {
+async function getPage(notion: Client, input: PagesInput): Promise<GetPageResult> {
   if (!input.page_id) {
     throw new NotionMCPError('page_id is required for get action', 'VALIDATION_ERROR', 'Provide page_id')
   }
@@ -223,7 +284,7 @@ async function getPage(notion: Client, input: PagesInput): Promise<any> {
  * Retrieve a page property item (supports paginated properties like relation, rollup, rich_text)
  * Maps to: GET /v1/pages/{id}/properties/{property_id}
  */
-async function getPageProperty(notion: Client, input: PagesInput): Promise<any> {
+async function getPageProperty(notion: Client, input: PagesInput): Promise<GetPagePropertyResult> {
   if (!input.page_id) {
     throw new NotionMCPError('page_id is required for get_property action', 'VALIDATION_ERROR', 'Provide page_id')
   }
@@ -302,7 +363,7 @@ async function getPageProperty(notion: Client, input: PagesInput): Promise<any> 
  * Update page content/properties
  * Maps to: PATCH /v1/pages/{id} + PATCH /v1/blocks/{id}/children
  */
-async function updatePage(notion: Client, input: PagesInput): Promise<any> {
+async function updatePage(notion: Client, input: PagesInput): Promise<UpdatePageResult> {
   if (!input.page_id) {
     throw new NotionMCPError('page_id is required for update action', 'VALIDATION_ERROR', 'Provide page_id')
   }
@@ -381,7 +442,7 @@ async function updatePage(notion: Client, input: PagesInput): Promise<any> {
  * Move page to a new parent
  * Maps to: POST /v1/pages/{id}/move
  */
-async function movePage(notion: Client, input: PagesInput): Promise<any> {
+async function movePage(notion: Client, input: PagesInput): Promise<MovePageResult> {
   if (!input.page_id) {
     throw new NotionMCPError('page_id is required for move action', 'VALIDATION_ERROR', 'Provide page_id')
   }
@@ -414,7 +475,7 @@ async function movePage(notion: Client, input: PagesInput): Promise<any> {
  * Archive or restore page
  * Maps to: PATCH /v1/pages/{id}
  */
-async function archivePage(notion: Client, input: PagesInput): Promise<any> {
+async function archivePage(notion: Client, input: PagesInput): Promise<ArchivePageResult> {
   const pageIds = input.page_ids || (input.page_id ? [input.page_id] : [])
 
   if (pageIds.length === 0) {
@@ -435,7 +496,7 @@ async function archivePage(notion: Client, input: PagesInput): Promise<any> {
   )
 
   return {
-    action: input.action,
+    action: input.action as 'archive' | 'restore',
     processed: results.length,
     results
   }
@@ -445,7 +506,7 @@ async function archivePage(notion: Client, input: PagesInput): Promise<any> {
  * Duplicate page
  * Maps to: GET /v1/pages/{id} + POST /v1/pages + GET/PATCH /v1/blocks
  */
-async function duplicatePage(notion: Client, input: PagesInput): Promise<any> {
+async function duplicatePage(notion: Client, input: PagesInput): Promise<DuplicatePageResult> {
   const pageIds = input.page_ids || (input.page_id ? [input.page_id] : [])
 
   if (pageIds.length === 0) {

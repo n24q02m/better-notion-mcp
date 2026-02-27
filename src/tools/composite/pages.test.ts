@@ -1,5 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { pages } from './pages'
+import {
+  type ArchivePageResult,
+  type CreatePageResult,
+  type DuplicatePageResult,
+  type GetPagePropertyResult,
+  type GetPageResult,
+  type MovePageResult,
+  pages,
+  type UpdatePageResult
+} from './pages'
 
 vi.mock('../helpers/markdown.js', () => ({
   markdownToBlocks: vi.fn((md: string) => {
@@ -52,11 +61,11 @@ describe('pages', () => {
     it('creates page with title and page parent', async () => {
       mockNotion.pages.create.mockResolvedValue({ id: 'page-1', url: 'https://notion.so/page-1' })
 
-      const result = await pages(mockNotion as any, {
+      const result = (await pages(mockNotion as any, {
         action: 'create',
         title: 'Test Page',
         parent_id: 'parent-1'
-      })
+      })) as CreatePageResult
 
       expect(result).toEqual({
         action: 'create',
@@ -75,12 +84,12 @@ describe('pages', () => {
     it('creates page with database parent when properties provided', async () => {
       mockNotion.pages.create.mockResolvedValue({ id: 'page-2', url: 'https://notion.so/page-2' })
 
-      const result = await pages(mockNotion as any, {
+      const result = (await pages(mockNotion as any, {
         action: 'create',
         title: 'DB Page',
         parent_id: 'db-123',
         properties: { Status: { select: { name: 'Active' } } }
-      })
+      })) as CreatePageResult
 
       expect(result.page_id).toBe('page-2')
       expect(mockNotion.pages.create).toHaveBeenCalledWith(
@@ -186,7 +195,7 @@ describe('pages', () => {
         has_more: false
       })
 
-      const result = await pages(mockNotion as any, { action: 'get', page_id: 'page-1' })
+      const result = (await pages(mockNotion as any, { action: 'get', page_id: 'page-1' })) as GetPageResult
 
       expect(result).toEqual({
         action: 'get',
@@ -216,7 +225,7 @@ describe('pages', () => {
         has_more: false
       })
 
-      const result = await pages(mockNotion as any, { action: 'get', page_id: 'page-2' })
+      const result = (await pages(mockNotion as any, { action: 'get', page_id: 'page-2' })) as GetPageResult
 
       expect(result.block_count).toBe(0)
       expect(result.properties).toEqual({})
@@ -268,7 +277,7 @@ describe('pages', () => {
         has_more: false
       })
 
-      const result = await pages(mockNotion as any, { action: 'get', page_id: 'page-3' })
+      const result = (await pages(mockNotion as any, { action: 'get', page_id: 'page-3' })) as GetPageResult
       const p = result.properties
 
       expect(p.Name).toBe('Hello World')
@@ -317,7 +326,7 @@ describe('pages', () => {
           has_more: false
         })
 
-      const result = await pages(mockNotion as any, { action: 'get', page_id: 'page-4' })
+      const result = (await pages(mockNotion as any, { action: 'get', page_id: 'page-4' })) as GetPageResult
 
       expect(result.block_count).toBe(2)
       expect(mockNotion.blocks.children.list).toHaveBeenCalledTimes(2)
@@ -342,11 +351,11 @@ describe('pages', () => {
         has_more: false
       })
 
-      const result = await pages(mockNotion as any, {
+      const result = (await pages(mockNotion as any, {
         action: 'get_property',
         page_id: 'page-1',
         property_id: 'title'
-      })
+      })) as GetPagePropertyResult
 
       expect(result).toEqual({
         action: 'get_property',
@@ -367,11 +376,11 @@ describe('pages', () => {
         has_more: false
       })
 
-      const result = await pages(mockNotion as any, {
+      const result = (await pages(mockNotion as any, {
         action: 'get_property',
         page_id: 'page-1',
         property_id: 'desc'
-      })
+      })) as GetPagePropertyResult
 
       expect(result.type).toBe('rich_text')
       expect(result.value).toBe('First Second')
@@ -387,11 +396,11 @@ describe('pages', () => {
         has_more: false
       })
 
-      const result = await pages(mockNotion as any, {
+      const result = (await pages(mockNotion as any, {
         action: 'get_property',
         page_id: 'page-1',
         property_id: 'related'
-      })
+      })) as GetPagePropertyResult
 
       expect(result.type).toBe('relation')
       expect(result.value).toEqual(['rel-a', 'rel-b'])
@@ -407,11 +416,11 @@ describe('pages', () => {
         has_more: false
       })
 
-      const result = await pages(mockNotion as any, {
+      const result = (await pages(mockNotion as any, {
         action: 'get_property',
         page_id: 'page-1',
         property_id: 'assignees'
-      })
+      })) as GetPagePropertyResult
 
       expect(result.type).toBe('people')
       expect(result.value).toEqual([
@@ -427,11 +436,11 @@ describe('pages', () => {
         has_more: false
       })
 
-      const result = await pages(mockNotion as any, {
+      const result = (await pages(mockNotion as any, {
         action: 'get_property',
         page_id: 'page-1',
         property_id: 'total'
-      })
+      })) as GetPagePropertyResult
 
       expect(result.type).toBe('rollup')
       expect(result.value).toEqual({ type: 'number', number: 99, function: 'sum' })
@@ -444,11 +453,11 @@ describe('pages', () => {
         number: 42
       })
 
-      const result = await pages(mockNotion as any, {
+      const result = (await pages(mockNotion as any, {
         action: 'get_property',
         page_id: 'page-1',
         property_id: 'count'
-      })
+      })) as GetPagePropertyResult
 
       expect(result.type).toBe('number')
       expect(result.value).toBe(42)
@@ -467,11 +476,11 @@ describe('pages', () => {
           has_more: false
         })
 
-      const result = await pages(mockNotion as any, {
+      const result = (await pages(mockNotion as any, {
         action: 'get_property',
         page_id: 'page-1',
         property_id: 'refs'
-      })
+      })) as GetPagePropertyResult
 
       expect(result.value).toEqual(['r-1', 'r-2'])
       expect(mockNotion.pages.properties.retrieve).toHaveBeenCalledTimes(2)
@@ -497,12 +506,12 @@ describe('pages', () => {
     it('updates metadata with icon and cover', async () => {
       mockNotion.pages.update.mockResolvedValue({ id: 'page-1' })
 
-      const result = await pages(mockNotion as any, {
+      const result = (await pages(mockNotion as any, {
         action: 'update',
         page_id: 'page-1',
         icon: '📝',
         cover: 'https://example.com/banner.jpg'
-      })
+      })) as UpdatePageResult
 
       expect(result).toEqual({ action: 'update', page_id: 'page-1', updated: true })
       expect(mockNotion.pages.update).toHaveBeenCalledWith({
@@ -621,11 +630,11 @@ describe('pages', () => {
     it('moves page to new parent', async () => {
       mockNotion.pages.update.mockResolvedValue({})
 
-      const result = await pages(mockNotion as any, {
+      const result = (await pages(mockNotion as any, {
         action: 'move',
         page_id: 'page-1',
         parent_id: 'newparent123'
-      })
+      })) as MovePageResult
 
       expect(result).toEqual({
         action: 'move',
@@ -642,11 +651,11 @@ describe('pages', () => {
     it('normalizes parent_id by removing dashes', async () => {
       mockNotion.pages.update.mockResolvedValue({})
 
-      const result = await pages(mockNotion as any, {
+      const result = (await pages(mockNotion as any, {
         action: 'move',
         page_id: 'page-1',
         parent_id: 'abc-def-123-456'
-      })
+      })) as MovePageResult
 
       expect(result.new_parent_id).toBe('abcdef123456')
       expect(mockNotion.pages.update).toHaveBeenCalledWith({
@@ -675,10 +684,10 @@ describe('pages', () => {
     it('archives multiple pages', async () => {
       mockNotion.pages.update.mockResolvedValue({})
 
-      const result = await pages(mockNotion as any, {
+      const result = (await pages(mockNotion as any, {
         action: 'archive',
         page_ids: ['page-1', 'page-2', 'page-3']
-      })
+      })) as ArchivePageResult
 
       expect(result.action).toBe('archive')
       expect(result.processed).toBe(3)
@@ -694,10 +703,10 @@ describe('pages', () => {
     it('archives single page via page_id', async () => {
       mockNotion.pages.update.mockResolvedValue({})
 
-      const result = await pages(mockNotion as any, {
+      const result = (await pages(mockNotion as any, {
         action: 'archive',
         page_id: 'page-solo'
-      })
+      })) as ArchivePageResult
 
       expect(result.processed).toBe(1)
       expect(result.results).toEqual([{ page_id: 'page-solo', archived: true }])
@@ -712,10 +721,10 @@ describe('pages', () => {
     it('restores single page', async () => {
       mockNotion.pages.update.mockResolvedValue({})
 
-      const result = await pages(mockNotion as any, {
+      const result = (await pages(mockNotion as any, {
         action: 'restore',
         page_id: 'page-archived'
-      })
+      })) as ArchivePageResult
 
       expect(result.action).toBe('restore')
       expect(result.processed).toBe(1)
@@ -726,10 +735,10 @@ describe('pages', () => {
     it('restores multiple pages via page_ids', async () => {
       mockNotion.pages.update.mockResolvedValue({})
 
-      const result = await pages(mockNotion as any, {
+      const result = (await pages(mockNotion as any, {
         action: 'restore',
         page_ids: ['page-a', 'page-b']
-      })
+      })) as ArchivePageResult
 
       expect(result.processed).toBe(2)
       for (const r of result.results) {
@@ -765,10 +774,10 @@ describe('pages', () => {
       })
       mockNotion.blocks.children.append.mockResolvedValue({ results: [] })
 
-      const result = await pages(mockNotion as any, {
+      const result = (await pages(mockNotion as any, {
         action: 'duplicate',
         page_id: 'orig-1'
-      })
+      })) as DuplicatePageResult
 
       expect(result).toEqual({
         action: 'duplicate',
@@ -887,10 +896,10 @@ describe('pages', () => {
         .mockResolvedValueOnce({ id: 'dup-a', url: 'https://notion.so/dup-a' })
         .mockResolvedValueOnce({ id: 'dup-b', url: 'https://notion.so/dup-b' })
 
-      const result = await pages(mockNotion as any, {
+      const result = (await pages(mockNotion as any, {
         action: 'duplicate',
         page_ids: ['orig-a', 'orig-b']
-      })
+      })) as DuplicatePageResult
 
       expect(result.processed).toBe(2)
       expect(result.results).toHaveLength(2)
