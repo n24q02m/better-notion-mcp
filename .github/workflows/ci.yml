@@ -4,16 +4,16 @@ on:
   pull_request:
     branches: [main]
     types:
-      - opened
-      - synchronize
-      - reopened
-      - ready_for_review
+    - opened
+    - synchronize
+    - reopened
+    - ready_for_review
   push:
     branches: [main]
   issue_comment:
     types:
-      - created
-      - edited
+    - created
+    - edited
 permissions:
   contents: read
   pull-requests: write
@@ -24,41 +24,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
+    - name: Harden Runner
+      uses: step-security/harden-runner@v2
+      with:
+        egress-policy: audit
 
-      - name: Checkout code
-        uses: actions/checkout@v6
+    - name: Checkout code
+      uses: actions/checkout@v6
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
 
-      - name: Setup Node.js 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-          cache: "pnpm"
+    - name: Setup Node.js 24
+      uses: actions/setup-node@v6
+      with:
+        node-version: "24"
+        cache: "pnpm"
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
 
-      - name: Run Biome check
-        run: pnpm check
+    - name: Run Biome check
+      run: pnpm check
 
-      - name: Run tests with coverage
-        run: pnpm test -- --coverage
+    - name: Run tests with coverage
+      run: pnpm test -- --coverage
 
-      - name: Upload coverage to Codecov
-        if: github.event_name == 'push'
-        uses: codecov/codecov-action@v5
-        with:
-          files: coverage/lcov.info
-          token: ${{ secrets.CODECOV_TOKEN }}
+    - name: Upload coverage to Codecov
+      if: github.event_name == 'push'
+      uses: codecov/codecov-action@v5
+      with:
+        files: coverage/lcov.info
+        token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Build project
-        run: pnpm build
+    - name: Build project
+      run: pnpm build
 
     if: github.event_name != 'issue_comment'
   dependency-review:
@@ -68,19 +68,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
+    - name: Harden Runner
+      uses: step-security/harden-runner@v2
+      with:
+        egress-policy: audit
 
-      - name: Checkout code
-        uses: actions/checkout@v6
+    - name: Checkout code
+      uses: actions/checkout@v6
 
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: moderate
-          comment-summary-in-pr: always
+    - name: Dependency Review
+      uses: actions/dependency-review-action@v4
+      with:
+        fail-on-severity: moderate
+        comment-summary-in-pr: always
   ai_pr_review:
     name: Qodo AI Code Review
     runs-on: ubuntu-latest
@@ -91,24 +91,24 @@ jobs:
       pull-requests: write
       contents: write
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-      - name: Load custom instructions
-        id: read_file
-        run: "if [ -f \".github/best_practices.md\" ]; then\n  INSTRUCTIONS=$(cat
-          .github/best_practices.md)\n  RANDOM_EOF=$(dd if=/dev/urandom bs=15 count=1
-          status=none | base64)\n  echo \"CUSTOM_INSTRUCTIONS<<$RANDOM_EOF\" >> \"\
-          $GITHUB_ENV\"\n  echo \"$INSTRUCTIONS\" >> \"$GITHUB_ENV\"\n  echo \"$RANDOM_EOF\"\
-          \ >> \"$GITHUB_ENV\"\nfi\n"
-      - name: PR Agent action step
-        uses: qodo-ai/pr-agent@main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GOOGLE_AI_STUDIO.GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          config.model: gemini/gemini-3.0-flash
-          pr_reviewer.extra_instructions: ${{ env.CUSTOM_INSTRUCTIONS }}
-          pr_code_suggestions.extra_instructions: ${{ env.CUSTOM_INSTRUCTIONS }}
-          pr_description.extra_instructions: ${{ env.CUSTOM_INSTRUCTIONS }}
-          github_action_config.auto_review: 'true'
-          github_action_config.auto_describe: 'true'
-          github_action_config.auto_improve: 'true'
+    - name: Checkout repo
+      uses: actions/checkout@v4
+    - name: Load custom instructions
+      id: read_file
+      run: "if [ -f \".github/best_practices.md\" ]; then\n  INSTRUCTIONS=$(cat .github/best_practices.md)\n\
+        \  RANDOM_EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)\n \
+        \ echo \"CUSTOM_INSTRUCTIONS<<$RANDOM_EOF\" >> \"$GITHUB_ENV\"\n  echo \"\
+        $INSTRUCTIONS\" >> \"$GITHUB_ENV\"\n  echo \"$RANDOM_EOF\" >> \"$GITHUB_ENV\"\
+        \nfi\n"
+    - name: PR Agent action step
+      uses: qodo-ai/pr-agent@main
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GOOGLE_AI_STUDIO.GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        config.model: gemini/gemini-1.5-flash
+        pr_reviewer.extra_instructions: ${{ env.CUSTOM_INSTRUCTIONS }}
+        pr_code_suggestions.extra_instructions: ${{ env.CUSTOM_INSTRUCTIONS }}
+        pr_description.extra_instructions: ${{ env.CUSTOM_INSTRUCTIONS }}
+        github_action_config.auto_review: 'true'
+        github_action_config.auto_describe: 'true'
+        github_action_config.auto_improve: 'true'
