@@ -14,7 +14,6 @@ on:
     types:
       - created
       - edited
-
 permissions:
   contents: read
   pull-requests: write
@@ -64,7 +63,7 @@ jobs:
     if: github.event_name != 'issue_comment'
   dependency-review:
     name: Dependency Review
-    if: (github.event_name == 'pull_request') && github.event_name !=
+    if: (github.event_name == 'pull_request') && github.event_name != 
       'issue_comment'
     runs-on: ubuntu-latest
 
@@ -85,23 +84,31 @@ jobs:
   ai_pr_review:
     name: Qodo AI Code Review
     runs-on: ubuntu-latest
-    if: github.event_name == 'issue_comment' || github.event_name ==
+    if: github.event_name == 'issue_comment' || github.event_name == 
       'pull_request'
     permissions:
       issues: write
       pull-requests: write
       contents: write
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Load custom instructions
+        id: read_file
+        run: "if [ -f \".github/best_practices.md\" ]; then\n  INSTRUCTIONS=$(cat
+          .github/best_practices.md)\n  RANDOM_EOF=$(dd if=/dev/urandom bs=15 count=1
+          status=none | base64)\n  echo \"CUSTOM_INSTRUCTIONS<<$RANDOM_EOF\" >> \"\
+          $GITHUB_ENV\"\n  echo \"$INSTRUCTIONS\" >> \"$GITHUB_ENV\"\n  echo \"$RANDOM_EOF\"\
+          \ >> \"$GITHUB_ENV\"\nfi\n"
       - name: PR Agent action step
         uses: qodo-ai/pr-agent@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOOGLE_AI_STUDIO.GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           config.model: gemini/gemini-3.0-flash
+          pr_reviewer.extra_instructions: ${{ env.CUSTOM_INSTRUCTIONS }}
+          pr_code_suggestions.extra_instructions: ${{ env.CUSTOM_INSTRUCTIONS }}
+          pr_description.extra_instructions: ${{ env.CUSTOM_INSTRUCTIONS }}
           github_action_config.auto_review: 'true'
           github_action_config.auto_describe: 'true'
           github_action_config.auto_improve: 'true'
