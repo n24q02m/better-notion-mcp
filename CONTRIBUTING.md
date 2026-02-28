@@ -6,11 +6,11 @@ Thank you for your interest in contributing to Better Notion MCP! This guide wil
 
 ### Prerequisites
 
-- **mise** (recommended) or **Node.js 24+** and **pnpm**
+- **mise** (recommended) or **Node.js 24+** and **bun**
 - Git
 - A GitHub account
 
-**Recommended:** Use [mise](https://mise.jdx.dev/) to automatically manage Node.js and pnpm versions from `.mise.toml`.
+**Recommended:** Use [mise](https://mise.jdx.dev/) to automatically manage Node.js and bun versions from `.mise.toml`.
 
 ### Setup Development Environment
 
@@ -26,26 +26,26 @@ cd better-notion-mcp
 If using **mise** (recommended):
 
 ```bash
-mise install      # Auto-install Node.js 24 and pnpm from .mise.toml
-pnpm install
+mise install      # Auto-install Node.js 24 and bun from .mise.toml
+bun install
 ```
 
-Without mise, ensure you have Node.js 24+ and pnpm installed:
+Without mise, ensure you have Node.js 24+ and bun installed:
 
 ```bash
-pnpm install
+bun install
 ```
 
 3. **Build the project**
 
 ```bash
-pnpm build
+bun run build
 ```
 
 4. **Run tests**
 
 ```bash
-pnpm test
+bun test
 ```
 
 ## Development Workflow
@@ -57,16 +57,16 @@ pnpm test
 export NOTION_TOKEN=secret_xxx
 
 # Start development server with auto-reload
-pnpm dev
+bun run dev
 ```
 
 ### Making Changes
 
 1. Create a new branch: `git checkout -b feature/your-feature-name`
 2. Make your changes
-3. Run checks: `pnpm check`
-4. Run tests: `pnpm test`
-5. Build the project: `pnpm build`
+3. Run checks: `bun run check`
+4. Run tests: `bun test`
+5. Build the project: `bun run build`
 6. Commit your changes (see [Commit Convention](#commit-convention))
 7. Push to your fork: `git push origin feature/your-feature-name`
 8. Open a Pull Request
@@ -141,7 +141,7 @@ You do **not** need to create manual tags or changelog entries.
 - Keep PRs focused on a single feature or fix
 - Update documentation if needed
 - Add tests for new functionality
-- Ensure all checks pass (`pnpm check`)
+- Ensure all checks pass (`bun run check`)
 
 - Follow existing code style
 - Write clear PR descriptions
@@ -151,10 +151,10 @@ You do **not** need to create manual tags or changelog entries.
 Before submitting your PR, ensure:
 
 - [ ] Code follows TypeScript best practices
-- [ ] All tests pass (`pnpm test`)
-- [ ] Linting passes (`pnpm lint`)
-- [ ] Formatting is correct (`pnpm format:check`)
-- [ ] Type checking passes (`pnpm type-check`)
+- [ ] All tests pass (`bun test`)
+- [ ] Linting passes (`bun run lint`)
+- [ ] Formatting is correct (`bun run format:check`)
+- [ ] Type checking passes (`bun run type-check`)
 - [ ] Commit messages follow **Conventional Commits** (`feat:`, `fix:`, etc.)
 - [ ] Documentation updated (if needed)
 - [ ] Commit messages follow convention
@@ -175,21 +175,21 @@ This project uses **Biome** for formatting and linting. All changes are automati
 **Commands:**
 
 ```bash
-pnpm check         # Check formatting, linting & types
-pnpm check:fix     # Auto-fix issues
+bun run check         # Check formatting, linting & types
+bun run check:fix     # Auto-fix issues
 ```
 
 ## Testing
 
 ```bash
 # Run all tests
-pnpm test
+bun test
 
 # Run tests in watch mode
-pnpm test:watch
+bun run test:watch
 
 # Run tests with coverage
-pnpm test:coverage
+bun run test:coverage
 ```
 
 ### Writing Tests
@@ -226,4 +226,4 @@ By contributing, you agree that your contributions will be licensed under the MI
 
 ---
 
-**Thank you for contributing to Better Notion MCP! 🎉**
+**Thank you for contributing to Better Notion MCP!**

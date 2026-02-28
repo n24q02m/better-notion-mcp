@@ -11,7 +11,7 @@
   "version": "2.9.0",
   "license": "MIT",
   "type": "module",
-  "packageManager": "pnpm@9.15.4",
+  "packageManager": "bun@1.2.21",
   "publishConfig": {
     "access": "public"
   },
@@ -26,9 +26,9 @@
     "format": "biome format --write .",
     "format:check": "biome format .",
     "type-check": "tsc --noEmit",
-    "check": "biome check . && pnpm type-check",
-    "check:fix": "biome check --write . && pnpm type-check",
-    "prepublishOnly": "pnpm build",
+    "check": "biome check . && bun run type-check",
+    "check:fix": "biome check --write . && bun run type-check",
+    "prepublishOnly": "bun run build",
     "docker:build": "docker build -t n24q02m/better-notion-mcp:latest .",
     "docker:push": "docker push n24q02m/better-notion-mcp:latest",
     "docker:run": "docker run --rm -i -e NOTION_TOKEN n24q02m/better-notion-mcp:latest"
@@ -37,8 +37,7 @@
     "better-notion-mcp": "bin/cli.mjs"
   },
   "engines": {
-    "node": ">=24.0.0",
-    "pnpm": ">=9.0.0"
+    "node": ">=24.0.0"
   },
   "files": [
     "build/",
@@ -52,7 +51,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.3.8",
+    "@biomejs/biome": "^2.4.4",
     "@types/node": "^24.10.1",
     "@vitest/coverage-v8": "^4.0.15",
     "esbuild": "^0.25.12",

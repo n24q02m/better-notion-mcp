@@ -35,14 +35,14 @@
 
 Get your token: <https://www.notion.so/my-integrations> → Create integration → Copy token → Share pages
 
-### Option 1: npx (Recommended)
+### Option 1: Package Manager (Recommended)
 
 ```jsonc
 {
   "mcpServers": {
     "better-notion": {
-      "command": "npx",
-      "args": ["-y", "@n24q02m/better-notion-mcp@latest"],
+      "command": "bunx",
+      "args": ["@n24q02m/better-notion-mcp@latest"],
       "env": {
         "NOTION_TOKEN": "ntn_..."                  // required: Notion integration token
       }
@@ -50,6 +50,14 @@ Get your token: <https://www.notion.so/my-integrations> → Create integration �
   }
 }
 ```
+
+Alternatively, you can use `npx`, `pnpm dlx`, or `yarn dlx`:
+
+| Runner | `command` | `args` |
+|--------|-----------|--------|
+| npx | `npx` | `["-y", "@n24q02m/better-notion-mcp@latest"]` |
+| pnpm | `pnpm` | `["dlx", "@n24q02m/better-notion-mcp@latest"]` |
+| yarn | `yarn` | `["dlx", "@n24q02m/better-notion-mcp@latest"]` |
 
 ### Option 2: Docker
 
@@ -127,10 +135,10 @@ Clients that support MCP Resources can load full tool documentation:
 git clone https://github.com/n24q02m/better-notion-mcp
 cd better-notion-mcp
 mise run setup
-pnpm build
+bun run build
 ```
 
-**Requirements:** Node.js 24+, pnpm
+**Requirements:** Node.js 24+, bun
 
 ## Contributing
 

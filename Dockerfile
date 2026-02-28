@@ -1,26 +1,30 @@
 # Better Notion MCP - Optimized for AI Agents
 # syntax=docker/dockerfile:1
 
-# Use Node.js 24 as the base image
-FROM node:24-alpine AS builder
+# Use bun for dependency installation
+FROM oven/bun:1-alpine AS deps
 
-# Enable corepack for pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-# Set working directory
 WORKDIR /app
 
 # Copy package files
-COPY package.json pnpm-lock.yaml ./
+COPY package.json bun.lock ./
 
 # Install dependencies
-RUN --mount=type=cache,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
+RUN bun install --frozen-lockfile --production=false
+
+# Use Node.js for building (tsc + esbuild)
+FROM node:24-alpine AS builder
+
+WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
 
 # Copy source code
 COPY . .
 
 # Build the package
-RUN pnpm build
+RUN npx tsc -build && node scripts/build-cli.js
 
 # Minimal image for runtime
 FROM node:24-alpine
