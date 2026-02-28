@@ -47,7 +47,7 @@ jobs:
         run: bun run check
 
       - name: Run tests with coverage
-        run: bun test -- --coverage
+        run: bun run test -- --coverage
 
       - name: Upload coverage to Codecov
         if: github.event_name == 'push'
