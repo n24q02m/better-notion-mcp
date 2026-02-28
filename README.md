@@ -41,8 +41,8 @@ Get your token: <https://www.notion.so/my-integrations> â†’ Create integration â
 {
   "mcpServers": {
     "better-notion": {
-      "command": "bunx",
-      "args": ["@n24q02m/better-notion-mcp@latest"],
+      "command": "bun",
+      "args": ["x", "@n24q02m/better-notion-mcp@latest"],
       "env": {
         "NOTION_TOKEN": "ntn_..."                  // required: Notion integration token
       }
