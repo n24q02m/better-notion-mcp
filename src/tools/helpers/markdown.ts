@@ -33,6 +33,16 @@ export interface RichText {
 /**
  * Convert markdown string to Notion blocks
  */
+// Hoisted regexes for performance
+const CALLOUT_REGEX = /^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION|INFO|SUCCESS|ERROR)\]\s*(.*)/i
+const IMAGE_REGEX = /^!\[([^\]]*)\]\(([^)]+)\)$/
+const BOOKMARK_REGEX = /^\[(bookmark|embed)\]\(([^)]+)\)$/i
+const CHECKBOX_REGEX = /^[-*]\s\[([ xX])\]\s/
+const BULLET_REGEX = /^[-*]\s/
+const NUMBERED_REGEX = /^\d+\.\s/
+const DIVIDER_REGEX = /^[-*]{3,}$/
+const LIST_ITEM_REGEX = /^([-*]|\d+\.)\s/
+
 export function markdownToBlocks(markdown: string): NotionBlock[] {
   const lines = markdown.split('\n')
   const blocks: NotionBlock[] = []
@@ -86,7 +96,7 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
     }
 
     // Callout > [!TYPE] content or > [!TYPE]\n> content
-    const calloutMatch = line.match(/^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION|INFO|SUCCESS|ERROR)\]\s*(.*)/i)
+    const calloutMatch = CALLOUT_REGEX.exec(line)
     if (calloutMatch) {
       const calloutType = calloutMatch[1].toUpperCase()
       let calloutContent = calloutMatch[2] || ''
@@ -104,14 +114,14 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
     }
 
     // Image ![alt](url)
-    const imageMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/)
+    const imageMatch = IMAGE_REGEX.exec(line)
     if (imageMatch) {
       blocks.push(createImage(imageMatch[2], imageMatch[1]))
       continue
     }
 
     // Bookmark/Embed [bookmark](url) or [embed](url)
-    const bookmarkMatch = line.match(/^\[(bookmark|embed)\]\(([^)]+)\)$/i)
+    const bookmarkMatch = BOOKMARK_REGEX.exec(line)
     if (bookmarkMatch) {
       const type = bookmarkMatch[1].toLowerCase()
       const url = bookmarkMatch[2]
@@ -169,21 +179,21 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
       blocks.push(createCodeBlock(codeLines.join('\n'), language))
     }
     // Task list / Checkbox list - [ ] or - [x]
-    else if (line.match(/^[-*]\s\[([ xX])\]\s/)) {
+    else if (CHECKBOX_REGEX.test(line)) {
       const checked = line[3] !== ' '
-      const text = line.replace(/^[-*]\s\[([ xX])\]\s/, '')
+      const text = line.replace(CHECKBOX_REGEX, '')
       currentListType = 'bulleted'
       currentList.push(createTodoItem(text, checked))
     }
     // Bulleted list
-    else if (line.match(/^[-*]\s/)) {
+    else if (BULLET_REGEX.test(line)) {
       const text = line.slice(2)
       currentListType = 'bulleted'
       currentList.push(createBulletedListItem(text))
     }
     // Numbered list
-    else if (line.match(/^\d+\.\s/)) {
-      const text = line.replace(/^\d+\.\s/, '')
+    else if (NUMBERED_REGEX.test(line)) {
+      const text = line.replace(NUMBERED_REGEX, '')
       currentListType = 'numbered'
       currentList.push(createNumberedListItem(text))
     }
@@ -192,7 +202,7 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
       blocks.push(createQuote(line.slice(2)))
     }
     // Divider
-    else if (line.match(/^[-*]{3,}$/)) {
+    else if (DIVIDER_REGEX.test(line)) {
       blocks.push(createDivider())
     }
     // Regular paragraph
@@ -900,5 +910,5 @@ function createBreadcrumb(): NotionBlock {
 }
 
 function isListItem(line: string): boolean {
-  return line.match(/^[-*]\s/) !== null || line.match(/^\d+\.\s/) !== null
+  return LIST_ITEM_REGEX.test(line)
 }
