@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package.json bun.lock ./
 
 # Install dependencies
-RUN bun install --frozen-lockfile --production=false
+RUN bun install --frozen-lockfile
 
 # Use Node.js for building (tsc + esbuild)
 FROM node:24-alpine AS builder
