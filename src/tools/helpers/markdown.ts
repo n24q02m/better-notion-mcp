@@ -6,6 +6,8 @@
  *           equations, columns, table of contents, breadcrumb
  */
 
+import { isSafeUrl } from './security.js'
+
 export interface NotionBlock {
   object: 'block'
   type: string
@@ -106,7 +108,12 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
     // Image ![alt](url)
     const imageMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/)
     if (imageMatch) {
-      blocks.push(createImage(imageMatch[2], imageMatch[1]))
+      const url = imageMatch[2]
+      if (isSafeUrl(url)) {
+        blocks.push(createImage(url, imageMatch[1]))
+      } else {
+        blocks.push(createParagraph(line))
+      }
       continue
     }
 
@@ -115,10 +122,14 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
     if (bookmarkMatch) {
       const type = bookmarkMatch[1].toLowerCase()
       const url = bookmarkMatch[2]
-      if (type === 'embed') {
-        blocks.push(createEmbed(url))
+      if (isSafeUrl(url)) {
+        if (type === 'embed') {
+          blocks.push(createEmbed(url))
+        } else {
+          blocks.push(createBookmark(url))
+        }
       } else {
-        blocks.push(createBookmark(url))
+        blocks.push(createParagraph(line))
       }
       continue
     }
