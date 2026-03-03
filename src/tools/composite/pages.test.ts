@@ -561,11 +561,17 @@ describe('pages', () => {
 
     it('replaces content by deleting old blocks and appending new', async () => {
       mockNotion.pages.update.mockResolvedValue({ id: 'page-1' })
-      mockNotion.blocks.children.list.mockResolvedValue({
-        results: [{ id: 'old-block-1' }, { id: 'old-block-2' }],
-        next_cursor: null,
-        has_more: false
-      })
+      mockNotion.blocks.children.list
+        .mockResolvedValueOnce({
+          results: [{ id: 'old-block-1' }, { id: 'old-block-2' }],
+          next_cursor: 'cursor-2',
+          has_more: true
+        })
+        .mockResolvedValueOnce({
+          results: [],
+          next_cursor: null,
+          has_more: false
+        })
       mockNotion.blocks.delete.mockResolvedValue({})
       mockNotion.blocks.children.append.mockResolvedValue({ results: [] })
 
