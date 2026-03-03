@@ -101,6 +101,25 @@ describe('enhanceError', () => {
       expect(result.message).toBe('Invalid request parameters')
     })
 
+    it('should sanitize validation_error body to remove sensitive fields', () => {
+      const result = enhanceError({
+        code: 'validation_error',
+        message: 'validation failed',
+        body: {
+          message: 'title is required',
+          path: '/properties/title',
+          secret_token: 'sk-12345',
+          internal_state: { some: 'data' }
+        }
+      })
+
+      expect(result.code).toBe('VALIDATION_ERROR')
+      expect(result.message).toBe('title is required')
+      expect(result.details).toEqual({ message: 'title is required', path: '/properties/title' })
+      expect(JSON.stringify(result.details)).not.toContain('secret_token')
+      expect(JSON.stringify(result.details)).not.toContain('sk-12345')
+    })
+
     it('should handle rate_limited error', () => {
       const result = enhanceError({ code: 'rate_limited', message: 'rate limited' })
 

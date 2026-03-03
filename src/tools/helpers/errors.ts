@@ -26,6 +26,25 @@ export class NotionMCPError extends Error {
 }
 
 /**
+ * Sanitize validation error body to remove sensitive information
+ */
+function sanitizeValidationBody(body: any): any {
+  if (!body || typeof body !== 'object') return body
+
+  // whitelist safe properties from Notion API validation_error responses
+  const safe: any = {}
+  const safeFields = ['message', 'object', 'code', 'status', 'request_id', 'path']
+
+  for (const field of safeFields) {
+    if (field in body) {
+      safe[field] = body[field]
+    }
+  }
+
+  return safe
+}
+
+/**
  * Sanitize error object to remove sensitive information
  */
 function sanitizeErrorDetails(error: any): any {
@@ -120,7 +139,7 @@ function handleNotionError(error: any): NotionMCPError {
         error.body?.message || 'Invalid request parameters',
         'VALIDATION_ERROR',
         'Check the API documentation for valid parameter formats',
-        error.body
+        sanitizeValidationBody(error.body)
       )
 
     case 'rate_limited':
