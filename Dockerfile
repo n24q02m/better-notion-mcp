@@ -13,7 +13,7 @@ COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
 # Use Node.js for building (tsc + esbuild)
-FROM node:24-alpine AS builder
+FROM node:24.14.0-alpine AS builder
 
 WORKDIR /app
 
@@ -27,7 +27,7 @@ COPY . .
 RUN npx tsc -build && node scripts/build-cli.js
 
 # Minimal image for runtime
-FROM node:24-alpine
+FROM node:24.14.0-alpine
 
 # Copy built package from builder stage
 COPY --from=builder /app/build /usr/local/lib/node_modules/@n24q02m/better-notion-mcp/build

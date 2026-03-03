@@ -37,7 +37,7 @@
     "better-notion-mcp": "bin/cli.mjs"
   },
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=24.14.0"
   },
   "files": [
     "build/",
@@ -47,17 +47,17 @@
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "@notionhq/client": "^5.4.0",
-    "zod": "^4.1.13"
+    "@notionhq/client": "^5.11.1",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.4",
-    "@types/node": "^24.10.1",
-    "@vitest/coverage-v8": "^4.0.15",
-    "esbuild": "^0.25.12",
+    "@biomejs/biome": "^2.4.5",
+    "@types/node": "^24.11.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "esbuild": "^0.27.3",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.15"
+    "vitest": "^4.0.18"
   },
   "description": "Better MCP server for Notion API with composite tools optimized for AI agents",
   "main": "build/src/init-server.js",
