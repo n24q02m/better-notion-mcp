@@ -1,5 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { databases } from './databases'
+import {
+  type CreateDatabasePageResponse,
+  type CreateDatabaseResponse,
+  type CreateDataSourceResponse,
+  type DeleteDatabasePageResponse,
+  databases,
+  type GetDatabaseResponse,
+  type ListDataSourceTemplatesResponse,
+  type QueryDatabaseResponse,
+  type UpdateDatabasePageResponse,
+  type UpdateDatabaseResponse,
+  type UpdateDataSourceResponse
+} from './databases.js'
 
 const mockNotion = {
   databases: {
@@ -66,12 +78,12 @@ describe('databases', () => {
         data_sources: [{ id: 'ds-new' }]
       })
 
-      const result = await databases(notion, {
+      const result = (await databases(notion, {
         action: 'create',
         parent_id: 'page-1',
         title: 'My DB',
         properties: { Name: { title: {} } }
-      })
+      })) as CreateDatabaseResponse
 
       expect(result).toEqual({
         action: 'create',
@@ -125,7 +137,7 @@ describe('databases', () => {
       mockNotion.databases.retrieve.mockResolvedValueOnce(makeDbRetrieveResponse())
       mockNotion.dataSources.retrieve.mockResolvedValueOnce(makeDataSourceResponse())
 
-      const result = await databases(notion, { action: 'get', database_id: 'db-1' })
+      const result = (await databases(notion, { action: 'get', database_id: 'db-1' })) as GetDatabaseResponse
 
       expect(result).toEqual({
         action: 'get',
@@ -163,7 +175,7 @@ describe('databases', () => {
         })
       )
 
-      const result = await databases(notion, { action: 'get', database_id: 'db-1' })
+      const result = (await databases(notion, { action: 'get', database_id: 'db-1' })) as GetDatabaseResponse
 
       expect(result.schema.Tags.options).toEqual(['A', 'B'])
       expect(result.schema.Total.expression).toBe('prop("Price") * prop("Qty")')
@@ -172,7 +184,7 @@ describe('databases', () => {
     it('should handle empty data_sources array', async () => {
       mockNotion.databases.retrieve.mockResolvedValueOnce(makeDbRetrieveResponse({ data_sources: [] }))
 
-      const result = await databases(notion, { action: 'get', database_id: 'db-1' })
+      const result = (await databases(notion, { action: 'get', database_id: 'db-1' })) as GetDatabaseResponse
 
       expect(result.data_source).toBeNull()
       expect(result.schema).toEqual({})
@@ -202,7 +214,7 @@ describe('databases', () => {
         has_more: false
       })
 
-      const result = await databases(notion, { action: 'query', database_id: 'db-1' })
+      const result = (await databases(notion, { action: 'query', database_id: 'db-1' })) as QueryDatabaseResponse
 
       expect(result.action).toBe('query')
       expect(result.database_id).toBe('db-1')
@@ -291,11 +303,11 @@ describe('databases', () => {
         has_more: false
       })
 
-      const result = await databases(notion, {
+      const result = (await databases(notion, {
         action: 'query',
         database_id: 'db-1',
         limit: 2
-      })
+      })) as QueryDatabaseResponse
 
       expect(result.total).toBe(2)
       expect(result.results).toHaveLength(2)
@@ -325,7 +337,7 @@ describe('databases', () => {
         has_more: false
       })
 
-      const result = await databases(notion, { action: 'query', database_id: 'db-1' })
+      const result = (await databases(notion, { action: 'query', database_id: 'db-1' })) as QueryDatabaseResponse
       const page = result.results[0]
 
       expect(page.Name).toBe('Test')
@@ -362,11 +374,11 @@ describe('databases', () => {
         url: 'https://notion.so/new-page-1'
       })
 
-      const result = await databases(notion, {
+      const result = (await databases(notion, {
         action: 'create_page',
         database_id: 'db-1',
         page_properties: { Name: 'New Item', Status: 'Active' }
-      })
+      })) as CreateDatabasePageResponse
 
       expect(result.action).toBe('create_page')
       expect(result.database_id).toBe('db-1')
@@ -390,11 +402,11 @@ describe('databases', () => {
         .mockResolvedValueOnce({ id: 'p-1', url: 'https://notion.so/p-1' })
         .mockResolvedValueOnce({ id: 'p-2', url: 'https://notion.so/p-2' })
 
-      const result = await databases(notion, {
+      const result = (await databases(notion, {
         action: 'create_page',
         database_id: 'db-1',
         pages: [{ properties: { Name: 'Item 1' } }, { properties: { Name: 'Item 2' } }]
-      })
+      })) as CreateDatabasePageResponse
 
       expect(result.processed).toBe(2)
       expect(result.results).toHaveLength(2)
@@ -418,11 +430,11 @@ describe('databases', () => {
     it('should update a single page with page_id and page_properties', async () => {
       mockNotion.pages.update.mockResolvedValueOnce({ id: 'page-1' })
 
-      const result = await databases(notion, {
+      const result = (await databases(notion, {
         action: 'update_page',
         page_id: 'page-1',
         page_properties: { Status: 'Done' }
-      })
+      })) as UpdateDatabasePageResponse
 
       expect(result.action).toBe('update_page')
       expect(result.processed).toBe(1)
@@ -433,13 +445,13 @@ describe('databases', () => {
     it('should update multiple pages with pages array', async () => {
       mockNotion.pages.update.mockResolvedValueOnce({ id: 'page-1' }).mockResolvedValueOnce({ id: 'page-2' })
 
-      const result = await databases(notion, {
+      const result = (await databases(notion, {
         action: 'update_page',
         pages: [
           { page_id: 'page-1', properties: { Status: 'Done' } },
           { page_id: 'page-2', properties: { Status: 'Active' } }
         ]
-      })
+      })) as UpdateDatabasePageResponse
 
       expect(result.processed).toBe(2)
       expect(result.results).toEqual([
@@ -459,10 +471,10 @@ describe('databases', () => {
     it('should delete pages by page_ids', async () => {
       mockNotion.pages.update.mockResolvedValueOnce({}).mockResolvedValueOnce({})
 
-      const result = await databases(notion, {
+      const result = (await databases(notion, {
         action: 'delete_page',
         page_ids: ['page-1', 'page-2']
-      })
+      })) as DeleteDatabasePageResponse
 
       expect(result.action).toBe('delete_page')
       expect(result.processed).toBe(2)
@@ -479,10 +491,10 @@ describe('databases', () => {
     it('should delete a single page by page_id', async () => {
       mockNotion.pages.update.mockResolvedValueOnce({})
 
-      const result = await databases(notion, {
+      const result = (await databases(notion, {
         action: 'delete_page',
         page_id: 'page-solo'
-      })
+      })) as DeleteDatabasePageResponse
 
       expect(result.processed).toBe(1)
       expect(result.results[0]).toEqual({ page_id: 'page-solo', deleted: true })
@@ -501,12 +513,12 @@ describe('databases', () => {
     it('should create a data source with required params', async () => {
       mockNotion.dataSources.create.mockResolvedValueOnce({ id: 'ds-new' })
 
-      const result = await databases(notion, {
+      const result = (await databases(notion, {
         action: 'create_data_source',
         database_id: 'db-1',
         title: 'New Source',
         properties: { Name: { title: {} } }
-      })
+      })) as CreateDataSourceResponse
 
       expect(result).toEqual({
         action: 'create_data_source',
@@ -554,11 +566,11 @@ describe('databases', () => {
     it('should update data source title', async () => {
       mockNotion.dataSources.update.mockResolvedValueOnce({})
 
-      const result = await databases(notion, {
+      const result = (await databases(notion, {
         action: 'update_data_source',
         data_source_id: 'ds-1',
         title: 'Renamed'
-      })
+      })) as UpdateDataSourceResponse
 
       expect(result).toEqual({
         action: 'update_data_source',
@@ -603,11 +615,11 @@ describe('databases', () => {
     it('should update database title', async () => {
       mockNotion.databases.update.mockResolvedValueOnce({})
 
-      const result = await databases(notion, {
+      const result = (await databases(notion, {
         action: 'update_database',
         database_id: 'db-1',
         title: 'New Title'
-      })
+      })) as UpdateDatabaseResponse
 
       expect(result).toEqual({
         action: 'update_database',
@@ -688,10 +700,10 @@ describe('databases', () => {
         has_more: false
       })
 
-      const result = await databases(notion, {
+      const result = (await databases(notion, {
         action: 'list_templates',
         database_id: 'db-1'
-      })
+      })) as ListDataSourceTemplatesResponse
 
       expect(result.action).toBe('list_templates')
       expect(result.database_id).toBe('db-1')
@@ -709,11 +721,11 @@ describe('databases', () => {
         has_more: false
       })
 
-      const result = await databases(notion, {
+      const result = (await databases(notion, {
         action: 'list_templates',
         database_id: 'db-1',
         data_source_id: 'ds-custom'
-      })
+      })) as ListDataSourceTemplatesResponse
 
       expect(result.data_source_id).toBe('ds-custom')
       expect(mockNotion.dataSources.listTemplates).toHaveBeenCalledWith(

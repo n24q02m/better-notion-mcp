@@ -34,7 +34,7 @@ import { pages } from './composite/pages.js'
 import { users } from './composite/users.js'
 import { workspace } from './composite/workspace.js'
 import { NotionMCPError } from './helpers/errors.js'
-import { registerTools } from './registry'
+import { registerTools } from './registry.js'
 
 const EXPECTED_TOOL_NAMES = [
   'pages',
@@ -297,8 +297,9 @@ describe('registerTools', () => {
 
     it('should route databases tool correctly', async () => {
       const handler = server.getHandler(3)
-      const mockResult = { action: 'query', results: [] }
-      vi.mocked(databases).mockResolvedValue(mockResult)
+      // Fix: updated mockResult to satisfy QueryDatabaseResponse type (must have total)
+      const mockResult = { action: 'query', database_id: 'db-1', data_source_id: 'ds-1', total: 0, results: [] }
+      vi.mocked(databases).mockResolvedValue(mockResult as any)
 
       const result = await handler({
         params: { name: 'databases', arguments: { action: 'query', database_id: 'db-1' } }

@@ -54,10 +54,115 @@ export interface DatabasesInput {
   }>
 }
 
+export interface CreateDatabaseResponse {
+  action: 'create'
+  database_id: string
+  data_source_id?: string
+  url: string
+  created: boolean
+}
+
+export interface GetDatabaseResponse {
+  action: 'get'
+  database_id: string
+  title: string
+  description: string
+  url: string
+  is_inline: boolean
+  created_time: string
+  last_edited_time: string
+  data_source: {
+    id: string
+    name: string
+  } | null
+  schema: Record<string, any>
+}
+
+export interface QueryDatabaseResponse {
+  action: 'query'
+  database_id: string
+  data_source_id: string
+  total: number
+  results: Record<string, any>[]
+}
+
+export interface CreateDatabasePageResponse {
+  action: 'create_page'
+  database_id: string
+  data_source_id: string
+  processed: number
+  results: {
+    page_id: string
+    url: string
+    created: boolean
+  }[]
+}
+
+export interface UpdateDatabasePageResponse {
+  action: 'update_page'
+  processed: number
+  results: {
+    page_id: string
+    updated: boolean
+  }[]
+}
+
+export interface DeleteDatabasePageResponse {
+  action: 'delete_page'
+  processed: number
+  results: {
+    page_id: string
+    deleted: boolean
+  }[]
+}
+
+export interface CreateDataSourceResponse {
+  action: 'create_data_source'
+  data_source_id: string
+  database_id: string
+  created: boolean
+}
+
+export interface UpdateDataSourceResponse {
+  action: 'update_data_source'
+  data_source_id: string
+  updated: boolean
+}
+
+export interface UpdateDatabaseResponse {
+  action: 'update_database'
+  database_id: string
+  updated: boolean
+}
+
+export interface ListDataSourceTemplatesResponse {
+  action: 'list_templates'
+  database_id: string
+  data_source_id: string
+  total: number
+  templates: {
+    template_id: string
+    title: string
+    properties: any
+  }[]
+}
+
+export type DatabasesResponse =
+  | CreateDatabaseResponse
+  | GetDatabaseResponse
+  | QueryDatabaseResponse
+  | CreateDatabasePageResponse
+  | UpdateDatabasePageResponse
+  | DeleteDatabasePageResponse
+  | CreateDataSourceResponse
+  | UpdateDataSourceResponse
+  | UpdateDatabaseResponse
+  | ListDataSourceTemplatesResponse
+
 /**
  * Unified databases tool - handles all database operations
  */
-export async function databases(notion: Client, input: DatabasesInput): Promise<any> {
+export async function databases(notion: Client, input: DatabasesInput): Promise<DatabasesResponse> {
   return withErrorHandling(async () => {
     switch (input.action) {
       case 'create':
@@ -104,7 +209,7 @@ export async function databases(notion: Client, input: DatabasesInput): Promise<
  * Create database with initial data source
  * Maps to: POST /v1/databases (API 2025-09-03)
  */
-async function createDatabase(notion: Client, input: DatabasesInput): Promise<any> {
+async function createDatabase(notion: Client, input: DatabasesInput): Promise<CreateDatabaseResponse> {
   if (!input.parent_id || !input.title || !input.properties) {
     throw new NotionMCPError(
       'parent_id, title, and properties required for create action',
@@ -145,7 +250,7 @@ async function createDatabase(notion: Client, input: DatabasesInput): Promise<an
  * Get database info including all data sources
  * Maps to: GET /v1/databases/{id} (API 2025-09-03)
  */
-async function getDatabase(notion: Client, input: DatabasesInput): Promise<any> {
+async function getDatabase(notion: Client, input: DatabasesInput): Promise<GetDatabaseResponse> {
   if (!input.database_id) {
     throw new NotionMCPError('database_id required for get action', 'VALIDATION_ERROR', 'Provide database_id')
   }
@@ -207,7 +312,7 @@ async function getDatabase(notion: Client, input: DatabasesInput): Promise<any> 
  * Query database (via data source)
  * Maps to: POST /v1/data_sources/{id}/query (API 2025-09-03)
  */
-async function queryDatabase(notion: Client, input: DatabasesInput): Promise<any> {
+async function queryDatabase(notion: Client, input: DatabasesInput): Promise<QueryDatabaseResponse> {
   if (!input.database_id) {
     throw new NotionMCPError('database_id required for query action', 'VALIDATION_ERROR', 'Provide database_id')
   }
@@ -288,7 +393,7 @@ async function queryDatabase(notion: Client, input: DatabasesInput): Promise<any
  * Create pages in database (via data source)
  * Maps to: Multiple POST /v1/pages with data_source_id parent (API 2025-09-03)
  */
-async function createDatabasePages(notion: Client, input: DatabasesInput): Promise<any> {
+async function createDatabasePages(notion: Client, input: DatabasesInput): Promise<CreateDatabasePageResponse> {
   if (!input.database_id) {
     throw new NotionMCPError('database_id required', 'VALIDATION_ERROR', 'Provide database_id')
   }
@@ -349,7 +454,7 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
  * Update pages in database (bulk)
  * Maps to: Multiple PATCH /v1/pages/{id}
  */
-async function updateDatabasePages(notion: Client, input: DatabasesInput): Promise<any> {
+async function updateDatabasePages(notion: Client, input: DatabasesInput): Promise<UpdateDatabasePageResponse> {
   const items =
     input.pages ||
     (input.page_id && input.page_properties ? [{ page_id: input.page_id, properties: input.page_properties }] : [])
@@ -387,7 +492,7 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
  * Delete pages in database (bulk archive)
  * Maps to: Multiple PATCH /v1/pages/{id} with archived: true
  */
-async function deleteDatabasePages(notion: Client, input: DatabasesInput): Promise<any> {
+async function deleteDatabasePages(notion: Client, input: DatabasesInput): Promise<DeleteDatabasePageResponse> {
   const pageIds =
     input.page_ids ||
     (input.page_id ? [input.page_id] : []) ||
@@ -424,7 +529,7 @@ async function deleteDatabasePages(notion: Client, input: DatabasesInput): Promi
  * Create additional data source for existing database
  * Maps to: POST /v1/data_sources (API 2025-09-03)
  */
-async function createDataSource(notion: Client, input: DatabasesInput): Promise<any> {
+async function createDataSource(notion: Client, input: DatabasesInput): Promise<CreateDataSourceResponse> {
   if (!input.database_id || !input.title || !input.properties) {
     throw new NotionMCPError(
       'database_id, title, and properties required',
@@ -457,7 +562,7 @@ async function createDataSource(notion: Client, input: DatabasesInput): Promise<
  * Update data source (title, description, properties/schema)
  * Maps to: PATCH /v1/data_sources/{id} (API 2025-09-03)
  */
-async function updateDataSource(notion: Client, input: DatabasesInput): Promise<any> {
+async function updateDataSource(notion: Client, input: DatabasesInput): Promise<UpdateDataSourceResponse> {
   if (!input.data_source_id) {
     throw new NotionMCPError('data_source_id required', 'VALIDATION_ERROR', 'Provide data_source_id')
   }
@@ -500,7 +605,7 @@ async function updateDataSource(notion: Client, input: DatabasesInput): Promise<
  * Update database container (parent, title, is_inline, icon, cover)
  * Maps to: PATCH /v1/databases/{id} (API 2025-09-03)
  */
-async function updateDatabaseContainer(notion: Client, input: DatabasesInput): Promise<any> {
+async function updateDatabaseContainer(notion: Client, input: DatabasesInput): Promise<UpdateDatabaseResponse> {
   if (!input.database_id) {
     throw new NotionMCPError('database_id required', 'VALIDATION_ERROR', 'Provide database_id')
   }
@@ -562,7 +667,10 @@ async function updateDatabaseContainer(notion: Client, input: DatabasesInput): P
  * List data source templates
  * Maps to: GET /v1/data_sources/{id}/templates (API 2025-09-03)
  */
-async function listDataSourceTemplates(notion: Client, input: DatabasesInput): Promise<any> {
+async function listDataSourceTemplates(
+  notion: Client,
+  input: DatabasesInput
+): Promise<ListDataSourceTemplatesResponse> {
   if (!input.database_id) {
     throw new NotionMCPError(
       'database_id required for list_templates action',
