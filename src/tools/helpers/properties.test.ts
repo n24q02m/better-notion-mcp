@@ -168,6 +168,24 @@ describe('convertToNotionProperties', () => {
         Items: []
       })
     })
+
+    describe('mixed type arrays', () => {
+      it('passes mixed array starting with string through as-is', () => {
+        const mixed = ['tag', 123]
+        const result = convertToNotionProperties({ Mixed: mixed })
+        expect(result).toEqual({
+          Mixed: mixed
+        })
+      })
+
+      it('passes mixed array starting with number through as-is', () => {
+        const mixed = [123, 'tag']
+        const result = convertToNotionProperties({ Mixed: mixed })
+        expect(result).toEqual({
+          Mixed: mixed
+        })
+      })
+    })
   })
 
   describe('object values', () => {
