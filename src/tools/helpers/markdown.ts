@@ -373,10 +373,11 @@ export function parseRichText(text: string): RichText[] {
 
           const linkText = text.slice(i + 1, closeBracket)
           const linkUrl = text.slice(closeBracket + 2, closeParen)
+          const isSafe = isSafeUrl(linkUrl)
 
           richText.push({
             type: 'text',
-            text: { content: linkText, link: { url: linkUrl } },
+            text: { content: linkText, link: isSafe ? { url: linkUrl } : null },
             annotations: {
               bold,
               italic,

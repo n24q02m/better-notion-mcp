@@ -65,24 +65,6 @@ function sanitizeErrorDetails(error: any): any {
 }
 
 /**
- * Sanitize validation error body to remove sensitive information
- */
-function sanitizeValidationBody(body: any): any {
-  if (!body || typeof body !== 'object') return body
-
-  // whitelist safe properties
-  const safe: any = {
-    message: body.message,
-    object: body.object,
-    code: body.code,
-    status: body.status,
-    request_id: body.request_id,
-    // Include 'path' as it's useful for debugging which field failed validation
-    path: body.path
-  }
-
-  return safe
-}
 
 /**
  * Enhance Notion API error with helpful context
