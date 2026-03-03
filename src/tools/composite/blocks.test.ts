@@ -215,13 +215,31 @@ describe('blocks', () => {
           block_id: 'block-1',
           content: 'Some text'
         })
-      ).rejects.toThrow("Block type 'image' cannot be updated")
+      ).rejects.toThrow('Block type mismatch: cannot update image with content that parses to paragraph')
     })
 
     it('should throw without content', async () => {
       await expect(blocks(mockNotion as any, { action: 'update', block_id: 'block-1' })).rejects.toThrow(
         'content required for update'
       )
+    })
+
+    it('should throw when content type does not match block type', async () => {
+      mockNotion.blocks.retrieve.mockResolvedValue({
+        id: 'block-1',
+        type: 'paragraph',
+        has_children: false,
+        archived: false,
+        paragraph: { rich_text: [] }
+      })
+
+      await expect(
+        blocks(mockNotion as any, {
+          action: 'update',
+          block_id: 'block-1',
+          content: '# New Heading'
+        })
+      ).rejects.toThrow('Block type mismatch')
     })
   })
 

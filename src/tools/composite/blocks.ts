@@ -84,6 +84,16 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
         }
 
         const newContent = newBlocks[0]
+
+        // Validate block type match
+        if (newContent.type !== blockType) {
+          throw new NotionMCPError(
+            `Block type mismatch: cannot update ${blockType} with content that parses to ${newContent.type}`,
+            'VALIDATION_ERROR',
+            `Provide markdown that parses to ${blockType}`
+          )
+        }
+
         const updatePayload: any = {}
 
         // Build update based on block type
