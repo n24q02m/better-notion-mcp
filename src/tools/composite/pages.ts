@@ -495,17 +495,21 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
   const results = await processBatches(
     pageIds,
     async (pageId) => {
-      // Get original page
-      const originalPage: any = await notion.pages.retrieve({ page_id: pageId })
+      // Get original page and content in parallel
 
-      // Get original content
-      const originalBlocks = await autoPaginate((cursor) =>
-        notion.blocks.children.list({
-          block_id: pageId,
-          start_cursor: cursor,
-          page_size: 100
-        })
-      )
+      const [originalPage, originalBlocks] = await Promise.all([
+        notion.pages.retrieve({ page_id: pageId }) as Promise<any>,
+
+        autoPaginate((cursor) =>
+          notion.blocks.children.list({
+            block_id: pageId,
+
+            start_cursor: cursor,
+
+            page_size: 100
+          })
+        )
+      ])
 
       // Sanitize parent - API response may include extra fields that
       // the create endpoint rejects (e.g. database_id in data_source parent)
