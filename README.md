@@ -3,7 +3,7 @@
 **Markdown-First MCP Server for Notion - Optimized for AI Agents**
 
 [![CI](https://github.com/n24q02m/better-notion-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/n24q02m/better-notion-mcp/actions/workflows/ci.yml)
-[![Codecov](https://img.shields.io/codecov/c/github/n24q02m/better-notion-mcp?logo=codecov&logoColor=white)](https://codecov.io/gh/n24q02m/better-notion-mcp)
+[![codecov](https://codecov.io/gh/n24q02m/better-notion-mcp/graph/badge.svg?token=D7FSDVVTAN)](https://codecov.io/gh/n24q02m/better-notion-mcp)
 [![npm](https://img.shields.io/npm/v/@n24q02m/better-notion-mcp?logo=npm&logoColor=white)](https://www.npmjs.com/package/@n24q02m/better-notion-mcp)
 [![Docker](https://img.shields.io/docker/v/n24q02m/better-notion-mcp?label=docker&logo=docker&logoColor=white&sort=semver)](https://hub.docker.com/r/n24q02m/better-notion-mcp)
 [![License: MIT](https://img.shields.io/github/license/n24q02m/better-notion-mcp)](LICENSE)
