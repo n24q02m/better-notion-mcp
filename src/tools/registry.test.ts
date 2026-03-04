@@ -334,7 +334,8 @@ describe('registerTools', () => {
       })
 
       expect(users).toHaveBeenCalledWith(expect.any(Object), { action: 'me' })
-      expect(result.content[0].text).toBe(JSON.stringify(mockResult, null, 2))
+      expect(result.content[0].text).toContain(JSON.stringify(mockResult, null, 2))
+      expect(result.content[0].text).toContain('<untrusted_notion_content>')
     })
 
     it('should route workspace tool correctly', async () => {
@@ -347,7 +348,8 @@ describe('registerTools', () => {
       })
 
       expect(workspace).toHaveBeenCalledWith(expect.any(Object), { action: 'search', query: 'test' })
-      expect(result.content[0].text).toBe(JSON.stringify(mockResult, null, 2))
+      expect(result.content[0].text).toContain(JSON.stringify(mockResult, null, 2))
+      expect(result.content[0].text).toContain('<untrusted_notion_content>')
     })
 
     it('should route comments tool correctly', async () => {
