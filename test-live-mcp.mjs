@@ -101,16 +101,7 @@ if (resourceUris.length >= 8) {
 // ---------------------------------------------------------------------------
 console.log('\n--- help ---')
 
-const helpTopics = [
-  'pages',
-  'databases',
-  'blocks',
-  'users',
-  'workspace',
-  'comments',
-  'content_convert',
-  'file_uploads'
-]
+const helpTopics = ['pages', 'databases', 'blocks', 'users', 'workspace', 'comments', 'content_convert', 'file_uploads']
 
 for (const topic of helpTopics) {
   try {
@@ -146,11 +137,7 @@ try {
 
 // pages: invalid action
 try {
-  const r = await client.callTool(
-    { name: 'pages', arguments: { action: 'nonexistent' } },
-    undefined,
-    TIMEOUT
-  )
+  const r = await client.callTool({ name: 'pages', arguments: { action: 'nonexistent' } }, undefined, TIMEOUT)
   const t = parse(r)
   if (t.toLowerCase().includes('error') || t.toLowerCase().includes('unknown') || t.toLowerCase().includes('invalid')) {
     ok('pages(invalid action)', t.slice(0, 80))
@@ -254,13 +241,13 @@ try {
 
 // help: invalid tool_name
 try {
-  const r = await client.callTool(
-    { name: 'help', arguments: { tool_name: 'nonexistent' } },
-    undefined,
-    TIMEOUT
-  )
+  const r = await client.callTool({ name: 'help', arguments: { tool_name: 'nonexistent' } }, undefined, TIMEOUT)
   const t = parse(r)
-  if (t.toLowerCase().includes('error') || t.toLowerCase().includes('not found') || t.toLowerCase().includes('unknown')) {
+  if (
+    t.toLowerCase().includes('error') ||
+    t.toLowerCase().includes('not found') ||
+    t.toLowerCase().includes('unknown')
+  ) {
     ok('help(invalid tool)', t.slice(0, 80))
   } else {
     fail('help(invalid tool)', `Expected error: ${t.slice(0, 60)}`)
@@ -277,11 +264,7 @@ if (HAS_REAL_TOKEN) {
 
   // workspace.info
   try {
-    const r = await client.callTool(
-      { name: 'workspace', arguments: { action: 'info' } },
-      undefined,
-      TIMEOUT
-    )
+    const r = await client.callTool({ name: 'workspace', arguments: { action: 'info' } }, undefined, TIMEOUT)
     const t = parse(r)
     ok('workspace.info', t.slice(0, 80))
   } catch (e) {
@@ -303,11 +286,7 @@ if (HAS_REAL_TOKEN) {
 
   // users.list
   try {
-    const r = await client.callTool(
-      { name: 'users', arguments: { action: 'list' } },
-      undefined,
-      TIMEOUT
-    )
+    const r = await client.callTool({ name: 'users', arguments: { action: 'list' } }, undefined, TIMEOUT)
     const t = parse(r)
     ok('users.list', t.slice(0, 80))
   } catch (e) {
@@ -316,11 +295,7 @@ if (HAS_REAL_TOKEN) {
 
   // users.me
   try {
-    const r = await client.callTool(
-      { name: 'users', arguments: { action: 'me' } },
-      undefined,
-      TIMEOUT
-    )
+    const r = await client.callTool({ name: 'users', arguments: { action: 'me' } }, undefined, TIMEOUT)
     const t = parse(r)
     ok('users.me', t.slice(0, 80))
   } catch (e) {
@@ -347,13 +322,7 @@ if (HAS_REAL_TOKEN) {
   }
 } else {
   console.log('\n--- API tests (SKIPPED - no NOTION_TOKEN) ---')
-  const apiTests = [
-    'workspace.info',
-    'workspace.search',
-    'users.list',
-    'users.me',
-    'content_convert.md-to-blocks'
-  ]
+  const apiTests = ['workspace.info', 'workspace.search', 'users.list', 'users.me', 'content_convert.md-to-blocks']
   for (const t of apiTests) {
     skip(t, 'Requires NOTION_TOKEN')
   }
@@ -366,7 +335,9 @@ await client.close()
 
 const total = passed + failed
 console.log(`\n${'='.repeat(60)}`)
-console.log(`RESULT: ${passed}/${total} PASS (${((100 * passed) / total).toFixed(1)}%)${skipped ? `, ${skipped} skipped` : ''}`)
+console.log(
+  `RESULT: ${passed}/${total} PASS (${((100 * passed) / total).toFixed(1)}%)${skipped ? `, ${skipped} skipped` : ''}`
+)
 console.log(`${'='.repeat(60)}`)
 
 if (failed > 0) {
