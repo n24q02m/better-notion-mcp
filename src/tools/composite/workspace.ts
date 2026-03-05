@@ -76,11 +76,11 @@ export async function workspace(notion: Client, input: WorkspaceInput): Promise<
 
         const results = input.limit ? allResults.slice(0, input.limit) : allResults
 
-        return {
-          action: 'search',
-          query: input.query,
-          total: results.length,
-          results: results.map((item: any) => ({
+        // Optimization: Use pre-allocated array and for loop instead of map
+        const formattedResults = new Array(results.length)
+        for (let i = 0; i < results.length; i++) {
+          const item = results[i] as any
+          formattedResults[i] = {
             id: item.id,
             object: item.object,
             title:
@@ -91,7 +91,14 @@ export async function workspace(notion: Client, input: WorkspaceInput): Promise<
                 : item.title?.[0]?.plain_text || 'Untitled',
             url: item.url,
             last_edited_time: item.last_edited_time
-          }))
+          }
+        }
+
+        return {
+          action: 'search',
+          query: input.query,
+          total: results.length,
+          results: formattedResults
         }
       }
 
