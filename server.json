@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.n24q02m/better-notion-mcp",
-  "description": "Markdown-first MCP server for Notion API - composite tools optimized for AI agents. 9 tools with 39 actions that consolidate Notion's 28+ REST API endpoints.",
+  "description": "Markdown-first MCP server for Notion API with 9 composite tools and 39+ actions.",
   "repository": {
     "url": "https://github.com/n24q02m/better-notion-mcp.git",
     "source": "github"
