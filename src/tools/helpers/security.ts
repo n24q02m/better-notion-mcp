@@ -24,8 +24,19 @@ export function isSafeUrl(url: string): boolean {
     // If URL parsing fails, it might be a relative path or an invalid URL
     // For relative paths like "/foo" or "foo", they are generally safe,
     // but we can reject strictly for now, or check for dangerous prefixes.
-    const lowerUrl = url.toLowerCase().trim()
-    if (lowerUrl.startsWith('javascript:') || lowerUrl.startsWith('data:') || lowerUrl.startsWith('vbscript:')) {
+
+    // Normalize URL by removing whitespace and control characters which could bypass checks
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: Intentionally matching control characters for security sanitization
+    const lowerUrl = url.toLowerCase().replace(/[\s\x00-\x1F\x7F]+/g, '')
+
+    if (
+      lowerUrl.startsWith('javascript:') ||
+      lowerUrl.startsWith('data:') ||
+      lowerUrl.startsWith('vbscript:') ||
+      lowerUrl.startsWith('javascript&') ||
+      lowerUrl.startsWith('data&') ||
+      lowerUrl.startsWith('vbscript&')
+    ) {
       return false
     }
     return true
