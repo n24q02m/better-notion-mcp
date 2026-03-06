@@ -1,0 +1,45 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.n24q02m/better-notion-mcp",
+  "description": "Markdown-first MCP server for Notion API - composite tools optimized for AI agents. 9 tools with 39 actions that consolidate Notion's 28+ REST API endpoints.",
+  "repository": {
+    "url": "https://github.com/n24q02m/better-notion-mcp.git",
+    "source": "github"
+  },
+  "version": "2.12.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@n24q02m/better-notion-mcp",
+      "version": "2.12.0",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Notion integration token. Create at https://www.notion.so/my-integrations",
+          "isRequired": true,
+          "isSecret": true,
+          "name": "NOTION_TOKEN"
+        }
+      ]
+    },
+    {
+      "registryType": "oci",
+      "identifier": "docker.io/n24q02m/better-notion-mcp:latest",
+      "runtimeHint": "docker",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Notion integration token. Create at https://www.notion.so/my-integrations",
+          "isRequired": true,
+          "isSecret": true,
+          "name": "NOTION_TOKEN"
+        }
+      ]
+    }
+  ]
+}

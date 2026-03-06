@@ -14,6 +14,7 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write
 
 env:
   DOCKERHUB_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/better-notion-mcp
@@ -217,3 +218,31 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           repository: ${{ env.DOCKERHUB_IMAGE }}
           short-description: ${{ github.event.repository.description }}
+
+  # ============================================================================
+  # Publish to MCP Registry
+  # ============================================================================
+  publish-mcp-registry:
+    name: Publish to MCP Registry
+    needs: [release, publish-npm]
+    if: needs.release.outputs.released == 'true' && needs.release.outputs.is_prerelease != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@a90bcbc6539c36a85cdfeb73f7e2f433735f215b # v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+
+      - name: Install MCP Publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Login to MCP Registry
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish to MCP Registry
+        run: ./mcp-publisher publish
