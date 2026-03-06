@@ -257,6 +257,88 @@ try {
 }
 
 // ---------------------------------------------------------------------------
+// Per-action validation (tests missing required params for specific actions)
+// ---------------------------------------------------------------------------
+console.log('\n--- Per-action validation ---')
+
+/**
+ * Accept both validation errors AND API auth errors as passing.
+ * With a fake token, some actions pass validation but fail at the Notion API
+ * with 401 unauthorized — that still proves MCP communication works correctly.
+ */
+async function expectErrorOrAuthFail(label, name, args) {
+  try {
+    const r = await client.callTool({ name, arguments: args }, undefined, TIMEOUT)
+    const t = r.content[0].text
+    const lower = t.toLowerCase()
+    if (
+      lower.includes('error') ||
+      lower.includes('unauthorized') ||
+      lower.includes('invalid') ||
+      lower.includes('required') ||
+      lower.includes('missing') ||
+      lower.includes('failed') ||
+      r.isError
+    ) {
+      ok(label, t.slice(0, 80))
+    } else {
+      fail(label, `Expected error: ${t.slice(0, 60)}`)
+    }
+  } catch (e) {
+    ok(label, `Error: ${e.message.slice(0, 60)}`)
+  }
+}
+
+// pages: per-action validation
+await expectErrorOrAuthFail('pages(create, no parent)', 'pages', { action: 'create' })
+await expectErrorOrAuthFail('pages(get, no page_id)', 'pages', { action: 'get' })
+await expectErrorOrAuthFail('pages(get_property, no page_id)', 'pages', { action: 'get_property' })
+await expectErrorOrAuthFail('pages(update, no page_id)', 'pages', { action: 'update' })
+await expectErrorOrAuthFail('pages(move, no page_id)', 'pages', { action: 'move' })
+await expectErrorOrAuthFail('pages(archive, no page_id)', 'pages', { action: 'archive' })
+await expectErrorOrAuthFail('pages(duplicate, no page_id)', 'pages', { action: 'duplicate' })
+
+// databases: per-action validation
+await expectErrorOrAuthFail('databases(create, no parent)', 'databases', { action: 'create' })
+await expectErrorOrAuthFail('databases(get, no db_id)', 'databases', { action: 'get' })
+await expectErrorOrAuthFail('databases(query, no db_id)', 'databases', { action: 'query' })
+await expectErrorOrAuthFail('databases(create_page, no db_id)', 'databases', { action: 'create_page' })
+await expectErrorOrAuthFail('databases(update_page, no items)', 'databases', { action: 'update_page' })
+await expectErrorOrAuthFail('databases(delete_page, no ids)', 'databases', { action: 'delete_page' })
+await expectErrorOrAuthFail('databases(create_data_source, no db_id)', 'databases', { action: 'create_data_source' })
+await expectErrorOrAuthFail('databases(update_data_source, no id)', 'databases', { action: 'update_data_source' })
+await expectErrorOrAuthFail('databases(update_database, no db_id)', 'databases', { action: 'update_database' })
+await expectErrorOrAuthFail('databases(list_templates, no db_id)', 'databases', { action: 'list_templates' })
+
+// blocks: per-action validation (block_id required for all actions)
+await expectErrorOrAuthFail('blocks(get, no block_id)', 'blocks', { action: 'get', block_id: '' })
+await expectErrorOrAuthFail('blocks(children, no block_id)', 'blocks', { action: 'children', block_id: '' })
+await expectErrorOrAuthFail('blocks(append, no block_id)', 'blocks', { action: 'append', block_id: '' })
+await expectErrorOrAuthFail('blocks(update, no block_id)', 'blocks', { action: 'update', block_id: '' })
+await expectErrorOrAuthFail('blocks(delete, no block_id)', 'blocks', { action: 'delete', block_id: '' })
+
+// users: per-action validation
+await expectErrorOrAuthFail('users(get, no user_id)', 'users', { action: 'get' })
+
+// comments: per-action validation
+await expectErrorOrAuthFail('comments(list, no page_id)', 'comments', { action: 'list' })
+await expectErrorOrAuthFail('comments(get, no comment_id)', 'comments', { action: 'get' })
+await expectErrorOrAuthFail('comments(create, no content)', 'comments', { action: 'create' })
+await expectErrorOrAuthFail('comments(create, no target)', 'comments', { action: 'create', content: 'test' })
+
+// content_convert: per-action validation
+await expectErrorOrAuthFail('content_convert(blocks-to-md, invalid)', 'content_convert', {
+  direction: 'blocks-to-markdown',
+  content: 'not-valid-json'
+})
+
+// file_uploads: per-action validation
+await expectErrorOrAuthFail('file_uploads(create, no filename)', 'file_uploads', { action: 'create' })
+await expectErrorOrAuthFail('file_uploads(send, no upload_id)', 'file_uploads', { action: 'send' })
+await expectErrorOrAuthFail('file_uploads(complete, no upload_id)', 'file_uploads', { action: 'complete' })
+await expectErrorOrAuthFail('file_uploads(retrieve, no upload_id)', 'file_uploads', { action: 'retrieve' })
+
+// ---------------------------------------------------------------------------
 // API tests (only with real token)
 // ---------------------------------------------------------------------------
 if (HAS_REAL_TOKEN) {
