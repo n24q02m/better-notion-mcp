@@ -1,5 +1,6 @@
 {
   "name": "@n24q02m/better-notion-mcp",
+  "mcpName": "io.github.n24q02m/better-notion-mcp",
   "keywords": [
     "notion",
     "api",
