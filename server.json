@@ -24,6 +24,22 @@
           "name": "NOTION_TOKEN"
         }
       ]
+    },
+    {
+      "registryType": "oci",
+      "identifier": "docker.io/n24q02m/better-notion-mcp:latest",
+      "runtimeHint": "docker",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Notion integration token. Create at https://www.notion.so/my-integrations",
+          "isRequired": true,
+          "isSecret": true,
+          "name": "NOTION_TOKEN"
+        }
+      ]
     }
   ]
 }

@@ -224,7 +224,7 @@ jobs:
   # ============================================================================
   publish-mcp-registry:
     name: Publish to MCP Registry
-    needs: [release, publish-npm]
+    needs: [release, publish-npm, merge-docker]
     if: needs.release.outputs.released == 'true' && needs.release.outputs.is_prerelease != 'true'
     runs-on: ubuntu-latest
     steps:
