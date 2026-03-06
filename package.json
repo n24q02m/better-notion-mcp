@@ -17,7 +17,7 @@
     "opencode",
     "gemini-cli"
   ],
-  "version": "2.12.3",
+  "version": "2.12.4",
   "license": "MIT",
   "type": "module",
   "packageManager": "bun@1.2.21",
