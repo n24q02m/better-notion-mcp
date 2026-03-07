@@ -1161,6 +1161,177 @@ describe('parseRichText', () => {
     const result = parseRichText('plain')
     expect(result[0].text.link).toBeNull()
   })
+
+  describe('page mentions', () => {
+    it('should parse @[Title](page-id) as mention rich text', () => {
+      const result = parseRichText('@[My Page](abc123def456)')
+      expect(result).toHaveLength(1)
+      expect(result[0].type).toBe('mention')
+      expect((result[0] as any).mention).toEqual({ page: { id: 'abc123def456' } })
+      expect(result[0].plain_text).toBe('My Page')
+    })
+
+    it('should parse mention with UUID page id', () => {
+      const result = parseRichText('@[Test](a1b2c3d4-e5f6-7890-abcd-ef1234567890)')
+      expect(result).toHaveLength(1)
+      expect(result[0].type).toBe('mention')
+      expect((result[0] as any).mention).toEqual({ page: { id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' } })
+    })
+
+    it('should parse mention with Notion URL and extract page id', () => {
+      const result = parseRichText('@[My Page](https://www.notion.so/My-Page-abc123def456abc123def456abc123de)')
+      expect(result).toHaveLength(1)
+      expect(result[0].type).toBe('mention')
+      expect((result[0] as any).mention).toEqual({ page: { id: 'abc123def456abc123def456abc123de' } })
+    })
+
+    it('should parse mention mixed with plain text', () => {
+      const result = parseRichText('See @[My Page](abc123) for details')
+      expect(result).toHaveLength(3)
+      expect(result[0].type).toBe('text')
+      expect(result[0].text.content).toBe('See ')
+      expect(result[1].type).toBe('mention')
+      expect((result[1] as any).mention).toEqual({ page: { id: 'abc123' } })
+      expect(result[1].plain_text).toBe('My Page')
+      expect(result[2].type).toBe('text')
+      expect(result[2].text.content).toBe(' for details')
+    })
+
+    it('should not confuse regular links with mentions', () => {
+      const result = parseRichText('[click](https://example.com)')
+      expect(result).toHaveLength(1)
+      expect(result[0].type).toBe('text')
+      expect(result[0].text.link!.url).toBe('https://example.com')
+    })
+  })
+})
+
+// ============================================================
+// richTextToMarkdown (via blocksToMarkdown)
+// ============================================================
+
+describe('richTextToMarkdown mention handling', () => {
+  it('should serialize page mention to @[Title](id)', () => {
+    const blocks: NotionBlock[] = [
+      {
+        object: 'block',
+        type: 'paragraph',
+        paragraph: {
+          rich_text: [
+            {
+              type: 'mention',
+              mention: { page: { id: 'abc123' } },
+              plain_text: 'My Page',
+              href: 'https://www.notion.so/abc123',
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: 'default'
+              }
+            }
+          ],
+          color: 'default'
+        }
+      }
+    ]
+    expect(blocksToMarkdown(blocks)).toBe('@[My Page](abc123)')
+  })
+
+  it('should serialize mention alongside plain text', () => {
+    const blocks: NotionBlock[] = [
+      {
+        object: 'block',
+        type: 'paragraph',
+        paragraph: {
+          rich_text: [
+            plainRichText('See '),
+            {
+              type: 'mention',
+              mention: { page: { id: 'abc123' } },
+              plain_text: 'My Page',
+              href: 'https://www.notion.so/abc123',
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: 'default'
+              }
+            },
+            plainRichText(' for details')
+          ],
+          color: 'default'
+        }
+      }
+    ]
+    expect(blocksToMarkdown(blocks)).toBe('See @[My Page](abc123) for details')
+  })
+
+  it('should not drop mention elements silently', () => {
+    const blocks: NotionBlock[] = [
+      {
+        object: 'block',
+        type: 'paragraph',
+        paragraph: {
+          rich_text: [
+            {
+              type: 'mention',
+              mention: { page: { id: 'xyz789' } },
+              plain_text: 'Referenced Page',
+              href: null,
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: 'default'
+              }
+            }
+          ],
+          color: 'default'
+        }
+      }
+    ]
+    const result = blocksToMarkdown(blocks)
+    expect(result).not.toBe('')
+    expect(result).toContain('Referenced Page')
+    expect(result).toContain('xyz789')
+  })
+
+  it('should handle database mention gracefully', () => {
+    const blocks: NotionBlock[] = [
+      {
+        object: 'block',
+        type: 'paragraph',
+        paragraph: {
+          rich_text: [
+            {
+              type: 'mention',
+              mention: { database: { id: 'db123' } },
+              plain_text: 'My Database',
+              href: 'https://www.notion.so/db123',
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: 'default'
+              }
+            }
+          ],
+          color: 'default'
+        }
+      }
+    ]
+    const result = blocksToMarkdown(blocks)
+    expect(result).toContain('My Database')
+  })
 })
 
 // ============================================================

@@ -15,10 +15,15 @@ export interface NotionBlock {
 }
 
 export interface RichText {
-  type: 'text'
+  type: 'text' | 'mention'
   text: {
     content: string
     link?: { url: string } | null
+  }
+  mention?: {
+    page?: { id: string }
+    database?: { id: string }
+    [key: string]: any
   }
   annotations: {
     bold: boolean
@@ -30,6 +35,27 @@ export interface RichText {
   }
   plain_text?: string
   href?: string | null
+}
+
+/** Create a mention rich text element (no text property - Notion API rejects it on mentions) */
+function createMention(
+  mentionData: RichText['mention'],
+  title: string,
+  formatting: { bold: boolean; italic: boolean; code: boolean; strikethrough: boolean }
+): RichText {
+  return {
+    type: 'mention',
+    mention: mentionData,
+    plain_text: title,
+    annotations: {
+      bold: formatting.bold,
+      italic: formatting.italic,
+      strikethrough: formatting.strikethrough,
+      underline: false,
+      code: formatting.code,
+      color: 'default'
+    }
+  } as RichText
 }
 
 // Regular expressions for block parsing
@@ -379,6 +405,32 @@ export function parseRichText(text: string): RichText[] {
     const char = text[i]
     const next = text[i + 1]
 
+    // Page mention @[Title](page-id-or-url) — must come before link handling
+    if (char === '@' && next === '[') {
+      const closeBracket = text.indexOf(']', i + 2)
+      if (closeBracket !== -1 && closeBracket + 1 < text.length && text[closeBracket + 1] === '(') {
+        const closeParen = text.indexOf(')', closeBracket + 2)
+        if (closeParen !== -1) {
+          if (current) {
+            richText.push(createRichText(current, { bold, italic, code, strikethrough }))
+            current = ''
+          }
+
+          const mentionTitle = text.slice(i + 2, closeBracket)
+          const mentionTarget = text.slice(closeBracket + 2, closeParen)
+
+          // Extract 32-char hex page ID from Notion URL or use as-is
+          const idMatch = mentionTarget.match(/([a-f0-9]{32})/)
+          const pageId = idMatch ? idMatch[1] : mentionTarget
+
+          richText.push(createMention({ page: { id: pageId } }, mentionTitle, { bold, italic, code, strikethrough }))
+
+          i = closeParen
+          continue
+        }
+      }
+    }
+
     // Link [text](url) — optimized to avoid O(N²) on pathological inputs
     if (char === '[' && !noMoreCloseBrackets) {
       const closeBracket = text.indexOf(']', i + 1)
@@ -474,7 +526,18 @@ function richTextToMarkdown(richText: RichText[]): string {
 
   return richText
     .map((rt) => {
-      if (!rt || !rt.text) return ''
+      if (!rt) return ''
+
+      // Handle mention elements
+      if (rt.type === 'mention' && rt.mention) {
+        const title = rt.plain_text || rt.text?.content || 'Untitled'
+        const id = rt.mention.page?.id || rt.mention.database?.id || ''
+        if (id) return `@[${title}](${id})`
+        // Fallback for other mention types (user, date, etc.)
+        return title
+      }
+
+      if (!rt.text) return ''
 
       let text = rt.text.content || ''
       const annotations = rt.annotations || {}
@@ -493,7 +556,7 @@ function richTextToMarkdown(richText: RichText[]): string {
  * Extract plain text from rich text
  */
 export function extractPlainText(richText: RichText[]): string {
-  return richText.map((rt) => rt.text.content).join('')
+  return richText.map((rt) => rt.plain_text || rt.text?.content || '').join('')
 }
 
 // ============================================================

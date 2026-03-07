@@ -39,6 +39,7 @@ Inline formatting within any text content:
 - `Code`: `` `text` ``
 - ~~Strikethrough~~: `~~text~~`
 - Links: `[text](url)`
+- Page mentions: `@[Page Title](page-id)` - creates an inline @mention, not a hyperlink
 
 ## Actions
 
