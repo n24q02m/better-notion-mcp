@@ -428,6 +428,54 @@ describe('markdownToBlocks', () => {
       expect(col1Children).toHaveLength(2)
       expect(col2Children).toHaveLength(2)
     })
+
+    it('should parse callout inside column', () => {
+      const md = ':::columns\n:::column\n> [!NOTE]\n> Important info\n:::column\nRight side\n:::end'
+      const blocks = markdownToBlocks(md)
+      const col1Children = blocks[0].column_list.children[0].column.children
+      expect(col1Children[0].type).toBe('callout')
+    })
+
+    it('should parse toggle inside column', () => {
+      const md =
+        ':::columns\n:::column\n<details><summary>Click me</summary>\nHidden content\n</details>\n:::column\nRight side\n:::end'
+      const blocks = markdownToBlocks(md)
+      const col1Children = blocks[0].column_list.children[0].column.children
+      expect(col1Children[0].type).toBe('toggle')
+      expect(col1Children[0].toggle.children).toHaveLength(1)
+    })
+
+    it('should parse three columns', () => {
+      const md = ':::columns\n:::column\nCol 1\n:::column\nCol 2\n:::column\nCol 3\n:::end'
+      const blocks = markdownToBlocks(md)
+      const columns = blocks[0].column_list.children
+      expect(columns).toHaveLength(3)
+    })
+
+    it('should handle empty column content', () => {
+      const md = ':::columns\n:::column\n:::column\nRight side\n:::end'
+      const blocks = markdownToBlocks(md)
+      const columns = blocks[0].column_list.children
+      expect(columns).toHaveLength(2)
+      // Empty column should still exist but with no children
+      expect(columns[0].column.children).toHaveLength(0)
+    })
+
+    it('should parse width ratio on columns', () => {
+      const md = ':::columns\n:::column{width=0.7}\nWide column\n:::column{width=0.3}\nNarrow column\n:::end'
+      const blocks = markdownToBlocks(md)
+      const columns = blocks[0].column_list.children
+      expect(columns[0].column.format?.column_ratio).toBe(0.7)
+      expect(columns[1].column.format?.column_ratio).toBe(0.3)
+    })
+
+    it('should parse columns without width ratio (default)', () => {
+      const md = ':::columns\n:::column\nLeft\n:::column\nRight\n:::end'
+      const blocks = markdownToBlocks(md)
+      const columns = blocks[0].column_list.children
+      expect(columns[0].column.format).toBeUndefined()
+      expect(columns[1].column.format).toBeUndefined()
+    })
   })
 
   describe('table of contents', () => {
@@ -898,6 +946,70 @@ describe('blocksToMarkdown', () => {
       expect(md).toContain('Left')
       expect(md).toContain('Right')
       expect(md).toContain(':::end')
+    })
+
+    it('should emit width ratio on columns', () => {
+      const blocks: NotionBlock[] = [
+        {
+          object: 'block',
+          type: 'column_list',
+          column_list: {
+            children: [
+              {
+                object: 'block',
+                type: 'column',
+                column: {
+                  children: [
+                    {
+                      object: 'block',
+                      type: 'paragraph',
+                      paragraph: { rich_text: [plainRichText('Wide')], color: 'default' }
+                    }
+                  ],
+                  format: { column_ratio: 0.7 }
+                }
+              },
+              {
+                object: 'block',
+                type: 'column',
+                column: {
+                  children: [
+                    {
+                      object: 'block',
+                      type: 'paragraph',
+                      paragraph: { rich_text: [plainRichText('Narrow')], color: 'default' }
+                    }
+                  ],
+                  format: { column_ratio: 0.3 }
+                }
+              }
+            ]
+          }
+        }
+      ]
+      const md = blocksToMarkdown(blocks)
+      expect(md).toContain(':::column{width=0.7}')
+      expect(md).toContain(':::column{width=0.3}')
+    })
+
+    it('should round-trip columns with width ratios', () => {
+      const md = ':::columns\n:::column{width=0.7}\nWide content\n:::column{width=0.3}\nNarrow content\n:::end'
+      const blocks = markdownToBlocks(md)
+      const result = blocksToMarkdown(blocks)
+      expect(result).toContain(':::column{width=0.7}')
+      expect(result).toContain(':::column{width=0.3}')
+      expect(result).toContain('Wide content')
+      expect(result).toContain('Narrow content')
+    })
+
+    it('should round-trip columns with callout inside', () => {
+      const md = ':::columns\n:::column\n> [!NOTE]\n> Important info\n:::column\nRight side\n:::end'
+      const blocks = markdownToBlocks(md)
+      const result = blocksToMarkdown(blocks)
+      expect(result).toContain(':::columns')
+      expect(result).toContain('> [!NOTE]')
+      expect(result).toContain('Right side')
+      expect(result).toContain(':::end')
     })
   })
 

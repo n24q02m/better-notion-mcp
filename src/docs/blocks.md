@@ -21,14 +21,14 @@ The markdown converter supports these Notion block types:
 | Code block | `` ```language `` ... `` ``` `` |
 | Quote | `> text` |
 | Divider | `---` or `***` |
-| Callout | `> [!NOTE] text`, `> [!TIP]`, `> [!WARNING]`, `> [!IMPORTANT]`, `> [!CAUTION]`, `> [!INFO]`, `> [!SUCCESS]`, `> [!ERROR]` |
-| Toggle | `<details><summary>Title</summary>content</details>` |
+| Callout | `> [!NOTE] text`, `> [!TIP]`, `> [!WARNING]`, `> [!IMPORTANT]`, `> [!INFO]`, `> [!SUCCESS]`, `> [!ERROR]`. Multi-line: each line must start with `> `. Avoid CAUTION (emoji rejected by Notion). |
+| Toggle | `<details><summary>Title</summary>content</details>`. No nesting (toggle inside toggle fails). |
 | Table | Pipe-delimited `\| col1 \| col2 \|` with optional header separator |
 | Image | `![alt text](url)` |
 | Bookmark | `[bookmark](url)` |
 | Embed | `[embed](url)` |
 | Equation | `$$expression$$` (inline) or `$$\n...\n$$` (multi-line) |
-| Columns | `:::columns` / `:::column` / `:::end` |
+| Columns | `:::columns` / `:::column` / `:::end` (optional width: `:::column{width=0.7}`) |
 | Table of Contents | `[toc]` |
 | Breadcrumb | `[breadcrumb]` |
 
@@ -40,6 +40,44 @@ Inline formatting within any text content:
 - ~~Strikethrough~~: `~~text~~`
 - Links: `[text](url)`
 - Page mentions: `@[Page Title](page-id)` - creates an inline @mention, not a hyperlink
+
+## Layout Guide
+
+### Columns
+
+```
+:::columns
+:::column
+Left content
+:::column
+Right content
+:::end
+```
+
+Rules:
+- `:::column` implicitly closes the previous column. Do NOT add `:::end` between columns.
+- Only ONE `:::end` at the very end closes the entire column_list.
+- Set width with `:::column{width=0.7}` (decimal 0-1). Ratios should sum to 1.
+
+### Nesting depth limit
+
+Notion API allows max 2 nesting levels per append call. A column with rich content like callouts or toggles exceeds this (`column_list > column > callout > children` = 4 levels).
+
+**Workaround - append in multiple calls:**
+
+1. Append the column_list with simple placeholder content (e.g. paragraphs):
+```
+:::columns
+:::column{width=0.7}
+Placeholder
+:::column{width=0.3}
+Placeholder
+:::end
+```
+
+2. Read back the page blocks to get each column's block_id.
+
+3. Replace each column's content individually using `update` or `delete` + `append` on the column block_id. Each call is now only 1 level deep (callout or toggle directly inside column).
 
 ## Actions
 

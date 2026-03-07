@@ -183,7 +183,7 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
     // Column layout :::columns
     if (trimmedLine === ':::columns') {
       const columnData = parseColumns(lines, i)
-      blocks.push(createColumnList(columnData.columns))
+      blocks.push(createColumnList(columnData.columns, columnData.widthRatios))
       i = columnData.endIndex
       continue
     }
@@ -350,8 +350,10 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         lines.push(':::columns')
         const columns = block.column_list?.children || []
         for (let colIdx = 0; colIdx < columns.length; colIdx++) {
-          lines.push(':::column')
-          const columnChildren = columns[colIdx].column?.children || []
+          const col = columns[colIdx]
+          const ratio = col.column?.format?.column_ratio
+          lines.push(ratio !== undefined ? `:::column{width=${ratio}}` : ':::column')
+          const columnChildren = col.column?.children || []
           if (columnChildren.length > 0) {
             lines.push(blocksToMarkdown(columnChildren))
           }
@@ -660,32 +662,38 @@ function parseToggle(lines: string[], startIndex: number): ToggleParseResult {
 
 interface ColumnParseResult {
   columns: NotionBlock[][]
+  widthRatios: (number | undefined)[]
   endIndex: number
 }
 
 function parseColumns(lines: string[], startIndex: number): ColumnParseResult {
   let i = startIndex + 1 // Skip :::columns
   const columns: NotionBlock[][] = []
+  const widthRatios: (number | undefined)[] = []
   let currentColumnLines: string[] = []
+  let inColumn = false
 
   while (i < lines.length) {
     const line = lines[i].trim()
 
     if (line === ':::end') {
       // Flush last column
-      if (currentColumnLines.length > 0) {
+      if (inColumn) {
         columns.push(markdownToBlocks(currentColumnLines.join('\n').trim()))
         currentColumnLines = []
       }
       break
     }
 
-    if (line === ':::column') {
-      // Flush previous column
-      if (currentColumnLines.length > 0) {
+    const columnMatch = line.match(/^:::column(?:\{width=([\d.]+)\})?$/)
+    if (columnMatch) {
+      // Flush previous column (even if empty)
+      if (inColumn) {
         columns.push(markdownToBlocks(currentColumnLines.join('\n').trim()))
         currentColumnLines = []
       }
+      inColumn = true
+      widthRatios.push(columnMatch[1] ? Number.parseFloat(columnMatch[1]) : undefined)
       i++
       continue
     }
@@ -699,7 +707,7 @@ function parseColumns(lines: string[], startIndex: number): ColumnParseResult {
     columns.push(markdownToBlocks(currentColumnLines.join('\n').trim()))
   }
 
-  return { columns, endIndex: i }
+  return { columns, widthRatios, endIndex: i }
 }
 
 // ============================================================
@@ -954,12 +962,19 @@ function createTable(headers: string[], rows: string[][], hasHeader: boolean): N
   }
 }
 
-function createColumnList(columns: NotionBlock[][]): NotionBlock {
-  const columnBlocks = columns.map((children) => ({
-    object: 'block' as const,
-    type: 'column',
-    column: { children }
-  }))
+function createColumnList(columns: NotionBlock[][], widthRatios?: (number | undefined)[]): NotionBlock {
+  const columnBlocks = columns.map((children, i) => {
+    const col: any = { children }
+    const ratio = widthRatios?.[i]
+    if (ratio !== undefined) {
+      col.format = { column_ratio: ratio }
+    }
+    return {
+      object: 'block' as const,
+      type: 'column',
+      column: col
+    }
+  })
 
   return {
     object: 'block',
