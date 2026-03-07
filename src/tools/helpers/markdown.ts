@@ -859,7 +859,7 @@ function createTable(headers: string[], rows: string[][], hasHeader: boolean): N
     object: 'block',
     type: 'table_row',
     table_row: {
-      cells: headers.map((h) => [createRichText(h)])
+      cells: headers.map((h) => parseRichText(h))
     }
   })
 
@@ -867,7 +867,7 @@ function createTable(headers: string[], rows: string[][], hasHeader: boolean): N
   for (const row of rows) {
     const cells = []
     for (let c = 0; c < tableWidth; c++) {
-      cells.push([createRichText(row[c] || '')])
+      cells.push(parseRichText(row[c] || ''))
     }
     allRows.push({
       object: 'block',
