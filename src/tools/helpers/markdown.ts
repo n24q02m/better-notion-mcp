@@ -60,28 +60,31 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
       currentListType = null
     }
 
+    // Cache trimmed line for performance to avoid repeated string allocations
+    const trimmedLine = line.trim()
+
     // Skip empty lines
-    if (!line.trim()) {
+    if (!trimmedLine) {
       continue
     }
 
     // Table of Contents [toc]
-    if (line.trim() === '[toc]' || line.trim() === '[TOC]') {
+    if (trimmedLine === '[toc]' || trimmedLine === '[TOC]') {
       blocks.push(createTableOfContents())
       continue
     }
 
     // Breadcrumb [breadcrumb]
-    if (line.trim() === '[breadcrumb]' || line.trim() === '[BREADCRUMB]') {
+    if (trimmedLine === '[breadcrumb]' || trimmedLine === '[BREADCRUMB]') {
       blocks.push(createBreadcrumb())
       continue
     }
 
     // Equation block $$...$$
-    if (line.trim().startsWith('$$')) {
-      if (line.trim().endsWith('$$') && line.trim().length > 4) {
+    if (trimmedLine.startsWith('$$')) {
+      if (trimmedLine.endsWith('$$') && trimmedLine.length > 4) {
         // Single line equation: $$expression$$
-        const expression = line.trim().slice(2, -2).trim()
+        const expression = trimmedLine.slice(2, -2).trim()
         blocks.push(createEquation(expression))
         continue
       }
@@ -144,7 +147,7 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
     }
 
     // Toggle <details><summary>Title</summary>
-    if (line.trim() === '<details>' || line.trim().startsWith('<details>')) {
+    if (trimmedLine === '<details>' || trimmedLine.startsWith('<details>')) {
       const toggleData = parseToggle(lines, i)
       blocks.push(createToggle(toggleData.title, toggleData.children))
       i = toggleData.endIndex
@@ -152,7 +155,7 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
     }
 
     // Column layout :::columns
-    if (line.trim() === ':::columns') {
+    if (trimmedLine === ':::columns') {
       const columnData = parseColumns(lines, i)
       blocks.push(createColumnList(columnData.columns))
       i = columnData.endIndex
@@ -160,7 +163,7 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
     }
 
     // Table (pipe-delimited)
-    if (line.includes('|') && line.trim().startsWith('|')) {
+    if (line.includes('|') && trimmedLine.startsWith('|')) {
       const tableData = parseTable(lines, i)
       if (tableData) {
         blocks.push(createTable(tableData.headers, tableData.rows, tableData.hasHeader))
