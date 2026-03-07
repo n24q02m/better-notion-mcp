@@ -206,6 +206,98 @@ describe('convertToNotionProperties', () => {
     })
   })
 
+  describe('relation values with schema', () => {
+    it('converts a single page ID string to relation format', () => {
+      const result = convertToNotionProperties({ Project: 'abc123def456' }, { Project: 'relation' })
+      expect(result).toEqual({
+        Project: { relation: [{ id: 'abc123def456' }] }
+      })
+    })
+
+    it('converts a UUID string to relation format', () => {
+      const result = convertToNotionProperties(
+        { Project: '12345678-1234-1234-1234-123456789abc' },
+        { Project: 'relation' }
+      )
+      expect(result).toEqual({
+        Project: { relation: [{ id: '12345678-1234-1234-1234-123456789abc' }] }
+      })
+    })
+
+    it('converts a Notion URL to relation format by extracting the page ID', () => {
+      const result = convertToNotionProperties(
+        { Project: 'https://www.notion.so/My-Page-abc123def45678901234567890abcdef' },
+        { Project: 'relation' }
+      )
+      expect(result).toEqual({
+        Project: { relation: [{ id: 'abc123def45678901234567890abcdef' }] }
+      })
+    })
+
+    it('converts a Notion URL with query params to relation format', () => {
+      const result = convertToNotionProperties(
+        { Project: 'https://www.notion.so/workspace/abc123def45678901234567890abcdef?v=xyz' },
+        { Project: 'relation' }
+      )
+      expect(result).toEqual({
+        Project: { relation: [{ id: 'abc123def45678901234567890abcdef' }] }
+      })
+    })
+
+    it('converts an array of page ID strings to relation format', () => {
+      const result = convertToNotionProperties({ Projects: ['abc123', 'def456'] }, { Projects: 'relation' })
+      expect(result).toEqual({
+        Projects: { relation: [{ id: 'abc123' }, { id: 'def456' }] }
+      })
+    })
+
+    it('converts an array of Notion URLs to relation format', () => {
+      const result = convertToNotionProperties(
+        {
+          Projects: [
+            'https://www.notion.so/Page-A-abc123def45678901234567890abcdef',
+            'https://www.notion.so/Page-B-fedcba09876543210987654321fedcba'
+          ]
+        },
+        { Projects: 'relation' }
+      )
+      expect(result).toEqual({
+        Projects: {
+          relation: [{ id: 'abc123def45678901234567890abcdef' }, { id: 'fedcba09876543210987654321fedcba' }]
+        }
+      })
+    })
+
+    it('converts a JSON array string to relation format', () => {
+      const result = convertToNotionProperties({ Projects: '["abc123", "def456"]' }, { Projects: 'relation' })
+      expect(result).toEqual({
+        Projects: { relation: [{ id: 'abc123' }, { id: 'def456' }] }
+      })
+    })
+
+    it('converts empty string to empty relation array', () => {
+      const result = convertToNotionProperties({ Project: '' }, { Project: 'relation' })
+      expect(result).toEqual({
+        Project: { relation: [] }
+      })
+    })
+
+    it('converts empty array to empty relation', () => {
+      const result = convertToNotionProperties({ Projects: [] }, { Projects: 'relation' })
+      expect(result).toEqual({
+        Projects: { relation: [] }
+      })
+    })
+
+    it('passes through pre-formatted relation objects as-is', () => {
+      const value = { relation: [{ id: 'abc123' }] }
+      const result = convertToNotionProperties({ Project: value }, { Project: 'relation' })
+      expect(result).toEqual({
+        Project: value
+      })
+    })
+  })
+
   describe('mixed properties with schema', () => {
     it('converts multiple property types in a single call', () => {
       const properties = {
