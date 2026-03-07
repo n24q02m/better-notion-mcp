@@ -905,27 +905,6 @@ describe('blocksToMarkdown', () => {
       const md = blocksToMarkdown(blocks)
       expect(md).toBe('<details>\n<summary>Empty toggle</summary>\n</details>')
     })
-
-    it('should add HTML comment when toggle has_children but children are not loaded', () => {
-      const blocks: NotionBlock[] = [
-        {
-          object: 'block',
-          id: 'toggle-block-id-123',
-          type: 'toggle',
-          has_children: true,
-          toggle: {
-            rich_text: [plainRichText('Toggle with hidden content')],
-            color: 'default'
-          }
-        }
-      ]
-      const md = blocksToMarkdown(blocks)
-      expect(md).toContain('<summary>Toggle with hidden content</summary>')
-      expect(md).toContain(
-        '<!-- has_children: fetch nested content with blocks tool, action: children, block_id: toggle-block-id-123 -->'
-      )
-      expect(md).toContain('</details>')
-    })
   })
 
   describe('images', () => {
@@ -1106,63 +1085,6 @@ describe('blocksToMarkdown', () => {
       expect(md).toContain(':::column')
       expect(md).toContain('Left')
       expect(md).toContain('Right')
-      expect(md).toContain(':::end')
-    })
-
-    it('should add HTML comments when column_list has_children but children are not loaded', () => {
-      const blocks: NotionBlock[] = [
-        {
-          object: 'block',
-          id: 'collist-id-123',
-          type: 'column_list',
-          has_children: true,
-          column_list: {}
-        }
-      ]
-      const md = blocksToMarkdown(blocks)
-      expect(md).toContain(':::columns')
-      expect(md).toContain(
-        '<!-- has_children: fetch nested content with blocks tool, action: children, block_id: collist-id-123 -->'
-      )
-      expect(md).toContain(':::end')
-    })
-
-    it('should add HTML comments when columns have has_children but children are not loaded', () => {
-      const blocks: NotionBlock[] = [
-        {
-          object: 'block',
-          id: 'collist-id-456',
-          type: 'column_list',
-          has_children: true,
-          column_list: {
-            children: [
-              {
-                object: 'block',
-                id: 'col1-id',
-                type: 'column',
-                has_children: true,
-                column: {}
-              },
-              {
-                object: 'block',
-                id: 'col2-id',
-                type: 'column',
-                has_children: true,
-                column: {}
-              }
-            ]
-          }
-        }
-      ]
-      const md = blocksToMarkdown(blocks)
-      expect(md).toContain(':::columns')
-      expect(md).toContain(':::column')
-      expect(md).toContain(
-        '<!-- has_children: fetch nested content with blocks tool, action: children, block_id: col1-id -->'
-      )
-      expect(md).toContain(
-        '<!-- has_children: fetch nested content with blocks tool, action: children, block_id: col2-id -->'
-      )
       expect(md).toContain(':::end')
     })
 

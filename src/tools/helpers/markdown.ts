@@ -86,28 +86,31 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
       currentListType = null
     }
 
+    // Cache trimmed line for performance to avoid repeated string allocations
+    const trimmedLine = line.trim()
+
     // Skip empty lines
-    if (!line.trim()) {
+    if (!trimmedLine) {
       continue
     }
 
     // Table of Contents [toc]
-    if (line.trim() === '[toc]' || line.trim() === '[TOC]') {
+    if (trimmedLine === '[toc]' || trimmedLine === '[TOC]') {
       blocks.push(createTableOfContents())
       continue
     }
 
     // Breadcrumb [breadcrumb]
-    if (line.trim() === '[breadcrumb]' || line.trim() === '[BREADCRUMB]') {
+    if (trimmedLine === '[breadcrumb]' || trimmedLine === '[BREADCRUMB]') {
       blocks.push(createBreadcrumb())
       continue
     }
 
     // Equation block $$...$$
-    if (line.trim().startsWith('$$')) {
-      if (line.trim().endsWith('$$') && line.trim().length > 4) {
+    if (trimmedLine.startsWith('$$')) {
+      if (trimmedLine.endsWith('$$') && trimmedLine.length > 4) {
         // Single line equation: $$expression$$
-        const expression = line.trim().slice(2, -2).trim()
+        const expression = trimmedLine.slice(2, -2).trim()
         blocks.push(createEquation(expression))
         continue
       }
@@ -170,7 +173,7 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
     }
 
     // Toggle <details><summary>Title</summary>
-    if (line.trim() === '<details>' || line.trim().startsWith('<details>')) {
+    if (trimmedLine === '<details>' || trimmedLine.startsWith('<details>')) {
       const toggleData = parseToggle(lines, i)
       blocks.push(createToggle(toggleData.title, toggleData.children))
       i = toggleData.endIndex
@@ -178,7 +181,7 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
     }
 
     // Column layout :::columns
-    if (line.trim() === ':::columns') {
+    if (trimmedLine === ':::columns') {
       const columnData = parseColumns(lines, i)
       blocks.push(createColumnList(columnData.columns, columnData.widthRatios))
       i = columnData.endIndex
@@ -186,7 +189,7 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
     }
 
     // Table (pipe-delimited)
-    if (line.includes('|') && line.trim().startsWith('|')) {
+    if (line.includes('|') && trimmedLine.startsWith('|')) {
       const tableData = parseTable(lines, i)
       if (tableData) {
         blocks.push(createTable(tableData.headers, tableData.rows, tableData.hasHeader))
@@ -309,10 +312,6 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         if (block.toggle.children && block.toggle.children.length > 0) {
           lines.push('')
           lines.push(blocksToMarkdown(block.toggle.children))
-        } else if (block.has_children && block.id) {
-          lines.push(
-            `<!-- has_children: fetch nested content with blocks tool, action: children, block_id: ${block.id} -->`
-          )
         }
         lines.push('</details>')
         break
@@ -350,27 +349,17 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
       case 'column_list': {
         lines.push(':::columns')
         const columns = block.column_list?.children || []
-        if (columns.length > 0) {
-          for (let colIdx = 0; colIdx < columns.length; colIdx++) {
-            const col = columns[colIdx]
-            const ratio = col.column?.format?.column_ratio
-            lines.push(ratio !== undefined ? `:::column{width=${ratio}}` : ':::column')
-            const columnChildren = col.column?.children || []
-            if (columnChildren.length > 0) {
-              lines.push(blocksToMarkdown(columnChildren))
-            } else if (col.has_children && col.id) {
-              lines.push(
-                `<!-- has_children: fetch nested content with blocks tool, action: children, block_id: ${col.id} -->`
-              )
-            }
-            if (colIdx < columns.length - 1) {
-              lines.push('')
-            }
+        for (let colIdx = 0; colIdx < columns.length; colIdx++) {
+          const col = columns[colIdx]
+          const ratio = col.column?.format?.column_ratio
+          lines.push(ratio !== undefined ? `:::column{width=${ratio}}` : ':::column')
+          const columnChildren = col.column?.children || []
+          if (columnChildren.length > 0) {
+            lines.push(blocksToMarkdown(columnChildren))
           }
-        } else if (block.has_children && block.id) {
-          lines.push(
-            `<!-- has_children: fetch nested content with blocks tool, action: children, block_id: ${block.id} -->`
-          )
+          if (colIdx < columns.length - 1) {
+            lines.push('')
+          }
         }
         lines.push(':::end')
         break
