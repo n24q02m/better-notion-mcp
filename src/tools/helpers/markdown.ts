@@ -625,26 +625,62 @@ function parseToggle(lines: string[], startIndex: number): ToggleParseResult {
   let title = ''
   const childLines: string[] = []
 
-  // Skip <details> tag
   const detailsLine = lines[i].trim()
-  if (detailsLine === '<details>') {
-    i++
-  } else if (detailsLine.startsWith('<details>')) {
-    // Inline content after <details>
-    i++
-  }
 
-  // Look for <summary>...</summary>
-  if (i < lines.length) {
-    const summaryMatch = lines[i].match(/<summary>(.*?)<\/summary>/)
-    if (summaryMatch) {
-      title = summaryMatch[1]
-      i++
+  // Try to extract <summary>...</summary> from the <details> line itself
+  const inlineSummaryMatch = detailsLine.match(/^<details>\s*<summary>(.*?)<\/summary>(.*?)(<\/details>)?$/)
+
+  if (inlineSummaryMatch) {
+    // All-on-one-line or inline summary: <details><summary>Title</summary>[Content][</details>]
+    title = inlineSummaryMatch[1]
+    const afterSummary = inlineSummaryMatch[2].trim()
+    const closedOnSameLine = !!inlineSummaryMatch[3]
+
+    if (closedOnSameLine) {
+      // Entire toggle on one line: <details><summary>Title</summary>Content</details>
+      if (afterSummary) {
+        childLines.push(afterSummary)
+      }
+      const childContent = childLines.join('\n').trim()
+      const children = childContent ? markdownToBlocks(childContent) : []
+      return { title, children, endIndex: i }
+    }
+
+    // Inline summary but content continues on subsequent lines
+    if (afterSummary) {
+      childLines.push(afterSummary)
+    }
+    i++
+  } else {
+    // Standard multi-line: <details> on its own line
+    i++
+
+    // Look for <summary>...</summary> on the next line
+    if (i < lines.length) {
+      const summaryMatch = lines[i].match(/<summary>(.*?)<\/summary>/)
+      if (summaryMatch) {
+        title = summaryMatch[1]
+        i++
+      }
     }
   }
 
-  // Collect content until </details>
-  while (i < lines.length && !lines[i].trim().startsWith('</details>')) {
+  // Collect content until matching </details>, tracking nesting depth
+  let depth = 1
+  while (i < lines.length && depth > 0) {
+    const trimmed = lines[i].trim()
+
+    // Check for <details> opens BEFORE </details> closes so that
+    // a single-line nested toggle (opens+closes on same line) doesn't
+    // prematurely terminate the outer loop.
+    if (trimmed.startsWith('<details>') || trimmed === '<details>') {
+      depth++
+    }
+    if (trimmed === '</details>' || trimmed.endsWith('</details>')) {
+      depth--
+      if (depth === 0) break
+    }
+
     childLines.push(lines[i])
     i++
   }

@@ -125,7 +125,8 @@ const TOOLS = [
         },
         database_id: {
           type: 'string',
-          description: 'Database ID (from Notion URL) or data_source_id (from workspace search). Auto-resolved for query/create_page/list_templates.'
+          description:
+            'Database ID (from Notion URL) or data_source_id (from workspace search). Auto-resolved for query/create_page/list_templates.'
         },
         data_source_id: { type: 'string', description: 'Data source ID (for update_data_source action)' },
         parent_id: { type: 'string', description: 'Parent page ID (for create/update_database)' },
@@ -349,7 +350,6 @@ const TOOLS = [
  *   Called per tool invocation to support both singleton (stdio) and per-request (HTTP) patterns.
  */
 export function registerTools(server: Server, notionClientFactory: () => Client) {
-
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: TOOLS
   }))

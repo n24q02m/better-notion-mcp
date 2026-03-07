@@ -165,10 +165,7 @@ export type DatabasesResponse =
  * Tries database_id first; if NOT_FOUND, tries as data_source_id
  * Returns both IDs for downstream operations
  */
-async function resolveDataSourceId(
-  notion: Client,
-  id: string
-): Promise<{ databaseId: string; dataSourceId: string }> {
+async function resolveDataSourceId(notion: Client, id: string): Promise<{ databaseId: string; dataSourceId: string }> {
   const normalized = normalizeId(id)
 
   // Try as database container first
