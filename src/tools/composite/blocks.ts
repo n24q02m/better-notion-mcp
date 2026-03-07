@@ -6,7 +6,7 @@
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
-import { autoPaginate } from '../helpers/pagination.js'
+import { autoPaginate, fetchChildrenRecursive } from '../helpers/pagination.js'
 
 export interface BlocksInput {
   action: 'get' | 'children' | 'append' | 'update' | 'delete'
@@ -45,6 +45,14 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
             page_size: 100
           })
         )
+
+        // Recursively fetch children for blocks that need them (tables, toggles, columns)
+        await fetchChildrenRecursive(blocksList as any[], async (blockId) => {
+          return autoPaginate((cursor) =>
+            notion.blocks.children.list({ block_id: blockId, start_cursor: cursor, page_size: 100 })
+          ) as any
+        })
+
         const markdown = blocksToMarkdown(blocksList as any)
         return {
           action: 'children',

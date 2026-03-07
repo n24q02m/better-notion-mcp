@@ -717,10 +717,10 @@ function parseColumns(lines: string[], startIndex: number): ColumnParseResult {
 function getCalloutIcon(type: string): string {
   const icons: Record<string, string> = {
     NOTE: '\u2139\ufe0f',
-    TIP: 'U0001f4a1',
+    TIP: '\u{1f4a1}',
     IMPORTANT: '\u2757',
     WARNING: '\u26a0\ufe0f',
-    CAUTION: 'U0001f6d1',
+    CAUTION: '\u{1f6d1}',
     INFO: '\u2139\ufe0f',
     SUCCESS: '\u2705',
     ERROR: '\u274c'
@@ -745,10 +745,10 @@ function getCalloutColor(type: string): string {
 function getCalloutTypeFromIcon(icon: string): string {
   const iconMap: Record<string, string> = {
     '\u2139\ufe0f': 'NOTE',
-    U0001f4a1: 'TIP',
+    '\u{1f4a1}': 'TIP',
     '\u2757': 'IMPORTANT',
     '\u26a0\ufe0f': 'WARNING',
-    U0001f6d1: 'CAUTION',
+    '\u{1f6d1}': 'CAUTION',
     '\u2705': 'SUCCESS',
     '\u274c': 'ERROR'
   }

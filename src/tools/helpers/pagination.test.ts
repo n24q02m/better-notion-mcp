@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { autoPaginate, batchItems, processBatches } from './pagination'
+import { autoPaginate, batchItems, fetchChildrenRecursive, processBatches } from './pagination'
 
 describe('autoPaginate', () => {
   it('should return results from a single page', async () => {
@@ -87,6 +87,92 @@ describe('autoPaginate', () => {
     await autoPaginate(fetchFn, { pageSize: 50 })
 
     expect(fetchFn).toHaveBeenCalledWith(undefined, 50)
+  })
+})
+
+describe('fetchChildrenRecursive', () => {
+  it('should fetch children for table blocks', async () => {
+    const blocks: any[] = [
+      { id: 'table-1', type: 'table', has_children: true, table: { table_width: 2 } },
+      { id: 'para-1', type: 'paragraph', has_children: false, paragraph: {} }
+    ]
+    const tableRows = [
+      { id: 'row-1', type: 'table_row', has_children: false, table_row: { cells: [] } },
+      { id: 'row-2', type: 'table_row', has_children: false, table_row: { cells: [] } }
+    ]
+    const fetchChildren = vi.fn().mockResolvedValue(tableRows)
+
+    await fetchChildrenRecursive(blocks, fetchChildren)
+
+    expect(fetchChildren).toHaveBeenCalledTimes(1)
+    expect(fetchChildren).toHaveBeenCalledWith('table-1')
+    expect(blocks[0].table.children).toEqual(tableRows)
+  })
+
+  it('should fetch children for toggle and column_list blocks', async () => {
+    const blocks: any[] = [
+      { id: 'toggle-1', type: 'toggle', has_children: true, toggle: {} },
+      {
+        id: 'col-list-1',
+        type: 'column_list',
+        has_children: true,
+        column_list: {}
+      }
+    ]
+    const toggleChildren = [{ id: 'p-1', type: 'paragraph', has_children: false, paragraph: {} }]
+    const columns: any[] = [
+      { id: 'col-1', type: 'column', has_children: true, column: {} },
+      { id: 'col-2', type: 'column', has_children: true, column: {} }
+    ]
+    const colContent = [{ id: 'p-2', type: 'paragraph', has_children: false, paragraph: {} }]
+    const fetchChildren = vi
+      .fn()
+      .mockResolvedValueOnce(toggleChildren)
+      .mockResolvedValueOnce(columns)
+      .mockResolvedValueOnce(colContent)
+      .mockResolvedValueOnce(colContent)
+
+    await fetchChildrenRecursive(blocks, fetchChildren)
+
+    expect(blocks[0].toggle.children).toEqual(toggleChildren)
+    expect(blocks[1].column_list.children).toEqual(columns)
+    // Columns themselves should have children fetched recursively
+    expect(columns[0].column.children).toEqual(colContent)
+    expect(columns[1].column.children).toEqual(colContent)
+  })
+
+  it('should skip blocks without has_children', async () => {
+    const blocks: any[] = [{ id: 'para-1', type: 'paragraph', has_children: false, paragraph: {} }]
+    const fetchChildren = vi.fn()
+
+    await fetchChildrenRecursive(blocks, fetchChildren)
+
+    expect(fetchChildren).not.toHaveBeenCalled()
+  })
+
+  it('should skip unsupported block types', async () => {
+    const blocks: any[] = [{ id: 'img-1', type: 'image', has_children: true, image: {} }]
+    const fetchChildren = vi.fn()
+
+    await fetchChildrenRecursive(blocks, fetchChildren)
+
+    expect(fetchChildren).not.toHaveBeenCalled()
+  })
+
+  it('should respect max depth limit', async () => {
+    const blocks: any[] = [{ id: 'toggle-1', type: 'toggle', has_children: true, toggle: {} }]
+    const fetchChildren = vi.fn().mockResolvedValue([])
+
+    // depth=3 should be at MAX_DEPTH and return immediately
+    await fetchChildrenRecursive(blocks, fetchChildren, 3)
+
+    expect(fetchChildren).not.toHaveBeenCalled()
+  })
+
+  it('should handle empty blocks array', async () => {
+    const fetchChildren = vi.fn()
+    await fetchChildrenRecursive([], fetchChildren)
+    expect(fetchChildren).not.toHaveBeenCalled()
   })
 })
 

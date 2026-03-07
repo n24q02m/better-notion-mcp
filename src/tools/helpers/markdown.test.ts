@@ -252,6 +252,37 @@ describe('markdownToBlocks', () => {
       expect(blocks[0].callout.icon.emoji).toBeTruthy()
     })
 
+    it('should use correct Unicode emoji for each callout type', () => {
+      const cases: [string, string][] = [
+        ['NOTE', '\u2139\ufe0f'],
+        ['TIP', '\u{1f4a1}'],
+        ['IMPORTANT', '\u2757'],
+        ['WARNING', '\u26a0\ufe0f'],
+        ['CAUTION', '\u{1f6d1}'],
+        ['INFO', '\u2139\ufe0f'],
+        ['SUCCESS', '\u2705'],
+        ['ERROR', '\u274c']
+      ]
+      for (const [type, expectedEmoji] of cases) {
+        const blocks = markdownToBlocks(`> [!${type}] Text`)
+        expect(blocks[0].callout.icon.emoji).toBe(expectedEmoji)
+      }
+    })
+
+    it('should round-trip TIP callout', () => {
+      const blocks = markdownToBlocks('> [!TIP] Helpful tip')
+      const md = blocksToMarkdown(blocks)
+      expect(md).toContain('[!TIP]')
+      expect(md).toContain('Helpful tip')
+    })
+
+    it('should round-trip CAUTION callout', () => {
+      const blocks = markdownToBlocks('> [!CAUTION] Danger zone')
+      const md = blocksToMarkdown(blocks)
+      expect(md).toContain('[!CAUTION]')
+      expect(md).toContain('Danger zone')
+    })
+
     it('should handle multi-line callout with continuation lines', () => {
       const md = '> [!NOTE] First line\n> Second line\n> Third line'
       const blocks = markdownToBlocks(md)
