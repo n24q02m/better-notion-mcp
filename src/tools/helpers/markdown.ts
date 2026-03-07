@@ -37,6 +37,27 @@ export interface RichText {
   href?: string | null
 }
 
+/** Create a mention rich text element (no text property - Notion API rejects it on mentions) */
+function createMention(
+  mentionData: RichText['mention'],
+  title: string,
+  formatting: { bold: boolean; italic: boolean; code: boolean; strikethrough: boolean }
+): RichText {
+  return {
+    type: 'mention',
+    mention: mentionData,
+    plain_text: title,
+    annotations: {
+      bold: formatting.bold,
+      italic: formatting.italic,
+      strikethrough: formatting.strikethrough,
+      underline: false,
+      code: formatting.code,
+      color: 'default'
+    }
+  } as RichText
+}
+
 // Regular expressions for block parsing
 const CALLOUT_REGEX = /^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION|INFO|SUCCESS|ERROR)\]\s*(.*)/i
 const IMAGE_REGEX = /^!\[([^\]]*)\]\(([^)]+)\)$/
@@ -388,20 +409,7 @@ export function parseRichText(text: string): RichText[] {
           const idMatch = mentionTarget.match(/([a-f0-9]{32})/)
           const pageId = idMatch ? idMatch[1] : mentionTarget
 
-          richText.push({
-            type: 'mention',
-            mention: { page: { id: pageId } },
-            text: { content: mentionTitle, link: null },
-            plain_text: mentionTitle,
-            annotations: {
-              bold,
-              italic,
-              strikethrough,
-              underline: false,
-              code,
-              color: 'default'
-            }
-          })
+          richText.push(createMention({ page: { id: pageId } }, mentionTitle, { bold, italic, code, strikethrough }))
 
           i = closeParen
           continue
@@ -534,7 +542,7 @@ function richTextToMarkdown(richText: RichText[]): string {
  * Extract plain text from rich text
  */
 export function extractPlainText(richText: RichText[]): string {
-  return richText.map((rt) => rt.text.content).join('')
+  return richText.map((rt) => rt.plain_text || rt.text?.content || '').join('')
 }
 
 // ============================================================
