@@ -4,11 +4,11 @@
  */
 
 import type { Client } from '@notionhq/client'
+import { formatCover } from '../helpers/covers.js'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { autoPaginate, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties, extractPageProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
-import { isSafeUrl } from '../helpers/security.js'
 
 export interface DatabasesInput {
   action:
@@ -638,16 +638,7 @@ async function updateDatabaseContainer(notion: Client, input: DatabasesInput): P
     updates.icon = { type: 'emoji', emoji: input.icon }
   }
 
-  if (input.cover) {
-    if (!isSafeUrl(input.cover)) {
-      throw new NotionMCPError(
-        `Unsafe cover URL: ${input.cover}`,
-        'VALIDATION_ERROR',
-        'Use a safe URL (http:, https:).'
-      )
-    }
-    updates.cover = { type: 'external', external: { url: input.cover } }
-  }
+  if (input.cover) updates.cover = formatCover(input.cover)
 
   if (Object.keys(updates).length === 0) {
     throw new NotionMCPError(

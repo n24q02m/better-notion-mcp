@@ -4,12 +4,12 @@
  */
 
 import type { Client } from '@notionhq/client'
+import { formatCover } from '../helpers/covers.js'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties, extractPageProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
-import { isSafeUrl } from '../helpers/security.js'
 
 export interface CreatePageResult {
   action: 'create'
@@ -173,16 +173,7 @@ async function createPage(notion: Client, input: PagesInput): Promise<CreatePage
 
   const pageData: any = { parent, properties }
   if (input.icon) pageData.icon = { type: 'emoji', emoji: input.icon }
-  if (input.cover) {
-    if (!isSafeUrl(input.cover)) {
-      throw new NotionMCPError(
-        `Unsafe cover URL: ${input.cover}`,
-        'VALIDATION_ERROR',
-        'Use a safe URL (http:, https:).'
-      )
-    }
-    pageData.cover = { type: 'external', external: { url: input.cover } }
-  }
+  if (input.cover) pageData.cover = formatCover(input.cover)
 
   const page = await notion.pages.create(pageData)
 
@@ -343,16 +334,7 @@ async function updatePage(notion: Client, input: PagesInput): Promise<UpdatePage
 
   // Update metadata
   if (input.icon) updates.icon = { type: 'emoji', emoji: input.icon }
-  if (input.cover) {
-    if (!isSafeUrl(input.cover)) {
-      throw new NotionMCPError(
-        `Unsafe cover URL: ${input.cover}`,
-        'VALIDATION_ERROR',
-        'Use a safe URL (http:, https:).'
-      )
-    }
-    updates.cover = { type: 'external', external: { url: input.cover } }
-  }
+  if (input.cover) updates.cover = formatCover(input.cover)
   if (input.archived !== undefined) updates.archived = input.archived
 
   // Update properties
