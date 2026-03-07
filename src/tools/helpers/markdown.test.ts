@@ -339,6 +339,58 @@ describe('markdownToBlocks', () => {
       expect(dataCells[0][0].text.content).toBe('key')
       expect(dataCells[1][0].text.content).toBe('42')
     })
+
+    it('should parse bold text in table cells', () => {
+      const md = '| Header |\n| --- |\n| **bold** |'
+      const blocks = markdownToBlocks(md)
+      const cell = blocks[0].table.children[1].table_row.cells[0]
+      expect(cell).toHaveLength(1)
+      expect(cell[0].text.content).toBe('bold')
+      expect(cell[0].annotations.bold).toBe(true)
+    })
+
+    it('should parse italic text in table cells', () => {
+      const md = '| Header |\n| --- |\n| *italic* |'
+      const blocks = markdownToBlocks(md)
+      const cell = blocks[0].table.children[1].table_row.cells[0]
+      expect(cell[0].text.content).toBe('italic')
+      expect(cell[0].annotations.italic).toBe(true)
+    })
+
+    it('should parse inline code in table cells', () => {
+      const md = '| Header |\n| --- |\n| `code` |'
+      const blocks = markdownToBlocks(md)
+      const cell = blocks[0].table.children[1].table_row.cells[0]
+      expect(cell[0].text.content).toBe('code')
+      expect(cell[0].annotations.code).toBe(true)
+    })
+
+    it('should parse links in table cells', () => {
+      const md = '| Header |\n| --- |\n| [click](https://example.com) |'
+      const blocks = markdownToBlocks(md)
+      const cell = blocks[0].table.children[1].table_row.cells[0]
+      expect(cell[0].text.content).toBe('click')
+      expect(cell[0].text.link).toEqual({ url: 'https://example.com' })
+    })
+
+    it('should parse mixed formatting in table cells', () => {
+      const md = '| Header |\n| --- |\n| **bold** and *italic* |'
+      const blocks = markdownToBlocks(md)
+      const cell = blocks[0].table.children[1].table_row.cells[0]
+      // Should have multiple rich text segments
+      expect(cell.length).toBeGreaterThan(1)
+      const boldSegment = cell.find((rt: any) => rt.annotations?.bold)
+      expect(boldSegment).toBeDefined()
+      expect(boldSegment.text.content).toBe('bold')
+    })
+
+    it('should parse rich text in header cells', () => {
+      const md = '| **Bold Header** |\n| --- |\n| data |'
+      const blocks = markdownToBlocks(md)
+      const headerCell = blocks[0].table.children[0].table_row.cells[0]
+      expect(headerCell[0].text.content).toBe('Bold Header')
+      expect(headerCell[0].annotations.bold).toBe(true)
+    })
   })
 
   describe('images', () => {
