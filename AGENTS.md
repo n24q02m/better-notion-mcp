@@ -9,7 +9,7 @@ bun install                 # Install dependencies
 bun run build               # tsc --build && esbuild CLI bundle
 bun run check               # Biome check + tsc --noEmit (CI command)
 bun run check:fix           # Auto-fix Biome + type check
-bun test                    # vitest --passWithNoTests
+bun run test                # vitest --passWithNoTests (NEVER use bare "bun test")
 bun run test:watch          # vitest watch
 bun run test:coverage       # vitest --coverage
 bun run lint                # biome lint src
@@ -26,7 +26,7 @@ bun x vitest run -t "test name pattern"
 # Mise shortcuts
 mise run setup              # Full dev environment setup
 mise run lint               # bun run check
-mise run test               # bun test
+mise run test               # bun run test
 mise run fix                # bun run check:fix
 ```
 

@@ -45,8 +45,10 @@ bun run build
 4. **Run tests**
 
 ```bash
-bun test
+bun run test
 ```
+
+> **Note:** Always use `bun run test` (which runs vitest), not `bun test` (which uses bun's built-in test runner). The test suite uses vitest-specific APIs like `vi.hoisted()` and `importOriginal` that are not available in bun's runner.
 
 ## Development Workflow
 
@@ -65,7 +67,7 @@ bun run dev
 1. Create a new branch: `git checkout -b feature/your-feature-name`
 2. Make your changes
 3. Run checks: `bun run check`
-4. Run tests: `bun test`
+4. Run tests: `bun run test`
 5. Build the project: `bun run build`
 6. Commit your changes (see [Commit Convention](#commit-convention))
 7. Push to your fork: `git push origin feature/your-feature-name`
@@ -151,7 +153,7 @@ You do **not** need to create manual tags or changelog entries.
 Before submitting your PR, ensure:
 
 - [ ] Code follows TypeScript best practices
-- [ ] All tests pass (`bun test`)
+- [ ] All tests pass (`bun run test`)
 - [ ] Linting passes (`bun run lint`)
 - [ ] Formatting is correct (`bun run format:check`)
 - [ ] Type checking passes (`bun run type-check`)
@@ -183,7 +185,7 @@ bun run check:fix     # Auto-fix issues
 
 ```bash
 # Run all tests
-bun test
+bun run test
 
 # Run tests in watch mode
 bun run test:watch
