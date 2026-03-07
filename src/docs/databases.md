@@ -75,8 +75,8 @@ Optionally specify `data_source_id` to target a specific data source (defaults t
 - `description` - Description
 - `properties` - Schema properties (for create/update data source)
 - `is_inline` - Display as inline (boolean, for create/update_database)
-- `icon` - Emoji icon (for update_database)
-- `cover` - Cover image URL (for update_database)
+- `icon` - Emoji, external URL (`https://...`), or built-in shorthand (`name:color`, e.g. `document:gray`) (for update_database)
+- `cover` - External URL (`https://...`) or built-in shorthand (e.g. `gradient_1`, `solid_beige`, `nasa_carina_nebula`) (for update_database)
 - `filters` / `sorts` / `limit` - Query options
 - `search` - Smart search across text fields
 - `page_id` - Single page ID (for update_page)
