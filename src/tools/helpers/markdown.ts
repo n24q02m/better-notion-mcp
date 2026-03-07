@@ -283,6 +283,10 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         if (block.toggle.children && block.toggle.children.length > 0) {
           lines.push('')
           lines.push(blocksToMarkdown(block.toggle.children))
+        } else if (block.has_children && block.id) {
+          lines.push(
+            `<!-- has_children: fetch nested content with blocks tool, action: children, block_id: ${block.id} -->`
+          )
         }
         lines.push('</details>')
         break
@@ -320,15 +324,25 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
       case 'column_list': {
         lines.push(':::columns')
         const columns = block.column_list?.children || []
-        for (let colIdx = 0; colIdx < columns.length; colIdx++) {
-          lines.push(':::column')
-          const columnChildren = columns[colIdx].column?.children || []
-          if (columnChildren.length > 0) {
-            lines.push(blocksToMarkdown(columnChildren))
+        if (columns.length > 0) {
+          for (let colIdx = 0; colIdx < columns.length; colIdx++) {
+            lines.push(':::column')
+            const columnChildren = columns[colIdx].column?.children || []
+            if (columnChildren.length > 0) {
+              lines.push(blocksToMarkdown(columnChildren))
+            } else if (columns[colIdx].has_children && columns[colIdx].id) {
+              lines.push(
+                `<!-- has_children: fetch nested content with blocks tool, action: children, block_id: ${columns[colIdx].id} -->`
+              )
+            }
+            if (colIdx < columns.length - 1) {
+              lines.push('')
+            }
           }
-          if (colIdx < columns.length - 1) {
-            lines.push('')
-          }
+        } else if (block.has_children && block.id) {
+          lines.push(
+            `<!-- has_children: fetch nested content with blocks tool, action: children, block_id: ${block.id} -->`
+          )
         }
         lines.push(':::end')
         break
