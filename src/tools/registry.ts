@@ -86,8 +86,16 @@ const TOOLS = [
         parent_id: { type: 'string', description: 'Parent page or database ID' },
         properties: { type: 'object', description: 'Page properties (for database pages)' },
         property_id: { type: 'string', description: 'Property ID (for get_property action)' },
-        icon: { type: 'string', description: 'Emoji icon' },
-        cover: { type: 'string', description: 'Cover image URL' },
+        icon: {
+          type: 'string',
+          description:
+            'Icon: emoji (e.g. "📋"), external URL (https://...), or built-in shorthand (name:color, e.g. "document:gray")'
+        },
+        cover: {
+          type: 'string',
+          description:
+            'Cover image: URL or built-in shorthand (gradient_1..11, solid_red/yellow/blue/beige, nasa_*, met_*, rijksmuseum_*, woodcuts_*)'
+        },
         archived: { type: 'boolean', description: 'Archive status' }
       },
       required: ['action']
@@ -125,7 +133,8 @@ const TOOLS = [
         },
         database_id: {
           type: 'string',
-          description: 'Database ID (from Notion URL) or data_source_id (from workspace search). Auto-resolved for query/create_page/list_templates.'
+          description:
+            'Database ID (from Notion URL) or data_source_id (from workspace search). Auto-resolved for query/create_page/list_templates.'
         },
         data_source_id: { type: 'string', description: 'Data source ID (for update_data_source action)' },
         parent_id: { type: 'string', description: 'Parent page ID (for create/update_database)' },
@@ -133,8 +142,16 @@ const TOOLS = [
         description: { type: 'string', description: 'Description' },
         properties: { type: 'object', description: 'Schema properties (for create/update data source)' },
         is_inline: { type: 'boolean', description: 'Display as inline (for create/update_database)' },
-        icon: { type: 'string', description: 'Emoji icon (for update_database)' },
-        cover: { type: 'string', description: 'Cover image URL (for update_database)' },
+        icon: {
+          type: 'string',
+          description:
+            'Icon (for update_database): emoji (e.g. "📋"), external URL (https://...), or built-in shorthand (name:color, e.g. "document:gray")'
+        },
+        cover: {
+          type: 'string',
+          description:
+            'Cover image (for update_database): URL or built-in shorthand (gradient_1..11, solid_red/yellow/blue/beige, nasa_*, met_*, rijksmuseum_*, woodcuts_*)'
+        },
         filters: { type: 'object', description: 'Query filters (for query action)' },
         sorts: { type: 'array', items: { type: 'object' }, description: 'Query sorts' },
         limit: { type: 'number', description: 'Max query results' },
@@ -349,7 +366,6 @@ const TOOLS = [
  *   Called per tool invocation to support both singleton (stdio) and per-request (HTTP) patterns.
  */
 export function registerTools(server: Server, notionClientFactory: () => Client) {
-
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: TOOLS
   }))
