@@ -71,6 +71,29 @@ describe('users', () => {
       expect(result.users).toEqual([])
     })
 
+    it('should suggest from_workspace when restricted_resource error', async () => {
+      mockNotion.users.list.mockRejectedValue({ code: 'restricted_resource' })
+
+      await expect(users(mockNotion as any, { action: 'list' })).rejects.toMatchObject({
+        code: 'RESTRICTED_RESOURCE',
+        message: expect.stringContaining('does not have permission')
+      })
+    })
+
+    it('should suggest from_workspace when RESTRICTED_RESOURCE error', async () => {
+      mockNotion.users.list.mockRejectedValue({ code: 'RESTRICTED_RESOURCE' })
+
+      await expect(users(mockNotion as any, { action: 'list' })).rejects.toMatchObject({
+        code: 'RESTRICTED_RESOURCE'
+      })
+    })
+
+    it('should rethrow non-permission errors', async () => {
+      mockNotion.users.list.mockRejectedValue(new Error('network error'))
+
+      await expect(users(mockNotion as any, { action: 'list' })).rejects.toThrow('network error')
+    })
+
     it('should default name to Unknown when missing', async () => {
       mockNotion.users.list.mockResolvedValue({
         results: [{ id: 'user-1', type: 'person', avatar_url: null, person: {} }],

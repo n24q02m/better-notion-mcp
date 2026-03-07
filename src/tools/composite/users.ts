@@ -20,23 +20,35 @@ export async function users(notion: Client, input: UsersInput): Promise<any> {
   return withErrorHandling(async () => {
     switch (input.action) {
       case 'list': {
-        const usersList = await autoPaginate((cursor) =>
-          notion.users.list({
-            start_cursor: cursor,
-            page_size: 100
-          })
-        )
+        try {
+          const usersList = await autoPaginate((cursor) =>
+            notion.users.list({
+              start_cursor: cursor,
+              page_size: 100
+            })
+          )
 
-        return {
-          action: 'list',
-          total: usersList.length,
-          users: usersList.map((user: any) => ({
-            id: user.id,
-            type: user.type,
-            name: user.name || 'Unknown',
-            avatar_url: user.avatar_url,
-            email: user.type === 'person' ? user.person?.email : undefined
-          }))
+          return {
+            action: 'list',
+            total: usersList.length,
+            users: usersList.map((user: any) => ({
+              id: user.id,
+              type: user.type,
+              name: user.name || 'Unknown',
+              avatar_url: user.avatar_url,
+              email: user.type === 'person' ? user.person?.email : undefined
+            }))
+          }
+        } catch (error: any) {
+          // Auto-suggest from_workspace when permission denied
+          if (error.code === 'restricted_resource' || error.code === 'RESTRICTED_RESOURCE') {
+            throw new NotionMCPError(
+              'Integration does not have permission to list users',
+              'RESTRICTED_RESOURCE',
+              'Use action "from_workspace" instead — it extracts users from accessible pages without requiring admin permissions.'
+            )
+          }
+          throw error
         }
       }
 

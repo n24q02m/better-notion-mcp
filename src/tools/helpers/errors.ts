@@ -70,6 +70,9 @@ function sanitizeErrorDetails(error: any): any {
  * Enhance Notion API error with helpful context
  */
 export function enhanceError(error: any): NotionMCPError {
+  // Already a NotionMCPError — pass through unchanged
+  if (error instanceof NotionMCPError) return error
+
   // Notion API error
   if (error.code) {
     return handleNotionError(error)
@@ -126,14 +129,14 @@ function handleNotionError(error: any): NotionMCPError {
       return new NotionMCPError(
         'Integration does not have access to this resource',
         'RESTRICTED_RESOURCE',
-        'Share the page/database with your integration in Notion settings'
+        'Share the page/database with your integration in Notion settings. For users/list: try the from_workspace action instead (extracts users from accessible pages).'
       )
 
     case 'object_not_found':
       return new NotionMCPError(
         'Page or database not found',
         'NOT_FOUND',
-        'Check that the ID is correct and the resource exists'
+        'Check the ID is correct. For databases: use the database container ID (from URL), not the data_source ID (from search). If you got this ID from workspace search, try databases/get first to resolve the correct ID.'
       )
 
     case 'validation_error':

@@ -96,7 +96,7 @@ const TOOLS = [
   {
     name: 'databases',
     description:
-      'Database operations: create, get, query, create_page, update_page, delete_page, create_data_source, update_data_source, update_database, list_templates. Databases contain data sources with schema and rows.',
+      'Database operations: create, get, query, create_page, update_page, delete_page, create_data_source, update_data_source, update_database, list_templates. Accepts both database_id (from URL) and data_source_id (from workspace search) — auto-resolved. Databases contain data sources with schema and rows.',
     annotations: {
       title: 'Databases',
       readOnlyHint: false,
@@ -123,7 +123,10 @@ const TOOLS = [
           ],
           description: 'Action to perform'
         },
-        database_id: { type: 'string', description: 'Database ID (container)' },
+        database_id: {
+          type: 'string',
+          description: 'Database ID (from Notion URL) or data_source_id (from workspace search). Auto-resolved for query/create_page/list_templates.'
+        },
         data_source_id: { type: 'string', description: 'Data source ID (for update_data_source action)' },
         parent_id: { type: 'string', description: 'Parent page ID (for create/update_database)' },
         title: { type: 'string', description: 'Title (for database or data source)' },
@@ -147,7 +150,7 @@ const TOOLS = [
   {
     name: 'blocks',
     description:
-      'Block-level content: get, children, append, update, delete. Page IDs are valid block IDs. Use for precise edits. Supports tables, toggles, callouts, images, equations via markdown.',
+      'Block-level content: get, children, append, update, delete. Page IDs are valid block IDs. update only works on text blocks (paragraph, headings, lists, quote, to_do, code). Supports tables, toggles, callouts, images, equations via markdown.',
     annotations: {
       title: 'Blocks',
       readOnlyHint: false,
@@ -171,7 +174,8 @@ const TOOLS = [
   },
   {
     name: 'users',
-    description: 'User info: list, get, me, from_workspace. Use from_workspace if list fails due to permissions.',
+    description:
+      'User info: list, get, me, from_workspace. list requires admin permissions — if it fails, use from_workspace (extracts users from accessible pages).',
     annotations: {
       title: 'Users',
       readOnlyHint: true,
@@ -305,7 +309,11 @@ const TOOLS = [
         mode: { type: 'string', enum: ['single', 'multi_part'], description: 'Upload mode (default: single)' },
         number_of_parts: { type: 'number', description: 'Number of parts (for multi_part mode)' },
         part_number: { type: 'number', description: 'Part number (for send in multi_part mode)' },
-        file_content: { type: 'string', description: 'Base64-encoded file content (for send)' },
+        file_content: {
+          type: 'string',
+          description:
+            'Base64-encoded file content (for send). Must be valid base64: only A-Z, a-z, 0-9, +, /, = chars. Use Buffer.from(bytes).toString("base64") to encode.'
+        },
         limit: { type: 'number', description: 'Max results for list' }
       },
       required: ['action']

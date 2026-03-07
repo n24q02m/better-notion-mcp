@@ -5,6 +5,7 @@
 
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
+import { normalizeId } from '../helpers/id.js'
 import { autoPaginate, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties, extractPageProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
@@ -160,6 +161,51 @@ export type DatabasesResponse =
   | ListDataSourceTemplatesResponse
 
 /**
+ * Smart ID resolution: accepts both database container ID and data_source ID
+ * Tries database_id first; if NOT_FOUND, tries as data_source_id
+ * Returns both IDs for downstream operations
+ */
+async function resolveDataSourceId(
+  notion: Client,
+  id: string
+): Promise<{ databaseId: string; dataSourceId: string }> {
+  const normalized = normalizeId(id)
+
+  // Try as database container first
+  try {
+    const database: any = await notion.databases.retrieve({ database_id: normalized })
+    if (database.data_sources?.length > 0) {
+      return { databaseId: database.id, dataSourceId: database.data_sources[0].id }
+    }
+    throw new NotionMCPError(
+      'Database has no data sources',
+      'VALIDATION_ERROR',
+      'This database container has no data sources yet. Use create_data_source to add one.'
+    )
+  } catch (error: any) {
+    if (error instanceof NotionMCPError) throw error
+
+    // If NOT_FOUND, try interpreting as data_source_id
+    if (error.code === 'object_not_found') {
+      try {
+        const ds: any = await (notion as any).dataSources.retrieve({ data_source_id: normalized })
+        return {
+          databaseId: ds.parent?.database_id || normalized,
+          dataSourceId: ds.id
+        }
+      } catch {
+        throw new NotionMCPError(
+          `ID "${id}" is not a valid database or data source`,
+          'NOT_FOUND',
+          'Use the database ID from the Notion URL (e.g., notion.so/<database_id>?...), or a data_source_id from workspace search. Try workspace/search with filter.object="data_source" to find available databases.'
+        )
+      }
+    }
+    throw error
+  }
+}
+
+/**
  * Unified databases tool - handles all database operations
  */
 export async function databases(notion: Client, input: DatabasesInput): Promise<DatabasesResponse> {
@@ -257,7 +303,7 @@ async function getDatabase(notion: Client, input: DatabasesInput): Promise<GetDa
 
   // Get database (contains list of data_sources)
   const database: any = await notion.databases.retrieve({
-    database_id: input.database_id
+    database_id: normalizeId(input.database_id)
   })
 
   // Get detailed schema from first data source
@@ -314,19 +360,15 @@ async function getDatabase(notion: Client, input: DatabasesInput): Promise<GetDa
  */
 async function queryDatabase(notion: Client, input: DatabasesInput): Promise<QueryDatabaseResponse> {
   if (!input.database_id) {
-    throw new NotionMCPError('database_id required for query action', 'VALIDATION_ERROR', 'Provide database_id')
+    throw new NotionMCPError(
+      'database_id required for query action',
+      'VALIDATION_ERROR',
+      'Provide database_id (from Notion URL) or data_source_id (from workspace search). Both formats are accepted.'
+    )
   }
 
-  // First, get data source ID from database
-  const database: any = await notion.databases.retrieve({
-    database_id: input.database_id
-  })
-
-  if (!database.data_sources || database.data_sources.length === 0) {
-    throw new NotionMCPError('No data sources found in database', 'VALIDATION_ERROR', 'Database has no data sources')
-  }
-
-  const dataSourceId = database.data_sources[0].id
+  // Smart resolve: accepts both database_id and data_source_id
+  const { databaseId, dataSourceId } = await resolveDataSourceId(notion, input.database_id)
 
   let filter = input.filters
 
@@ -388,7 +430,7 @@ async function queryDatabase(notion: Client, input: DatabasesInput): Promise<Que
 
   return {
     action: 'query',
-    database_id: input.database_id,
+    database_id: databaseId,
     data_source_id: dataSourceId,
     total: formattedResults.length,
     results: formattedResults
@@ -401,19 +443,15 @@ async function queryDatabase(notion: Client, input: DatabasesInput): Promise<Que
  */
 async function createDatabasePages(notion: Client, input: DatabasesInput): Promise<CreateDatabasePageResponse> {
   if (!input.database_id) {
-    throw new NotionMCPError('database_id required', 'VALIDATION_ERROR', 'Provide database_id')
+    throw new NotionMCPError(
+      'database_id required',
+      'VALIDATION_ERROR',
+      'Provide database_id (from Notion URL) or data_source_id (from workspace search). Both formats are accepted.'
+    )
   }
 
-  // Get data source ID from database
-  const database: any = await notion.databases.retrieve({
-    database_id: input.database_id
-  })
-
-  if (!database.data_sources || database.data_sources.length === 0) {
-    throw new NotionMCPError('No data sources found in database', 'VALIDATION_ERROR', 'Database has no data sources')
-  }
-
-  const dataSourceId = database.data_sources[0].id
+  // Smart resolve: accepts both database_id and data_source_id
+  const { databaseId, dataSourceId } = await resolveDataSourceId(notion, input.database_id)
 
   // Fetch schema for property type mapping
   const dataSource: any = await (notion as any).dataSources.retrieve({
@@ -449,7 +487,7 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
 
   return {
     action: 'create_page',
-    database_id: input.database_id,
+    database_id: databaseId,
     data_source_id: dataSourceId,
     processed: results.length,
     results
@@ -658,7 +696,7 @@ async function updateDatabaseContainer(notion: Client, input: DatabasesInput): P
   }
 
   await notion.databases.update({
-    database_id: input.database_id,
+    database_id: normalizeId(input.database_id),
     ...updates
   })
 
@@ -681,20 +719,13 @@ async function listDataSourceTemplates(
     throw new NotionMCPError(
       'database_id required for list_templates action',
       'VALIDATION_ERROR',
-      'Provide database_id'
+      'Provide database_id (from Notion URL) or data_source_id. Both formats are accepted.'
     )
   }
 
-  // Get data source ID from database
-  const database: any = await notion.databases.retrieve({
-    database_id: input.database_id
-  })
-
-  if (!database.data_sources || database.data_sources.length === 0) {
-    throw new NotionMCPError('No data sources found in database', 'VALIDATION_ERROR', 'Database has no data sources')
-  }
-
-  const dataSourceId = input.data_source_id || database.data_sources[0].id
+  // Smart resolve: accepts both database_id and data_source_id
+  const { databaseId, dataSourceId: resolvedDsId } = await resolveDataSourceId(notion, input.database_id)
+  const dataSourceId = input.data_source_id || resolvedDsId
 
   const templates = await autoPaginate(async (cursor) => {
     const response: any = await (notion as any).dataSources.listTemplates({
@@ -711,7 +742,7 @@ async function listDataSourceTemplates(
 
   return {
     action: 'list_templates',
-    database_id: input.database_id,
+    database_id: databaseId,
     data_source_id: dataSourceId,
     total: templates.length,
     templates: templates.map((t: any) => ({

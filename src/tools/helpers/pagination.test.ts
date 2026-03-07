@@ -163,8 +163,8 @@ describe('fetchChildrenRecursive', () => {
     const blocks: any[] = [{ id: 'toggle-1', type: 'toggle', has_children: true, toggle: {} }]
     const fetchChildren = vi.fn().mockResolvedValue([])
 
-    // depth=3 should be at MAX_DEPTH and return immediately
-    await fetchChildrenRecursive(blocks, fetchChildren, 3)
+    // depth=5 should be at MAX_DEPTH and return immediately
+    await fetchChildrenRecursive(blocks, fetchChildren, 5)
 
     expect(fetchChildren).not.toHaveBeenCalled()
   })

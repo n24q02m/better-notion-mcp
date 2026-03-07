@@ -60,8 +60,8 @@ const BLOCKS_NEEDING_CHILDREN = new Set([
   'heading_3'
 ])
 
-/** Max recursion depth to prevent runaway API calls */
-const MAX_DEPTH = 3
+/** Max recursion depth to prevent runaway API calls (5 covers deeply nested lists/toggles) */
+const MAX_DEPTH = 5
 
 /**
  * Recursively fetch children for blocks that need them (tables, toggles, columns, etc.)

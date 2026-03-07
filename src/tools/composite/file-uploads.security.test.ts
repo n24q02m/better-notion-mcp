@@ -19,9 +19,10 @@ describe('fileUploads Security', () => {
     const targetBytes = limit + 1024 * 100 // 10MB + 100KB
     const base64Length = Math.ceil((targetBytes * 4) / 3)
 
-    // Create a "fake" base64 string of sufficient length
-    // 'a' is a valid base64 char
-    const largeContent = 'a'.repeat(base64Length)
+    // Create a valid base64 string of sufficient length
+    // 'a' is a valid base64 char; pad to multiple of 4 for valid base64
+    const paddedLength = Math.ceil(base64Length / 4) * 4
+    const largeContent = 'a'.repeat(paddedLength)
 
     await expect(
       fileUploads(mockNotion as any, {
