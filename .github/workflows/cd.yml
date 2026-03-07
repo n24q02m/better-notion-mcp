@@ -259,7 +259,7 @@ jobs:
           docker push "${AR_IMAGE}:${VERSION}"
 
       - name: Deploy to Cloud Run
-        uses: google-github-actions/deploy-cloudrun@e72a01bee26bb03b0d8b8c39bb2ec41d0ab0e8c7 # v2
+        uses: google-github-actions/deploy-cloudrun@251330ba9a8a34bfbc1622895f42e1d53fd14522 # v2
         with:
           service: ${{ needs.release.outputs.is_prerelease == 'true' && 'better-notion-mcp-staging' || 'better-notion-mcp' }}
           region: ${{ secrets.GCP_REGION }}
