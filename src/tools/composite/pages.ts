@@ -5,6 +5,7 @@
 
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
+import { formatIcon } from '../helpers/icons.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties, extractPageProperties } from '../helpers/properties.js'
@@ -172,7 +173,7 @@ async function createPage(notion: Client, input: PagesInput): Promise<CreatePage
   }
 
   const pageData: any = { parent, properties }
-  if (input.icon) pageData.icon = { type: 'emoji', emoji: input.icon }
+  if (input.icon) pageData.icon = formatIcon(input.icon)
   if (input.cover) {
     if (!isSafeUrl(input.cover)) {
       throw new NotionMCPError(
@@ -342,7 +343,7 @@ async function updatePage(notion: Client, input: PagesInput): Promise<UpdatePage
   const updates: any = {}
 
   // Update metadata
-  if (input.icon) updates.icon = { type: 'emoji', emoji: input.icon }
+  if (input.icon) updates.icon = formatIcon(input.icon)
   if (input.cover) {
     if (!isSafeUrl(input.cover)) {
       throw new NotionMCPError(

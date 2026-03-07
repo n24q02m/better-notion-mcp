@@ -5,6 +5,7 @@
 
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
+import { formatIcon } from '../helpers/icons.js'
 import { autoPaginate, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties, extractPageProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
@@ -635,7 +636,7 @@ async function updateDatabaseContainer(notion: Client, input: DatabasesInput): P
   }
 
   if (input.icon) {
-    updates.icon = { type: 'emoji', emoji: input.icon }
+    updates.icon = formatIcon(input.icon)
   }
 
   if (input.cover) {

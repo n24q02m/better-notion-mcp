@@ -64,6 +64,6 @@ Move a page to a new parent page.
 - `parent_id` - Parent page or database ID
 - `properties` - Page properties (for database pages)
 - `property_id` - Property ID (required for get_property action)
-- `icon` - Emoji icon
+- `icon` - Emoji, external URL (`https://...`), or built-in shorthand (`name:color`, e.g. `document:gray`)
 - `cover` - Cover image URL
 - `archived` - Archive status (boolean, for update action)
