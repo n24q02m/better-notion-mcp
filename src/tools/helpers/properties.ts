@@ -5,6 +5,37 @@
 
 import * as RichText from './richtext.js'
 
+/** Extract a 32-char hex page ID from a Notion URL, or return the input as-is if it's already a raw ID */
+function extractPageId(value: string): string {
+  const match = value.match(/([a-f0-9]{32})/)
+  if (match) return match[1]
+  // Also accept hyphenated UUIDs as-is
+  return value
+}
+
+/** Convert a single string or array value to Notion relation format */
+function toRelation(value: any): { relation: { id: string }[] } {
+  if (typeof value === 'string') {
+    if (value === '') return { relation: [] }
+    // Try parsing as JSON array (e.g. '["id1", "id2"]')
+    if (value.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(value)
+        if (Array.isArray(parsed)) {
+          return { relation: parsed.map((v: string) => ({ id: extractPageId(v) })) }
+        }
+      } catch {
+        // Not valid JSON, treat as single value
+      }
+    }
+    return { relation: [{ id: extractPageId(value) }] }
+  }
+  if (Array.isArray(value)) {
+    return { relation: value.map((v: string) => ({ id: extractPageId(v) })) }
+  }
+  return value
+}
+
 /**
  * Convert simple property values to Notion API format
  * Handles auto-detection of property types and conversion
@@ -42,6 +73,8 @@ export function convertToNotionProperties(
         converted[key] = { email: value }
       } else if (schemaType === 'phone_number') {
         converted[key] = { phone_number: value }
+      } else if (schemaType === 'relation') {
+        converted[key] = toRelation(value)
       } else if (key === 'Name' || key === 'Title' || key.toLowerCase() === 'title') {
         // Fallback: guess title from key name
         converted[key] = { title: [RichText.text(value)] }
@@ -54,6 +87,11 @@ export function convertToNotionProperties(
     } else if (typeof value === 'boolean') {
       converted[key] = { checkbox: value }
     } else if (Array.isArray(value)) {
+      const schemaType = schema?.[key]
+      if (schemaType === 'relation') {
+        converted[key] = toRelation(value)
+        continue
+      }
       // Could be multi_select, relation, people, files
       // Only assume multi_select if all elements are strings
       if (value.length > 0 && value.every((v) => typeof v === 'string')) {
