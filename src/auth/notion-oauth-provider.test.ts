@@ -97,9 +97,7 @@ describe('createNotionOAuthProvider', () => {
       )
 
       // First token claims the bind (same IP)
-      await requestContext.run({ ip: '10.0.0.1' }, () =>
-        provider.verifyAccessToken('sk-ant-oat01-legit-client')
-      )
+      await requestContext.run({ ip: '10.0.0.1' }, () => provider.verifyAccessToken('sk-ant-oat01-legit-client'))
 
       // Second DIFFERENT token should be rejected — bind is consumed
       await requestContext.run({ ip: '10.0.0.1' }, () =>
@@ -133,9 +131,7 @@ describe('createNotionOAuthProvider', () => {
       )
 
       // Bind during pending period (same IP)
-      await requestContext.run({ ip: '10.0.0.1' }, () =>
-        provider.verifyAccessToken('sk-ant-legit-token')
-      )
+      await requestContext.run({ ip: '10.0.0.1' }, () => provider.verifyAccessToken('sk-ant-legit-token'))
 
       // Advance past pending bind TTL
       vi.advanceTimersByTime(45 * 1000)
