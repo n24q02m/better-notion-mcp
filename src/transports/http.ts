@@ -117,8 +117,8 @@ export async function startHttp() {
       })
 
       if (!tokenResponse.ok) {
-        const errBody = await tokenResponse.text()
-        console.error('Notion token exchange failed:', tokenResponse.status, errBody)
+        await tokenResponse.body?.cancel()
+        console.error('Notion token exchange failed:', tokenResponse.status)
         res
           .status(502)
           .json({ error: 'token_exchange_failed', error_description: 'Failed to exchange code with Notion' })
