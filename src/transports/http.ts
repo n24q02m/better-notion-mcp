@@ -150,10 +150,11 @@ export async function startHttp() {
   })
 
   const authMiddleware = requireBearerAuth({ verifier: provider })
+  const jsonParser = express.json()
   const transports: Map<string, StreamableHTTPServerTransport> = new Map()
 
   // MCP endpoint — POST (new session or existing)
-  app.post('/mcp', authMiddleware, async (req, res) => {
+  app.post('/mcp', jsonParser, authMiddleware, async (req, res) => {
     const sessionId = req.headers['mcp-session-id'] as string | undefined
 
     // Existing session

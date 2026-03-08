@@ -21,7 +21,9 @@ vi.mock('express', () => {
     listen: vi.fn((_port: number, _host: string, cb?: Fn) => (cb as (() => void) | undefined)?.()),
     _handlers: handlers
   }
-  return { default: vi.fn(() => mockApp) }
+  const expressFn = vi.fn(() => mockApp) as any
+  expressFn.json = vi.fn(() => (_req: any, _res: any, next: any) => next())
+  return { default: expressFn }
 })
 
 vi.mock('@modelcontextprotocol/sdk/server/auth/router.js', () => ({
@@ -128,8 +130,8 @@ describe('startHttp', () => {
     // Health endpoint registered
     expect(app.get).toHaveBeenCalledWith('/health', expect.any(Function))
 
-    // MCP endpoints registered (POST, GET, DELETE)
-    expect(app.post).toHaveBeenCalledWith('/mcp', expect.anything(), expect.any(Function))
+    // MCP endpoints registered (POST with jsonParser + authMiddleware, GET/DELETE with authMiddleware)
+    expect(app.post).toHaveBeenCalledWith('/mcp', expect.anything(), expect.anything(), expect.any(Function))
     expect(app.get).toHaveBeenCalledWith('/mcp', expect.anything(), expect.any(Function))
     expect(app.delete).toHaveBeenCalledWith('/mcp', expect.anything(), expect.any(Function))
 
