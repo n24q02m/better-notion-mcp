@@ -418,13 +418,15 @@ async function queryDatabase(notion: Client, input: DatabasesInput): Promise<Que
   const results = input.limit ? allResults.slice(0, input.limit) : allResults
 
   // Format results
-  const formattedResults = results.map((page: any) => {
+  const formattedResults = new Array(results.length)
+  for (let i = 0; i < results.length; i++) {
+    const page: any = results[i]
     const props = extractPageProperties(page.properties)
     props.page_id = page.id
     props.url = page.url
 
-    return props
-  })
+    formattedResults[i] = props
+  }
 
   return {
     action: 'query',
@@ -535,10 +537,19 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
  * Maps to: Multiple PATCH /v1/pages/{id} with archived: true
  */
 async function deleteDatabasePages(notion: Client, input: DatabasesInput): Promise<DeleteDatabasePageResponse> {
-  const pageIds =
-    input.page_ids ||
-    (input.page_id ? [input.page_id] : []) ||
-    (input.pages ? input.pages.map((p) => p.page_id!).filter(Boolean) : [])
+  let pageIds = input.page_ids || (input.page_id ? [input.page_id] : [])
+  if (!pageIds || pageIds.length === 0) {
+    if (input.pages) {
+      pageIds = []
+      for (const p of input.pages) {
+        if (p.page_id) {
+          pageIds.push(p.page_id)
+        }
+      }
+    } else {
+      pageIds = []
+    }
+  }
 
   if (pageIds.length === 0) {
     throw new NotionMCPError('page_id or page_ids required', 'VALIDATION_ERROR', 'Provide page IDs to delete')
