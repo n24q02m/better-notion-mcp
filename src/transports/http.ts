@@ -10,6 +10,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
 import { Client } from '@notionhq/client'
 import express from 'express'
+import rateLimit from 'express-rate-limit'
 import { createNotionOAuthProvider, requestContext } from '../auth/notion-oauth-provider.js'
 import { createMCPServer } from '../create-server.js'
 
@@ -55,8 +56,16 @@ export async function startHttp() {
 
   const app = express()
 
-  // Trust reverse proxy headers (Cloud Run, CF) for express-rate-limit
+  // Trust reverse proxy headers (Caddy, CF) for express-rate-limit
   app.set('trust proxy', true)
+
+  // Rate limit MCP endpoints per IP
+  const mcpRateLimit = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 120,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false
+  })
 
   // Propagate request IP via AsyncLocalStorage for IP-scoped pending binds
   app.use((req, _res, next) => {
@@ -165,7 +174,7 @@ export async function startHttp() {
   const sessionOwners: Map<string, string> = new Map() // sessionId → notionToken
 
   // MCP endpoint — POST (new session or existing)
-  app.post('/mcp', jsonParser, authMiddleware, async (req, res) => {
+  app.post('/mcp', mcpRateLimit, jsonParser, authMiddleware, async (req, res) => {
     const sessionId = req.headers['mcp-session-id'] as string | undefined
 
     // Existing session — verify the authenticated user owns this session
@@ -230,7 +239,7 @@ export async function startHttp() {
   }
 
   // MCP endpoint — GET (SSE streaming for existing session)
-  app.get('/mcp', authMiddleware, async (req, res) => {
+  app.get('/mcp', mcpRateLimit, authMiddleware, async (req, res) => {
     const sessionId = req.headers['mcp-session-id'] as string
     if (sessionId && transports.has(sessionId)) {
       if (!verifySessionOwner(req, res, sessionId)) return
@@ -241,7 +250,7 @@ export async function startHttp() {
   })
 
   // MCP endpoint — DELETE (close session)
-  app.delete('/mcp', authMiddleware, async (req, res) => {
+  app.delete('/mcp', mcpRateLimit, authMiddleware, async (req, res) => {
     const sessionId = req.headers['mcp-session-id'] as string
     if (sessionId && transports.has(sessionId)) {
       if (!verifySessionOwner(req, res, sessionId)) return
