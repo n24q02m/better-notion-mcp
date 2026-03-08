@@ -332,6 +332,63 @@ describe('markdownToBlocks', () => {
       expect(children[0].type).toBe('heading_1')
       expect(children[1].type).toBe('bulleted_list_item')
     })
+
+    it('should preserve title when summary is inline with details tag', () => {
+      const md = '<details><summary>Title</summary>\nContent\n</details>'
+      const blocks = markdownToBlocks(md)
+      expect(blocks).toHaveLength(1)
+      expect(blocks[0].type).toBe('toggle')
+      expect(getRichTextContent(blocks[0])).toBe('Title')
+      expect(blocks[0].toggle.children).toHaveLength(1)
+      expect(blocks[0].toggle.children[0].type).toBe('paragraph')
+    })
+
+    it('should parse all-on-one-line toggle', () => {
+      const md = '<details><summary>Title</summary>Content here</details>'
+      const blocks = markdownToBlocks(md)
+      expect(blocks).toHaveLength(1)
+      expect(blocks[0].type).toBe('toggle')
+      expect(getRichTextContent(blocks[0])).toBe('Title')
+      expect(blocks[0].toggle.children).toHaveLength(1)
+      expect(blocks[0].toggle.children[0].type).toBe('paragraph')
+    })
+
+    it('should parse sequential toggles as siblings', () => {
+      const md =
+        '<details>\n<summary>First</summary>\n\nContent 1\n</details>\n\n<details>\n<summary>Second</summary>\n\nContent 2\n</details>'
+      const blocks = markdownToBlocks(md)
+      expect(blocks).toHaveLength(2)
+      expect(blocks[0].type).toBe('toggle')
+      expect(getRichTextContent(blocks[0])).toBe('First')
+      expect(blocks[0].toggle.children).toHaveLength(1)
+      expect(blocks[1].type).toBe('toggle')
+      expect(getRichTextContent(blocks[1])).toBe('Second')
+      expect(blocks[1].toggle.children).toHaveLength(1)
+    })
+
+    it('should parse nested toggles correctly', () => {
+      const md =
+        '<details>\n<summary>Outer</summary>\n\n<details>\n<summary>Inner</summary>\n\nInner content\n</details>\n\n</details>'
+      const blocks = markdownToBlocks(md)
+      expect(blocks).toHaveLength(1)
+      expect(getRichTextContent(blocks[0])).toBe('Outer')
+      const outerChildren = blocks[0].toggle.children
+      expect(outerChildren).toHaveLength(1)
+      expect(outerChildren[0].type).toBe('toggle')
+      expect(getRichTextContent(outerChildren[0])).toBe('Inner')
+      expect(outerChildren[0].toggle.children).toHaveLength(1)
+    })
+
+    it('should round-trip toggle blocks preserving title and children', () => {
+      const md = '<details>\n<summary>Round Trip</summary>\n\nSome content\n</details>'
+      const blocks = markdownToBlocks(md)
+      const output = blocksToMarkdown(blocks)
+      const reparsed = markdownToBlocks(output)
+      expect(reparsed).toHaveLength(1)
+      expect(reparsed[0].type).toBe('toggle')
+      expect(getRichTextContent(reparsed[0])).toBe('Round Trip')
+      expect(reparsed[0].toggle.children).toHaveLength(1)
+    })
   })
 
   describe('tables', () => {
