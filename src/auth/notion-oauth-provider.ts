@@ -1,15 +1,19 @@
-import { randomBytes } from 'node:crypto'
+import { AsyncLocalStorage } from 'node:async_hooks'
+import { createHash, randomBytes } from 'node:crypto'
 import { InvalidTokenError } from '@modelcontextprotocol/sdk/server/auth/errors.js'
 import { ProxyOAuthServerProvider } from '@modelcontextprotocol/sdk/server/auth/providers/proxyProvider.js'
 import { Client } from '@notionhq/client'
 import { StatelessClientStore } from './stateless-client-store.js'
+
+/** Request context propagated via AsyncLocalStorage for IP-scoped pending binds */
+export const requestContext = new AsyncLocalStorage<{ ip?: string }>()
 
 const NOTION_AUTH_URL = 'https://api.notion.com/v1/oauth/authorize'
 const NOTION_TOKEN_URL = 'https://api.notion.com/v1/oauth/token'
 const AUTH_CODE_TTL = 10 * 60 * 1000 // 10 minutes
 const PENDING_AUTH_TTL = 10 * 60 * 1000 // 10 minutes
 const NOTION_TOKEN_TTL = 24 * 60 * 60 * 1000 // 24 hours
-const PENDING_BIND_TTL = 2 * 60 * 1000 // 2 minutes to claim a pending bind after OAuth
+const PENDING_BIND_TTL = 30 * 1000 // 30 seconds to claim a pending bind after OAuth
 const VERIFY_CACHE_TTL = 5 * 60 * 1000 // 5 minutes cache for token verification
 
 export interface NotionOAuthConfig {
@@ -20,6 +24,7 @@ export interface NotionOAuthConfig {
 }
 
 interface PendingAuth {
+  clientId: string
   clientRedirectUri: string
   clientState?: string
   codeChallenge: string
@@ -32,6 +37,9 @@ interface StoredAuthCode {
   notionAccessToken: string
   notionRefreshToken?: string
   expiresIn?: number
+  codeChallenge?: string
+  codeChallengeMethod?: string
+  clientId?: string
   createdAt: number
 }
 
@@ -77,7 +85,7 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
   // Pending bind slots — one-shot: consumed on first use, keyed by client_id.
   // When a client completes OAuth, a pending bind is created. The first unknown bearer token
   // that claims it gets bound. This prevents cross-user token leaks on shared instances.
-  const pendingBinds = new Map<string, { notionToken: StoredNotionToken; expiresAt: number }>()
+  const pendingBinds = new Map<string, { notionToken: StoredNotionToken; expiresAt: number; sourceIp?: string }>()
 
   /** Resolve a bearer token to a Notion access token */
   function resolveNotionToken(bearerToken: string): string | undefined {
@@ -85,20 +93,24 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
     const byToken = notionTokens.get(bearerToken)
     if (byToken) return byToken.notionAccessToken
 
-    // 2. If the token itself is a Notion token (starts with ntn_ or secret_), use directly
-    if (bearerToken.startsWith('ntn_') || bearerToken.startsWith('secret_')) return bearerToken
-
-    // 3. Previously bound external token (e.g., Claude Code's sk-ant-*)
+    // 2. Previously bound external token (e.g., Claude Code's sk-ant-*)
     const bound = boundTokens.get(bearerToken)
     if (bound) return bound.notionAccessToken
 
-    // 4. One-shot pending bind — claim the first available unexpired slot.
+    // 3. One-shot pending bind — claim the first available unexpired slot.
     // This is consumed immediately (one token per OAuth flow) to prevent
     // cross-user leaks. Only the first unknown token to arrive claims the bind.
+    // IP-scoped: both IPs must be known and must match.
     const now = Date.now()
+    const claimIp = requestContext.getStore()?.ip
     for (const [clientId, pending] of pendingBinds) {
       if (now > pending.expiresAt) {
         pendingBinds.delete(clientId)
+        continue
+      }
+      // Strict IP check: both IPs must be known and must match.
+      // If either IP is unknown, reject the bind to prevent bypass via proxy misconfiguration.
+      if (!pending.sourceIp || !claimIp || pending.sourceIp !== claimIp) {
         continue
       }
       // Consume the pending bind — one-shot, no other token can claim this
@@ -181,10 +193,11 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
   })
 
   // Override authorize: redirect to Notion with OUR callback URL, not client's
-  provider.authorize = async (_client, params, res) => {
+  provider.authorize = async (client, params, res) => {
     const ourState = randomBytes(32).toString('hex')
 
     pendingAuths.set(ourState, {
+      clientId: client.client_id,
       clientRedirectUri: params.redirectUri,
       clientState: params.state,
       codeChallenge: params.codeChallenge,
@@ -204,10 +217,26 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
   }
 
   // Override exchangeAuthorizationCode: issue opaque token, store Notion token server-side
-  provider.exchangeAuthorizationCode = async (client, authorizationCode) => {
+  provider.exchangeAuthorizationCode = async (client, authorizationCode, codeVerifier) => {
     const stored = authCodes.get(authorizationCode)
     if (!stored) {
       throw new InvalidTokenError('Invalid or expired authorization code')
+    }
+
+    // Verify client binding — auth code must be exchanged by the same client that initiated the flow
+    if (stored.clientId && stored.clientId !== client.client_id) {
+      throw new InvalidTokenError('Auth code was not issued to this client')
+    }
+
+    // Verify PKCE S256 — prevents auth code interception attacks
+    if (stored.codeChallenge && stored.codeChallengeMethod === 'S256') {
+      if (!codeVerifier) {
+        throw new InvalidTokenError('code_verifier is required')
+      }
+      const expectedChallenge = createHash('sha256').update(codeVerifier).digest('base64url')
+      if (expectedChallenge !== stored.codeChallenge) {
+        throw new InvalidTokenError('code_verifier does not match the challenge')
+      }
     }
 
     authCodes.delete(authorizationCode)
@@ -224,9 +253,11 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
     // Create a one-shot pending bind for clients that use their own identity tokens
     // (e.g., Claude Code sends sk-ant-* instead of our opaque token).
     // The first unknown bearer token to arrive within PENDING_BIND_TTL claims this bind.
+    // IP-scoped: only requests from the same IP as this POST /token can claim it.
     pendingBinds.set(client.client_id, {
       notionToken: entry,
-      expiresAt: Date.now() + PENDING_BIND_TTL
+      expiresAt: Date.now() + PENDING_BIND_TTL,
+      sourceIp: requestContext.getStore()?.ip
     })
 
     return {
@@ -267,7 +298,8 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
     notionTokens.set(opaqueToken, entry)
     pendingBinds.set(client.client_id, {
       notionToken: entry,
-      expiresAt: Date.now() + PENDING_BIND_TTL
+      expiresAt: Date.now() + PENDING_BIND_TTL,
+      sourceIp: requestContext.getStore()?.ip
     })
 
     return {

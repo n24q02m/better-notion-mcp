@@ -10,7 +10,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
 import { Client } from '@notionhq/client'
 import express from 'express'
-import { createNotionOAuthProvider } from '../auth/notion-oauth-provider.js'
+import { createNotionOAuthProvider, requestContext } from '../auth/notion-oauth-provider.js'
 import { createMCPServer } from '../create-server.js'
 
 const NOTION_TOKEN_URL = 'https://api.notion.com/v1/oauth/token'
@@ -57,6 +57,12 @@ export async function startHttp() {
 
   // Trust reverse proxy headers (Cloud Run, CF) for express-rate-limit
   app.set('trust proxy', true)
+
+  // Propagate request IP via AsyncLocalStorage for IP-scoped pending binds
+  app.use((req, _res, next) => {
+    const ip = req.ip || req.socket.remoteAddress || undefined
+    requestContext.run({ ip }, next)
+  })
 
   // OAuth endpoints (/.well-known/*, /authorize, /token, /register)
   app.use(
@@ -126,12 +132,15 @@ export async function startHttp() {
         refresh_token?: string
       }
 
-      // Issue our own auth code and store the Notion token
+      // Issue our own auth code and store the Notion token + PKCE challenge for verification
       const ourAuthCode = randomBytes(32).toString('hex')
       authCodes.set(ourAuthCode, {
         notionAccessToken: tokenData.access_token,
         notionRefreshToken: tokenData.refresh_token,
         expiresIn: tokenData.expires_in,
+        codeChallenge: pending.codeChallenge,
+        codeChallengeMethod: pending.codeChallengeMethod,
+        clientId: pending.clientId,
         createdAt: Date.now()
       })
 
@@ -152,13 +161,25 @@ export async function startHttp() {
   const authMiddleware = requireBearerAuth({ verifier: provider })
   const jsonParser = express.json()
   const transports: Map<string, StreamableHTTPServerTransport> = new Map()
+  // Session owner binding — prevents cross-user session hijacking
+  const sessionOwners: Map<string, string> = new Map() // sessionId → notionToken
 
   // MCP endpoint — POST (new session or existing)
   app.post('/mcp', jsonParser, authMiddleware, async (req, res) => {
     const sessionId = req.headers['mcp-session-id'] as string | undefined
 
-    // Existing session
+    // Existing session — verify the authenticated user owns this session
     if (sessionId && transports.has(sessionId)) {
+      const authInfo = (req as any).auth
+      const ownerToken = sessionOwners.get(sessionId)
+      if (ownerToken && authInfo?.token !== ownerToken) {
+        res.status(403).json({
+          jsonrpc: '2.0',
+          error: { code: -32000, message: 'Session belongs to a different user' },
+          id: null
+        })
+        return
+      }
       await transports.get(sessionId)!.handleRequest(req, res, req.body)
       return
     }
@@ -172,11 +193,15 @@ export async function startHttp() {
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (id) => {
           transports.set(id, transport)
+          sessionOwners.set(id, notionToken)
         }
       })
 
       transport.onclose = () => {
-        if (transport.sessionId) transports.delete(transport.sessionId)
+        if (transport.sessionId) {
+          transports.delete(transport.sessionId)
+          sessionOwners.delete(transport.sessionId)
+        }
       }
 
       // Per-session MCP server with the user's Notion token
@@ -193,10 +218,22 @@ export async function startHttp() {
     })
   })
 
+  // Verify session ownership for GET/DELETE endpoints
+  function verifySessionOwner(req: express.Request, res: express.Response, sessionId: string): boolean {
+    const authInfo = (req as any).auth
+    const ownerToken = sessionOwners.get(sessionId)
+    if (ownerToken && authInfo?.token !== ownerToken) {
+      res.status(403).json({ error: 'Session belongs to a different user' })
+      return false
+    }
+    return true
+  }
+
   // MCP endpoint — GET (SSE streaming for existing session)
   app.get('/mcp', authMiddleware, async (req, res) => {
     const sessionId = req.headers['mcp-session-id'] as string
     if (sessionId && transports.has(sessionId)) {
+      if (!verifySessionOwner(req, res, sessionId)) return
       await transports.get(sessionId)!.handleRequest(req, res)
     } else {
       res.status(400).json({ error: 'Invalid or missing session' })
@@ -207,6 +244,7 @@ export async function startHttp() {
   app.delete('/mcp', authMiddleware, async (req, res) => {
     const sessionId = req.headers['mcp-session-id'] as string
     if (sessionId && transports.has(sessionId)) {
+      if (!verifySessionOwner(req, res, sessionId)) return
       await transports.get(sessionId)!.handleRequest(req, res)
     } else {
       res.status(400).json({ error: 'Invalid or missing session' })
