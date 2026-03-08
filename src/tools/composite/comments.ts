@@ -44,6 +44,7 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
             created_by: comment.created_by,
             discussion_id: comment.discussion_id,
             text: RichText.extractPlainText(comment.rich_text),
+            ...(comment.display_name ? { display_name: comment.display_name } : {}),
             parent: comment.parent
           }))
         }
@@ -65,7 +66,8 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
           created_by: comment.created_by,
           discussion_id: comment.discussion_id,
           text: RichText.extractPlainText(comment.rich_text),
-          rich_text: comment.rich_text,
+          ...(comment.rich_text ? { rich_text: comment.rich_text } : {}),
+          ...(comment.display_name ? { display_name: comment.display_name } : {}),
           parent: comment.parent
         }
       }

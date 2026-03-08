@@ -171,17 +171,17 @@ export function extractPageProperties(pageProperties: any): any {
         arr[j] = p.files[j].file?.url || p.files[j].external?.url || p.files[j].name
       properties[key] = arr
     } else if (p.type === 'formula' && p.formula) {
-      properties[key] = p.formula[p.formula.type]
+      properties[key] = p.formula.type ? (p.formula[p.formula.type] ?? null) : null
     } else if (p.type === 'created_time') {
       properties[key] = p.created_time
     } else if (p.type === 'last_edited_time') {
       properties[key] = p.last_edited_time
     } else if (p.type === 'created_by' && p.created_by) {
-      properties[key] = p.created_by.name || p.created_by.id
+      properties[key] = p.created_by?.name || p.created_by?.id
     } else if (p.type === 'last_edited_by' && p.last_edited_by) {
-      properties[key] = p.last_edited_by.name || p.last_edited_by.id
+      properties[key] = p.last_edited_by?.name || p.last_edited_by?.id
     } else if (p.type === 'status' && p.status) {
-      properties[key] = p.status.name
+      properties[key] = p.status?.name
     } else if (p.type === 'unique_id' && p.unique_id) {
       properties[key] = p.unique_id.prefix ? `${p.unique_id.prefix}-${p.unique_id.number}` : p.unique_id.number
     }

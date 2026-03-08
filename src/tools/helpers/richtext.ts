@@ -133,8 +133,9 @@ export function formatText(
 /**
  * Extract plain text from rich text array
  */
-export function extractPlainText(richText: RichTextItem[]): string {
-  return richText.map((rt) => rt.text.content).join('')
+export function extractPlainText(richText: RichTextItem[] | undefined | null): string {
+  if (!richText || !Array.isArray(richText)) return ''
+  return richText.map((rt) => rt.plain_text ?? rt.text?.content ?? '').join('')
 }
 
 /**
@@ -174,7 +175,8 @@ export function fromStrings(strings: string[]): RichTextItem[] {
 /**
  * Check if rich text is empty
  */
-export function isEmpty(richText: RichTextItem[]): boolean {
+export function isEmpty(richText: RichTextItem[] | undefined | null): boolean {
+  if (!richText || !Array.isArray(richText)) return true
   return richText.length === 0 || extractPlainText(richText).trim().length === 0
 }
 

@@ -93,14 +93,14 @@ export async function users(notion: Client, input: UsersInput): Promise<any> {
 
         for (const page of searchResults.results) {
           // Extract users from created_by and last_edited_by
-          if (page.created_by) {
+          if (page.created_by?.id) {
             usersMap.set(page.created_by.id, {
               id: page.created_by.id,
               type: page.created_by.object,
               source: 'page_metadata'
             })
           }
-          if (page.last_edited_by) {
+          if (page.last_edited_by?.id) {
             usersMap.set(page.last_edited_by.id, {
               id: page.last_edited_by.id,
               type: page.last_edited_by.object,
