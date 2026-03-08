@@ -26,6 +26,10 @@ vi.mock('express', () => {
   return { default: expressFn }
 })
 
+vi.mock('express-rate-limit', () => ({
+  default: vi.fn(() => (_req: any, _res: any, next: any) => next())
+}))
+
 vi.mock('@modelcontextprotocol/sdk/server/auth/router.js', () => ({
   mcpAuthRouter: vi.fn(() => 'mock-auth-router')
 }))
@@ -162,5 +166,217 @@ describe('startHttp', () => {
     })
 
     mockLog.mockRestore()
+  })
+
+  // Helper: start the server and return the registered route handlers
+  async function startAndGetHandlers() {
+    const mockLog = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const { startHttp } = await import('./http.js')
+    const express = (await import('express')).default
+    await startHttp()
+    const app = (express as any).mock.results[0]?.value
+    mockLog.mockRestore()
+    return app?._handlers as Record<string, Fn[]>
+  }
+
+  function mockRes() {
+    const res: any = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
+      redirect: vi.fn()
+    }
+    return res
+  }
+
+  describe('health endpoint', () => {
+    it('should return status ok and mode remote', async () => {
+      const handlers = await startAndGetHandlers()
+      const handler = handlers['GET:/health']?.at(-1) as Fn
+      expect(handler).toBeDefined()
+
+      const req = {}
+      const res = mockRes()
+      handler(req, res)
+
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ status: 'ok', mode: 'remote' }))
+    })
+  })
+
+  describe('callback route', () => {
+    it('should return 400 when error param is present', async () => {
+      const handlers = await startAndGetHandlers()
+      const handler = handlers['GET:/callback']?.at(-1) as Fn
+      expect(handler).toBeDefined()
+
+      const req = { query: { error: 'access_denied' } }
+      const res = mockRes()
+      await handler(req, res)
+
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'oauth_error',
+        error_description: 'access_denied'
+      })
+    })
+
+    it('should return 400 when code or state is missing', async () => {
+      const handlers = await startAndGetHandlers()
+      const handler = handlers['GET:/callback']?.at(-1) as Fn
+
+      const req = { query: { code: 'some-code' } } // missing state
+      const res = mockRes()
+      await handler(req, res)
+
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'invalid_request',
+        error_description: 'Missing code or state'
+      })
+    })
+
+    it('should return 400 when state is unknown', async () => {
+      const handlers = await startAndGetHandlers()
+      const handler = handlers['GET:/callback']?.at(-1) as Fn
+
+      const req = { query: { code: 'some-code', state: 'unknown-state' } }
+      const res = mockRes()
+      await handler(req, res)
+
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'invalid_state',
+        error_description: 'Unknown or expired state'
+      })
+    })
+  })
+
+  describe('POST /mcp', () => {
+    it('should return 400 JSON-RPC error when no session and not an initialize request', async () => {
+      const { isInitializeRequest: mockIsInit } = await import('@modelcontextprotocol/sdk/types.js')
+      ;(mockIsInit as any).mockReturnValue(false)
+
+      const handlers = await startAndGetHandlers()
+      const handler = handlers['POST:/mcp']?.at(-1) as Fn
+      expect(handler).toBeDefined()
+
+      const req = { headers: {}, body: { jsonrpc: '2.0', method: 'tools/list', id: 1 }, auth: { token: 'tok' } }
+      const res = mockRes()
+      await handler(req, res)
+
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(res.json).toHaveBeenCalledWith({
+        jsonrpc: '2.0',
+        error: { code: -32000, message: 'Bad request: missing session ID or not an initialize request' },
+        id: null
+      })
+    })
+  })
+
+  describe('GET /mcp', () => {
+    it('should return 400 when session ID is missing', async () => {
+      const handlers = await startAndGetHandlers()
+      const handler = handlers['GET:/mcp']?.at(-1) as Fn
+      expect(handler).toBeDefined()
+
+      const req = { headers: {} }
+      const res = mockRes()
+      await handler(req, res)
+
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid or missing session' })
+    })
+
+    it('should return 400 when session ID is not recognized', async () => {
+      const handlers = await startAndGetHandlers()
+      const handler = handlers['GET:/mcp']?.at(-1) as Fn
+
+      const req = { headers: { 'mcp-session-id': 'nonexistent-session' } }
+      const res = mockRes()
+      await handler(req, res)
+
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid or missing session' })
+    })
+  })
+
+  describe('DELETE /mcp', () => {
+    it('should return 400 when session ID is missing', async () => {
+      const handlers = await startAndGetHandlers()
+      const handler = handlers['DELETE:/mcp']?.at(-1) as Fn
+      expect(handler).toBeDefined()
+
+      const req = { headers: {} }
+      const res = mockRes()
+      await handler(req, res)
+
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid or missing session' })
+    })
+
+    it('should return 400 when session ID is not recognized', async () => {
+      const handlers = await startAndGetHandlers()
+      const handler = handlers['DELETE:/mcp']?.at(-1) as Fn
+
+      const req = { headers: { 'mcp-session-id': 'nonexistent-session' } }
+      const res = mockRes()
+      await handler(req, res)
+
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid or missing session' })
+    })
+  })
+
+  describe('POST /mcp session owner verification', () => {
+    it('should return 403 when authenticated user does not own the session', async () => {
+      const { isInitializeRequest: mockIsInit } = await import('@modelcontextprotocol/sdk/types.js')
+      ;(mockIsInit as any).mockReturnValue(true)
+
+      const { StreamableHTTPServerTransport: MockTransport } = await import(
+        '@modelcontextprotocol/sdk/server/streamableHttp.js'
+      )
+
+      // Make StreamableHTTPServerTransport constructor store config and simulate session
+      let capturedConfig: any = null
+      ;(MockTransport as any).mockImplementation(function (this: any, config: any) {
+        capturedConfig = config
+        this.sessionId = null
+        this.onclose = null
+        this.handleRequest = vi.fn(async () => {
+          // Simulate session initialization: call onsessioninitialized
+          if (capturedConfig?.onsessioninitialized && !this.sessionId) {
+            this.sessionId = 'test-session-id'
+            capturedConfig.onsessioninitialized('test-session-id')
+          }
+        })
+      })
+
+      const handlers = await startAndGetHandlers()
+      const handler = handlers['POST:/mcp']?.at(-1) as Fn
+
+      // First request: initialize the session with token-A
+      const initReq = {
+        headers: {},
+        body: { jsonrpc: '2.0', method: 'initialize', id: 1 },
+        auth: { token: 'token-A' }
+      }
+      const initRes = mockRes()
+      await handler(initReq, initRes)
+
+      // Second request: try to use the session with token-B (different user)
+      const hijackReq = {
+        headers: { 'mcp-session-id': 'test-session-id' },
+        body: { jsonrpc: '2.0', method: 'tools/list', id: 2 },
+        auth: { token: 'token-B' }
+      }
+      const hijackRes = mockRes()
+      await handler(hijackReq, hijackRes)
+
+      expect(hijackRes.status).toHaveBeenCalledWith(403)
+      expect(hijackRes.json).toHaveBeenCalledWith({
+        jsonrpc: '2.0',
+        error: { code: -32000, message: 'Session belongs to a different user' },
+        id: null
+      })
+    })
   })
 })

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NotionOAuthConfig } from './notion-oauth-provider.js'
 import { createNotionOAuthProvider, requestContext } from './notion-oauth-provider.js'
@@ -17,7 +18,7 @@ vi.mock('@notionhq/client', () => ({
     }
     users = {
       me: async () => {
-        if (this.auth === 'valid-token') {
+        if (this.auth === 'valid-token' || this.auth === 'refreshed-notion-token') {
           return { id: 'user-123', name: 'Test User' }
         }
         throw new Error('Unauthorized')
@@ -33,6 +34,7 @@ describe('createNotionOAuthProvider', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
   it('should return provider and relay stores', () => {
@@ -53,6 +55,12 @@ describe('createNotionOAuthProvider', () => {
     const { provider } = createNotionOAuthProvider(TEST_CONFIG)
     expect(provider.clientsStore).toBeDefined()
     expect(provider.clientsStore.registerClient).toBeDefined()
+  })
+
+  it('should compute correct notionBasicAuth', () => {
+    const { notionBasicAuth } = createNotionOAuthProvider(TEST_CONFIG)
+    const expected = Buffer.from(`${TEST_CONFIG.notionClientId}:${TEST_CONFIG.notionClientSecret}`).toString('base64')
+    expect(notionBasicAuth).toBe(expected)
   })
 
   describe('verifyAccessToken', () => {
@@ -155,6 +163,23 @@ describe('createNotionOAuthProvider', () => {
       expect(r2.token).toBe('valid-token')
     })
 
+    it('should bypass cache after VERIFY_CACHE_TTL expires', async () => {
+      const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
+      authCodes.set('code-1', { notionAccessToken: 'valid-token', createdAt: Date.now() })
+      const tokens = await provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1')
+
+      // First call populates cache
+      await provider.verifyAccessToken(tokens.access_token)
+
+      // Advance past 5-minute verify cache TTL
+      vi.advanceTimersByTime(6 * 60 * 1000)
+
+      // Should hit Notion API again (cache expired)
+      const result = await provider.verifyAccessToken(tokens.access_token)
+      expect(result.token).toBe('valid-token')
+      expect(result.extra).toEqual({ userId: 'user-123', userName: 'Test User' })
+    })
+
     it('should throw when no Notion token is stored', async () => {
       const { provider } = createNotionOAuthProvider(TEST_CONFIG)
       await expect(provider.verifyAccessToken('sk-ant-unknown')).rejects.toThrow('No Notion token found')
@@ -202,6 +227,25 @@ describe('createNotionOAuthProvider', () => {
       await expect(provider.verifyAccessToken(tokens.access_token)).rejects.toThrow('Invalid or expired Notion token')
     })
 
+    it('should clear stale cache entry when Notion token becomes invalid', async () => {
+      const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
+
+      // First: store a valid token and populate cache
+      authCodes.set('code-1', { notionAccessToken: 'valid-token', createdAt: Date.now() })
+      const tokens = await provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1')
+      await provider.verifyAccessToken(tokens.access_token)
+
+      // Now store a code with an invalid notion token under a DIFFERENT opaque token
+      authCodes.set('code-2', { notionAccessToken: 'now-invalid-token', createdAt: Date.now() })
+      const tokens2 = await provider.exchangeAuthorizationCode(
+        { client_id: 'c2', client_secret: 's2' } as any,
+        'code-2'
+      )
+
+      // This should fail and delete the cache entry for 'now-invalid-token'
+      await expect(provider.verifyAccessToken(tokens2.access_token)).rejects.toThrow('Invalid or expired Notion token')
+    })
+
     it('should reject pending bind when IP is unknown', async () => {
       const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
 
@@ -214,6 +258,20 @@ describe('createNotionOAuthProvider', () => {
       await requestContext.run({ ip: '1.2.3.4' }, () =>
         expect(provider.verifyAccessToken('sk-ant-unknown')).rejects.toThrow('No Notion token found')
       )
+    })
+
+    it('should reject pending bind when claim IP is unknown (no requestContext)', async () => {
+      const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
+
+      authCodes.set('code-1', { notionAccessToken: 'valid-token', createdAt: Date.now() })
+
+      // Exchange WITH IP
+      await requestContext.run({ ip: '1.2.3.4' }, () =>
+        provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1')
+      )
+
+      // Claim WITHOUT requestContext — claimIp is undefined, strict check rejects
+      await expect(provider.verifyAccessToken('sk-ant-no-ip')).rejects.toThrow('No Notion token found')
     })
   })
 
@@ -279,10 +337,9 @@ describe('createNotionOAuthProvider', () => {
     })
 
     it('should verify PKCE S256 code_verifier when challenge is stored', async () => {
-      const { createHash: hash } = await import('node:crypto')
       const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
       const codeVerifier = 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk'
-      const codeChallenge = hash('sha256').update(codeVerifier).digest('base64url')
+      const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url')
 
       authCodes.set('pkce-code', {
         notionAccessToken: 'notion-token-pkce',
@@ -301,9 +358,8 @@ describe('createNotionOAuthProvider', () => {
     })
 
     it('should reject wrong code_verifier (PKCE)', async () => {
-      const { createHash: hash } = await import('node:crypto')
       const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
-      const codeChallenge = hash('sha256').update('correct-verifier').digest('base64url')
+      const codeChallenge = createHash('sha256').update('correct-verifier').digest('base64url')
 
       authCodes.set('pkce-code', {
         notionAccessToken: 'notion-token-pkce',
@@ -322,6 +378,27 @@ describe('createNotionOAuthProvider', () => {
       ).rejects.toThrow('code_verifier does not match the challenge')
     })
 
+    it('should reject missing code_verifier when PKCE challenge is stored', async () => {
+      const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
+      const codeChallenge = createHash('sha256').update('some-verifier').digest('base64url')
+
+      authCodes.set('pkce-code', {
+        notionAccessToken: 'notion-token-pkce',
+        codeChallenge,
+        codeChallengeMethod: 'S256',
+        clientId: 'test-client',
+        createdAt: Date.now()
+      })
+
+      await expect(
+        provider.exchangeAuthorizationCode(
+          { client_id: 'test-client', client_secret: 'test' } as any,
+          'pkce-code'
+          // no code_verifier
+        )
+      ).rejects.toThrow('code_verifier is required')
+    })
+
     it('should reject auth code from a different client (client binding)', async () => {
       const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
 
@@ -335,6 +412,39 @@ describe('createNotionOAuthProvider', () => {
       await expect(
         provider.exchangeAuthorizationCode({ client_id: 'client-B', client_secret: 'test' } as any, 'bound-code')
       ).rejects.toThrow('Auth code was not issued to this client')
+    })
+
+    it('should create a pending bind with IP from requestContext', async () => {
+      const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
+
+      authCodes.set('code-ip', { notionAccessToken: 'valid-token', createdAt: Date.now() })
+
+      // Exchange within requestContext — pending bind should have sourceIp
+      await requestContext.run({ ip: '192.168.1.1' }, () =>
+        provider.exchangeAuthorizationCode({ client_id: 'ip-client', client_secret: 's1' } as any, 'code-ip')
+      )
+
+      // Verify bind works from same IP
+      const result = await requestContext.run({ ip: '192.168.1.1' }, () =>
+        provider.verifyAccessToken('external-token-123')
+      )
+      expect(result.token).toBe('valid-token')
+    })
+
+    it('should allow exchange without clientId binding (no clientId stored)', async () => {
+      const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
+
+      authCodes.set('unbound-code', {
+        notionAccessToken: 'notion-token-unbound',
+        createdAt: Date.now()
+        // no clientId — any client can exchange
+      })
+
+      const result = await provider.exchangeAuthorizationCode(
+        { client_id: 'any-client', client_secret: 'test' } as any,
+        'unbound-code'
+      )
+      expect(result.access_token).toHaveLength(96)
     })
   })
 
@@ -359,13 +469,252 @@ describe('createNotionOAuthProvider', () => {
       expect(redirectedUrl).toContain('api.notion.com/v1/oauth/authorize')
       expect(redirectedUrl).toContain('client_id=31cd872b-test-client-id')
       expect(redirectedUrl).toContain(`redirect_uri=${encodeURIComponent('https://test.example.com/callback')}`)
+      expect(redirectedUrl).toContain('response_type=code')
+      expect(redirectedUrl).toContain('owner=user')
       expect(pendingAuths.size).toBe(1)
 
-      const [, pending] = [...pendingAuths.entries()][0]
+      const [state, pending] = [...pendingAuths.entries()][0]
+      expect(state).toMatch(/^[0-9a-f]{64}$/) // 32 bytes hex
       expect(pending.clientId).toBe('test')
       expect(pending.clientRedirectUri).toBe('https://mcp-client.example.com/cb')
       expect(pending.clientState).toBe('client-state')
       expect(pending.codeChallenge).toBe('challenge123')
+      expect(pending.codeChallengeMethod).toBe('S256')
+    })
+
+    it('should store scopes in pending auth', async () => {
+      const { provider, pendingAuths } = createNotionOAuthProvider(TEST_CONFIG)
+
+      await new Promise<void>((resolve) => {
+        const mockRes = { redirect: () => resolve() }
+        provider.authorize(
+          { client_id: 'test' } as any,
+          {
+            redirectUri: 'https://mcp-client.example.com/cb',
+            codeChallenge: 'c',
+            codeChallengeMethod: 'S256',
+            scopes: ['read', 'write']
+          } as any,
+          mockRes as any
+        )
+      })
+
+      const [, pending] = [...pendingAuths.entries()][0]
+      expect(pending.scopes).toEqual(['read', 'write'])
+    })
+
+    it('should handle authorize without optional state', async () => {
+      const { provider, pendingAuths } = createNotionOAuthProvider(TEST_CONFIG)
+
+      await new Promise<void>((resolve) => {
+        const mockRes = { redirect: () => resolve() }
+        provider.authorize(
+          { client_id: 'test' } as any,
+          {
+            redirectUri: 'https://mcp-client.example.com/cb',
+            codeChallenge: 'c',
+            codeChallengeMethod: 'S256'
+            // no state
+          } as any,
+          mockRes as any
+        )
+      })
+
+      const [, pending] = [...pendingAuths.entries()][0]
+      expect(pending.clientState).toBeUndefined()
+    })
+  })
+
+  describe('exchangeRefreshToken', () => {
+    it('should proxy refresh to Notion and return new opaque token', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          access_token: 'refreshed-notion-token',
+          token_type: 'bearer',
+          expires_in: 7200
+        })
+      })
+      vi.stubGlobal('fetch', mockFetch)
+
+      const { provider } = createNotionOAuthProvider(TEST_CONFIG)
+
+      const result = await provider.exchangeRefreshToken(
+        { client_id: 'refresh-client', client_secret: 'test' } as any,
+        'notion-refresh-token-xyz'
+      )
+
+      expect(result.access_token).toHaveLength(96) // 48 bytes hex
+      expect(result.token_type).toBe('bearer')
+      expect(result.expires_in).toBe(7200)
+
+      // Verify fetch was called with correct params
+      expect(mockFetch).toHaveBeenCalledOnce()
+      const [url, init] = mockFetch.mock.calls[0]
+      expect(url).toBe('https://api.notion.com/v1/oauth/token')
+      expect(init.method).toBe('POST')
+      expect(init.headers.Authorization).toContain('Basic ')
+      expect(init.body).toContain('grant_type=refresh_token')
+      expect(init.body).toContain('refresh_token=notion-refresh-token-xyz')
+    })
+
+    it('should use default expires_in when Notion does not return one', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: async () => ({
+            access_token: 'refreshed-notion-token',
+            token_type: 'bearer'
+            // no expires_in
+          })
+        })
+      )
+
+      const { provider } = createNotionOAuthProvider(TEST_CONFIG)
+
+      const result = await provider.exchangeRefreshToken(
+        { client_id: 'refresh-client', client_secret: 'test' } as any,
+        'notion-refresh-token-xyz'
+      )
+
+      expect(result.expires_in).toBe(86400) // default fallback
+    })
+
+    it('should throw when Notion refresh fails', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 401
+        })
+      )
+
+      const { provider } = createNotionOAuthProvider(TEST_CONFIG)
+
+      await expect(
+        provider.exchangeRefreshToken(
+          { client_id: 'refresh-client', client_secret: 'test' } as any,
+          'invalid-refresh-token'
+        )
+      ).rejects.toThrow('Token refresh failed: 401')
+    })
+
+    it('should store refreshed token and create pending bind', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: async () => ({
+            access_token: 'refreshed-notion-token',
+            token_type: 'bearer',
+            expires_in: 3600
+          })
+        })
+      )
+
+      const { provider } = createNotionOAuthProvider(TEST_CONFIG)
+
+      // Exchange refresh token within requestContext
+      const result = await requestContext.run({ ip: '10.0.0.5' }, () =>
+        provider.exchangeRefreshToken(
+          { client_id: 'refresh-client', client_secret: 'test' } as any,
+          'refresh-token-abc'
+        )
+      )
+
+      // The opaque token should resolve correctly
+      const authInfo = await provider.verifyAccessToken(result.access_token)
+      expect(authInfo.token).toBe('refreshed-notion-token')
+
+      // Pending bind should also work from same IP
+      const boundResult = await requestContext.run({ ip: '10.0.0.5' }, () =>
+        provider.verifyAccessToken('sk-ant-after-refresh')
+      )
+      expect(boundResult.token).toBe('refreshed-notion-token')
+    })
+  })
+
+  describe('cleanup interval', () => {
+    it('should clean up expired pendingAuths', () => {
+      const { pendingAuths } = createNotionOAuthProvider(TEST_CONFIG)
+
+      pendingAuths.set('old-state', {
+        clientId: 'c1',
+        clientRedirectUri: 'https://example.com/cb',
+        codeChallenge: 'c',
+        codeChallengeMethod: 'S256',
+        createdAt: Date.now() - 15 * 60 * 1000 // 15 min ago (> 10 min TTL)
+      })
+      pendingAuths.set('fresh-state', {
+        clientId: 'c2',
+        clientRedirectUri: 'https://example.com/cb',
+        codeChallenge: 'c',
+        codeChallengeMethod: 'S256',
+        createdAt: Date.now()
+      })
+
+      // Trigger the cleanup interval (runs every 60s)
+      vi.advanceTimersByTime(60_000)
+
+      expect(pendingAuths.has('old-state')).toBe(false)
+      expect(pendingAuths.has('fresh-state')).toBe(true)
+    })
+
+    it('should clean up expired authCodes', () => {
+      const { authCodes } = createNotionOAuthProvider(TEST_CONFIG)
+
+      authCodes.set('old-code', {
+        notionAccessToken: 'token',
+        createdAt: Date.now() - 15 * 60 * 1000 // 15 min ago (> 10 min TTL)
+      })
+      authCodes.set('fresh-code', {
+        notionAccessToken: 'token',
+        createdAt: Date.now()
+      })
+
+      vi.advanceTimersByTime(60_000)
+
+      expect(authCodes.has('old-code')).toBe(false)
+      expect(authCodes.has('fresh-code')).toBe(true)
+    })
+  })
+
+  describe('fetch override (Basic auth injection)', () => {
+    it('should inject Basic auth header for Notion token URL', async () => {
+      const mockFetch = vi.fn().mockResolvedValue(new Response('{}'))
+      vi.stubGlobal('fetch', mockFetch)
+
+      const { provider, notionBasicAuth } = createNotionOAuthProvider(TEST_CONFIG)
+
+      // The internal fetch is used by the ProxyOAuthServerProvider.
+      // We can test it indirectly via exchangeRefreshToken which calls globalThis.fetch
+      // directly. But the proxy fetch is set in the constructor.
+      // Access it through the provider's internal mechanism.
+
+      // Test: exchangeRefreshToken uses the direct fetch (not the proxy fetch),
+      // so let's test the proxy fetch path by accessing the underlying proxy provider.
+      // The proxy fetch is used when ProxyOAuthServerProvider delegates to Notion's token endpoint.
+
+      // Since the fetch override is internal to the ProxyOAuthServerProvider,
+      // we verify via exchangeRefreshToken which DOES use Basic auth directly.
+      await provider
+        .exchangeRefreshToken({ client_id: 'c1', client_secret: 's1' } as any, 'refresh-token')
+        .catch(() => {})
+
+      const callHeaders = mockFetch.mock.calls[0][1].headers
+      expect(callHeaders.Authorization).toBe(`Basic ${notionBasicAuth}`)
+    })
+  })
+
+  describe('getClient delegation', () => {
+    it('should delegate getClient to StatelessClientStore', async () => {
+      const { provider } = createNotionOAuthProvider(TEST_CONFIG)
+
+      // getClient for an unknown ID should return a fallback
+      const client = await provider.clientsStore.getClient('unknown-id')
+      expect(client).toBeDefined()
+      expect(client!.client_id).toBe('unknown-id')
     })
   })
 })

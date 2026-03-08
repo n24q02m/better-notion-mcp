@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import * as markdown from '../helpers/markdown.js'
 import { blocks } from './blocks'
 
 const mockNotion = {
@@ -240,6 +241,106 @@ describe('blocks', () => {
           content: '# New Heading'
         })
       ).rejects.toThrow('Block type mismatch')
+    })
+
+    it('should update to_do block with checked state', async () => {
+      mockNotion.blocks.retrieve.mockResolvedValue({
+        id: 'block-1',
+        type: 'to_do',
+        has_children: false,
+        archived: false,
+        to_do: { rich_text: [], checked: true }
+      })
+      mockNotion.blocks.update.mockResolvedValue({})
+
+      const result = await blocks(mockNotion as any, {
+        action: 'update',
+        block_id: 'block-1',
+        content: '- [ ] Updated task'
+      })
+
+      expect(result).toEqual({
+        action: 'update',
+        block_id: 'block-1',
+        type: 'to_do',
+        updated: true
+      })
+      expect(mockNotion.blocks.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          block_id: 'block-1',
+          to_do: { rich_text: expect.any(Array), checked: expect.any(Boolean) }
+        })
+      )
+    })
+
+    it('should update code block with language', async () => {
+      mockNotion.blocks.retrieve.mockResolvedValue({
+        id: 'block-1',
+        type: 'code',
+        has_children: false,
+        archived: false,
+        code: { rich_text: [], language: 'javascript' }
+      })
+      mockNotion.blocks.update.mockResolvedValue({})
+
+      const result = await blocks(mockNotion as any, {
+        action: 'update',
+        block_id: 'block-1',
+        content: '```javascript\nconsole.log("hello")\n```'
+      })
+
+      expect(result).toEqual({
+        action: 'update',
+        block_id: 'block-1',
+        type: 'code',
+        updated: true
+      })
+      expect(mockNotion.blocks.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          block_id: 'block-1',
+          code: { rich_text: expect.any(Array), language: expect.any(String) }
+        })
+      )
+    })
+
+    it('should throw for non-text block type like table', async () => {
+      mockNotion.blocks.retrieve.mockResolvedValue({
+        id: 'block-1',
+        type: 'table',
+        has_children: true,
+        archived: false,
+        table: { table_width: 2, has_column_header: false, has_row_header: false }
+      })
+
+      await expect(
+        blocks(mockNotion as any, {
+          action: 'update',
+          block_id: 'block-1',
+          content: '| A | B |'
+        })
+      ).rejects.toThrow("Block type 'table' cannot be updated")
+    })
+
+    it('should throw when content produces no blocks', async () => {
+      mockNotion.blocks.retrieve.mockResolvedValue({
+        id: 'block-1',
+        type: 'paragraph',
+        has_children: false,
+        archived: false,
+        paragraph: { rich_text: [] }
+      })
+
+      const spy = vi.spyOn(markdown, 'markdownToBlocks').mockReturnValueOnce([])
+
+      await expect(
+        blocks(mockNotion as any, {
+          action: 'update',
+          block_id: 'block-1',
+          content: 'some content'
+        })
+      ).rejects.toThrow('Content must produce at least one block')
+
+      spy.mockRestore()
     })
   })
 
