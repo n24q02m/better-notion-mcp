@@ -155,6 +155,12 @@ export async function startHttp() {
 
       // Redirect back to the MCP client's original redirect_uri
       const clientRedirect = new URL(pending.clientRedirectUri)
+      const protocol = clientRedirect.protocol.toLowerCase()
+      if (['javascript:', 'data:', 'vbscript:'].includes(protocol)) {
+        res.status(400).json({ error: 'invalid_request', error_description: 'Invalid redirect_uri protocol' })
+        return
+      }
+
       clientRedirect.searchParams.set('code', ourAuthCode)
       if (pending.clientState) {
         clientRedirect.searchParams.set('state', pending.clientState)
