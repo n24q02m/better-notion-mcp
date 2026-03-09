@@ -515,39 +515,52 @@ export function parseRichText(text: string): RichText[] {
 function richTextToMarkdown(richText: RichText[]): string {
   if (!richText || !Array.isArray(richText)) return ''
 
-  return richText
-    .map((rt) => {
-      if (!rt) return ''
+  let result = ''
+  for (let i = 0; i < richText.length; i++) {
+    const rt = richText[i]
+    if (!rt) continue
 
-      // Handle mention elements
-      if (rt.type === 'mention' && rt.mention) {
-        const title = rt.plain_text || rt.text?.content || 'Untitled'
-        const id = rt.mention.page?.id || rt.mention.database?.id || ''
-        if (id) return `@[${title}](${id})`
-        // Fallback for other mention types (user, date, etc.)
-        return title
+    // Handle mention elements
+    if (rt.type === 'mention' && rt.mention) {
+      const title = rt.plain_text || rt.text?.content || 'Untitled'
+      const id = rt.mention.page?.id || rt.mention.database?.id || ''
+      if (id) {
+        result += `@[${title}](${id})`
+        continue
       }
+      // Fallback for other mention types (user, date, etc.)
+      result += title
+      continue
+    }
 
-      if (!rt.text) return ''
+    if (!rt.text) continue
 
-      let text = rt.text.content || ''
-      const annotations = rt.annotations || {}
+    let text = rt.text.content || ''
+    const annotations = rt.annotations || ({} as any)
 
-      if (annotations.bold) text = `**${text}**`
-      if (annotations.italic) text = `*${text}*`
-      if (annotations.code) text = `\`${text}\``
-      if (annotations.strikethrough) text = `~~${text}~~`
-      if (rt.text.link) text = `[${text}](${rt.text.link.url})`
-      return text
-    })
-    .join('')
+    if (annotations.bold) text = `**${text}**`
+    if (annotations.italic) text = `*${text}*`
+    if (annotations.code) text = `\`${text}\``
+    if (annotations.strikethrough) text = `~~${text}~~`
+    if (rt.text.link) text = `[${text}](${rt.text.link.url})`
+    result += text
+  }
+
+  return result
 }
 
 /**
  * Extract plain text from rich text
+ * Optimized string accumulation avoids creating intermediate arrays
+ * and reduces garbage collection pressure in hot paths.
  */
 export function extractPlainText(richText: RichText[]): string {
-  return richText.map((rt) => rt.plain_text || rt.text?.content || '').join('')
+  if (!richText || !Array.isArray(richText)) return ''
+  let result = ''
+  for (let i = 0; i < richText.length; i++) {
+    result += richText[i].plain_text || richText[i].text?.content || ''
+  }
+  return result
 }
 
 // ============================================================
