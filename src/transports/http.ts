@@ -155,6 +155,14 @@ export async function startHttp() {
 
       // Redirect back to the MCP client's original redirect_uri
       const clientRedirect = new URL(pending.clientRedirectUri)
+
+      // Prevent XSS and Open Redirect vulnerabilities via unsafe protocols
+      const protocol = clientRedirect.protocol.toLowerCase()
+      if (['javascript:', 'data:', 'vbscript:', 'file:'].includes(protocol)) {
+        res.status(400).json({ error: 'invalid_request', error_description: 'Unsafe redirect URI' })
+        return
+      }
+
       clientRedirect.searchParams.set('code', ourAuthCode)
       if (pending.clientState) {
         clientRedirect.searchParams.set('state', pending.clientState)
