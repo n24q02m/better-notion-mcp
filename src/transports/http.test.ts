@@ -248,6 +248,45 @@ describe('startHttp', () => {
         error_description: 'Unknown or expired state'
       })
     })
+
+    it('should block unsafe redirect URIs to prevent XSS', async () => {
+      // Mock global fetch
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          access_token: 'notion-token',
+          token_type: 'bearer'
+        })
+      })
+      vi.stubGlobal('fetch', mockFetch)
+
+      const { createNotionOAuthProvider } = await import('../auth/notion-oauth-provider.js')
+      const handlers = await startAndGetHandlers()
+      const handler = handlers['GET:/callback']?.at(-1) as Fn
+
+      // Get the mock instance returned by createNotionOAuthProvider
+      const providerInfo = vi.mocked(createNotionOAuthProvider).mock.results[0].value
+      const pendingAuths: Map<string, any> = providerInfo.pendingAuths
+
+      // Insert a pending auth with an unsafe redirectURI
+      pendingAuths.set('unsafe-state', {
+        clientId: 'c1',
+        clientRedirectUri: 'javascript:alert(1)',
+        codeChallenge: 'c',
+        codeChallengeMethod: 'S256',
+        createdAt: Date.now()
+      })
+
+      const req = { query: { code: 'some-code', state: 'unsafe-state' } }
+      const res = mockRes()
+      await handler(req, res)
+
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'invalid_request',
+        error_description: 'Unsafe redirect URI'
+      })
+    })
   })
 
   describe('POST /mcp', () => {
