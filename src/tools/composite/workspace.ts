@@ -76,30 +76,34 @@ export async function workspace(notion: Client, input: WorkspaceInput): Promise<
 
         const results = input.limit ? allResults.slice(0, input.limit) : allResults
 
+        const formattedResults = new Array(results.length)
+        for (let i = 0; i < results.length; i++) {
+          const item: any = results[i]
+          const result: any = {
+            id: item.id,
+            object: item.object,
+            title:
+              item.object === 'page'
+                ? item.properties?.title?.title?.[0]?.plain_text ||
+                  item.properties?.Name?.title?.[0]?.plain_text ||
+                  'Untitled'
+                : item.title?.[0]?.plain_text || 'Untitled',
+            url: item.url,
+            last_edited_time: item.last_edited_time
+          }
+          // For data_source objects, include the parent database_id
+          // This lets callers use either ID with the databases tool
+          if (item.object === 'data_source' && item.parent?.database_id) {
+            result.database_id = item.parent.database_id
+          }
+          formattedResults[i] = result
+        }
+
         return {
           action: 'search',
           query: input.query,
           total: results.length,
-          results: results.map((item: any) => {
-            const result: any = {
-              id: item.id,
-              object: item.object,
-              title:
-                item.object === 'page'
-                  ? item.properties?.title?.title?.[0]?.plain_text ||
-                    item.properties?.Name?.title?.[0]?.plain_text ||
-                    'Untitled'
-                  : item.title?.[0]?.plain_text || 'Untitled',
-              url: item.url,
-              last_edited_time: item.last_edited_time
-            }
-            // For data_source objects, include the parent database_id
-            // This lets callers use either ID with the databases tool
-            if (item.object === 'data_source' && item.parent?.database_id) {
-              result.database_id = item.parent.database_id
-            }
-            return result
-          })
+          results: formattedResults
         }
       }
 
