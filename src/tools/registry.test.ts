@@ -287,9 +287,15 @@ describe('registerTools', () => {
 
     it('should route databases tool correctly', async () => {
       const handler = server.getHandler(3)
-      // Fix: updated mockResult to satisfy QueryDatabaseResponse type (must have total)
-      const mockResult = { action: 'query', database_id: 'db-1', data_source_id: 'ds-1', total: 0, results: [] }
-      vi.mocked(databases).mockResolvedValue(mockResult as any)
+
+      const mockResult = {
+        action: 'query' as const,
+        database_id: 'db-1',
+        data_source_id: 'ds-1',
+        total: 0,
+        results: []
+      }
+      vi.mocked(databases).mockResolvedValue(mockResult)
 
       const result = await handler({
         params: { name: 'databases', arguments: { action: 'query', database_id: 'db-1' } }
