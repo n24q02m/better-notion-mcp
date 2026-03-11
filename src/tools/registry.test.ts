@@ -231,6 +231,20 @@ describe('registerTools', () => {
       })
     })
 
+    it('should throw NotionMCPError with DOC_NOT_FOUND when readFileSync throws', async () => {
+      const handler = server.getHandler(2)
+      vi.mocked(readFileSync).mockImplementation(() => {
+        throw new Error('ENOENT: no such file or directory')
+      })
+
+      const promise = handler({ params: { uri: 'notion://docs/pages' } })
+      await expect(promise).rejects.toThrow(NotionMCPError)
+      await expect(promise).rejects.toMatchObject({
+        code: 'DOC_NOT_FOUND',
+        suggestion: expect.any(String)
+      })
+    })
+
     it('should include available resources in error message', async () => {
       const handler = server.getHandler(2)
 

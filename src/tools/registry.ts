@@ -391,9 +391,13 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
       )
     }
 
-    const content = readFileSync(join(DOCS_DIR, resource.file), 'utf-8')
-    return {
-      contents: [{ uri, mimeType: 'text/markdown', text: content }]
+    try {
+      const content = readFileSync(join(DOCS_DIR, resource.file), 'utf-8')
+      return {
+        contents: [{ uri, mimeType: 'text/markdown', text: content }]
+      }
+    } catch {
+      throw new NotionMCPError(`Documentation not found for: ${resource.name}`, 'DOC_NOT_FOUND', 'Check resource URI')
     }
   })
 
