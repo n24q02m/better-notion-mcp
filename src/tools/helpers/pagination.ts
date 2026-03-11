@@ -108,21 +108,41 @@ export function batchItems<T>(items: T[], batchSize: number): T[][] {
 
 /**
  * Process items in batches with concurrency limit
+ * Optimized: Uses a rolling concurrency window (worker pool) instead of fixed Promise.all chunking
+ * to prevent slow requests from blocking subsequent fast requests.
  */
 export async function processBatches<T, R>(
   items: T[],
   processFn: (item: T) => Promise<R>,
   options: { batchSize?: number; concurrency?: number } = {}
 ): Promise<R[]> {
-  const { batchSize = 10, concurrency = 3 } = options
-  const batches = batchItems(items, batchSize)
-  const results: R[] = []
+  // Calculate effective concurrency to match previous behavior where 'concurrency'
+  // meant the number of parallel 'batchSize' chunks.
+  const effectiveConcurrency = (options.batchSize ?? 10) * (options.concurrency ?? 3)
+  const results: R[] = new Array(items.length)
+  let currentIndex = 0
+  let hasError = false
+  let caughtError: unknown = null
 
-  for (let i = 0; i < batches.length; i += concurrency) {
-    const currentBatches = batches.slice(i, i + concurrency)
-    const batchPromises = currentBatches.map((batch) => Promise.all(batch.map(processFn)))
-    const batchResults = await Promise.all(batchPromises)
-    results.push(...batchResults.flat())
+  async function worker() {
+    while (currentIndex < items.length && !hasError) {
+      const index = currentIndex++
+      try {
+        results[index] = await processFn(items[index])
+      } catch (err) {
+        if (!hasError) {
+          hasError = true
+          caughtError = err
+        }
+      }
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(effectiveConcurrency, items.length) }, worker)
+  await Promise.all(workers)
+
+  if (hasError) {
+    throw caughtError
   }
 
   return results
