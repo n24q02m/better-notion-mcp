@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { createHash, randomBytes } from 'node:crypto'
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { InvalidTokenError } from '@modelcontextprotocol/sdk/server/auth/errors.js'
 import { ProxyOAuthServerProvider } from '@modelcontextprotocol/sdk/server/auth/providers/proxyProvider.js'
 import { Client } from '@notionhq/client'
@@ -234,7 +234,11 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
         throw new InvalidTokenError('code_verifier is required')
       }
       const expectedChallenge = createHash('sha256').update(codeVerifier).digest('base64url')
-      if (expectedChallenge !== stored.codeChallenge) {
+
+      const expectedBuffer = Buffer.from(expectedChallenge, 'utf8')
+      const storedBuffer = Buffer.from(stored.codeChallenge, 'utf8')
+
+      if (expectedBuffer.byteLength !== storedBuffer.byteLength || !timingSafeEqual(expectedBuffer, storedBuffer)) {
         throw new InvalidTokenError('code_verifier does not match the challenge')
       }
     }
