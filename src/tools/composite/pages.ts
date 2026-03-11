@@ -384,9 +384,13 @@ async function updatePage(notion: Client, input: PagesInput): Promise<UpdatePage
         }
 
         // Delete current batch immediately
-        await processBatches(results, async (block) => {
-          await notion.blocks.delete({ block_id: block.id })
-        })
+        await processBatches(
+          results,
+          async (block) => {
+            await notion.blocks.delete({ block_id: block.id })
+          },
+          { batchSize: 1, concurrency: 5 }
+        )
       }
 
       const newBlocks = markdownToBlocks(input.content)

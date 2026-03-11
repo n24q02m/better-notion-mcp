@@ -107,7 +107,7 @@ export function batchItems<T>(items: T[], batchSize: number): T[][] {
 }
 
 /**
- * Process items in batches with concurrency limit
+ * Process items in batches with concurrency limit using a rolling window
  */
 export async function processBatches<T, R>(
   items: T[],
@@ -115,15 +115,28 @@ export async function processBatches<T, R>(
   options: { batchSize?: number; concurrency?: number } = {}
 ): Promise<R[]> {
   const { batchSize = 10, concurrency = 3 } = options
-  const batches = batchItems(items, batchSize)
-  const results: R[] = []
+  const itemConcurrency = batchSize * concurrency
 
-  for (let i = 0; i < batches.length; i += concurrency) {
-    const currentBatches = batches.slice(i, i + concurrency)
-    const batchPromises = currentBatches.map((batch) => Promise.all(batch.map(processFn)))
-    const batchResults = await Promise.all(batchPromises)
-    results.push(...batchResults.flat())
+  const results: R[] = new Array(items.length)
+  let currentIndex = 0
+
+  let hasError = false
+
+  const worker = async () => {
+    while (currentIndex < items.length && !hasError) {
+      const index = currentIndex++
+      try {
+        results[index] = await processFn(items[index])
+      } catch (error) {
+        hasError = true
+        throw error
+      }
+    }
   }
+
+  const workers = Array.from({ length: Math.min(itemConcurrency, items.length) }, () => worker())
+
+  await Promise.all(workers)
 
   return results
 }
