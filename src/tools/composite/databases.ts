@@ -12,6 +12,10 @@ import { autoPaginate, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties, extractPageProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
 
+// Cache for data source schema (properties)
+const schemaCache = new Map<string, { properties: any; expiresAt: number }>()
+const SCHEMA_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
 export interface DatabasesInput {
   action:
     | 'create'
@@ -372,14 +376,29 @@ async function queryDatabase(notion: Client, input: DatabasesInput): Promise<Que
 
   // Smart search across text properties
   if (input.search && !filter) {
-    const dataSource: any = await (notion as any).dataSources.retrieve({
-      data_source_id: dataSourceId
-    })
+    let properties: any
+
+    const cached = schemaCache.get(dataSourceId)
+    if (cached && Date.now() < cached.expiresAt) {
+      properties = cached.properties
+    } else {
+      const dataSource: any = await (notion as any).dataSources.retrieve({
+        data_source_id: dataSourceId
+      })
+      properties = dataSource.properties
+
+      if (properties) {
+        schemaCache.set(dataSourceId, {
+          properties,
+          expiresAt: Date.now() + SCHEMA_CACHE_TTL
+        })
+      }
+    }
 
     const textProps = []
-    if (dataSource.properties) {
-      for (const name of Object.keys(dataSource.properties)) {
-        const prop = (dataSource.properties as any)[name]
+    if (properties) {
+      for (const name of Object.keys(properties)) {
+        const prop = (properties as any)[name]
         if (['title', 'rich_text'].includes(prop.type)) {
           textProps.push(name)
         }
