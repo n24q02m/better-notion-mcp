@@ -369,6 +369,13 @@ export function parseRichText(text: string): RichText[] {
   let strikethrough = false
   let noMoreCloseBrackets = false
 
+  const flushCurrent = () => {
+    if (current) {
+      richText.push(createRichText(current, { bold, italic, code, strikethrough }))
+      current = ''
+    }
+  }
+
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
     const next = text[i + 1]
@@ -379,10 +386,7 @@ export function parseRichText(text: string): RichText[] {
       if (closeBracket !== -1 && closeBracket + 1 < text.length && text[closeBracket + 1] === '(') {
         const closeParen = text.indexOf(')', closeBracket + 2)
         if (closeParen !== -1) {
-          if (current) {
-            richText.push(createRichText(current, { bold, italic, code, strikethrough }))
-            current = ''
-          }
+          flushCurrent()
 
           const mentionTitle = text.slice(i + 2, closeBracket)
           const mentionTarget = text.slice(closeBracket + 2, closeParen)
@@ -409,10 +413,7 @@ export function parseRichText(text: string): RichText[] {
         const closeParen = text.indexOf(')', closeBracket + 2)
 
         if (closeParen !== -1) {
-          if (current) {
-            richText.push(createRichText(current, { bold, italic, code, strikethrough }))
-            current = ''
-          }
+          flushCurrent()
 
           const linkText = text.slice(i + 1, closeBracket)
           const linkUrl = text.slice(closeBracket + 2, closeParen)
@@ -439,38 +440,26 @@ export function parseRichText(text: string): RichText[] {
 
     // Bold **text**
     if (char === '*' && next === '*') {
-      if (current) {
-        richText.push(createRichText(current, { bold, italic, code, strikethrough }))
-        current = ''
-      }
+      flushCurrent()
       bold = !bold
       i++ // Skip next *
       continue
     }
     // Italic *text*
     else if (char === '*' && next !== '*') {
-      if (current) {
-        richText.push(createRichText(current, { bold, italic, code, strikethrough }))
-        current = ''
-      }
+      flushCurrent()
       italic = !italic
       continue
     }
     // Code `text`
     else if (char === '`') {
-      if (current) {
-        richText.push(createRichText(current, { bold, italic, code, strikethrough }))
-        current = ''
-      }
+      flushCurrent()
       code = !code
       continue
     }
     // Strikethrough ~~text~~
     else if (char === '~' && next === '~') {
-      if (current) {
-        richText.push(createRichText(current, { bold, italic, code, strikethrough }))
-        current = ''
-      }
+      flushCurrent()
       strikethrough = !strikethrough
       i++ // Skip next ~
       continue
@@ -479,9 +468,7 @@ export function parseRichText(text: string): RichText[] {
     current += char
   }
 
-  if (current) {
-    richText.push(createRichText(current, { bold, italic, code, strikethrough }))
-  }
+  flushCurrent()
 
   return richText.length > 0 ? richText : [createRichText(text)]
 }
