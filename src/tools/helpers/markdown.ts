@@ -108,38 +108,18 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
 
     // Equation block $$...$$
     if (trimmedLine.startsWith('$$')) {
-      if (trimmedLine.endsWith('$$') && trimmedLine.length > 4) {
-        // Single line equation: $$expression$$
-        const expression = trimmedLine.slice(2, -2).trim()
-        blocks.push(createEquation(expression))
-        continue
-      }
-      // Multi-line equation
-      const eqLines: string[] = []
-      i++
-      while (i < lines.length && !lines[i].trim().startsWith('$$')) {
-        eqLines.push(lines[i])
-        i++
-      }
-      blocks.push(createEquation(eqLines.join('\n')))
+      const eqData = parseEquationBlock(lines, i, trimmedLine)
+      blocks.push(eqData.block)
+      i = eqData.endIndex
       continue
     }
 
     // Callout > [!TYPE] content or > [!TYPE]\n> content
     const calloutMatch = line.match(CALLOUT_REGEX)
     if (calloutMatch) {
-      const calloutType = calloutMatch[1].toUpperCase()
-      let calloutContent = calloutMatch[2] || ''
-
-      // Collect continuation lines (lines starting with >)
-      while (i + 1 < lines.length && lines[i + 1].startsWith('> ')) {
-        i++
-        calloutContent += (calloutContent ? '\n' : '') + lines[i].slice(2)
-      }
-
-      const icon = getCalloutIcon(calloutType)
-      const color = getCalloutColor(calloutType)
-      blocks.push(createCallout(calloutContent || calloutType, icon, color))
+      const calloutData = parseCalloutBlock(lines, i, calloutMatch)
+      blocks.push(calloutData.block)
+      i = calloutData.endIndex
       continue
     }
 
@@ -206,17 +186,14 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
     } else if (line.startsWith('### ')) {
       blocks.push(createHeading(3, line.slice(4)))
     }
+
     // Code block
     else if (line.startsWith('```')) {
-      const language = line.slice(3).trim()
-      const codeLines: string[] = []
-      i++
-      while (i < lines.length && !lines[i].startsWith('```')) {
-        codeLines.push(lines[i])
-        i++
-      }
-      blocks.push(createCodeBlock(codeLines.join('\n'), language))
+      const codeData = parseCodeBlock(lines, i, line)
+      blocks.push(codeData.block)
+      i = codeData.endIndex
     }
+
     // Task list / Checkbox list - [ ] or - [x]
     else if (CHECKED_LIST_REGEX.test(line)) {
       const checked = line[3] !== ' '
@@ -563,6 +540,57 @@ export function extractPlainText(richText: RichText[]): string {
   return result
 }
 
+// ============================================================
+// Block Parsing Helpers
+// ============================================================
+
+interface ParseResult {
+  block: NotionBlock
+  endIndex: number
+}
+
+function parseCalloutBlock(lines: string[], startIndex: number, match: RegExpMatchArray): ParseResult {
+  const calloutType = match[1].toUpperCase()
+  let calloutContent = match[2] || ''
+  let i = startIndex
+
+  // Collect continuation lines (lines starting with >)
+  while (i + 1 < lines.length && lines[i + 1].startsWith('> ')) {
+    i++
+    calloutContent += (calloutContent ? '\n' : '') + lines[i].slice(2)
+  }
+
+  const icon = getCalloutIcon(calloutType)
+  const color = getCalloutColor(calloutType)
+  return { block: createCallout(calloutContent || calloutType, icon, color), endIndex: i }
+}
+
+function parseCodeBlock(lines: string[], startIndex: number, line: string): ParseResult {
+  const language = line.slice(3).trim()
+  const codeLines: string[] = []
+  let i = startIndex + 1
+  while (i < lines.length && !lines[i].startsWith('```')) {
+    codeLines.push(lines[i])
+    i++
+  }
+  return { block: createCodeBlock(codeLines.join('\n'), language), endIndex: i }
+}
+
+function parseEquationBlock(lines: string[], startIndex: number, trimmedLine: string): ParseResult {
+  if (trimmedLine.endsWith('$$') && trimmedLine.length > 4) {
+    // Single line equation: $$expression$$
+    const expression = trimmedLine.slice(2, -2).trim()
+    return { block: createEquation(expression), endIndex: startIndex }
+  }
+  // Multi-line equation
+  const eqLines: string[] = []
+  let i = startIndex + 1
+  while (i < lines.length && !lines[i].trim().startsWith('$$')) {
+    eqLines.push(lines[i])
+    i++
+  }
+  return { block: createEquation(eqLines.join('\n')), endIndex: i }
+}
 // ============================================================
 // Table parsing
 // ============================================================
