@@ -348,7 +348,7 @@ try {
 try {
   const searchResp = await mcpRequest('tools/call', {
     name: 'workspace',
-    arguments: { action: 'search', query: 'MCP', filter: 'page' }
+    arguments: { action: 'search', query: 'MCP', filter: { object: 'page' } }
   })
   const searchText = searchResp.result?.content?.[0]?.text || ''
   const parentMatch = searchText.match(/"(?:page_)?id":\s*"([0-9a-f-]+)"/)
