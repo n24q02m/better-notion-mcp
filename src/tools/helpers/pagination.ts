@@ -78,20 +78,29 @@ export async function fetchChildrenRecursive(
 
   if (blocksNeedingChildren.length === 0) return
 
-  // Fetch children in parallel (batch of 5 to respect rate limits)
-  for (let i = 0; i < blocksNeedingChildren.length; i += 5) {
-    const batch = blocksNeedingChildren.slice(i, i + 5)
-    const childrenResults = await Promise.all(batch.map((b) => fetchChildren(b.id)))
-    for (let j = 0; j < batch.length; j++) {
-      const block = batch[j]
-      const children = childrenResults[j]
-      // Attach children to the correct property based on block type
-      if (block[block.type]) {
-        block[block.type].children = children
-      }
-      // Recurse into children
-      await fetchChildrenRecursive(children, fetchChildren, depth + 1)
+  // Fetch children with a rolling concurrency window (max 5 parallel requests)
+  // This avoids the latency penalty of fixed Promise.all batches where fast requests
+  // wait for the slowest request in the batch.
+  const childrenResults = await processBatches(
+    blocksNeedingChildren,
+    async (block) => {
+      return await fetchChildren(block.id)
+    },
+    { batchSize: 1, concurrency: 5 }
+  )
+
+  // Attach children and recurse sequentially to avoid unpredictable concurrent load
+  for (let j = 0; j < blocksNeedingChildren.length; j++) {
+    const block = blocksNeedingChildren[j]
+    const children = childrenResults[j]
+
+    // Attach children to the correct property based on block type
+    if (block[block.type]) {
+      block[block.type].children = children
     }
+
+    // Recurse into children
+    await fetchChildrenRecursive(children, fetchChildren, depth + 1)
   }
 }
 
