@@ -489,14 +489,18 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
     throw new NotionMCPError('pages or page_properties required', 'VALIDATION_ERROR', 'Provide items to create')
   }
 
-  const results = await processBatches(items, async (item) => {
-    if (item.properties === undefined || item.properties === null) {
+  // Validate all items before processing to avoid partial writes on malformed input
+  for (let i = 0; i < items.length; i++) {
+    if (!items[i] || items[i].properties === undefined || items[i].properties === null) {
       throw new NotionMCPError(
-        'Each item in the pages array must have a "properties" key',
+        `Item at index ${i} in the pages array is missing the "properties" key`,
         'VALIDATION_ERROR',
         'Use format: pages: [{ "properties": { "FieldName": "value" } }] - not flat objects like [{ "FieldName": "value" }]'
       )
     }
+  }
+
+  const results = await processBatches(items, async (item) => {
     const properties = convertToNotionProperties(item.properties, schema)
 
     const page = await notion.pages.create({
@@ -531,6 +535,17 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
 
   if (items.length === 0) {
     throw new NotionMCPError('pages or page_id+page_properties required', 'VALIDATION_ERROR', 'Provide items to update')
+  }
+
+  // Validate all items before processing to avoid partial writes on malformed input
+  for (let i = 0; i < items.length; i++) {
+    if (!items[i] || items[i].properties === undefined || items[i].properties === null) {
+      throw new NotionMCPError(
+        `Item at index ${i} in the pages array is missing the "properties" key`,
+        'VALIDATION_ERROR',
+        'Use format: pages: [{ "page_id": "...", "properties": { "FieldName": "value" } }]'
+      )
+    }
   }
 
   const results = await processBatches(items, async (item) => {
