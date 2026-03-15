@@ -434,6 +434,13 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
   }
 
   const results = await processBatches(items, async (item) => {
+    if (item.properties === undefined || item.properties === null) {
+      throw new NotionMCPError(
+        'Each item in the pages array must have a "properties" key',
+        'VALIDATION_ERROR',
+        'Use format: pages: [{ "properties": { "FieldName": "value" } }] - not flat objects like [{ "FieldName": "value" }]'
+      )
+    }
     const properties = convertToNotionProperties(item.properties, schema)
 
     const page = await notion.pages.create({
