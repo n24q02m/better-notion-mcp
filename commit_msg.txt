@@ -1,0 +1,12 @@
+test: add unit tests for src/main.ts entry point
+
+🎯 **What:** The testing gap addressed
+This PR creates `src/main.test.ts` to test the module resolution logic of `src/main.ts` and its dependency on `process.env.TRANSPORT_MODE`. It verifies that the top-level dynamic imports load the correct transport mode.
+
+📊 **Coverage:** What scenarios are now tested
+- The default `stdio` fallback is correctly launched when `TRANSPORT_MODE` is undefined.
+- `http` transport begins when `TRANSPORT_MODE=http`.
+- `stdio` transport initiates when `TRANSPORT_MODE=stdio`.
+
+✨ **Result:** The improvement in test coverage
+We now successfully cover the entry point logic natively without spinning up actual listeners. Overall test suite runs deterministically without unexpected environment overlaps.
