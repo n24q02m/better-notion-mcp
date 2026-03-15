@@ -3,6 +3,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { InvalidTokenError } from '@modelcontextprotocol/sdk/server/auth/errors.js'
 import { ProxyOAuthServerProvider } from '@modelcontextprotocol/sdk/server/auth/providers/proxyProvider.js'
 import { Client } from '@notionhq/client'
+import { NotionMCPError } from '../tools/helpers/errors.js'
 import { StatelessClientStore } from './stateless-client-store.js'
 
 /** Request context propagated via AsyncLocalStorage for IP-scoped pending binds */
@@ -288,7 +289,11 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
     })
 
     if (!response.ok) {
-      throw new Error(`Token refresh failed: ${response.status}`)
+      throw new NotionMCPError(
+        `Token refresh failed: ${response.status}`,
+        'AUTHENTICATION_ERROR',
+        'Check OAuth token and scopes'
+      )
     }
 
     const data = (await response.json()) as { access_token: string; token_type: string; expires_in?: number }
