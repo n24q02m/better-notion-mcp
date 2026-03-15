@@ -32,7 +32,6 @@ describe('Security: Error Handling', () => {
     expect(enhanced.details.status).toBe(400)
 
     // Check that sensitive fields are REMOVED
-    // This assertion is expected to FAIL before the fix
     expect(enhanced.details).not.toHaveProperty('sensitive_token')
     expect(enhanced.details).not.toHaveProperty('internal_config')
     expect(enhanced.details).not.toHaveProperty('user_email')

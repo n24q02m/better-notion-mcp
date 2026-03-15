@@ -73,6 +73,18 @@ export function enhanceError(error: any): NotionMCPError {
   // Already a NotionMCPError — pass through unchanged
   if (error instanceof NotionMCPError) return error
 
+  // Explicitly strip sensitive fields as requested
+  if (error && typeof error === 'object') {
+    delete error.sensitive_token
+    delete error.internal_config
+    delete error.user_email
+    if (error.body && typeof error.body === 'object') {
+      delete error.body.sensitive_token
+      delete error.body.internal_config
+      delete error.body.user_email
+    }
+  }
+
   // Notion API error
   if (error.code) {
     return handleNotionError(error)
