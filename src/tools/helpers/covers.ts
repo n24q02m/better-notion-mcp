@@ -122,15 +122,3 @@ export function formatCover(value: string): { type: 'external'; external: { url:
     'Provide a valid URL or a recognized cover shorthand name'
   )
 }
-
-/** List all available cover shorthand names, grouped by category */
-export function listCovers(): Record<string, string[]> {
-  const groups: Record<string, string[]> = {}
-  for (const key of Object.keys(COVER_CATALOG)) {
-    const category = key.split('_')[0]
-    const groupName = category === 'solid' ? 'solid_colors' : category === 'gradient' ? 'gradients' : category
-    if (!groups[groupName]) groups[groupName] = []
-    groups[groupName].push(key)
-  }
-  return groups
-}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatCover, listCovers } from './covers'
+import { formatCover } from './covers'
 import { NotionMCPError } from './errors'
 
 describe('formatCover', () => {
@@ -99,29 +99,5 @@ describe('formatCover', () => {
     it('rejects vbscript: URLs', () => {
       expect(() => formatCover('vbscript:msgbox(1)')).toThrow(NotionMCPError)
     })
-  })
-})
-
-describe('listCovers', () => {
-  it('should return covers grouped by category', () => {
-    const groups = listCovers()
-    expect(groups.solid_colors).toContain('solid_red')
-    expect(groups.solid_colors).toContain('solid_blue')
-    expect(groups.gradients).toContain('gradient_1')
-    expect(groups.gradients).toContain('gradient_11')
-    expect(groups.nasa).toContain('nasa_carina_nebula')
-    expect(groups.met).toContain('met_paul_signac')
-    expect(groups.rijksmuseum).toContain('rijksmuseum_rembrandt_1642')
-    expect(groups.woodcuts).toContain('woodcuts_1')
-  })
-
-  it('should have 4 solid colors', () => {
-    const groups = listCovers()
-    expect(groups.solid_colors).toHaveLength(4)
-  })
-
-  it('should have 11 gradients', () => {
-    const groups = listCovers()
-    expect(groups.gradients).toHaveLength(11)
   })
 })
