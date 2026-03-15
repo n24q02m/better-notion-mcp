@@ -86,6 +86,21 @@ describe('convertToNotionProperties', () => {
       expect(result).not.toEqual({ State: { select: { name: 'In progress' } } })
       expect(result).toEqual({ State: { status: { name: 'In progress' } } })
     })
+
+    it('converts empty string for status field (API validates option names, not this layer)', () => {
+      const result = convertToNotionProperties({ Status: '' }, { Status: 'status' })
+      expect(result).toEqual({ Status: { status: { name: '' } } })
+    })
+  })
+
+  describe('string values with mixed schema (status vs select fallback)', () => {
+    it('converts status field via schema while falling back to select for unschematized field', () => {
+      const result = convertToNotionProperties({ Status: 'In Progress', Priority: 'High' }, { Status: 'status' })
+      expect(result).toEqual({
+        Status: { status: { name: 'In Progress' } },
+        Priority: { select: { name: 'High' } }
+      })
+    })
   })
 
   describe('string values without schema (auto-detect)', () => {
