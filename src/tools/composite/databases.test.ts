@@ -354,7 +354,42 @@ describe('databases', () => {
     it('should throw when no data sources exist', async () => {
       mockNotion.databases.retrieve.mockResolvedValueOnce(makeDbRetrieveResponse({ data_sources: [] }))
 
-      await expect(databases(notion, { action: 'query', database_id: 'db-1' })).rejects.toThrow('No data sources found')
+      await expect(databases(notion, { action: 'query', database_id: 'db-1' })).rejects.toThrow(
+        'Database has no data sources'
+      )
+    })
+
+    it('should resolve data_source_id when database_id is not found', async () => {
+      // databases.retrieve returns NOT_FOUND
+      mockNotion.databases.retrieve.mockRejectedValueOnce({ code: 'object_not_found' })
+      // dataSources.retrieve succeeds (fallback path)
+      mockNotion.dataSources.retrieve
+        .mockResolvedValueOnce({
+          id: 'ds-fallback',
+          parent: { database_id: 'db-parent' }
+        })
+        .mockResolvedValueOnce(makeDataSourceResponse())
+      mockNotion.dataSources.query.mockResolvedValueOnce({
+        results: [],
+        next_cursor: null,
+        has_more: false
+      })
+
+      const result = (await databases(notion, {
+        action: 'query',
+        database_id: 'ds-fallback'
+      })) as QueryDatabaseResponse
+
+      expect(result.database_id).toBe('db-parent')
+    })
+
+    it('should throw when ID is neither database nor data source', async () => {
+      mockNotion.databases.retrieve.mockRejectedValueOnce({ code: 'object_not_found' })
+      mockNotion.dataSources.retrieve.mockRejectedValueOnce({ code: 'object_not_found' })
+
+      await expect(databases(notion, { action: 'query', database_id: 'bad-id' })).rejects.toThrow(
+        'is not a valid database or data source'
+      )
     })
 
     it('should throw when database_id is missing', async () => {
@@ -664,7 +699,8 @@ describe('databases', () => {
       })
 
       const call = mockNotion.databases.update.mock.calls[0][0]
-      expect(call.database_id).toBe('db-1')
+      // normalizeId strips hyphens for Notion API call
+      expect(call.database_id).toBe('db1')
       expect(call.title[0].text.content).toBe('New Title')
     })
 
@@ -773,7 +809,7 @@ describe('databases', () => {
       mockNotion.databases.retrieve.mockResolvedValueOnce(makeDbRetrieveResponse({ data_sources: [] }))
 
       await expect(databases(notion, { action: 'list_templates', database_id: 'db-1' })).rejects.toThrow(
-        'No data sources found'
+        'Database has no data sources'
       )
     })
 

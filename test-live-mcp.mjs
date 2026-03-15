@@ -344,67 +344,317 @@ await expectErrorOrAuthFail('file_uploads(retrieve, no upload_id)', 'file_upload
 if (HAS_REAL_TOKEN) {
   console.log('\n--- API tests (real token) ---')
 
-  // workspace.info
-  try {
-    const r = await client.callTool({ name: 'workspace', arguments: { action: 'info' } }, undefined, TIMEOUT)
-    const t = parse(r)
-    ok('workspace.info', t.slice(0, 80))
-  } catch (e) {
-    fail('workspace.info', e.message)
+  // Helper for simple API call tests
+  async function apiTest(label, name, args) {
+    try {
+      const r = await client.callTool({ name, arguments: args }, undefined, TIMEOUT)
+      const t = parse(r)
+      ok(label, t.slice(0, 80))
+      return t
+    } catch (e) {
+      fail(label, e.message)
+      return null
+    }
   }
 
-  // workspace.search
+  // --- workspace ---
+  await apiTest('workspace.info', 'workspace', { action: 'info' })
+  await apiTest('workspace.search', 'workspace', { action: 'search', query: 'test' })
+
+  // --- users ---
+  await apiTest('users.me', 'users', { action: 'me' })
+  await apiTest('users.from_workspace', 'users', { action: 'from_workspace' })
+
+  // --- content_convert ---
+  await apiTest('content_convert.md-to-blocks', 'content_convert', {
+    direction: 'markdown-to-blocks',
+    content: '# Hello\n\nThis is a **test**.\n\n- Item 1\n- Item 2'
+  })
+
+  // blocks-to-markdown
+  await apiTest('content_convert.blocks-to-md', 'content_convert', {
+    direction: 'blocks-to-markdown',
+    content: JSON.stringify([
+      { type: 'heading_1', heading_1: { rich_text: [{ type: 'text', text: { content: 'Test' } }] } },
+      { type: 'paragraph', paragraph: { rich_text: [{ type: 'text', text: { content: 'Hello world' } }] } }
+    ])
+  })
+
+  // --- pages: full CRUD lifecycle ---
+  console.log('\n--- pages CRUD ---')
+
+  // Find a parent page via workspace search
+  let parentId = null
   try {
-    const r = await client.callTool(
-      { name: 'workspace', arguments: { action: 'search', query: 'test' } },
+    const sr = await client.callTool(
+      { name: 'workspace', arguments: { action: 'search', query: 'MCP', filter: 'page' } },
       undefined,
       TIMEOUT
     )
-    const t = parse(r)
-    ok('workspace.search', t.slice(0, 80))
-  } catch (e) {
-    fail('workspace.search', e.message)
+    const st = parse(sr)
+    const m = st.match(/"(?:page_)?id":\s*"([0-9a-f-]+)"/)
+    if (m) parentId = m[1]
+  } catch (_) {}
+
+  if (!parentId) {
+    skip('pages CRUD', 'No accessible parent page found')
+  } else {
+    // create
+    let testPageId = null
+    try {
+      const r = await client.callTool(
+        {
+          name: 'pages',
+          arguments: {
+            action: 'create',
+            parent_id: parentId,
+            title: 'Live Test Page (auto-cleanup)',
+            content:
+              '# Test\n\nCreated by test-live-mcp.mjs.\n\n- Bullet 1\n- Bullet 2\n\n## Section\n\nParagraph text.',
+            icon: 'document:gray'
+          }
+        },
+        undefined,
+        TIMEOUT
+      )
+      const t = parse(r)
+      const idMatch = t.match(/"(?:page_)?id":\s*"([0-9a-f-]+)"/)
+      if (idMatch) {
+        testPageId = idMatch[1]
+        ok('pages.create', `id=${testPageId}`)
+      } else {
+        ok('pages.create', t.slice(0, 80))
+      }
+    } catch (e) {
+      fail('pages.create', e.message)
+    }
+
+    if (testPageId) {
+      // get
+      await apiTest('pages.get', 'pages', { action: 'get', page_id: testPageId })
+
+      // update (append content)
+      await apiTest('pages.update', 'pages', {
+        action: 'update',
+        page_id: testPageId,
+        append_content: '## Appended\n\nThis was appended via update.'
+      })
+
+      // get_property (title)
+      await apiTest('pages.get_property', 'pages', {
+        action: 'get_property',
+        page_id: testPageId,
+        property_id: 'title'
+      })
+
+      // --- blocks ---
+      console.log('\n--- blocks CRUD ---')
+
+      // children
+      let blockId = null
+      try {
+        const r = await client.callTool(
+          { name: 'blocks', arguments: { action: 'children', block_id: testPageId } },
+          undefined,
+          TIMEOUT
+        )
+        const t = parse(r)
+        const bm = t.match(/"(?:block_)?id":\s*"([0-9a-f-]+)"/)
+        if (bm) blockId = bm[1]
+        ok('blocks.children', `found block: ${blockId}`)
+      } catch (e) {
+        fail('blocks.children', e.message)
+      }
+
+      // append
+      await apiTest('blocks.append', 'blocks', {
+        action: 'append',
+        block_id: testPageId,
+        content: '### Appended Block\n\nThis block was appended via blocks tool.'
+      })
+
+      if (blockId) {
+        // get
+        await apiTest('blocks.get', 'blocks', { action: 'get', block_id: blockId })
+      }
+
+      // --- comments ---
+      console.log('\n--- comments ---')
+
+      // create
+      let commentId = null
+      try {
+        const r = await client.callTool(
+          {
+            name: 'comments',
+            arguments: { action: 'create', page_id: testPageId, content: 'Test comment from live MCP test' }
+          },
+          undefined,
+          TIMEOUT
+        )
+        const t = parse(r)
+        const cm = t.match(/"(?:comment_)?id":\s*"([0-9a-f-]+)"/)
+        if (cm) commentId = cm[1]
+        ok('comments.create', `id=${commentId}`)
+      } catch (e) {
+        fail('comments.create', e.message)
+      }
+
+      // list
+      await apiTest('comments.list', 'comments', { action: 'list', page_id: testPageId })
+
+      if (commentId) {
+        // get
+        await apiTest('comments.get', 'comments', { action: 'get', comment_id: commentId })
+      }
+
+      // --- duplicate ---
+      let dupPageId = null
+      try {
+        const r = await client.callTool(
+          { name: 'pages', arguments: { action: 'duplicate', page_id: testPageId } },
+          undefined,
+          TIMEOUT
+        )
+        const t = parse(r)
+        const dm = t.match(/"(?:page_)?id":\s*"([0-9a-f-]+)"/)
+        if (dm) dupPageId = dm[1]
+        ok('pages.duplicate', `dup_id=${dupPageId}`)
+      } catch (e) {
+        fail('pages.duplicate', e.message)
+      }
+
+      // --- cleanup: archive test pages ---
+      console.log('\n--- cleanup ---')
+      await apiTest('pages.archive(test)', 'pages', { action: 'archive', page_id: testPageId })
+      if (dupPageId) {
+        await apiTest('pages.archive(dup)', 'pages', { action: 'archive', page_id: dupPageId })
+      }
+    }
   }
 
-  // users.list
+  // --- databases ---
+  console.log('\n--- databases ---')
+
+  // Find a database via workspace search
+  let dbId = null
   try {
-    const r = await client.callTool({ name: 'users', arguments: { action: 'list' } }, undefined, TIMEOUT)
-    const t = parse(r)
-    ok('users.list', t.slice(0, 80))
-  } catch (e) {
-    fail('users.list', e.message)
+    const sr = await client.callTool(
+      { name: 'workspace', arguments: { action: 'search', filter: { object: 'data_source' } } },
+      undefined,
+      TIMEOUT
+    )
+    const st = parse(sr)
+    const dm = st.match(/"(?:database_)?id":\s*"([0-9a-f-]+)"/)
+    if (dm) dbId = dm[1]
+  } catch (_) {}
+
+  if (!dbId) {
+    skip('databases.get', 'No accessible database found')
+    skip('databases.query', 'No accessible database found')
+  } else {
+    // Token may find a database via search but lack direct access permissions
+    try {
+      const getR = await client.callTool(
+        { name: 'databases', arguments: { action: 'get', database_id: dbId } },
+        undefined,
+        TIMEOUT
+      )
+      const getT = parse(getR)
+      if (getT.includes('not found') || getT.includes('not_found') || getT.includes('Insufficient')) {
+        skip('databases.get', 'Token lacks access to this database')
+      } else {
+        ok('databases.get', getT.slice(0, 80))
+      }
+    } catch (e) {
+      skip('databases.get', `Token lacks access: ${e.message.slice(0, 60)}`)
+    }
+    await apiTest('databases.query', 'databases', { action: 'query', database_id: dbId, page_size: 3 })
   }
 
-  // users.me
-  try {
-    const r = await client.callTool({ name: 'users', arguments: { action: 'me' } }, undefined, TIMEOUT)
-    const t = parse(r)
-    ok('users.me', t.slice(0, 80))
-  } catch (e) {
-    fail('users.me', e.message)
-  }
+  // --- file_uploads ---
+  console.log('\n--- file_uploads ---')
 
-  // content_convert: markdown-to-blocks
+  // create
+  let uploadId = null
   try {
     const r = await client.callTool(
       {
-        name: 'content_convert',
-        arguments: {
-          action: 'markdown-to-blocks',
-          markdown: '# Hello\n\nThis is a **test**.'
-        }
+        name: 'file_uploads',
+        arguments: { action: 'create', filename: 'test-live.txt', content_type: 'text/plain' }
       },
       undefined,
       TIMEOUT
     )
     const t = parse(r)
-    ok('content_convert.md-to-blocks', t.slice(0, 80))
+    const um = t.match(/"(?:file_upload_)?id":\s*"([0-9a-f-]+)"/)
+    if (um) uploadId = um[1]
+    ok('file_uploads.create', `id=${uploadId}`)
   } catch (e) {
-    fail('content_convert.md-to-blocks', e.message)
+    // File upload API may not be available for all integrations
+    if (e.message.includes('permission') || e.message.includes('not available')) {
+      skip('file_uploads.create', 'File uploads not available for this integration')
+    } else {
+      fail('file_uploads.create', e.message)
+    }
+  }
+
+  if (uploadId) {
+    // send
+    await apiTest('file_uploads.send', 'file_uploads', {
+      action: 'send',
+      file_upload_id: uploadId,
+      file_content: 'SGVsbG8gZnJvbSBsaXZlIHRlc3Q='
+    })
+
+    // complete (may fail if Notion API requires more data before completing)
+    try {
+      const cr = await client.callTool(
+        { name: 'file_uploads', arguments: { action: 'complete', file_upload_id: uploadId } },
+        undefined,
+        TIMEOUT
+      )
+      const ct = parse(cr)
+      ok('file_uploads.complete', ct.slice(0, 80))
+    } catch (e) {
+      if (e.message.includes('Invalid request') || e.message.includes('not ready')) {
+        skip('file_uploads.complete', 'File not ready for completion (API limitation)')
+      } else {
+        fail('file_uploads.complete', e.message)
+      }
+    }
+
+    // retrieve
+    await apiTest('file_uploads.retrieve', 'file_uploads', {
+      action: 'retrieve',
+      file_upload_id: uploadId
+    })
   }
 } else {
   console.log('\n--- API tests (SKIPPED - no NOTION_TOKEN) ---')
-  const apiTests = ['workspace.info', 'workspace.search', 'users.list', 'users.me', 'content_convert.md-to-blocks']
+  const apiTests = [
+    'workspace.info',
+    'workspace.search',
+    'users.me',
+    'users.from_workspace',
+    'content_convert.md-to-blocks',
+    'content_convert.blocks-to-md',
+    'pages.create',
+    'pages.get',
+    'pages.update',
+    'pages.get_property',
+    'pages.duplicate',
+    'pages.archive',
+    'blocks.children',
+    'blocks.append',
+    'blocks.get',
+    'comments.create',
+    'comments.list',
+    'comments.get',
+    'databases.get',
+    'databases.query',
+    'file_uploads.create'
+  ]
   for (const t of apiTests) {
     skip(t, 'Requires NOTION_TOKEN')
   }

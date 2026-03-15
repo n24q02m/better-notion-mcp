@@ -20,23 +20,35 @@ export async function users(notion: Client, input: UsersInput): Promise<any> {
   return withErrorHandling(async () => {
     switch (input.action) {
       case 'list': {
-        const usersList = await autoPaginate((cursor) =>
-          notion.users.list({
-            start_cursor: cursor,
-            page_size: 100
-          })
-        )
+        try {
+          const usersList = await autoPaginate((cursor) =>
+            notion.users.list({
+              start_cursor: cursor,
+              page_size: 100
+            })
+          )
 
-        return {
-          action: 'list',
-          total: usersList.length,
-          users: usersList.map((user: any) => ({
-            id: user.id,
-            type: user.type,
-            name: user.name || 'Unknown',
-            avatar_url: user.avatar_url,
-            email: user.type === 'person' ? user.person?.email : undefined
-          }))
+          return {
+            action: 'list',
+            total: usersList.length,
+            users: usersList.map((user: any) => ({
+              id: user.id,
+              type: user.type,
+              name: user.name || 'Unknown',
+              avatar_url: user.avatar_url,
+              email: user.type === 'person' ? user.person?.email : undefined
+            }))
+          }
+        } catch (error: any) {
+          // Auto-suggest from_workspace when permission denied
+          if (error.code === 'restricted_resource' || error.code === 'RESTRICTED_RESOURCE') {
+            throw new NotionMCPError(
+              'Integration does not have permission to list users',
+              'RESTRICTED_RESOURCE',
+              'Use action "from_workspace" instead — it extracts users from accessible pages without requiring admin permissions.'
+            )
+          }
+          throw error
         }
       }
 
@@ -72,23 +84,29 @@ export async function users(notion: Client, input: UsersInput): Promise<any> {
       case 'from_workspace': {
         // Alternative method: Search pages and extract user info from metadata
         // This bypasses the permission issue with direct users.list() call
-        const searchResults: any = await notion.search({
-          filter: { property: 'object', value: 'page' },
-          page_size: 100
-        })
+        const searchResults: any = await autoPaginate(
+          (cursor) =>
+            notion.search({
+              filter: { property: 'object', value: 'page' },
+              start_cursor: cursor,
+              page_size: 100
+            }),
+          { maxPages: 5 }
+        )
 
         const usersMap = new Map<string, any>()
 
-        for (const page of searchResults.results) {
+        for (let i = 0; i < searchResults.length; i++) {
+          const page: any = searchResults[i]
           // Extract users from created_by and last_edited_by
-          if (page.created_by) {
+          if (page.created_by?.id && !usersMap.has(page.created_by.id)) {
             usersMap.set(page.created_by.id, {
               id: page.created_by.id,
               type: page.created_by.object,
               source: 'page_metadata'
             })
           }
-          if (page.last_edited_by) {
+          if (page.last_edited_by?.id && !usersMap.has(page.last_edited_by.id)) {
             usersMap.set(page.last_edited_by.id, {
               id: page.last_edited_by.id,
               type: page.last_edited_by.object,

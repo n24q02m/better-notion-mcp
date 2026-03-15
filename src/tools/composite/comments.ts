@@ -28,24 +28,36 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
           throw new NotionMCPError('page_id required for list action', 'VALIDATION_ERROR', 'Provide page_id')
         }
 
-        const comments = await autoPaginate(async (cursor) => {
-          return await (notion.comments as any).list({
-            block_id: input.page_id,
-            start_cursor: cursor
+        try {
+          const comments = await autoPaginate(async (cursor) => {
+            return await (notion.comments as any).list({
+              block_id: input.page_id,
+              start_cursor: cursor
+            })
           })
-        })
 
-        return {
-          page_id: input.page_id,
-          total_comments: comments.length,
-          comments: comments.map((comment: any) => ({
-            id: comment.id,
-            created_time: comment.created_time,
-            created_by: comment.created_by,
-            discussion_id: comment.discussion_id,
-            text: RichText.extractPlainText(comment.rich_text),
-            parent: comment.parent
-          }))
+          return {
+            page_id: input.page_id,
+            total_comments: comments.length,
+            comments: comments.map((comment: any) => ({
+              id: comment.id,
+              created_time: comment.created_time,
+              created_by: comment.created_by,
+              discussion_id: comment.discussion_id,
+              text: RichText.extractPlainText(comment.rich_text),
+              ...(comment.display_name ? { display_name: comment.display_name } : {}),
+              parent: comment.parent
+            }))
+          }
+        } catch (error: any) {
+          if (error.code === 'object_not_found') {
+            throw new NotionMCPError(
+              'Cannot list comments for this page',
+              'COMMENTS_LIST_UNAVAILABLE',
+              'This is a known Notion API limitation with OAuth integrations (API version 2025-09-03). The comments.list endpoint may return 404 even when the page exists and has comments. Workaround: use comments/get with a specific comment_id, or use comments/create which works normally.'
+            )
+          }
+          throw error
         }
       }
 
@@ -58,15 +70,22 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
           comment_id: input.comment_id
         })
 
+        const text = RichText.extractPlainText(comment.rich_text)
+
         return {
           action: 'get',
           comment_id: comment.id,
           created_time: comment.created_time,
           created_by: comment.created_by,
           discussion_id: comment.discussion_id,
-          text: RichText.extractPlainText(comment.rich_text),
-          rich_text: comment.rich_text,
-          parent: comment.parent
+          text,
+          ...(comment.rich_text ? { rich_text: comment.rich_text } : {}),
+          ...(comment.display_name ? { display_name: comment.display_name } : {}),
+          parent: comment.parent,
+          ...(!comment.rich_text && {
+            _note:
+              'rich_text unavailable in Notion API version 2025-09-03 for comments.retrieve. Comment content was set during creation.'
+          })
         }
       }
 

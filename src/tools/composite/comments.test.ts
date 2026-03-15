@@ -89,6 +89,70 @@ describe('commentsManage', () => {
       expect(result.comments).toEqual([])
     })
 
+    it('should throw COMMENTS_LIST_UNAVAILABLE when Notion returns object_not_found', async () => {
+      const notFoundError = new Error('Not found')
+      ;(notFoundError as any).code = 'object_not_found'
+      mockNotion.comments.list.mockRejectedValue(notFoundError)
+
+      await expect(
+        commentsManage(mockNotion as any, {
+          action: 'list',
+          page_id: 'page-1'
+        })
+      ).rejects.toMatchObject({
+        code: 'COMMENTS_LIST_UNAVAILABLE',
+        message: 'Cannot list comments for this page'
+      })
+    })
+
+    it('should re-throw non-object_not_found errors', async () => {
+      const rateLimitError = new Error('Rate limited')
+      ;(rateLimitError as any).code = 'rate_limited'
+      mockNotion.comments.list.mockRejectedValue(rateLimitError)
+
+      await expect(
+        commentsManage(mockNotion as any, {
+          action: 'list',
+          page_id: 'page-1'
+        })
+      ).rejects.toThrow()
+
+      // Should NOT be caught as COMMENTS_LIST_UNAVAILABLE
+      await expect(
+        commentsManage(mockNotion as any, {
+          action: 'list',
+          page_id: 'page-1'
+        })
+      ).rejects.not.toMatchObject({
+        code: 'COMMENTS_LIST_UNAVAILABLE'
+      })
+    })
+
+    it('should include display_name when present', async () => {
+      mockNotion.comments.list.mockResolvedValue({
+        results: [
+          {
+            id: 'comment-1',
+            created_time: '2024-01-01',
+            created_by: { id: 'user-1' },
+            discussion_id: 'disc-1',
+            rich_text: [{ type: 'text', text: { content: 'Hello' } }],
+            display_name: 'John Doe',
+            parent: { type: 'page_id', page_id: 'page-1' }
+          }
+        ],
+        next_cursor: null,
+        has_more: false
+      })
+
+      const result = await commentsManage(mockNotion as any, {
+        action: 'list',
+        page_id: 'page-1'
+      })
+
+      expect(result.comments[0].display_name).toBe('John Doe')
+    })
+
     it('should throw without page_id', async () => {
       await expect(commentsManage(mockNotion as any, { action: 'list' })).rejects.toMatchObject({
         code: 'VALIDATION_ERROR',
@@ -124,6 +188,45 @@ describe('commentsManage', () => {
       expect(mockNotion.comments.retrieve).toHaveBeenCalledWith({
         comment_id: 'comment-1'
       })
+    })
+
+    it('should handle undefined rich_text with _note field', async () => {
+      mockNotion.comments.retrieve.mockResolvedValue({
+        id: 'comment-1',
+        created_time: '2024-01-01',
+        created_by: { id: 'user-1' },
+        discussion_id: 'disc-1',
+        rich_text: undefined,
+        parent: { type: 'page_id', page_id: 'page-1' }
+      })
+
+      const result = await commentsManage(mockNotion as any, {
+        action: 'get',
+        comment_id: 'comment-1'
+      })
+
+      expect(result.text).toBe('')
+      expect(result.rich_text).toBeUndefined()
+      expect(result._note).toContain('rich_text unavailable')
+    })
+
+    it('should include display_name when present', async () => {
+      mockNotion.comments.retrieve.mockResolvedValue({
+        id: 'comment-1',
+        created_time: '2024-01-01',
+        created_by: { id: 'user-1' },
+        discussion_id: 'disc-1',
+        rich_text: [{ type: 'text', text: { content: 'Hello' } }],
+        display_name: 'Jane Doe',
+        parent: { type: 'page_id', page_id: 'page-1' }
+      })
+
+      const result = await commentsManage(mockNotion as any, {
+        action: 'get',
+        comment_id: 'comment-1'
+      })
+
+      expect(result.display_name).toBe('Jane Doe')
     })
 
     it('should throw without comment_id', async () => {

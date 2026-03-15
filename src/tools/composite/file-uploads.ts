@@ -6,6 +6,7 @@
 
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
+import { isValidBase64 } from '../helpers/id.js'
 import { autoPaginate } from '../helpers/pagination.js'
 
 // Maximum file size per request (10MB) to prevent OOM
@@ -122,6 +123,15 @@ async function sendFileUpload(notion: Client, input: FileUploadsInput): Promise<
       'file_content is required for send action',
       'VALIDATION_ERROR',
       'Provide base64-encoded file content'
+    )
+  }
+
+  // Validate base64 format before processing
+  if (!isValidBase64(input.file_content)) {
+    throw new NotionMCPError(
+      'file_content is not valid base64 encoding',
+      'VALIDATION_ERROR',
+      'Encode the file as base64 first. Example: Buffer.from(fileBytes).toString("base64"). The string must only contain A-Z, a-z, 0-9, +, /, and = padding.'
     )
   }
 

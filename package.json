@@ -17,7 +17,7 @@
     "opencode",
     "gemini-cli"
   ],
-  "version": "2.13.1",
+  "version": "2.18.0",
   "license": "MIT",
   "type": "module",
   "packageManager": "bun@1.2.21",
@@ -27,6 +27,7 @@
   "scripts": {
     "build": "tsc -build && node scripts/build-cli.js",
     "dev": "tsx watch scripts/start-server.ts",
+    "dev:http": "TRANSPORT_MODE=http tsx watch scripts/start-server.ts",
     "test": "vitest --passWithNoTests",
     "test:watch": "vitest watch",
     "test:coverage": "vitest --coverage",
@@ -56,11 +57,14 @@
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "@notionhq/client": "^5.11.1",
+    "@notionhq/client": "^5.12.0",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.3.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.6",
+    "@types/express": "^5.0.6",
     "@types/node": "^24.12.0",
     "@vitest/coverage-v8": "^4.0.18",
     "esbuild": "^0.27.3",

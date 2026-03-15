@@ -14,6 +14,10 @@
 [![semantic-release](https://img.shields.io/badge/semantic--release-e10079?logo=semantic-release&logoColor=white)](https://github.com/python-semantic-release/python-semantic-release)
 [![Renovate](https://img.shields.io/badge/renovate-enabled-1A1F6C?logo=renovatebot&logoColor=white)](https://developer.mend.io/)
 
+<a href="https://glama.ai/mcp/servers/n24q02m/better-notion-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/n24q02m/better-notion-mcp/badge" alt="Better Notion MCP server" />
+</a>
+
 ## Why "Better"?
 
 **9 composite tools** that consolidate Notion's 28+ REST API endpoints into action-based operations optimized for AI agents.
@@ -33,9 +37,28 @@
 
 ## Quick Start
 
-Get your token: <https://www.notion.so/my-integrations> → Create integration → Copy token → Share pages
+### Remote Mode (OAuth) -- No token needed
 
-### Option 1: Package Manager (Recommended)
+Connect directly via URL with OAuth authentication. Your MCP client handles the OAuth flow automatically — just authorize with your Notion account when prompted.
+
+```jsonc
+{
+  "mcpServers": {
+    "better-notion": {
+      "type": "http",
+      "url": "https://better-notion-mcp.n24q02m.com/mcp"
+    }
+  }
+}
+```
+
+> Supported by Claude Desktop, Claude Code, Cursor, VS Code Copilot, and other clients with OAuth support.
+
+### Local Mode (Token)
+
+Get your token: <https://www.notion.so/my-integrations> -> Create integration -> Copy token -> Share pages
+
+#### Option 1: Package Manager (Recommended)
 
 ```jsonc
 {
@@ -59,7 +82,7 @@ Alternatively, you can use `npx`, `pnpm dlx`, or `yarn dlx`:
 | pnpm | `pnpm` | `["dlx", "@n24q02m/better-notion-mcp@latest"]` |
 | yarn | `yarn` | `["dlx", "@n24q02m/better-notion-mcp@latest"]` |
 
-### Option 2: Docker
+#### Option 2: Docker
 
 ```jsonc
 {
@@ -79,6 +102,36 @@ Alternatively, you can use `npx`, `pnpm dlx`, or `yarn dlx`:
   }
 }
 ```
+
+---
+
+## Self-Hosting (Remote Mode)
+
+You can self-host the remote server with your own Notion OAuth app.
+
+**Prerequisites:**
+1. Create a **Public Integration** at <https://www.notion.so/my-integrations>
+2. Set the redirect URI to `https://your-domain.com/callback`
+3. Note your `client_id` and `client_secret`
+
+```bash
+docker run -p 8080:8080 \
+  -e TRANSPORT_MODE=http \
+  -e PUBLIC_URL=https://your-domain.com \
+  -e NOTION_OAUTH_CLIENT_ID=your-client-id \
+  -e NOTION_OAUTH_CLIENT_SECRET=your-client-secret \
+  -e DCR_SERVER_SECRET=$(openssl rand -hex 32) \
+  n24q02m/better-notion-mcp:latest
+```
+
+| Variable | Description |
+|----------|-------------|
+| `TRANSPORT_MODE` | Set to `http` for remote mode (default: `stdio`) |
+| `PUBLIC_URL` | Your server's public URL (used for OAuth redirects) |
+| `NOTION_OAUTH_CLIENT_ID` | Notion Public Integration client ID |
+| `NOTION_OAUTH_CLIENT_SECRET` | Notion Public Integration client secret |
+| `DCR_SERVER_SECRET` | HMAC secret for stateless client registration |
+| `PORT` | Server port (default: `8080`) |
 
 ---
 
@@ -159,6 +212,7 @@ bun run build
 | [mnemo-mcp](https://github.com/n24q02m/mnemo-mcp) | Persistent AI memory with hybrid search | `uvx mnemo-mcp@latest` |
 | [better-email-mcp](https://github.com/n24q02m/better-email-mcp) | Email (IMAP/SMTP) for AI agents | `npx -y @n24q02m/better-email-mcp@latest` |
 | [better-godot-mcp](https://github.com/n24q02m/better-godot-mcp) | Godot Engine for AI agents | `npx -y @n24q02m/better-godot-mcp@latest` |
+| [better-telegram-mcp](https://github.com/n24q02m/better-telegram-mcp) | Telegram Bot API + MTProto for AI agents | `uvx --python 3.13 better-telegram-mcp@latest` |
 
 ## Contributing
 

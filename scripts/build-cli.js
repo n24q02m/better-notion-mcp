@@ -8,7 +8,7 @@ const projectRoot = join(__dirname, '..')
 
 async function build() {
   await esbuild.build({
-    entryPoints: [join(__dirname, 'start-server.ts')],
+    entryPoints: [join(projectRoot, 'src/main.ts')],
     bundle: true,
     minify: true,
     platform: 'node',
@@ -18,7 +18,7 @@ async function build() {
     banner: {
       js: "#!/usr/bin/env node\nimport { createRequire } from 'module';const require = createRequire(import.meta.url);"
     },
-    external: ['util', '@notionhq/client', '@modelcontextprotocol/sdk']
+    external: ['util', '@notionhq/client', '@modelcontextprotocol/sdk', 'express']
   })
 
   // Make the output file executable

@@ -808,7 +808,7 @@ describe('pages', () => {
       })
       expect(mockNotion.blocks.children.append).toHaveBeenCalledWith({
         block_id: 'dup-1',
-        children: [{ id: 'block-1', type: 'paragraph' }]
+        children: [{ type: 'paragraph' }]
       })
     })
 
