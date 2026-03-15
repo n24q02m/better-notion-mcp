@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { autoPaginate, batchItems, fetchChildrenRecursive, processBatches } from './pagination'
+import { autoPaginate, fetchChildrenRecursive, processBatches } from './pagination'
 
 describe('autoPaginate', () => {
   it('should return results from a single page', async () => {
@@ -173,48 +173,6 @@ describe('fetchChildrenRecursive', () => {
     const fetchChildren = vi.fn()
     await fetchChildrenRecursive([], fetchChildren)
     expect(fetchChildren).not.toHaveBeenCalled()
-  })
-})
-
-describe('batchItems', () => {
-  it('should split items evenly into batches', () => {
-    const items = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-
-    const batches = batchItems(items, 3)
-
-    expect(batches).toEqual([
-      [1, 2, 3],
-      [4, 5, 6],
-      [7, 8, 9]
-    ])
-  })
-
-  it('should handle uneven splits with a smaller last batch', () => {
-    const items = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-
-    const batches = batchItems(items, 3)
-
-    expect(batches).toEqual([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10]])
-  })
-
-  it('should return empty array for empty input', () => {
-    const batches = batchItems([], 3)
-
-    expect(batches).toEqual([])
-  })
-
-  it('should handle a single item', () => {
-    const batches = batchItems(['only'], 3)
-
-    expect(batches).toEqual([['only']])
-  })
-
-  it('should put all items in one batch when batchSize exceeds length', () => {
-    const items = [1, 2, 3]
-
-    const batches = batchItems(items, 100)
-
-    expect(batches).toEqual([[1, 2, 3]])
   })
 })
 

@@ -96,17 +96,6 @@ export async function fetchChildrenRecursive(
 }
 
 /**
- * Batch items into chunks
- */
-export function batchItems<T>(items: T[], batchSize: number): T[][] {
-  const batches: T[][] = []
-  for (let i = 0; i < items.length; i += batchSize) {
-    batches.push(items.slice(i, i + batchSize))
-  }
-  return batches
-}
-
-/**
  * Process items in batches with concurrency limit using a rolling window
  */
 export async function processBatches<T, R>(
