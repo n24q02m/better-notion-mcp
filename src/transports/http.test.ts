@@ -116,7 +116,7 @@ describe('startHttp', () => {
   })
 
   it('should register OAuth router, health, and MCP endpoints', async () => {
-    const mockLog = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const mockLog = vi.spyOn(console, 'info').mockImplementation(() => {})
     const { startHttp } = await import('./http.js')
     const express = (await import('express')).default
 
@@ -152,7 +152,7 @@ describe('startHttp', () => {
   })
 
   it('should use createNotionOAuthProvider with config', async () => {
-    const mockLog = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const mockLog = vi.spyOn(console, 'info').mockImplementation(() => {})
     const { createNotionOAuthProvider } = await import('../auth/notion-oauth-provider.js')
 
     const { startHttp } = await import('./http.js')
@@ -170,7 +170,7 @@ describe('startHttp', () => {
 
   // Helper: start the server and return the registered route handlers
   async function startAndGetHandlers() {
-    const mockLog = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const mockLog = vi.spyOn(console, 'info').mockImplementation(() => {})
     const { startHttp } = await import('./http.js')
     const express = (await import('express')).default
     await startHttp()

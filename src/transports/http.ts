@@ -274,7 +274,7 @@ export async function startHttp() {
   })
 
   app.listen(config.port, '0.0.0.0', () => {
-    console.log(`Remote MCP server listening on port ${config.port}`)
-    console.log(`Public URL: ${config.publicUrl}`)
+    console.info(`Remote MCP server listening on port ${config.port}`)
+    console.info(`Public URL: ${config.publicUrl}`)
   })
 }
