@@ -459,6 +459,16 @@ describe('databases', () => {
         'pages or page_properties required'
       )
     })
+
+    it('should throw a clear error when pages array items are missing the properties wrapper', async () => {
+      await expect(
+        databases(notion, {
+          action: 'create_page',
+          database_id: 'db-1',
+          pages: [{ Name: 'Flat item' } as any]
+        })
+      ).rejects.toThrow('Each item in the pages array must have a "properties" key')
+    })
   })
 
   describe('update_page', () => {
