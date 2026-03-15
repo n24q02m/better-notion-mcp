@@ -74,24 +74,35 @@ export async function fetchChildrenRecursive(
 ): Promise<void> {
   if (depth >= MAX_DEPTH) return
 
-  const blocksNeedingChildren = blocks.filter((b) => b.has_children && BLOCKS_NEEDING_CHILDREN.has(b.type))
+  // Optimize array allocations
+  const blocksNeedingChildren: any[] = []
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i]
+    if (b.has_children && BLOCKS_NEEDING_CHILDREN.has(b.type)) {
+      blocksNeedingChildren.push(b)
+    }
+  }
 
   if (blocksNeedingChildren.length === 0) return
 
-  // Fetch children in parallel (batch of 5 to respect rate limits)
-  for (let i = 0; i < blocksNeedingChildren.length; i += 5) {
-    const batch = blocksNeedingChildren.slice(i, i + 5)
-    const childrenResults = await Promise.all(batch.map((b) => fetchChildren(b.id)))
-    for (let j = 0; j < batch.length; j++) {
-      const block = batch[j]
-      const children = childrenResults[j]
-      // Attach children to the correct property based on block type
-      if (block[block.type]) {
-        block[block.type].children = children
-      }
-      // Recurse into children
-      await fetchChildrenRecursive(children, fetchChildren, depth + 1)
+  // Fetch children concurrently with a rolling window (effective concurrency of 5)
+  const childrenResults = await processBatches(blocksNeedingChildren, (b) => fetchChildren(b.id), {
+    batchSize: 1,
+    concurrency: 5
+  })
+
+  // We can't completely parallelize the recursive calls across all children branches simultaneously
+  // because that would lead to an explosion in concurrency, bypassing the Notion API rate limit.
+  // Instead, we await each branch's resolution before moving to the next.
+  for (let j = 0; j < blocksNeedingChildren.length; j++) {
+    const block = blocksNeedingChildren[j]
+    const children = childrenResults[j]
+    // Attach children to the correct property based on block type
+    if (block[block.type]) {
+      block[block.type].children = children
     }
+    // Recurse into children sequentially to respect rate limits globally per tree level
+    await fetchChildrenRecursive(children, fetchChildren, depth + 1)
   }
 }
 
