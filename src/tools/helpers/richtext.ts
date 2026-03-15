@@ -145,26 +145,6 @@ export function extractPlainText(richText: RichTextItem[] | undefined | null): s
 }
 
 /**
- * Split text into chunks (max 2000 chars per rich text item)
- */
-export function splitText(content: string, maxLength: number = 2000): RichTextItem[] {
-  if (content.length <= maxLength) {
-    return [text(content)]
-  }
-
-  const chunks: RichTextItem[] = []
-  let remaining = content
-
-  while (remaining.length > 0) {
-    const chunk = remaining.slice(0, maxLength)
-    chunks.push(text(chunk))
-    remaining = remaining.slice(maxLength)
-  }
-
-  return chunks
-}
-
-/**
  * Merge multiple rich text items
  */
 export function mergeRichText(...items: RichTextItem[]): RichTextItem[] {
