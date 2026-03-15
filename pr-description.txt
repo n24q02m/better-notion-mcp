@@ -1,0 +1,7 @@
+🎯 **What:** Replaced the large, monolithic `switch` statement in the `CallToolRequestSchema` handler inside `src/tools/registry.ts` with a cleaner `TOOL_HANDLERS` mapping object.
+
+💡 **Why:** The `registerTools` function was getting unnecessarily complex as the list of tools expanded. Using an object map for routing simplifies the execution path, drastically reduces lines of code within the request handler logic itself, and sets up a robust pattern for adding additional tools in the future.
+
+✅ **Verification:** Visually verified that the new implementation completely replaces the `switch` statement without changing functionality. Executed `bun run check` and `bun run test` locally—all tests pass successfully, ensuring no existing behaviors or tests rely on the old `switch` structure.
+
+✨ **Result:** Improved maintainability, cleaner handler functions, and more organized registry logic.

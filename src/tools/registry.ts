@@ -360,8 +360,39 @@ const TOOLS = [
   }
 ]
 
+const TOOL_HANDLERS: Record<string, (notion: Client, args: any) => Promise<any> | any> = {
+  pages,
+  databases,
+  blocks,
+  users,
+  workspace,
+  comments: commentsManage,
+  content_convert: (_notion: Client, args: any) => contentConvert(args),
+  file_uploads: fileUploads,
+  help: (_notion: Client, args: any) => {
+    const toolName = (args as { tool_name: string }).tool_name
+    // Security: validate tool_name against allowlist to prevent path traversal
+    const validToolNames = TOOLS.filter((t) => t.name !== 'help').map((t) => t.name)
+    if (!validToolNames.includes(toolName)) {
+      throw new NotionMCPError(
+        `Invalid tool name: ${toolName}`,
+        'VALIDATION_ERROR',
+        `Valid tools: ${validToolNames.join(', ')}`
+      )
+    }
+    const docFile = `${toolName}.md`
+    try {
+      const content = readFileSync(join(DOCS_DIR, docFile), 'utf-8')
+      return { tool: toolName, documentation: content }
+    } catch {
+      throw new NotionMCPError(`Documentation not found for: ${toolName}`, 'DOC_NOT_FOUND', 'Check tool_name')
+    }
+  }
+}
+
 /**
  * Register all tools with MCP server
+
  * @param notionClientFactory - Returns a Notion Client.
  *   Called per tool invocation to support both singleton (stdio) and per-request (HTTP) patterns.
  */
@@ -417,61 +448,18 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
     }
 
     try {
-      let result
       const notion = notionClientFactory()
 
-      switch (name) {
-        case 'pages':
-          result = await pages(notion, args as any)
-          break
-        case 'databases':
-          result = await databases(notion, args as any)
-          break
-        case 'blocks':
-          result = await blocks(notion, args as any)
-          break
-        case 'users':
-          result = await users(notion, args as any)
-          break
-        case 'workspace':
-          result = await workspace(notion, args as any)
-          break
-        case 'comments':
-          result = await commentsManage(notion, args as any)
-          break
-        case 'content_convert':
-          result = await contentConvert(args as any)
-          break
-        case 'file_uploads':
-          result = await fileUploads(notion, args as any)
-          break
-        case 'help': {
-          const toolName = (args as { tool_name: string }).tool_name
-          // Security: validate tool_name against allowlist to prevent path traversal
-          const validToolNames = TOOLS.filter((t) => t.name !== 'help').map((t) => t.name)
-          if (!validToolNames.includes(toolName)) {
-            throw new NotionMCPError(
-              `Invalid tool name: ${toolName}`,
-              'VALIDATION_ERROR',
-              `Valid tools: ${validToolNames.join(', ')}`
-            )
-          }
-          const docFile = `${toolName}.md`
-          try {
-            const content = readFileSync(join(DOCS_DIR, docFile), 'utf-8')
-            result = { tool: toolName, documentation: content }
-          } catch {
-            throw new NotionMCPError(`Documentation not found for: ${toolName}`, 'DOC_NOT_FOUND', 'Check tool_name')
-          }
-          break
-        }
-        default:
-          throw new NotionMCPError(
-            `Unknown tool: ${name}`,
-            'UNKNOWN_TOOL',
-            `Available tools: ${TOOLS.map((t) => t.name).join(', ')}`
-          )
+      const handler = TOOL_HANDLERS[name]
+      if (!handler) {
+        throw new NotionMCPError(
+          `Unknown tool: ${name}`,
+          'UNKNOWN_TOOL',
+          `Available tools: ${TOOLS.map((t) => t.name).join(', ')}`
+        )
       }
+
+      const result = await handler(notion, args)
 
       const jsonText = JSON.stringify(result, null, 2)
       return {
