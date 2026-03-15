@@ -3,6 +3,22 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { InvalidTokenError } from '@modelcontextprotocol/sdk/server/auth/errors.js'
 import { ProxyOAuthServerProvider } from '@modelcontextprotocol/sdk/server/auth/providers/proxyProvider.js'
 import { Client } from '@notionhq/client'
+import { ExpirationQueue } from './expiration-queue.js'
+
+class ExpirationMap<K, V> extends Map<K, V> {
+  public queue = new ExpirationQueue<K>()
+
+  constructor(public getExpirationTime: (val: V) => number) {
+    super()
+  }
+
+  set(key: K, value: V) {
+    super.set(key, value)
+    this.queue.add(key, this.getExpirationTime(value))
+    return this
+  }
+}
+
 import { StatelessClientStore } from './stateless-client-store.js'
 
 /** Request context propagated via AsyncLocalStorage for IP-scoped pending binds */
@@ -73,19 +89,25 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
   const notionBasicAuth = Buffer.from(`${config.notionClientId}:${config.notionClientSecret}`).toString('base64')
 
   // Temporary stores for the callback relay
-  const pendingAuths = new Map<string, PendingAuth>()
-  const authCodes = new Map<string, StoredAuthCode>()
+
+  const pendingAuths = new ExpirationMap<string, PendingAuth>((val) => val.createdAt + PENDING_AUTH_TTL)
+  const authCodes = new ExpirationMap<string, StoredAuthCode>((val) => val.createdAt + AUTH_CODE_TTL)
 
   // Server-side Notion token store — keyed by our opaque access token
-  const notionTokens = new Map<string, StoredNotionToken>()
+  const notionTokens = new ExpirationMap<string, StoredNotionToken>((val) => val.createdAt + NOTION_TOKEN_TTL)
   // Bound external tokens — maps bearer token → Notion token (one-shot bind per OAuth)
-  const boundTokens = new Map<string, StoredNotionToken>()
+  const boundTokens = new ExpirationMap<string, StoredNotionToken>((val) => val.createdAt + NOTION_TOKEN_TTL)
   // Verification cache — avoids calling Notion API on every request
-  const verifyCache = new Map<string, { expiresAt: number; userId: string; userName: string | null }>()
+  const verifyCache = new ExpirationMap<string, { expiresAt: number; userId: string; userName: string | null }>(
+    (val) => val.expiresAt
+  )
   // Pending bind slots — one-shot: consumed on first use, keyed by client_id.
   // When a client completes OAuth, a pending bind is created. The first unknown bearer token
   // that claims it gets bound. This prevents cross-user token leaks on shared instances.
-  const pendingBinds = new Map<string, { notionToken: StoredNotionToken; expiresAt: number; sourceIp?: string }>()
+  const pendingBinds = new ExpirationMap<
+    string,
+    { notionToken: StoredNotionToken; expiresAt: number; sourceIp?: string }
+  >((val) => val.expiresAt)
 
   /** Resolve a bearer token to a Notion access token */
   function resolveNotionToken(bearerToken: string): string | undefined {
@@ -316,24 +338,31 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
   // Cleanup expired entries periodically
   setInterval(() => {
     const now = Date.now()
-    for (const [key, val] of pendingAuths) {
-      if (now - val.createdAt > PENDING_AUTH_TTL) pendingAuths.delete(key)
-    }
-    for (const [key, val] of authCodes) {
-      if (now - val.createdAt > AUTH_CODE_TTL) authCodes.delete(key)
-    }
-    for (const [key, val] of notionTokens) {
-      if (now - val.createdAt > NOTION_TOKEN_TTL) notionTokens.delete(key)
-    }
-    for (const [key, val] of pendingBinds) {
-      if (now > val.expiresAt) pendingBinds.delete(key)
-    }
-    for (const [key, val] of boundTokens) {
-      if (now - val.createdAt > NOTION_TOKEN_TTL) boundTokens.delete(key)
-    }
-    for (const [key, val] of verifyCache) {
-      if (now > val.expiresAt) verifyCache.delete(key)
-    }
+    pendingAuths.queue.process(now, (key) => {
+      // Extra safety check in case entry was updated
+      const val = pendingAuths.get(key)
+      if (val && now - val.createdAt > PENDING_AUTH_TTL) pendingAuths.delete(key)
+    })
+    authCodes.queue.process(now, (key) => {
+      const val = authCodes.get(key)
+      if (val && now - val.createdAt > AUTH_CODE_TTL) authCodes.delete(key)
+    })
+    notionTokens.queue.process(now, (key) => {
+      const val = notionTokens.get(key)
+      if (val && now - val.createdAt > NOTION_TOKEN_TTL) notionTokens.delete(key)
+    })
+    pendingBinds.queue.process(now, (key) => {
+      const val = pendingBinds.get(key)
+      if (val && now > val.expiresAt) pendingBinds.delete(key)
+    })
+    boundTokens.queue.process(now, (key) => {
+      const val = boundTokens.get(key)
+      if (val && now - val.createdAt > NOTION_TOKEN_TTL) boundTokens.delete(key)
+    })
+    verifyCache.queue.process(now, (key) => {
+      const val = verifyCache.get(key)
+      if (val && now > val.expiresAt) verifyCache.delete(key)
+    })
   }, 60_000)
 
   return {

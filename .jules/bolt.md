@@ -1,0 +1,4 @@
+
+## 2024-05-14 - Replace O(N) Map Sweeps with ExpirationQueue
+**Learning:** For periodic cache cleanup loops iterating over entire Maps (e.g., `for (const [key, val] of map)`), the time complexity is O(N) and can cause noticeable CPU and garbage collection spikes if the map grows large.
+**Action:** Implement an amortized O(1) cleanup mechanism using an `ExpirationQueue` (an array of `{key, expiresAt}` objects tracking insertion order) paired with an `ExpirationMap` wrapper that hooks `set()` to append entries to the queue. During cleanup, poll the front of the queue and `break` immediately upon hitting an unexpired item. Always include a secondary `map.get(key)` check before deletion to ensure the entry wasn't overwritten or extended after its initial insertion into the queue. Ensure the queue periodically compacts itself (`this.queue = this.queue.slice(this.headIndex)`) to prevent unbounded array growth.
