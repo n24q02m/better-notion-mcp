@@ -192,6 +192,39 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
     get: () => clientStore
   })
 
+  setupProviderOverrides(
+    provider,
+    config,
+    callbackUrl,
+    notionBasicAuth,
+    pendingAuths,
+    authCodes,
+    notionTokens,
+    pendingBinds
+  )
+
+  startCleanupInterval(pendingAuths, authCodes, notionTokens, pendingBinds, boundTokens, verifyCache)
+
+  return {
+    provider,
+    clientStore,
+    pendingAuths,
+    authCodes,
+    callbackUrl,
+    notionBasicAuth
+  }
+}
+
+function setupProviderOverrides(
+  provider: ProxyOAuthServerProvider,
+  config: NotionOAuthConfig,
+  callbackUrl: string,
+  notionBasicAuth: string,
+  pendingAuths: Map<string, PendingAuth>,
+  authCodes: Map<string, StoredAuthCode>,
+  notionTokens: Map<string, StoredNotionToken>,
+  pendingBinds: Map<string, { notionToken: StoredNotionToken; expiresAt: number; sourceIp?: string }>
+) {
   // Override authorize: redirect to Notion with OUR callback URL, not client's
   provider.authorize = async (client, params, res) => {
     const ourState = randomBytes(32).toString('hex')
@@ -312,9 +345,17 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
       expires_in: data.expires_in ?? 86400
     }
   }
+}
 
-  // Cleanup expired entries periodically
-  setInterval(() => {
+function startCleanupInterval(
+  pendingAuths: Map<string, PendingAuth>,
+  authCodes: Map<string, StoredAuthCode>,
+  notionTokens: Map<string, StoredNotionToken>,
+  pendingBinds: Map<string, { notionToken: StoredNotionToken; expiresAt: number; sourceIp?: string }>,
+  boundTokens: Map<string, StoredNotionToken>,
+  verifyCache: Map<string, { expiresAt: number; userId: string; userName: string | null }>
+) {
+  return setInterval(() => {
     const now = Date.now()
     for (const [key, val] of pendingAuths) {
       if (now - val.createdAt > PENDING_AUTH_TTL) pendingAuths.delete(key)
@@ -335,13 +376,4 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
       if (now > val.expiresAt) verifyCache.delete(key)
     }
   }, 60_000)
-
-  return {
-    provider,
-    clientStore,
-    pendingAuths,
-    authCodes,
-    callbackUrl,
-    notionBasicAuth
-  }
 }
