@@ -3,7 +3,7 @@
  * Convert between Markdown and Notion blocks
  */
 
-import { withErrorHandling } from '../helpers/errors.js'
+import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 
 export interface ContentConvertInput {
@@ -19,7 +19,11 @@ export async function contentConvert(input: ContentConvertInput): Promise<any> {
     switch (input.direction) {
       case 'markdown-to-blocks': {
         if (typeof input.content !== 'string') {
-          throw new Error('Content must be a string for markdown-to-blocks')
+          throw new NotionMCPError(
+            'Content must be a string for markdown-to-blocks',
+            'VALIDATION_ERROR',
+            'Ensure content is a string'
+          )
         }
         const blocks = markdownToBlocks(input.content)
         return {
@@ -36,11 +40,19 @@ export async function contentConvert(input: ContentConvertInput): Promise<any> {
           try {
             content = JSON.parse(content)
           } catch {
-            throw new Error('Content must be a valid JSON array or array object for blocks-to-markdown')
+            throw new NotionMCPError(
+              'Content must be a valid JSON array or array object for blocks-to-markdown',
+              'VALIDATION_ERROR',
+              'Ensure content is a valid JSON string representing an array'
+            )
           }
         }
         if (!Array.isArray(content)) {
-          throw new Error('Content must be an array for blocks-to-markdown')
+          throw new NotionMCPError(
+            'Content must be an array for blocks-to-markdown',
+            'VALIDATION_ERROR',
+            'Ensure content is an array'
+          )
         }
         const markdown = blocksToMarkdown(content as any)
         return {
@@ -51,7 +63,11 @@ export async function contentConvert(input: ContentConvertInput): Promise<any> {
       }
 
       default:
-        throw new Error(`Unsupported direction: ${input.direction}`)
+        throw new NotionMCPError(
+          `Unsupported direction: ${input.direction}`,
+          'VALIDATION_ERROR',
+          'Use "markdown-to-blocks" or "blocks-to-markdown"'
+        )
     }
   })()
 }
