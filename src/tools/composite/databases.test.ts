@@ -486,14 +486,53 @@ describe('databases', () => {
       )
     })
 
-    it('should throw a clear error when pages array items are missing the properties wrapper', async () => {
+    it('should throw with item index when pages array item is missing the properties wrapper', async () => {
       await expect(
         databases(notion, {
           action: 'create_page',
           database_id: 'db-1',
           pages: [{ Name: 'Flat item' } as any]
         })
-      ).rejects.toThrow('Each item in the pages array must have a "properties" key')
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('index 0'),
+        code: 'VALIDATION_ERROR'
+      })
+    })
+
+    it('should throw with correct index when second item is missing the properties wrapper', async () => {
+      mockNotion.pages.create.mockResolvedValueOnce({ id: 'p-1', url: 'https://notion.so/p-1' })
+
+      await expect(
+        databases(notion, {
+          action: 'create_page',
+          database_id: 'db-1',
+          pages: [{ properties: { Name: 'Valid' } }, { Name: 'Flat' } as any]
+        })
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('index 1'),
+        code: 'VALIDATION_ERROR'
+      })
+      expect(mockNotion.pages.create).not.toHaveBeenCalled()
+    })
+
+    it('should throw when pages array item has null properties', async () => {
+      await expect(
+        databases(notion, {
+          action: 'create_page',
+          database_id: 'db-1',
+          pages: [{ properties: null } as any]
+        })
+      ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+    })
+
+    it('should throw when pages array item is null', async () => {
+      await expect(
+        databases(notion, {
+          action: 'create_page',
+          database_id: 'db-1',
+          pages: [null as any]
+        })
+      ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
     })
   })
 
@@ -535,6 +574,18 @@ describe('databases', () => {
       await expect(databases(notion, { action: 'update_page' })).rejects.toThrow(
         'pages or page_id+page_properties required'
       )
+    })
+
+    it('should throw with item index when pages array item is missing properties', async () => {
+      await expect(
+        databases(notion, {
+          action: 'update_page',
+          pages: [{ page_id: 'p-1', properties: null } as any]
+        })
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('index 0'),
+        code: 'VALIDATION_ERROR'
+      })
     })
   })
 
