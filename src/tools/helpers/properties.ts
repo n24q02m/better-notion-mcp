@@ -75,6 +75,8 @@ export function convertToNotionProperties(
         converted[key] = { phone_number: value }
       } else if (schemaType === 'relation') {
         converted[key] = toRelation(value)
+      } else if (schemaType === 'status') {
+        converted[key] = { status: { name: value } }
       } else if (key === 'Name' || key === 'Title' || key.toLowerCase() === 'title') {
         // Fallback: guess title from key name
         converted[key] = { title: [RichText.text(value)] }

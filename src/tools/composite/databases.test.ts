@@ -459,6 +459,32 @@ describe('databases', () => {
         'pages or page_properties required'
       )
     })
+
+    it('should convert a status field string to status format (not select)', async () => {
+      mockNotion.dataSources.retrieve.mockResolvedValueOnce(
+        makeDataSourceResponse({
+          properties: {
+            Name: { type: 'title', id: 'prop-1' },
+            State: { type: 'status', id: 'prop-3' }
+          }
+        })
+      )
+      mockNotion.pages.create.mockResolvedValueOnce({ id: 'p-status', url: 'https://notion.so/p-status' })
+
+      await databases(notion, {
+        action: 'create_page',
+        database_id: 'db-1',
+        page_properties: { Name: 'Todo item', State: 'Not started' }
+      })
+
+      expect(mockNotion.pages.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          properties: expect.objectContaining({
+            State: { status: { name: 'Not started' } }
+          })
+        })
+      )
+    })
   })
 
   describe('update_page', () => {
