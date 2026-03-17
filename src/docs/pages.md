@@ -8,6 +8,18 @@ Page lifecycle: create, get, get_property, update, move, archive, restore, dupli
 - Returns **markdown content** for get action
 - **get_property** supports paginated properties (relation, rollup, rich_text, people)
 
+## Reading Images & Files in Pages
+Pages may contain **image blocks** and **file blocks**. These are returned as markdown with signed URLs:
+
+- **Images**: `![caption](https://prod-files-secure.s3.amazonaws.com/...)` — signed S3 URL, expires in 1 hour
+- **Files**: Returned as blocks with download URLs in `blocks/children` response
+
+**To read image content**: Fetch the signed URL directly — multimodal LLMs can view the image. The URL is a standard HTTPS link, no auth needed (signature is embedded).
+
+**To read document content** (PDF, DOCX, etc.): Download the file via the signed URL, then use appropriate tools to parse content (e.g., Read tool for images, WebFetch for downloading).
+
+**Important**: Signed URLs expire after ~1 hour. If you need to access a file later, fetch `blocks/get` again to get a fresh URL.
+
 ## Actions
 
 ### create

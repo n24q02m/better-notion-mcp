@@ -58,7 +58,7 @@ const TOOLS = [
   {
     name: 'pages',
     description:
-      'Page lifecycle: create, get, get_property, update, move, archive, restore, duplicate. Requires parent_id for create. Returns markdown content for get.',
+      'Page lifecycle: create, get, get_property, update, move, archive, restore, duplicate. Requires parent_id for create. Returns markdown content for get. Images appear as ![caption](signed-url) — fetch the URL to view image content. Files appear as link blocks with signed download URLs (expire in 1h).',
     annotations: {
       title: 'Pages',
       readOnlyHint: false,
@@ -167,7 +167,7 @@ const TOOLS = [
   {
     name: 'blocks',
     description:
-      'Block-level content: get, children, append, update, delete. Page IDs are valid block IDs. update only works on text blocks (paragraph, headings, lists, quote, to_do, code). Supports tables, toggles, callouts, images, equations via markdown.',
+      'Block-level content: get, children, append, update, delete. Page IDs are valid block IDs. update only works on text blocks (paragraph, headings, lists, quote, to_do, code). Supports tables, toggles, callouts, images, equations via markdown. Image/file blocks contain signed URLs (1h expiry) — to read image content, fetch the URL and view it; to read documents (PDF/DOCX), download via the URL.',
     annotations: {
       title: 'Blocks',
       readOnlyHint: false,
