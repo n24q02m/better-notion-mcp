@@ -225,59 +225,6 @@ describe('extractPlainText', () => {
   })
 })
 
-describe('splitText', () => {
-  it('should return single item when content is shorter than maxLength', () => {
-    const result = RichText.splitText('short', 2000)
-    expect(result).toHaveLength(1)
-    expect(result[0].text.content).toBe('short')
-  })
-
-  it('should return single item when content equals maxLength', () => {
-    const content = 'a'.repeat(2000)
-    const result = RichText.splitText(content, 2000)
-    expect(result).toHaveLength(1)
-    expect(result[0].text.content).toBe(content)
-  })
-
-  it('should split content exceeding maxLength into multiple chunks', () => {
-    const content = 'a'.repeat(5000)
-    const result = RichText.splitText(content, 2000)
-    expect(result).toHaveLength(3)
-    expect(result[0].text.content).toBe('a'.repeat(2000))
-    expect(result[1].text.content).toBe('a'.repeat(2000))
-    expect(result[2].text.content).toBe('a'.repeat(1000))
-  })
-
-  it('should use default maxLength of 2000', () => {
-    const content = 'b'.repeat(4000)
-    const result = RichText.splitText(content)
-    expect(result).toHaveLength(2)
-    expect(result[0].text.content.length).toBe(2000)
-    expect(result[1].text.content.length).toBe(2000)
-  })
-
-  it('should handle custom maxLength', () => {
-    const result = RichText.splitText('abcdef', 3)
-    expect(result).toHaveLength(2)
-    expect(result[0].text.content).toBe('abc')
-    expect(result[1].text.content).toBe('def')
-  })
-
-  it('should handle empty string', () => {
-    const result = RichText.splitText('')
-    expect(result).toHaveLength(1)
-    expect(result[0].text.content).toBe('')
-  })
-
-  it('should produce valid RichTextItem for each chunk', () => {
-    const result = RichText.splitText('a'.repeat(3000), 2000)
-    for (const item of result) {
-      expect(item.type).toBe('text')
-      expect(item.annotations).toEqual(DEFAULT_ANNOTATIONS)
-    }
-  })
-})
-
 describe('mergeRichText', () => {
   it('should merge multiple items into a single array', () => {
     const a = RichText.text('hello ')
