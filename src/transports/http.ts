@@ -67,6 +67,14 @@ export async function startHttp() {
     legacyHeaders: false
   })
 
+  // Rate limit OAuth endpoints per IP to prevent abuse/brute-force
+  const authRateLimit = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 20, // Strict limit for auth endpoints
+    standardHeaders: 'draft-7',
+    legacyHeaders: false
+  })
+
   // Propagate request IP via AsyncLocalStorage for IP-scoped pending binds
   app.use((req, _res, next) => {
     const ip = req.ip || req.socket.remoteAddress || undefined
@@ -87,7 +95,7 @@ export async function startHttp() {
   // Notion OAuth callback relay
   // Notion redirects here after user authorizes. We exchange the code,
   // store the token, issue our own auth code, and redirect to MCP client.
-  app.get('/callback', async (req, res) => {
+  app.get('/callback', authRateLimit, async (req, res) => {
     const { code, state, error } = req.query as Record<string, string>
 
     if (error) {

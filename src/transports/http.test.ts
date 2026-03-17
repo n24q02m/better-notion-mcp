@@ -129,7 +129,7 @@ describe('startHttp', () => {
     expect(app.use).toHaveBeenCalled()
 
     // Callback endpoint registered
-    expect(app.get).toHaveBeenCalledWith('/callback', expect.any(Function))
+    expect(app.get).toHaveBeenCalledWith('/callback', expect.any(Function), expect.any(Function))
 
     // Health endpoint registered
     expect(app.get).toHaveBeenCalledWith('/health', expect.any(Function))
