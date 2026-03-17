@@ -250,6 +250,13 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
 /**
  * Convert Notion blocks to markdown
  */
+function indentChildren(children: NotionBlock[]): string {
+  return blocksToMarkdown(children)
+    .split('\n')
+    .map((l) => `  ${l}`)
+    .join('\n')
+}
+
 export function blocksToMarkdown(blocks: NotionBlock[]): string {
   const lines: string[] = []
 
@@ -257,24 +264,42 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
     switch (block.type) {
       case 'heading_1':
         lines.push(`# ${richTextToMarkdown(block.heading_1.rich_text)}`)
+        if (block.heading_1.children?.length > 0) {
+          lines.push(blocksToMarkdown(block.heading_1.children))
+        }
         break
       case 'heading_2':
         lines.push(`## ${richTextToMarkdown(block.heading_2.rich_text)}`)
+        if (block.heading_2.children?.length > 0) {
+          lines.push(blocksToMarkdown(block.heading_2.children))
+        }
         break
       case 'heading_3':
         lines.push(`### ${richTextToMarkdown(block.heading_3.rich_text)}`)
+        if (block.heading_3.children?.length > 0) {
+          lines.push(blocksToMarkdown(block.heading_3.children))
+        }
         break
       case 'paragraph':
         lines.push(richTextToMarkdown(block.paragraph.rich_text))
         break
       case 'bulleted_list_item':
         lines.push(`- ${richTextToMarkdown(block.bulleted_list_item.rich_text)}`)
+        if (block.bulleted_list_item.children?.length > 0) {
+          lines.push(indentChildren(block.bulleted_list_item.children))
+        }
         break
       case 'numbered_list_item':
         lines.push(`1. ${richTextToMarkdown(block.numbered_list_item.rich_text)}`)
+        if (block.numbered_list_item.children?.length > 0) {
+          lines.push(indentChildren(block.numbered_list_item.children))
+        }
         break
       case 'to_do':
         lines.push(`- [${block.to_do.checked ? 'x' : ' '}] ${richTextToMarkdown(block.to_do.rich_text)}`)
+        if (block.to_do.children?.length > 0) {
+          lines.push(indentChildren(block.to_do.children))
+        }
         break
       case 'code':
         lines.push(`\`\`\`${block.code.language || ''}`)
@@ -283,6 +308,15 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         break
       case 'quote':
         lines.push(`> ${richTextToMarkdown(block.quote.rich_text)}`)
+        if (block.quote.children?.length > 0) {
+          const childMd = blocksToMarkdown(block.quote.children)
+          lines.push(
+            childMd
+              .split('\n')
+              .map((l: string) => `> ${l}`)
+              .join('\n')
+          )
+        }
         break
       case 'divider':
         lines.push('---')
@@ -292,6 +326,15 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         const calloutIcon = block.callout.icon?.emoji || ''
         const calloutType = getCalloutTypeFromIcon(calloutIcon)
         lines.push(`> [!${calloutType}] ${calloutText}`)
+        if (block.callout.children?.length > 0) {
+          const childMd = blocksToMarkdown(block.callout.children)
+          lines.push(
+            childMd
+              .split('\n')
+              .map((l: string) => `> ${l}`)
+              .join('\n')
+          )
+        }
         break
       }
       case 'toggle': {

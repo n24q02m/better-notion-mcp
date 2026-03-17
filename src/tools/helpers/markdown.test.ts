@@ -1179,6 +1179,172 @@ describe('blocksToMarkdown', () => {
     })
   })
 
+  describe('nested children', () => {
+    it('should render nested bulleted list items with indentation', () => {
+      const blocks: NotionBlock[] = [
+        {
+          object: 'block',
+          type: 'bulleted_list_item',
+          bulleted_list_item: {
+            rich_text: [plainRichText('Parent')],
+            color: 'default',
+            children: [
+              {
+                object: 'block',
+                type: 'bulleted_list_item',
+                bulleted_list_item: { rich_text: [plainRichText('Child 1')], color: 'default' }
+              },
+              {
+                object: 'block',
+                type: 'bulleted_list_item',
+                bulleted_list_item: { rich_text: [plainRichText('Child 2')], color: 'default' }
+              }
+            ]
+          }
+        }
+      ]
+      expect(blocksToMarkdown(blocks)).toBe('- Parent\n  - Child 1\n  - Child 2')
+    })
+
+    it('should render nested numbered list items with indentation', () => {
+      const blocks: NotionBlock[] = [
+        {
+          object: 'block',
+          type: 'numbered_list_item',
+          numbered_list_item: {
+            rich_text: [plainRichText('Step 1')],
+            color: 'default',
+            children: [
+              {
+                object: 'block',
+                type: 'numbered_list_item',
+                numbered_list_item: { rich_text: [plainRichText('Sub-step')], color: 'default' }
+              }
+            ]
+          }
+        }
+      ]
+      expect(blocksToMarkdown(blocks)).toBe('1. Step 1\n  1. Sub-step')
+    })
+
+    it('should render nested to_do items with indentation', () => {
+      const blocks: NotionBlock[] = [
+        {
+          object: 'block',
+          type: 'to_do',
+          to_do: {
+            rich_text: [plainRichText('Main task')],
+            checked: false,
+            color: 'default',
+            children: [
+              {
+                object: 'block',
+                type: 'to_do',
+                to_do: { rich_text: [plainRichText('Sub-task')], checked: true, color: 'default' }
+              }
+            ]
+          }
+        }
+      ]
+      expect(blocksToMarkdown(blocks)).toBe('- [ ] Main task\n  - [x] Sub-task')
+    })
+
+    it('should render quote with nested children', () => {
+      const blocks: NotionBlock[] = [
+        {
+          object: 'block',
+          type: 'quote',
+          quote: {
+            rich_text: [plainRichText('Quote text')],
+            color: 'default',
+            children: [
+              {
+                object: 'block',
+                type: 'paragraph',
+                paragraph: { rich_text: [plainRichText('Nested paragraph')], color: 'default' }
+              }
+            ]
+          }
+        }
+      ]
+      expect(blocksToMarkdown(blocks)).toBe('> Quote text\n> Nested paragraph')
+    })
+
+    it('should render callout with nested children', () => {
+      const blocks: NotionBlock[] = [
+        {
+          object: 'block',
+          type: 'callout',
+          callout: {
+            rich_text: [plainRichText('Important')],
+            icon: { type: 'emoji', emoji: '\u2757' },
+            color: 'red_background',
+            children: [
+              {
+                object: 'block',
+                type: 'paragraph',
+                paragraph: { rich_text: [plainRichText('Details here')], color: 'default' }
+              }
+            ]
+          }
+        }
+      ]
+      expect(blocksToMarkdown(blocks)).toBe('> [!IMPORTANT] Important\n> Details here')
+    })
+
+    it('should render heading with nested children', () => {
+      const blocks: NotionBlock[] = [
+        {
+          object: 'block',
+          type: 'heading_1',
+          heading_1: {
+            rich_text: [plainRichText('Section')],
+            color: 'default',
+            children: [
+              {
+                object: 'block',
+                type: 'paragraph',
+                paragraph: { rich_text: [plainRichText('Content under heading')], color: 'default' }
+              }
+            ]
+          }
+        }
+      ]
+      expect(blocksToMarkdown(blocks)).toBe('# Section\nContent under heading')
+    })
+
+    it('should handle deeply nested bulleted lists', () => {
+      const blocks: NotionBlock[] = [
+        {
+          object: 'block',
+          type: 'bulleted_list_item',
+          bulleted_list_item: {
+            rich_text: [plainRichText('Level 1')],
+            color: 'default',
+            children: [
+              {
+                object: 'block',
+                type: 'bulleted_list_item',
+                bulleted_list_item: {
+                  rich_text: [plainRichText('Level 2')],
+                  color: 'default',
+                  children: [
+                    {
+                      object: 'block',
+                      type: 'bulleted_list_item',
+                      bulleted_list_item: { rich_text: [plainRichText('Level 3')], color: 'default' }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+      expect(blocksToMarkdown(blocks)).toBe('- Level 1\n  - Level 2\n    - Level 3')
+    })
+  })
+
   describe('unsupported block types', () => {
     it('should skip unknown block types', () => {
       const blocks: NotionBlock[] = [
