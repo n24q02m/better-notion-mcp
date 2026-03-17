@@ -29,17 +29,26 @@ export function isSafeUrl(url: string): boolean {
     // biome-ignore lint/suspicious/noControlCharactersInRegex: Intentionally matching control characters for security sanitization
     const lowerUrl = url.toLowerCase().replace(/[\s\x00-\x1F\x7F]+/g, '')
 
-    if (
-      lowerUrl.startsWith('javascript:') ||
-      lowerUrl.startsWith('data:') ||
-      lowerUrl.startsWith('vbscript:') ||
-      lowerUrl.startsWith('javascript&') ||
-      lowerUrl.startsWith('data&') ||
-      lowerUrl.startsWith('vbscript&')
-    ) {
+    try {
+      new URL(lowerUrl, 'http://relative-check.internal')
+
+      const delimiters = [lowerUrl.indexOf('/'), lowerUrl.indexOf('?'), lowerUrl.indexOf('#')].filter(
+        (idx) => idx !== -1
+      )
+      const firstDelimiter = delimiters.length > 0 ? Math.min(...delimiters) : -1
+
+      const prefix = firstDelimiter === -1 ? lowerUrl : lowerUrl.substring(0, firstDelimiter)
+
+      // Prevent obfuscated protocols (e.g., jav&#x09;ascript:, javascript%3a)
+      // Any colon or ampersand before the first delimiter is suspicious in a relative URL
+      if (prefix.includes(':') || prefix.includes('&') || prefix.includes('%3a')) {
+        return false
+      }
+
+      return true
+    } catch {
       return false
     }
-    return true
   }
 }
 

@@ -34,6 +34,13 @@ describe('Security Utilities', () => {
       expect(isSafeUrl('vbscript&colon;msgbox(1)')).toBe(false)
       expect(isSafeUrl('javascript&#58;alert(1)')).toBe(false)
       expect(isSafeUrl('javascript&#0000058alert(1)')).toBe(false)
+      expect(isSafeUrl('jav&#x09;ascript:alert(1)')).toBe(false)
+      expect(isSafeUrl('javascript&#x3a;alert(1)')).toBe(false)
+    })
+
+    it('should reject URLs with URL encoding obfuscation', () => {
+      expect(isSafeUrl('javascript%3aalert(1)')).toBe(false)
+      expect(isSafeUrl('javascript%3Aalert(1)')).toBe(false)
     })
   })
 
