@@ -55,6 +55,7 @@ export async function startHttp() {
   })
 
   const app = express()
+  app.disable('x-powered-by')
 
   // Trust exactly 2 reverse proxies (Cloudflare + Caddy) for correct req.ip
   app.set('trust proxy', 2)

@@ -9,6 +9,7 @@ vi.mock('express', () => {
   const mockApp = {
     use: vi.fn(),
     set: vi.fn(),
+    disable: vi.fn(),
     get: vi.fn((path: string, ...fns: Fn[]) => {
       handlers[`GET:${path}`] = fns
     }),
