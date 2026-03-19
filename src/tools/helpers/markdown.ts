@@ -251,10 +251,8 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
  * Convert Notion blocks to markdown
  */
 function indentChildren(children: NotionBlock[]): string {
-  return blocksToMarkdown(children)
-    .split('\n')
-    .map((l) => `  ${l}`)
-    .join('\n')
+  // Reduces garbage collection overhead by replacing `.split('\n').map().join('\n')` with native multiline regex replacement
+  return blocksToMarkdown(children).replace(/^/gm, '  ')
 }
 
 export function blocksToMarkdown(blocks: NotionBlock[]): string {
@@ -310,12 +308,8 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         lines.push(`> ${richTextToMarkdown(block.quote.rich_text)}`)
         if (block.quote.children?.length > 0) {
           const childMd = blocksToMarkdown(block.quote.children)
-          lines.push(
-            childMd
-              .split('\n')
-              .map((l: string) => `> ${l}`)
-              .join('\n')
-          )
+          // Reduces garbage collection overhead by replacing `.split('\n').map().join('\n')` with native multiline regex replacement
+          lines.push(childMd.replace(/^/gm, '> '))
         }
         break
       case 'divider':
@@ -328,12 +322,8 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         lines.push(`> [!${calloutType}] ${calloutText}`)
         if (block.callout.children?.length > 0) {
           const childMd = blocksToMarkdown(block.callout.children)
-          lines.push(
-            childMd
-              .split('\n')
-              .map((l: string) => `> ${l}`)
-              .join('\n')
-          )
+          // Reduces garbage collection overhead by replacing `.split('\n').map().join('\n')` with native multiline regex replacement
+          lines.push(childMd.replace(/^/gm, '> '))
         }
         break
       }
