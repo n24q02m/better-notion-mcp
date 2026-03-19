@@ -58,6 +58,7 @@ export async function startHttp() {
 
   // Trust exactly 2 reverse proxies (Cloudflare + Caddy) for correct req.ip
   app.set('trust proxy', 2)
+  app.disable('x-powered-by')
 
   // Rate limit MCP endpoints per IP
   const mcpRateLimit = rateLimit({

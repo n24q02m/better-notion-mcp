@@ -9,6 +9,7 @@ vi.mock('express', () => {
   const mockApp = {
     use: vi.fn(),
     set: vi.fn(),
+    disable: vi.fn(),
     get: vi.fn((path: string, ...fns: Fn[]) => {
       handlers[`GET:${path}`] = fns
     }),
@@ -127,6 +128,10 @@ describe('startHttp', () => {
 
     // OAuth router mounted
     expect(app.use).toHaveBeenCalled()
+
+    // Trust proxy and disable x-powered-by
+    expect(app.set).toHaveBeenCalledWith('trust proxy', 2)
+    expect(app.disable).toHaveBeenCalledWith('x-powered-by')
 
     // Callback endpoint registered
     expect(app.get).toHaveBeenCalledWith('/callback', expect.any(Function))
