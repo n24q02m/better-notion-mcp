@@ -240,10 +240,10 @@ export function suggestFixes(error: NotionMCPError): string[] {
 /**
  * Wrap async function with error handling
  */
-export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(
-  fn: T
-): (...args: Parameters<T>) => Promise<ReturnType<T>> {
-  return async (...args: Parameters<T>): Promise<ReturnType<T>> => {
+export function withErrorHandling<Args extends unknown[], Return>(
+  fn: (...args: Args) => Promise<Return>
+): (...args: Args) => Promise<Return> {
+  return async (...args: Args): Promise<Return> => {
     try {
       return await fn(...args)
     } catch (error) {
