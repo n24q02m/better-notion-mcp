@@ -134,7 +134,7 @@ describe('startHttp', () => {
     expect(app.disable).toHaveBeenCalledWith('x-powered-by')
 
     // Callback endpoint registered
-    expect(app.get).toHaveBeenCalledWith('/callback', expect.any(Function))
+    expect(app.get).toHaveBeenCalledWith('/callback', expect.any(Function), expect.any(Function))
 
     // Health endpoint registered
     expect(app.get).toHaveBeenCalledWith('/health', expect.any(Function))
