@@ -350,7 +350,7 @@ describe('registerTools', () => {
 
     it('should route workspace tool correctly', async () => {
       const handler = server.getHandler(3)
-      const mockResult = { action: 'search', results: [] }
+      const mockResult = { action: 'search' as const, total: 0, results: [] }
       vi.mocked(workspace).mockResolvedValue(mockResult)
 
       const result = await handler({

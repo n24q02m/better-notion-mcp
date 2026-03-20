@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { workspace } from './workspace'
+import { type WorkspaceResult, workspace } from './workspace.js'
 
 const mockNotion = {
   users: {
@@ -22,7 +22,10 @@ describe('workspace', () => {
         bot: { owner: { type: 'workspace', workspace: true } }
       })
 
-      const result = await workspace(mockNotion as any, { action: 'info' })
+      const result = (await workspace(mockNotion as any, { action: 'info' })) as Extract<
+        WorkspaceResult,
+        { action: 'info' }
+      >
 
       expect(result.action).toBe('info')
       expect(result.bot).toEqual({
@@ -41,7 +44,10 @@ describe('workspace', () => {
         bot: {}
       })
 
-      const result = await workspace(mockNotion as any, { action: 'info' })
+      const result = (await workspace(mockNotion as any, { action: 'info' })) as Extract<
+        WorkspaceResult,
+        { action: 'info' }
+      >
 
       expect(result.bot.name).toBe('Bot')
     })
@@ -63,7 +69,10 @@ describe('workspace', () => {
         has_more: false
       })
 
-      const result = await workspace(mockNotion as any, { action: 'search', query: 'My Page' })
+      const result = (await workspace(mockNotion as any, { action: 'search', query: 'My Page' })) as Extract<
+        WorkspaceResult,
+        { action: 'search' }
+      >
 
       expect(result.action).toBe('search')
       expect(result.query).toBe('My Page')
@@ -84,7 +93,10 @@ describe('workspace', () => {
         has_more: false
       })
 
-      const result = await workspace(mockNotion as any, { action: 'search' })
+      const result = (await workspace(mockNotion as any, { action: 'search' })) as Extract<
+        WorkspaceResult,
+        { action: 'search' }
+      >
 
       expect(result.action).toBe('search')
       expect(result.query).toBeUndefined()
@@ -161,10 +173,10 @@ describe('workspace', () => {
         has_more: false
       })
 
-      const result = await workspace(mockNotion as any, {
+      const result = (await workspace(mockNotion as any, {
         action: 'search',
         limit: 2
-      })
+      })) as Extract<WorkspaceResult, { action: 'search' }>
 
       expect(result.total).toBe(2)
       expect(result.results).toHaveLength(2)
@@ -185,7 +197,10 @@ describe('workspace', () => {
         has_more: false
       })
 
-      const result = await workspace(mockNotion as any, { action: 'search' })
+      const result = (await workspace(mockNotion as any, { action: 'search' })) as Extract<
+        WorkspaceResult,
+        { action: 'search' }
+      >
 
       expect(result.results[0].title).toBe('Named Page')
     })
@@ -205,7 +220,10 @@ describe('workspace', () => {
         has_more: false
       })
 
-      const result = await workspace(mockNotion as any, { action: 'search' })
+      const result = (await workspace(mockNotion as any, { action: 'search' })) as Extract<
+        WorkspaceResult,
+        { action: 'search' }
+      >
 
       expect(result.results[0].title).toBe('My Database')
     })
@@ -225,7 +243,10 @@ describe('workspace', () => {
         has_more: false
       })
 
-      const result = await workspace(mockNotion as any, { action: 'search' })
+      const result = (await workspace(mockNotion as any, { action: 'search' })) as Extract<
+        WorkspaceResult,
+        { action: 'search' }
+      >
 
       expect(result.results[0].title).toBe('Untitled')
     })
