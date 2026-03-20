@@ -65,8 +65,6 @@ function sanitizeErrorDetails(error: any): any {
 }
 
 /**
-
-/**
  * Enhance Notion API error with helpful context
  */
 export function enhanceError(error: any): NotionMCPError {
