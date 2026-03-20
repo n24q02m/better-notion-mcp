@@ -72,7 +72,6 @@ Move a page to a new parent page.
 - `title` - Page title
 - `content` - Markdown content
 - `append_content` - Markdown to append
-- `prepend_content` - [Deprecated] Not supported by Notion API. Use blocks tool to insert at specific position
 - `parent_id` - Parent page or database ID
 - `properties` - Page properties (for database pages)
 - `property_id` - Property ID (required for get_property action)

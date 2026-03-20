@@ -79,10 +79,6 @@ const TOOLS = [
         title: { type: 'string', description: 'Page title' },
         content: { type: 'string', description: 'Markdown content' },
         append_content: { type: 'string', description: 'Markdown to append' },
-        prepend_content: {
-          type: 'string',
-          description: '[Deprecated] Not supported by Notion API — use blocks tool to insert at specific position'
-        },
         parent_id: { type: 'string', description: 'Parent page or database ID' },
         properties: { type: 'object', description: 'Page properties (for database pages)' },
         property_id: { type: 'string', description: 'Property ID (for get_property action)' },
