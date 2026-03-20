@@ -24,7 +24,7 @@ When running locally via npm or Docker:
 ## Third-Party Services
 
 - **Notion API** (`api.notion.com`): Your data is subject to [Notion's Privacy Policy](https://www.notion.so/Privacy-Policy-3468d120cf614d4c9014c09f6aab3571).
-- **Google Cloud Run**: The remote server runs on Google Cloud. See [Google Cloud Privacy](https://cloud.google.com/terms/cloud-privacy-notice).
+- **Oracle Cloud Infrastructure**: The remote server runs on OCI. See [Oracle Cloud Privacy](https://www.oracle.com/legal/privacy/services-privacy-policy.html).
 - **Cloudflare**: DNS proxy for DDoS protection. See [Cloudflare Privacy](https://www.cloudflare.com/privacypolicy/).
 
 ## Contact
