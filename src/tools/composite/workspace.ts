@@ -7,6 +7,34 @@ import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { autoPaginate } from '../helpers/pagination.js'
 
+export interface WorkspaceInfoResult {
+  action: 'info'
+  bot: {
+    id: string
+    name: string
+    type: string
+    owner?: any
+  }
+}
+
+export interface WorkspaceSearchResultItem {
+  id: string
+  object: string
+  title: string
+  url: string
+  last_edited_time: string
+  database_id?: string
+}
+
+export interface WorkspaceSearchResult {
+  action: 'search'
+  query?: string
+  total: number
+  results: WorkspaceSearchResultItem[]
+}
+
+export type WorkspaceResult = WorkspaceInfoResult | WorkspaceSearchResult
+
 export interface WorkspaceInput {
   action: 'info' | 'search'
 
@@ -28,14 +56,14 @@ export interface WorkspaceInput {
  * Unified workspace tool
  * Maps to: GET /v1/users/me and POST /v1/search
  */
-export async function workspace(notion: Client, input: WorkspaceInput): Promise<any> {
+export async function workspace(notion: Client, input: WorkspaceInput): Promise<WorkspaceResult> {
   return withErrorHandling(async () => {
     switch (input.action) {
       case 'info': {
         const botUser = await notion.users.retrieve({ user_id: 'me' })
 
         return {
-          action: 'info',
+          action: 'info' as const,
           bot: {
             id: (botUser as any).id,
             name: (botUser as any).name || 'Bot',
@@ -100,7 +128,7 @@ export async function workspace(notion: Client, input: WorkspaceInput): Promise<
         }
 
         return {
-          action: 'search',
+          action: 'search' as const,
           query: input.query,
           total: results.length,
           results: formattedResults
