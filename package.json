@@ -60,6 +60,7 @@
     "@notionhq/client": "^5.13.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.1",
+    "mitata": "^1.0.34",
     "zod": "^4.3.6"
   },
   "devDependencies": {

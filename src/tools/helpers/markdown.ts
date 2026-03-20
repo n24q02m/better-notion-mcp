@@ -534,38 +534,34 @@ export function parseRichText(text: string): RichText[] {
 function richTextToMarkdown(richText: RichText[]): string {
   if (!richText || !Array.isArray(richText)) return ''
 
-  let result = ''
-  for (let i = 0; i < richText.length; i++) {
-    const rt = richText[i]
-    if (!rt) continue
+  return richText
+    .map((rt) => {
+      if (!rt) return ''
 
-    // Handle mention elements
-    if (rt.type === 'mention' && rt.mention) {
-      const title = rt.plain_text || rt.text?.content || 'Untitled'
-      const id = rt.mention.page?.id || rt.mention.database?.id || ''
-      if (id) {
-        result += `@[${title}](${id})`
-        continue
+      // Handle mention elements
+      if (rt.type === 'mention' && rt.mention) {
+        const title = rt.plain_text || rt.text?.content || 'Untitled'
+        const id = rt.mention.page?.id || rt.mention.database?.id || ''
+        if (id) {
+          return `@[${title}](${id})`
+        }
+        // Fallback for other mention types (user, date, etc.)
+        return title
       }
-      // Fallback for other mention types (user, date, etc.)
-      result += title
-      continue
-    }
 
-    if (!rt.text) continue
+      if (!rt.text) return ''
 
-    let text = rt.text.content || ''
-    const annotations = rt.annotations || ({} as any)
+      let text = rt.text.content || ''
+      const annotations = rt.annotations || ({} as any)
 
-    if (annotations.bold) text = `**${text}**`
-    if (annotations.italic) text = `*${text}*`
-    if (annotations.code) text = `\`${text}\``
-    if (annotations.strikethrough) text = `~~${text}~~`
-    if (rt.text.link) text = `[${text}](${rt.text.link.url})`
-    result += text
-  }
-
-  return result
+      if (annotations.bold) text = `**${text}**`
+      if (annotations.italic) text = `*${text}*`
+      if (annotations.code) text = `\`${text}\``
+      if (annotations.strikethrough) text = `~~${text}~~`
+      if (rt.text.link) text = `[${text}](${rt.text.link.url})`
+      return text
+    })
+    .join('')
 }
 
 /**
