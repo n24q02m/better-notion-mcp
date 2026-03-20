@@ -83,6 +83,11 @@ export function enhanceError(error: any): NotionMCPError {
       delete error.body.internal_config
       delete error.body.user_email
     }
+    if (error.details && typeof error.details === 'object') {
+      delete error.details.sensitive_token
+      delete error.details.internal_config
+      delete error.details.user_email
+    }
   }
 
   // Notion API error
