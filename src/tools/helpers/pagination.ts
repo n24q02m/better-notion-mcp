@@ -82,6 +82,7 @@ export async function fetchChildrenRecursive(
   for (let i = 0; i < blocksNeedingChildren.length; i += 5) {
     const batch = blocksNeedingChildren.slice(i, i + 5)
     const childrenResults = await Promise.all(batch.map((b) => fetchChildren(b.id)))
+    const recursivePromises: Promise<void>[] = []
     for (let j = 0; j < batch.length; j++) {
       const block = batch[j]
       const children = childrenResults[j]
@@ -90,8 +91,9 @@ export async function fetchChildrenRecursive(
         block[block.type].children = children
       }
       // Recurse into children
-      await fetchChildrenRecursive(children, fetchChildren, depth + 1)
+      recursivePromises.push(fetchChildrenRecursive(children, fetchChildren, depth + 1))
     }
+    await Promise.all(recursivePromises)
   }
 }
 
