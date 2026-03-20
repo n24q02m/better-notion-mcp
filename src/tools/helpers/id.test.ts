@@ -13,6 +13,14 @@ describe('normalizeId', () => {
   it('should strip hyphens from any string', () => {
     expect(normalizeId('abc-def')).toBe('abcdef')
   })
+
+  it('should return empty string unchanged', () => {
+    expect(normalizeId('')).toBe('')
+  })
+
+  it('should return string without hyphens unchanged', () => {
+    expect(normalizeId('abcdef123456')).toBe('abcdef123456')
+  })
 })
 
 describe('isValidNotionId', () => {
