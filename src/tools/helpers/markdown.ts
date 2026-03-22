@@ -1080,3 +1080,85 @@ function createBreadcrumb(): NotionBlock {
 function isListItem(line: string): boolean {
   return BULLETED_LIST_REGEX.test(line) || NUMBERED_LIST_REGEX.test(line)
 }
+
+// ============================================================
+// Mention resolution helpers
+// ============================================================
+
+/**
+ * Walk a block tree collecting all unique page/database mention IDs
+ * that have stale plain_text ('Untitled').
+ */
+export function collectMentionIds(blocks: any[]): Set<string> {
+  const ids = new Set<string>()
+  for (const block of blocks) {
+    const blockType = block.type
+    const blockData = block[blockType]
+    if (blockData?.rich_text) {
+      for (const rt of blockData.rich_text) {
+        if (rt.type === 'mention') {
+          const id = rt.mention?.page?.id || rt.mention?.database?.id
+          if (id && rt.plain_text === 'Untitled') {
+            ids.add(id)
+          }
+        }
+      }
+    }
+    // Recurse into children
+    if (blockData?.children) {
+      for (const childId of collectMentionIds(blockData.children)) {
+        ids.add(childId)
+      }
+    }
+    // Also check table_row cells
+    if (blockType === 'table_row' && blockData?.cells) {
+      for (const cell of blockData.cells) {
+        for (const rt of cell) {
+          if (rt.type === 'mention') {
+            const id = rt.mention?.page?.id || rt.mention?.database?.id
+            if (id && rt.plain_text === 'Untitled') {
+              ids.add(id)
+            }
+          }
+        }
+      }
+    }
+  }
+  return ids
+}
+
+/**
+ * Replace stale plain_text in mention rich text elements
+ * using a pre-fetched title map.
+ */
+export function replaceMentionTitles(blocks: any[], titleMap: Map<string, string>): void {
+  for (const block of blocks) {
+    const blockType = block.type
+    const blockData = block[blockType]
+    if (blockData?.rich_text) {
+      for (const rt of blockData.rich_text) {
+        if (rt.type === 'mention') {
+          const id = rt.mention?.page?.id || rt.mention?.database?.id
+          if (id && titleMap.has(id)) {
+            rt.plain_text = titleMap.get(id)!
+          }
+        }
+      }
+    }
+    if (blockData?.children) {
+      replaceMentionTitles(blockData.children, titleMap)
+    }
+    if (blockType === 'table_row' && blockData?.cells) {
+      for (const cell of blockData.cells) {
+        for (const rt of cell) {
+          if (rt.type === 'mention') {
+            const id = rt.mention?.page?.id || rt.mention?.database?.id
+            if (id && titleMap.has(id)) {
+              rt.plain_text = titleMap.get(id)!
+            }
+          }
+        }
+      }
+    }
+  }
+}

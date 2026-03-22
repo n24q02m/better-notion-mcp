@@ -18,6 +18,36 @@ vi.mock('../helpers/markdown.js', () => ({
   blocksToMarkdown: vi.fn((blocks: any[]) => {
     if (!blocks.length) return ''
     return '# Mock markdown'
+  }),
+  collectMentionIds: vi.fn((blocks: any[]) => {
+    const ids = new Set<string>()
+    for (const block of blocks) {
+      const data = block[block.type]
+      if (data?.rich_text) {
+        for (const rt of data.rich_text) {
+          if (rt.type === 'mention') {
+            const id = rt.mention?.page?.id || rt.mention?.database?.id
+            if (id && rt.plain_text === 'Untitled') ids.add(id)
+          }
+        }
+      }
+    }
+    return ids
+  }),
+  replaceMentionTitles: vi.fn((blocks: any[], titleMap: Map<string, string>) => {
+    for (const block of blocks) {
+      const data = block[block.type]
+      if (data?.rich_text) {
+        for (const rt of data.rich_text) {
+          if (rt.type === 'mention') {
+            const id = rt.mention?.page?.id || rt.mention?.database?.id
+            if (id && titleMap.has(id)) {
+              rt.plain_text = titleMap.get(id)!
+            }
+          }
+        }
+      }
+    }
   })
 }))
 
@@ -982,6 +1012,83 @@ describe('pages', () => {
 
     it('throws without page_id or page_ids', async () => {
       await expect(pages(mockNotion as any, { action: 'duplicate' })).rejects.toThrow('page_id or page_ids required')
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // get - stale mention resolution
+  // ---------------------------------------------------------------------------
+  describe('get - stale mention resolution', () => {
+    it('resolves stale Untitled mentions by fetching page titles', async () => {
+      const staleMention = {
+        type: 'mention',
+        mention: { page: { id: 'mentioned-page-id' } },
+        plain_text: 'Untitled',
+        annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+      }
+
+      mockNotion.pages.retrieve.mockImplementation(async ({ page_id }: { page_id: string }) => {
+        if (page_id === 'get-page-1') {
+          return {
+            id: 'get-page-1',
+            url: 'https://notion.so/get-page-1',
+            created_time: '2024-01-01T00:00:00.000Z',
+            last_edited_time: '2024-01-02T00:00:00.000Z',
+            archived: false,
+            properties: { Name: { type: 'title', title: [{ plain_text: 'Main Page' }] } }
+          }
+        }
+        if (page_id === 'mentioned-page-id') {
+          return {
+            id: 'mentioned-page-id',
+            properties: { Name: { type: 'title', title: [{ plain_text: 'Resolved Title' }] } }
+          }
+        }
+        throw new Error(`Unexpected page_id: ${page_id}`)
+      })
+
+      mockNotion.blocks.children.list.mockResolvedValue({
+        results: [
+          {
+            id: 'block-with-mention',
+            type: 'paragraph',
+            paragraph: { rich_text: [staleMention] }
+          }
+        ],
+        next_cursor: null,
+        has_more: false
+      })
+
+      const result = (await pages(mockNotion as any, { action: 'get', page_id: 'get-page-1' })) as GetPageResult
+
+      // Verify the mentioned page was fetched to resolve its title
+      expect(mockNotion.pages.retrieve).toHaveBeenCalledWith({ page_id: 'mentioned-page-id' })
+      // Verify the main page was also fetched
+      expect(mockNotion.pages.retrieve).toHaveBeenCalledWith({ page_id: 'get-page-1' })
+      // Result should still be valid
+      expect(result.action).toBe('get')
+      expect(result.page_id).toBe('get-page-1')
+    })
+
+    it('skips mention resolution when no stale mentions exist', async () => {
+      mockNotion.pages.retrieve.mockResolvedValue({
+        id: 'page-no-mentions',
+        url: 'https://notion.so/page-no-mentions',
+        created_time: '2024-01-01T00:00:00.000Z',
+        last_edited_time: '2024-01-01T00:00:00.000Z',
+        archived: false,
+        properties: {}
+      })
+      mockNotion.blocks.children.list.mockResolvedValue({
+        results: [{ id: 'b-1', type: 'paragraph', paragraph: { rich_text: [{ type: 'text', text: { content: 'Hello' } }] } }],
+        next_cursor: null,
+        has_more: false
+      })
+
+      await pages(mockNotion as any, { action: 'get', page_id: 'page-no-mentions' })
+
+      // Only the main page retrieval, no extra calls for mentions
+      expect(mockNotion.pages.retrieve).toHaveBeenCalledTimes(1)
     })
   })
 

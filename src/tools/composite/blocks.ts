@@ -5,7 +5,7 @@
 
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
-import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
+import { blocksToMarkdown, collectMentionIds, markdownToBlocks, replaceMentionTitles } from '../helpers/markdown.js'
 import { autoPaginate, fetchChildrenRecursive } from '../helpers/pagination.js'
 
 export interface BlocksInput {
@@ -52,6 +52,30 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
             notion.blocks.children.list({ block_id: blockId, start_cursor: cursor, page_size: 100 })
           ) as any
         })
+
+        // Resolve stale mention titles (plain_text === 'Untitled') by batch-fetching page titles
+        const mentionIds = collectMentionIds(blocksList as any[])
+        if (mentionIds.size > 0 && mentionIds.size <= 50) {
+          const titleMap = new Map<string, string>()
+          const ids = Array.from(mentionIds)
+          for (let i = 0; i < ids.length; i += 5) {
+            const batch = ids.slice(i, i + 5)
+            const results = await Promise.allSettled(batch.map((id) => notion.pages.retrieve({ page_id: id })))
+            for (let j = 0; j < results.length; j++) {
+              if (results[j].status === 'fulfilled') {
+                const page = (results[j] as PromiseFulfilledResult<any>).value
+                const titleProp = Object.values(page.properties || {}).find((p: any) => p.type === 'title') as any
+                const title = titleProp?.title?.[0]?.plain_text
+                if (title) {
+                  titleMap.set(batch[j], title)
+                }
+              }
+            }
+          }
+          if (titleMap.size > 0) {
+            replaceMentionTitles(blocksList as any[], titleMap)
+          }
+        }
 
         const markdown = blocksToMarkdown(blocksList as any)
         return {

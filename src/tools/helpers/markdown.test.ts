@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { NotionBlock, RichText } from './markdown'
-import { blocksToMarkdown, extractPlainText, markdownToBlocks, parseRichText } from './markdown'
+import {
+  blocksToMarkdown,
+  collectMentionIds,
+  extractPlainText,
+  markdownToBlocks,
+  parseRichText,
+  replaceMentionTitles
+} from './markdown'
 
 // ============================================================
 // Helpers
@@ -1718,5 +1725,252 @@ describe('round-trip conversion', () => {
     expect(output).toContain('- Item 2')
     expect(output).toContain('---')
     expect(output).toContain('> Quote')
+  })
+})
+
+// ============================================================
+// collectMentionIds
+// ============================================================
+
+describe('collectMentionIds', () => {
+  it('should collect page mention IDs with plain_text Untitled', () => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        paragraph: {
+          rich_text: [
+            {
+              type: 'mention',
+              mention: { page: { id: 'page-aaa' } },
+              plain_text: 'Untitled',
+              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+            }
+          ]
+        }
+      }
+    ]
+    const ids = collectMentionIds(blocks)
+    expect(ids).toBeInstanceOf(Set)
+    expect(ids.size).toBe(1)
+    expect(ids.has('page-aaa')).toBe(true)
+  })
+
+  it('should collect database mention IDs with plain_text Untitled', () => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        paragraph: {
+          rich_text: [
+            {
+              type: 'mention',
+              mention: { database: { id: 'db-bbb' } },
+              plain_text: 'Untitled',
+              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+            }
+          ]
+        }
+      }
+    ]
+    const ids = collectMentionIds(blocks)
+    expect(ids.size).toBe(1)
+    expect(ids.has('db-bbb')).toBe(true)
+  })
+
+  it('should NOT collect mentions that already have a real title', () => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        paragraph: {
+          rich_text: [
+            {
+              type: 'mention',
+              mention: { page: { id: 'page-ccc' } },
+              plain_text: 'My Real Page',
+              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+            }
+          ]
+        }
+      }
+    ]
+    const ids = collectMentionIds(blocks)
+    expect(ids.size).toBe(0)
+  })
+
+  it('should recurse into block children', () => {
+    const blocks = [
+      {
+        type: 'toggle',
+        toggle: {
+          rich_text: [],
+          children: [
+            {
+              type: 'paragraph',
+              paragraph: {
+                rich_text: [
+                  {
+                    type: 'mention',
+                    mention: { page: { id: 'nested-page' } },
+                    plain_text: 'Untitled',
+                    annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+    const ids = collectMentionIds(blocks)
+    expect(ids.size).toBe(1)
+    expect(ids.has('nested-page')).toBe(true)
+  })
+
+  it('should collect from table_row cells', () => {
+    const blocks = [
+      {
+        type: 'table_row',
+        table_row: {
+          cells: [
+            [
+              {
+                type: 'mention',
+                mention: { page: { id: 'cell-page' } },
+                plain_text: 'Untitled',
+                annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+              }
+            ],
+            [
+              {
+                type: 'text',
+                text: { content: 'Normal text' },
+                annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+    const ids = collectMentionIds(blocks)
+    expect(ids.size).toBe(1)
+    expect(ids.has('cell-page')).toBe(true)
+  })
+
+  it('should return empty set when no stale mentions exist', () => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        paragraph: {
+          rich_text: [
+            {
+              type: 'text',
+              text: { content: 'Just plain text' },
+              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+            }
+          ]
+        }
+      }
+    ]
+    const ids = collectMentionIds(blocks)
+    expect(ids.size).toBe(0)
+  })
+})
+
+// ============================================================
+// replaceMentionTitles
+// ============================================================
+
+describe('replaceMentionTitles', () => {
+  it('should replace stale plain_text with resolved titles', () => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        paragraph: {
+          rich_text: [
+            {
+              type: 'mention',
+              mention: { page: { id: 'page-111' } },
+              plain_text: 'Untitled',
+              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+            }
+          ]
+        }
+      }
+    ]
+    const titleMap = new Map([['page-111', 'Resolved Title']])
+    replaceMentionTitles(blocks, titleMap)
+    expect(blocks[0].paragraph.rich_text[0].plain_text).toBe('Resolved Title')
+  })
+
+  it('should not modify mentions whose IDs are not in the titleMap', () => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        paragraph: {
+          rich_text: [
+            {
+              type: 'mention',
+              mention: { page: { id: 'page-222' } },
+              plain_text: 'Untitled',
+              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+            }
+          ]
+        }
+      }
+    ]
+    const titleMap = new Map([['page-other', 'Other Title']])
+    replaceMentionTitles(blocks, titleMap)
+    expect(blocks[0].paragraph.rich_text[0].plain_text).toBe('Untitled')
+  })
+
+  it('should recurse into children', () => {
+    const blocks = [
+      {
+        type: 'toggle',
+        toggle: {
+          rich_text: [],
+          children: [
+            {
+              type: 'paragraph',
+              paragraph: {
+                rich_text: [
+                  {
+                    type: 'mention',
+                    mention: { page: { id: 'child-page' } },
+                    plain_text: 'Untitled',
+                    annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+    const titleMap = new Map([['child-page', 'Child Title']])
+    replaceMentionTitles(blocks, titleMap)
+    expect(blocks[0].toggle.children[0].paragraph.rich_text[0].plain_text).toBe('Child Title')
+  })
+
+  it('should replace in table_row cells', () => {
+    const blocks = [
+      {
+        type: 'table_row',
+        table_row: {
+          cells: [
+            [
+              {
+                type: 'mention',
+                mention: { page: { id: 'table-page' } },
+                plain_text: 'Untitled',
+                annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+    const titleMap = new Map([['table-page', 'Table Page Title']])
+    replaceMentionTitles(blocks, titleMap)
+    expect(blocks[0].table_row.cells[0][0].plain_text).toBe('Table Page Title')
   })
 })

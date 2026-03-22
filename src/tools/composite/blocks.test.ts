@@ -359,6 +359,81 @@ describe('blocks', () => {
     })
   })
 
+  describe('children - stale mention resolution', () => {
+    it('should resolve stale Untitled mentions by fetching page titles', async () => {
+      const staleMention = {
+        type: 'mention',
+        mention: { page: { id: 'mentioned-page-1' } },
+        plain_text: 'Untitled',
+        annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+      }
+
+      mockNotion.blocks.children.list.mockResolvedValue({
+        results: [
+          {
+            id: 'block-with-mention',
+            type: 'paragraph',
+            paragraph: { rich_text: [staleMention] }
+          }
+        ],
+        next_cursor: null,
+        has_more: false
+      })
+
+      // Mock pages.retrieve for mentioned page
+      const mockPagesRetrieve = vi.fn().mockResolvedValue({
+        id: 'mentioned-page-1',
+        properties: { Name: { type: 'title', title: [{ plain_text: 'Resolved Page Title' }] } }
+      })
+      const notionWithPages = {
+        ...mockNotion,
+        pages: { retrieve: mockPagesRetrieve }
+      }
+
+      const result = await blocks(notionWithPages as any, { action: 'children', block_id: 'block-1' })
+
+      expect(result.action).toBe('children')
+      // Verify the mentioned page was fetched
+      expect(mockPagesRetrieve).toHaveBeenCalledWith({ page_id: 'mentioned-page-1' })
+      // Verify the stale mention was resolved in-place
+      expect(staleMention.plain_text).toBe('Resolved Page Title')
+    })
+
+    it('should skip mention resolution when no stale mentions', async () => {
+      mockNotion.blocks.children.list.mockResolvedValue({
+        results: [
+          {
+            id: 'block-1',
+            type: 'paragraph',
+            paragraph: {
+              rich_text: [
+                {
+                  type: 'mention',
+                  mention: { page: { id: 'page-with-title' } },
+                  plain_text: 'Already Named',
+                  annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+                }
+              ]
+            }
+          }
+        ],
+        next_cursor: null,
+        has_more: false
+      })
+
+      const mockPagesRetrieve = vi.fn()
+      const notionWithPages = {
+        ...mockNotion,
+        pages: { retrieve: mockPagesRetrieve }
+      }
+
+      await blocks(notionWithPages as any, { action: 'children', block_id: 'block-1' })
+
+      // No page retrieval for mentions since none are stale
+      expect(mockPagesRetrieve).not.toHaveBeenCalled()
+    })
+  })
+
   describe('default', () => {
     it('should throw on unknown action', async () => {
       await expect(blocks(mockNotion as any, { action: 'invalid' as any, block_id: 'block-1' })).rejects.toThrow(
