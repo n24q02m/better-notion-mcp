@@ -205,6 +205,8 @@ describe('pages', () => {
         action: 'get',
         page_id: 'page-1',
         url: 'https://notion.so/page-1',
+        icon: null,
+        cover: null,
         created_time: '2024-01-01T00:00:00.000Z',
         last_edited_time: '2024-01-02T00:00:00.000Z',
         archived: false,
@@ -334,6 +336,69 @@ describe('pages', () => {
 
       expect(result.block_count).toBe(2)
       expect(mockNotion.blocks.children.list).toHaveBeenCalledTimes(2)
+    })
+
+    it('returns icon field from Notion API response', async () => {
+      mockNotion.pages.retrieve.mockResolvedValue({
+        id: 'page-icon',
+        url: 'https://notion.so/page-icon',
+        created_time: '2024-01-01T00:00:00.000Z',
+        last_edited_time: '2024-01-01T00:00:00.000Z',
+        archived: false,
+        icon: { type: 'emoji', emoji: '🔥' },
+        properties: {}
+      })
+      mockNotion.blocks.children.list.mockResolvedValue({
+        results: [],
+        next_cursor: null,
+        has_more: false
+      })
+
+      const result = (await pages(mockNotion as any, { action: 'get', page_id: 'page-icon' })) as GetPageResult
+
+      expect(result.icon).toEqual({ type: 'emoji', emoji: '🔥' })
+    })
+
+    it('returns cover field from Notion API response', async () => {
+      mockNotion.pages.retrieve.mockResolvedValue({
+        id: 'page-cover',
+        url: 'https://notion.so/page-cover',
+        created_time: '2024-01-01T00:00:00.000Z',
+        last_edited_time: '2024-01-01T00:00:00.000Z',
+        archived: false,
+        cover: { type: 'external', external: { url: 'https://example.com/cover.jpg' } },
+        properties: {}
+      })
+      mockNotion.blocks.children.list.mockResolvedValue({
+        results: [],
+        next_cursor: null,
+        has_more: false
+      })
+
+      const result = (await pages(mockNotion as any, { action: 'get', page_id: 'page-cover' })) as GetPageResult
+
+      expect(result.cover).toEqual({ type: 'external', external: { url: 'https://example.com/cover.jpg' } })
+    })
+
+    it('returns null for icon and cover when API has none', async () => {
+      mockNotion.pages.retrieve.mockResolvedValue({
+        id: 'page-no-icon',
+        url: 'https://notion.so/page-no-icon',
+        created_time: '2024-01-01T00:00:00.000Z',
+        last_edited_time: '2024-01-01T00:00:00.000Z',
+        archived: false,
+        properties: {}
+      })
+      mockNotion.blocks.children.list.mockResolvedValue({
+        results: [],
+        next_cursor: null,
+        has_more: false
+      })
+
+      const result = (await pages(mockNotion as any, { action: 'get', page_id: 'page-no-icon' })) as GetPageResult
+
+      expect(result.icon).toBeNull()
+      expect(result.cover).toBeNull()
     })
 
     it('throws without page_id', async () => {
