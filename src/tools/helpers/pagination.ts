@@ -78,11 +78,12 @@ export async function fetchChildrenRecursive(
 
   if (blocksNeedingChildren.length === 0) return
 
+  const recursivePromises: Promise<void>[] = []
+
   // Fetch children in parallel (batch of 5 to respect rate limits)
   for (let i = 0; i < blocksNeedingChildren.length; i += 5) {
     const batch = blocksNeedingChildren.slice(i, i + 5)
     const childrenResults = await Promise.all(batch.map((b) => fetchChildren(b.id)))
-    const recursivePromises: Promise<void>[] = []
     for (let j = 0; j < batch.length; j++) {
       const block = batch[j]
       const children = childrenResults[j]
@@ -93,8 +94,12 @@ export async function fetchChildrenRecursive(
       // Recurse into children
       recursivePromises.push(fetchChildrenRecursive(children, fetchChildren, depth + 1))
     }
-    await Promise.all(recursivePromises)
   }
+
+  // ⚡ Bolt: Parallelize recursive tree traversal by awaiting all children's
+  // recursion after processing all batches at the current depth, rather than
+  // sequentially waiting for each batch's deep traversal to finish.
+  await Promise.all(recursivePromises)
 }
 
 /**
