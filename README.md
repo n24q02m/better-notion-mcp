@@ -36,6 +36,8 @@
 claude plugin add n24q02m/better-notion-mcp
 ```
 
+Uses remote OAuth -- no `NOTION_TOKEN` needed. Your browser opens for Notion authorization on first use.
+
 ### MCP Server
 
 #### Option 1: Remote (OAuth) -- No token needed
