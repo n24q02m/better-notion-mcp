@@ -30,6 +30,7 @@
     "dev:http": "TRANSPORT_MODE=http tsx watch scripts/start-server.ts",
     "test": "vitest --passWithNoTests",
     "test:watch": "vitest watch",
+    "test:full": "vitest run tests/live/*.full.test.ts",
     "test:coverage": "vitest --coverage",
     "lint": "biome lint src",
     "lint:fix": "biome lint --write src",
