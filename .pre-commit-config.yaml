@@ -10,6 +10,15 @@
 
 repos:
   # ============================================================================
+  # Security: Secret Detection (MUST be first — blocks commit if secrets found)
+  # ============================================================================
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+        name: gitleaks (detect secrets)
+
+  # ============================================================================
   # TypeScript/JavaScript
   # ============================================================================
 
