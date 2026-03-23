@@ -7,6 +7,7 @@ vi.mock('@modelcontextprotocol/sdk/server/index.js', () => {
   return {
     Server: class MockServer {
       connect = vi.fn().mockResolvedValue(undefined)
+      setRequestHandler = vi.fn()
     }
   }
 })
@@ -22,7 +23,7 @@ vi.mock('./tools/registry.js', () => ({
 }))
 
 vi.mock('node:fs', () => ({
-  readFileSync: vi.fn().mockReturnValue(JSON.stringify({ version: '1.0.0' }))
+  readFileSync: vi.fn().mockReturnValue(JSON.stringify({ name: '@n24q02m/better-notion-mcp', version: '1.0.0' }))
 }))
 
 vi.mock('@notionhq/client', () => ({
@@ -31,10 +32,6 @@ vi.mock('@notionhq/client', () => ({
 
 describe('initServer (delegates to startStdio)', () => {
   const originalEnv = process.env
-
-  const mockExit = vi.spyOn(process, 'exit').mockImplementation((_code?: number | string | null | undefined) => {
-    return undefined as never
-  })
   const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 
   beforeEach(() => {
@@ -46,13 +43,15 @@ describe('initServer (delegates to startStdio)', () => {
     process.env = originalEnv
   })
 
-  it('should exit if NOTION_TOKEN is missing', async () => {
+  it('should start server without NOTION_TOKEN and log warning', async () => {
     delete process.env.NOTION_TOKEN
 
-    await initServer()
+    const server = await initServer()
 
-    expect(mockConsoleError).toHaveBeenCalledWith('NOTION_TOKEN environment variable is required')
-    expect(mockExit).toHaveBeenCalledWith(1)
+    expect(server.connect).toHaveBeenCalledWith(expect.any(StdioServerTransport))
+    expect(mockConsoleError).toHaveBeenCalledWith(
+      expect.stringContaining('NOTION_TOKEN not set')
+    )
   })
 
   it('should initialize server successfully with NOTION_TOKEN', async () => {
