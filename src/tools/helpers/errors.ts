@@ -8,7 +8,7 @@ export class NotionMCPError extends Error {
     message: string,
     public code: string,
     public suggestion?: string,
-    public details?: any
+    public details?: unknown
   ) {
     super(message)
     this.name = 'NotionMCPError'
@@ -28,16 +28,16 @@ export class NotionMCPError extends Error {
 /**
  * Sanitize validation error body to remove sensitive information
  */
-function sanitizeValidationBody(body: any): any {
+function sanitizeValidationBody(body: unknown): unknown {
   if (!body || typeof body !== 'object') return body
 
   // whitelist safe properties from Notion API validation_error responses
-  const safe: any = {}
+  const safe: Record<string, unknown> = {}
   const safeFields = ['message', 'object', 'code', 'status', 'request_id', 'path']
 
   for (const field of safeFields) {
     if (field in body) {
-      safe[field] = body[field]
+      safe[field] = (body as Record<string, unknown>)[field]
     }
   }
 
@@ -47,19 +47,22 @@ function sanitizeValidationBody(body: any): any {
 /**
  * Sanitize error object to remove sensitive information
  */
-function sanitizeErrorDetails(error: any): any {
+function sanitizeErrorDetails(error: unknown): unknown {
   if (!error || typeof error !== 'object') return error
 
   // whitelist safe properties
-  const safe: any = {
-    message: error.message,
-    name: error.name,
-    code: error.code
+  const errObj = error as Record<string, unknown>
+  const safe: Record<string, unknown> = {
+    message: errObj.message,
+    name: errObj.name,
+    code: errObj.code
   }
 
   // Add status if available (common in HTTP errors)
-  if (error.status) safe.status = error.status
-  if (error.response?.status) safe.status = error.response.status
+  if (errObj.status) safe.status = errObj.status
+  if (errObj.response && typeof errObj.response === 'object' && 'status' in errObj.response) {
+    safe.status = (errObj.response as Record<string, unknown>).status
+  }
 
   return safe
 }
@@ -67,34 +70,40 @@ function sanitizeErrorDetails(error: any): any {
 /**
  * Enhance Notion API error with helpful context
  */
-export function enhanceError(error: any): NotionMCPError {
+export function enhanceError(error: unknown): NotionMCPError {
   // Already a NotionMCPError — pass through unchanged
   if (error instanceof NotionMCPError) return error
 
   // Explicitly strip sensitive fields as requested
   if (error && typeof error === 'object') {
-    delete error.sensitive_token
-    delete error.internal_config
-    delete error.user_email
-    if (error.body && typeof error.body === 'object') {
-      delete error.body.sensitive_token
-      delete error.body.internal_config
-      delete error.body.user_email
+    const errObj = error as Record<string, unknown>
+    delete errObj.sensitive_token
+    delete errObj.internal_config
+    delete errObj.user_email
+    if (errObj.body && typeof errObj.body === 'object') {
+      const bodyObj = errObj.body as Record<string, unknown>
+      delete bodyObj.sensitive_token
+      delete bodyObj.internal_config
+      delete bodyObj.user_email
     }
-    if (error.details && typeof error.details === 'object') {
-      delete error.details.sensitive_token
-      delete error.details.internal_config
-      delete error.details.user_email
+    if (errObj.details && typeof errObj.details === 'object') {
+      const detailsObj = errObj.details as Record<string, unknown>
+      delete detailsObj.sensitive_token
+      delete detailsObj.internal_config
+      delete detailsObj.user_email
     }
   }
 
+  const errObj = (error && typeof error === 'object' ? error : {}) as Record<string, unknown>
+
   // Notion API error
-  if (error.code) {
+  if (errObj.code) {
     return handleNotionError(error)
   }
 
   // Network error
-  if (error.message?.includes('ECONNREFUSED') || error.message?.includes('ENOTFOUND')) {
+  const messageStr = typeof errObj.message === 'string' ? errObj.message : ''
+  if (messageStr.includes('ECONNREFUSED') || messageStr.includes('ENOTFOUND')) {
     return new NotionMCPError(
       'Cannot connect to Notion API',
       'NETWORK_ERROR',
@@ -104,7 +113,7 @@ export function enhanceError(error: any): NotionMCPError {
 
   // Generic error
   return new NotionMCPError(
-    error.message || 'Unknown error occurred',
+    messageStr || 'Unknown error occurred',
     'UNKNOWN_ERROR',
     'Please check your request and try again',
     sanitizeErrorDetails(error)
@@ -114,9 +123,10 @@ export function enhanceError(error: any): NotionMCPError {
 /**
  * Handle specific Notion API errors
  */
-function handleNotionError(error: any): NotionMCPError {
-  const code = error.code
-  const message = error.message || 'Unknown Notion API error'
+function handleNotionError(error: unknown): NotionMCPError {
+  const errObj = (error && typeof error === 'object' ? error : {}) as Record<string, unknown>
+  const code = typeof errObj.code === 'string' ? errObj.code : ''
+  const message = typeof errObj.message === 'string' ? errObj.message : 'Unknown Notion API error'
 
   switch (code) {
     case 'unauthorized':
@@ -141,7 +151,8 @@ function handleNotionError(error: any): NotionMCPError {
       )
 
     case 'validation_error': {
-      const bodyMessage: string = error.body?.message || ''
+      const bodyObj = (errObj.body && typeof errObj.body === 'object' ? errObj.body : {}) as Record<string, unknown>
+      const bodyMessage: string = typeof bodyObj.message === 'string' ? bodyObj.message : ''
       let suggestion = 'Check the API documentation for valid parameter formats'
 
       // Detect common property format mistakes and provide specific guidance
@@ -157,7 +168,7 @@ function handleNotionError(error: any): NotionMCPError {
         bodyMessage || 'Invalid request parameters',
         'VALIDATION_ERROR',
         suggestion,
-        sanitizeValidationBody(error.body)
+        sanitizeValidationBody(errObj.body)
       )
     }
 
@@ -316,17 +327,18 @@ export async function retryWithBackoff<T>(
 ): Promise<T> {
   const { maxRetries = 3, initialDelay = 1000, maxDelay = 10000, backoffMultiplier = 2 } = options
 
-  let lastError: any
+  let lastError: unknown
   let delay = initialDelay
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn()
-    } catch (error: any) {
+    } catch (error: unknown) {
       lastError = error
 
       // Don't retry on certain errors
-      if (error.code === 'UNAUTHORIZED' || error.code === 'NOT_FOUND') {
+      const errObj = (error && typeof error === 'object' ? error : {}) as Record<string, unknown>
+      if (errObj.code === 'UNAUTHORIZED' || errObj.code === 'NOT_FOUND') {
         throw enhanceError(error)
       }
 

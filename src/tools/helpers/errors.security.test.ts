@@ -27,9 +27,9 @@ describe('Security: Error Handling', () => {
 
     // Check that safe fields are present
     expect(enhanced.details).toBeDefined()
-    expect(enhanced.details.message).toBe('Invalid property value')
-    expect(enhanced.details.object).toBe('error')
-    expect(enhanced.details.status).toBe(400)
+    expect((enhanced.details as any).message).toBe('Invalid property value')
+    expect((enhanced.details as any).object).toBe('error')
+    expect((enhanced.details as any).status).toBe(400)
 
     // Check that sensitive fields are REMOVED
     expect(enhanced.details).not.toHaveProperty('sensitive_token')
