@@ -13,7 +13,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](#)
 [![Node.js](https://img.shields.io/badge/Node.js-5FA04E?logo=nodedotjs&logoColor=white)](#)
 [![Notion](https://img.shields.io/badge/Notion_API-000000?logo=notion&logoColor=white)](#)
-[![semantic-release](https://img.shields.io/badge/semantic--release-e10079?logo=semantic-release&logoColor=white)](https://github.com/python-semantic-release/python-semantic-release)
+[![semantic-release](https://img.shields.io/badge/semantic--release-e10079?logo=semantic-release&logoColor=white)](https://github.com/semantic-release/semantic-release)
 [![Renovate](https://img.shields.io/badge/renovate-enabled-1A1F6C?logo=renovatebot&logoColor=white)](https://developer.mend.io/)
 
 <a href="https://glama.ai/mcp/servers/n24q02m/better-notion-mcp">
@@ -59,15 +59,20 @@ Connect directly via URL with OAuth authentication. Your MCP client handles the 
 
 Get your token: <https://www.notion.so/my-integrations> -> Create integration -> Copy token -> Share pages
 
+Set `NOTION_TOKEN` in `~/.claude/settings.local.json` or your shell profile:
+
+```bash
+export NOTION_TOKEN="ntn_..."
+```
+
+Then add to your MCP client config:
+
 ```jsonc
 {
   "mcpServers": {
     "better-notion": {
       "command": "npx",
-      "args": ["-y", "@n24q02m/better-notion-mcp@latest"],
-      "env": {
-        "NOTION_TOKEN": "ntn_..."
-      }
+      "args": ["-y", "@n24q02m/better-notion-mcp@latest"]
     }
   }
 }
@@ -86,10 +91,7 @@ Other runners: `bun x`, `pnpm dlx`, `yarn dlx` also work.
         "run", "-i", "--rm",
         "-e", "NOTION_TOKEN",
         "n24q02m/better-notion-mcp:latest"
-      ],
-      "env": {
-        "NOTION_TOKEN": "ntn_..."
-      }
+      ]
     }
   }
 }
