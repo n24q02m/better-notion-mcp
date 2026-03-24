@@ -37,13 +37,15 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 Via marketplace (includes skills: /organize-database, /bulk-update):
 
 ```bash
-/plugins add n24q02m/claude-plugins
+/plugin marketplace add n24q02m/claude-plugins
+/plugin install better-notion-mcp@claude-plugins
 ```
 
 Or install this plugin only:
 
 ```bash
-claude plugin add n24q02m/better-notion-mcp
+/plugin marketplace add n24q02m/better-notion-mcp
+/plugin install better-notion-mcp
 ```
 
 Plugin uses remote OAuth — no `NOTION_TOKEN` needed. Browser opens for Notion authorization on first use.
