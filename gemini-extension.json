@@ -8,10 +8,7 @@
       "args": [
         "-y",
         "@n24q02m/better-notion-mcp"
-      ],
-      "env": {
-        "NOTION_TOKEN": ""
-      }
+      ]
     }
   },
   "contextFileName": "GEMINI.md"
