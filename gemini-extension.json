@@ -3,7 +3,7 @@
   "version": "2.20.0",
   "description": "Comprehensive Notion API integration — 9 composite tools, ~95% coverage",
   "mcpServers": {
-    "better-notion": {
+    "better-notion-mcp": {
       "command": "npx",
       "args": [
         "-y",
