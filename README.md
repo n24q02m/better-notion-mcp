@@ -32,11 +32,19 @@
 
 ### Claude Code Plugin (Recommended)
 
+Via marketplace (includes skills: /organize-database, /bulk-update):
+
+```bash
+/plugins add n24q02m/claude-plugins
+```
+
+Or install this plugin only:
+
 ```bash
 claude plugin add n24q02m/better-notion-mcp
 ```
 
-Uses remote OAuth -- no `NOTION_TOKEN` needed. Your browser opens for Notion authorization on first use.
+Plugin uses remote OAuth — no `NOTION_TOKEN` needed. Browser opens for Notion authorization on first use.
 
 ### MCP Server
 
