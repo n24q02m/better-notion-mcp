@@ -18,7 +18,7 @@ describe('normalizeId', () => {
     expect(normalizeId('')).toBe('')
   })
 
-  it('should return string without hyphens unchanged', () => {
+  it('should return string without hyphens unchanged (non-UUID)', () => {
     expect(normalizeId('abcdef123456')).toBe('abcdef123456')
   })
 })
