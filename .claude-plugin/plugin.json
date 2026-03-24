@@ -10,10 +10,17 @@
   "mcpServers": {
     "better-notion-mcp": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@n24q02m/better-notion-mcp"
-      ]
+      "args": ["-y", "@n24q02m/better-notion-mcp"],
+      "env": {
+        "NOTION_TOKEN": ""
+      }
+    },
+    "better-notion-mcp-bunx": {
+      "command": "bunx",
+      "args": ["--bun", "@n24q02m/better-notion-mcp"],
+      "env": {
+        "NOTION_TOKEN": ""
+      }
     },
     "better-notion-mcp-http": {
       "type": "http",
@@ -21,15 +28,9 @@
     },
     "better-notion-mcp-docker": {
       "command": "docker",
-      "args": [
-        "run",
-        "--rm",
-        "-i",
-        "-p",
-        "8080:8080",
-        "n24q02m/better-notion-mcp:latest"
-      ],
+      "args": ["run", "--rm", "-i", "-p", "8080:8080", "n24q02m/better-notion-mcp:latest"],
       "env": {
+        "NOTION_TOKEN": "",
         "TRANSPORT_MODE": "http",
         "PORT": "8080"
       }
