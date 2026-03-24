@@ -563,11 +563,8 @@ function richTextToMarkdown(richText: RichText[]): string {
  */
 export function extractPlainText(richText: RichText[]): string {
   if (!richText || !Array.isArray(richText)) return ''
-  let result = ''
-  for (let i = 0; i < richText.length; i++) {
-    result += richText[i].plain_text || richText[i].text?.content || ''
-  }
-  return result
+  // Reduces garbage collection overhead and optimizes native execution
+  return richText.map((rt) => rt.plain_text ?? rt.text?.content ?? '').join('')
 }
 
 // ============================================================
