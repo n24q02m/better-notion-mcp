@@ -1,5 +1,7 @@
 # Better Notion MCP
 
+mcp-name: io.github.n24q02m/better-notion-mcp
+
 **Markdown-first Notion API server for AI agents -- 9 composite tools replacing 28+ endpoint calls**
 
 <!-- Badge Row 1: Status -->
