@@ -8,6 +8,10 @@
   },
   "homepage": "https://github.com/n24q02m/better-notion-mcp",
   "mcpServers": {
+    "better-notion-mcp-http": {
+      "type": "http",
+      "url": "https://better-notion-mcp.n24q02m.com/mcp"
+    },
     "better-notion-mcp": {
       "command": "npx",
       "args": ["-y", "@n24q02m/better-notion-mcp"],
@@ -22,9 +26,19 @@
         "NOTION_TOKEN": ""
       }
     },
-    "better-notion-mcp-http": {
-      "type": "http",
-      "url": "https://better-notion-mcp.n24q02m.com/mcp"
+    "better-notion-mcp-pnpx": {
+      "command": "pnpx",
+      "args": ["@n24q02m/better-notion-mcp"],
+      "env": {
+        "NOTION_TOKEN": ""
+      }
+    },
+    "better-notion-mcp-yarn": {
+      "command": "yarn",
+      "args": ["dlx", "@n24q02m/better-notion-mcp"],
+      "env": {
+        "NOTION_TOKEN": ""
+      }
     },
     "better-notion-mcp-docker": {
       "command": "docker",
