@@ -177,6 +177,26 @@ describe('fetchChildrenRecursive', () => {
 })
 
 describe('processBatches', () => {
+  it('should stop processing and throw if an item process rejects', async () => {
+    const items = [1, 2, 3, 4, 5]
+    const error = new Error('Test error')
+    let processedCount = 0
+
+    const processFn = vi.fn(async (x: number) => {
+      processedCount++
+      if (x === 3) {
+        throw error
+      }
+      return x * 2
+    })
+
+    await expect(processBatches(items, processFn, { batchSize: 1, concurrency: 1 })).rejects.toThrow(error)
+
+    // Wait a bit to ensure no further items are processed after the throw
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(processedCount).toBe(3) // Only 1, 2, 3 should be processed
+  })
+
   it('should process all items and return results', async () => {
     const items = [1, 2, 3, 4, 5]
     const processFn = vi.fn((x: number) => Promise.resolve(x * 2))
