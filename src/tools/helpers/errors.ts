@@ -64,6 +64,22 @@ function sanitizeErrorDetails(error: any): any {
   return safe
 }
 
+function stripSensitiveFields(obj: any, seen = new WeakSet()): void {
+  if (!obj || typeof obj !== 'object') return
+  if (seen.has(obj)) return
+  seen.add(obj)
+
+  delete obj.sensitive_token
+  delete obj.internal_config
+  delete obj.user_email
+
+  for (const key of Object.keys(obj)) {
+    if (typeof obj[key] === 'object' && obj[key] !== null) {
+      stripSensitiveFields(obj[key], seen)
+    }
+  }
+}
+
 /**
  * Enhance Notion API error with helpful context
  */
@@ -71,22 +87,8 @@ export function enhanceError(error: any): NotionMCPError {
   // Already a NotionMCPError — pass through unchanged
   if (error instanceof NotionMCPError) return error
 
-  // Explicitly strip sensitive fields as requested
-  if (error && typeof error === 'object') {
-    delete error.sensitive_token
-    delete error.internal_config
-    delete error.user_email
-    if (error.body && typeof error.body === 'object') {
-      delete error.body.sensitive_token
-      delete error.body.internal_config
-      delete error.body.user_email
-    }
-    if (error.details && typeof error.details === 'object') {
-      delete error.details.sensitive_token
-      delete error.details.internal_config
-      delete error.details.user_email
-    }
-  }
+  // Explicitly strip sensitive fields recursively
+  stripSensitiveFields(error)
 
   // Notion API error
   if (error.code) {
