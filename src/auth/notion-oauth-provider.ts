@@ -83,6 +83,10 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
   const boundTokens = new Map<string, StoredNotionToken>()
   // Verification cache — avoids calling Notion API on every request
   const verifyCache = new Map<string, { expiresAt: number; userId: string; userName: string | null }>()
+  // ⚡ Bolt: ExpirationQueue enables amortized O(1) cache cleanup instead of O(N) Map traversal.
+  // We use a head pointer (`verifyCacheQueueHead`) to avoid O(N) Array.shift() costs.
+  const verifyCacheQueue: { key: string; expiresAt: number }[] = []
+  let verifyCacheQueueHead = 0
   // Pending bind slots — one-shot: consumed on first use, keyed by client_id.
   // When a client completes OAuth, a pending bind is created. The first unknown bearer token
   // that claims it gets bound. This prevents cross-user token leaks on shared instances.
@@ -151,11 +155,13 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
         const me = await notion.users.me({})
 
         // Cache the verification result
+        const expiresAt = Date.now() + VERIFY_CACHE_TTL
         verifyCache.set(notionToken, {
-          expiresAt: Date.now() + VERIFY_CACHE_TTL,
+          expiresAt,
           userId: me.id,
           userName: me.name
         })
+        verifyCacheQueue.push({ key: notionToken, expiresAt })
 
         return {
           token: notionToken,
@@ -336,8 +342,23 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
     for (const [key, val] of boundTokens) {
       if (now - val.createdAt > NOTION_TOKEN_TTL) boundTokens.delete(key)
     }
-    for (const [key, val] of verifyCache) {
-      if (now > val.expiresAt) verifyCache.delete(key)
+    // ⚡ Bolt: Amortized O(1) cleanup using ExpirationQueue with a head pointer
+    while (verifyCacheQueueHead < verifyCacheQueue.length) {
+      const front = verifyCacheQueue[verifyCacheQueueHead]
+      if (now > front.expiresAt) {
+        verifyCacheQueueHead++
+        const cached = verifyCache.get(front.key)
+        if (cached && cached.expiresAt <= now) {
+          verifyCache.delete(front.key)
+        }
+      } else {
+        break // Stop at first unexpired item
+      }
+    }
+    // Prevent unbounded array growth by slicing off processed items periodically
+    if (verifyCacheQueueHead > 1000) {
+      verifyCacheQueue.splice(0, verifyCacheQueueHead)
+      verifyCacheQueueHead = 0
     }
   }, 60_000)
 
