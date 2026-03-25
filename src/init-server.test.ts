@@ -30,6 +30,10 @@ vi.mock('@notionhq/client', () => ({
   Client: vi.fn()
 }))
 
+vi.mock('./relay-setup.js', () => ({
+  ensureConfig: vi.fn().mockResolvedValue(null)
+}))
+
 describe('initServer (delegates to startStdio)', () => {
   const originalEnv = process.env
   const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {})

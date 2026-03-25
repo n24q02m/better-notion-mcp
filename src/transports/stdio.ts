@@ -1,15 +1,24 @@
 /**
  * Stdio Transport
- * Reads NOTION_TOKEN from env, creates singleton Notion client, connects via stdio
+ * Reads NOTION_TOKEN from env or relay config, creates singleton Notion client, connects via stdio
  */
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { Client } from '@notionhq/client'
 import { createMCPServer } from '../create-server.js'
+import { ensureConfig } from '../relay-setup.js'
 import { NotionMCPError } from '../tools/helpers/errors.js'
 
 export async function startStdio() {
-  const notionToken = process.env.NOTION_TOKEN
+  let notionToken = process.env.NOTION_TOKEN
+
+  // If NOTION_TOKEN is not set, try relay config resolution
+  if (!notionToken) {
+    const relayToken = await ensureConfig()
+    if (relayToken) {
+      notionToken = relayToken
+    }
+  }
 
   let notionClientFactory: () => Client
 
