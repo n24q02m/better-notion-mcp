@@ -58,7 +58,7 @@
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "@n24q02m/mcp-relay-core": "file:../mcp-relay-core/packages/core-ts",
+    "@n24q02m/mcp-relay-core": "^0.1.0",
     "@notionhq/client": "^5.14.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.1",
