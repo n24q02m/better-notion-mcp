@@ -71,7 +71,7 @@
     "@vitest/coverage-v8": "^4.1.0",
     "esbuild": "^0.27.4",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.2",
     "vitest": "^4.1.0"
   },
   "description": "Better MCP server for Notion API with composite tools optimized for AI agents",
