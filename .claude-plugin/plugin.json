@@ -10,10 +10,7 @@
   "mcpServers": {
     "better-notion-mcp": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@n24q02m/better-notion-mcp"
-      ]
+      "args": ["-y", "@n24q02m/better-notion-mcp"]
     }
   }
 }
