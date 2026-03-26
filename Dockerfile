@@ -13,7 +13,7 @@ COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
 # Use Node.js for building (tsc + esbuild)
-FROM node:24.14.0-alpine AS builder
+FROM node:24.14.1-alpine AS builder
 
 WORKDIR /app
 
@@ -27,7 +27,7 @@ COPY . .
 RUN npx tsc -build && node scripts/build-cli.js
 
 # Minimal image for runtime
-FROM node:24.14.0-alpine
+FROM node:24.14.1-alpine
 
 LABEL org.opencontainers.image.source="https://github.com/n24q02m/better-notion-mcp"
 LABEL io.modelcontextprotocol.server.name="io.github.n24q02m/better-notion-mcp"
