@@ -1102,6 +1102,202 @@ describe('pages', () => {
   })
 
   // ---------------------------------------------------------------------------
+  // icon_file (file-based icon upload in one call)
+  // ---------------------------------------------------------------------------
+  describe('icon_file', () => {
+    const TINY_PNG_BASE64 =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=='
+
+    beforeEach(() => {
+      // Add fileUploads mock to the Notion client
+      ;(mockNotion as any).fileUploads = {
+        create: vi.fn().mockResolvedValue({
+          id: 'file-upload-123',
+          status: 'pending',
+          upload_url: 'https://api.notion.com/v1/file_uploads/file-upload-123/send'
+        }),
+        send: vi.fn().mockResolvedValue({ status: 'uploaded' })
+      }
+    })
+
+    describe('create with icon_file', () => {
+      it('should upload file and set as icon in one call', async () => {
+        mockNotion.pages.create.mockResolvedValue({ id: 'page-new', url: 'https://notion.so/page-new' })
+
+        const result = (await pages(mockNotion as any, {
+          action: 'create',
+          title: 'Page with Logo',
+          parent_id: 'parent-1',
+          icon_file: {
+            filename: 'logo.png',
+            content: TINY_PNG_BASE64
+          }
+        })) as CreatePageResult
+
+        expect(result.page_id).toBe('page-new')
+        expect(result.created).toBe(true)
+
+        // Verify file was uploaded via Notion's file upload API
+        expect((mockNotion as any).fileUploads.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            filename: 'logo.png',
+            content_type: expect.stringContaining('image/')
+          })
+        )
+        expect((mockNotion as any).fileUploads.send).toHaveBeenCalledWith(
+          expect.objectContaining({
+            file_upload_id: 'file-upload-123'
+          })
+        )
+
+        // Verify the page was created with a file_upload icon
+        const createArgs = mockNotion.pages.create.mock.calls[0][0]
+        expect(createArgs.icon).toEqual({
+          type: 'file_upload',
+          file_upload: { id: 'file-upload-123' }
+        })
+      })
+
+      it('should use explicit content_type when provided', async () => {
+        mockNotion.pages.create.mockResolvedValue({ id: 'page-svg', url: 'https://notion.so/page-svg' })
+
+        await pages(mockNotion as any, {
+          action: 'create',
+          title: 'SVG Icon Page',
+          parent_id: 'parent-1',
+          icon_file: {
+            filename: 'logo.svg',
+            content: TINY_PNG_BASE64,
+            content_type: 'image/svg+xml'
+          }
+        })
+
+        expect((mockNotion as any).fileUploads.create).toHaveBeenCalledWith(
+          expect.objectContaining({ content_type: 'image/svg+xml' })
+        )
+      })
+
+      it('should still work with emoji icon (no regression)', async () => {
+        mockNotion.pages.create.mockResolvedValue({ id: 'page-emoji', url: 'https://notion.so/page-emoji' })
+
+        await pages(mockNotion as any, {
+          action: 'create',
+          title: 'Emoji Page',
+          parent_id: 'parent-1',
+          icon: '🚀'
+        })
+
+        const createArgs = mockNotion.pages.create.mock.calls[0][0]
+        expect(createArgs.icon).toEqual({ type: 'emoji', emoji: '🚀' })
+        expect((mockNotion as any).fileUploads.create).not.toHaveBeenCalled()
+      })
+    })
+
+    describe('update with icon_file', () => {
+      it('should upload file and set as icon on existing page', async () => {
+        mockNotion.pages.update.mockResolvedValue({ id: 'page-1' })
+
+        const result = (await pages(mockNotion as any, {
+          action: 'update',
+          page_id: 'page-1',
+          icon_file: {
+            filename: 'company-logo.png',
+            content: TINY_PNG_BASE64
+          }
+        })) as UpdatePageResult
+
+        expect(result).toEqual({ action: 'update', page_id: 'page-1', updated: true })
+
+        // Verify upload happened
+        expect((mockNotion as any).fileUploads.create).toHaveBeenCalled()
+        expect((mockNotion as any).fileUploads.send).toHaveBeenCalled()
+
+        // Verify page was updated with file_upload icon
+        expect(mockNotion.pages.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            page_id: 'page-1',
+            icon: { type: 'file_upload', file_upload: { id: 'file-upload-123' } }
+          })
+        )
+      })
+
+      it('should prefer icon_file over icon when both provided', async () => {
+        mockNotion.pages.update.mockResolvedValue({ id: 'page-1' })
+
+        await pages(mockNotion as any, {
+          action: 'update',
+          page_id: 'page-1',
+          icon: '🚀',
+          icon_file: {
+            filename: 'logo.png',
+            content: TINY_PNG_BASE64
+          }
+        })
+
+        // icon_file should win — the page gets a file_upload icon, not emoji
+        const updateArgs = mockNotion.pages.update.mock.calls[0][0]
+        expect(updateArgs.icon).toEqual({
+          type: 'file_upload',
+          file_upload: { id: 'file-upload-123' }
+        })
+      })
+
+      it('should combine icon_file with other updates', async () => {
+        mockNotion.pages.update.mockResolvedValue({ id: 'page-1' })
+
+        await pages(mockNotion as any, {
+          action: 'update',
+          page_id: 'page-1',
+          title: 'Renamed Page',
+          icon_file: {
+            filename: 'logo.png',
+            content: TINY_PNG_BASE64
+          }
+        })
+
+        const updateArgs = mockNotion.pages.update.mock.calls[0][0]
+        expect(updateArgs.icon).toEqual({
+          type: 'file_upload',
+          file_upload: { id: 'file-upload-123' }
+        })
+        expect(updateArgs.properties).toBeDefined()
+      })
+    })
+
+    describe('validation', () => {
+      it('should throw when icon_file has no filename', async () => {
+        await expect(
+          pages(mockNotion as any, {
+            action: 'update',
+            page_id: 'page-1',
+            icon_file: { content: TINY_PNG_BASE64 } as any
+          })
+        ).rejects.toThrow()
+      })
+
+      it('should throw when icon_file has no content', async () => {
+        await expect(
+          pages(mockNotion as any, {
+            action: 'update',
+            page_id: 'page-1',
+            icon_file: { filename: 'logo.png' } as any
+          })
+        ).rejects.toThrow()
+      })
+
+      it('should throw when icon_file content is not valid base64', async () => {
+        await expect(
+          pages(mockNotion as any, {
+            action: 'update',
+            page_id: 'page-1',
+            icon_file: { filename: 'logo.png', content: '!!!not-base64!!!' }
+          })
+        ).rejects.toThrow()
+      })
+    })
+  })
+
+  // ---------------------------------------------------------------------------
   // unknown action
   // ---------------------------------------------------------------------------
   describe('unknown action', () => {
