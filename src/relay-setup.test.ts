@@ -7,7 +7,8 @@ vi.mock('@n24q02m/mcp-relay-core/storage', () => ({
 }))
 vi.mock('@n24q02m/mcp-relay-core/relay', () => ({
   createSession: vi.fn(),
-  pollForResult: vi.fn()
+  pollForResult: vi.fn(),
+  sendMessage: vi.fn().mockResolvedValue('mock-msg-id')
 }))
 vi.mock('@n24q02m/mcp-relay-core', () => ({
   writeConfig: vi.fn()

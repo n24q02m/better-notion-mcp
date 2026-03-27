@@ -9,7 +9,7 @@
  */
 
 import { writeConfig } from '@n24q02m/mcp-relay-core'
-import { createSession, pollForResult } from '@n24q02m/mcp-relay-core/relay'
+import { createSession, pollForResult, sendMessage } from '@n24q02m/mcp-relay-core/relay'
 import { resolveConfig } from '@n24q02m/mcp-relay-core/storage'
 import { RELAY_SCHEMA } from './relay-schema.js'
 
@@ -70,6 +70,12 @@ export async function ensureConfig(): Promise<string | null> {
   // Save to config file for future use
   await writeConfig(SERVER_NAME, config)
   console.error('Notion config saved successfully')
+
+  // Notify relay page setup is complete
+  await sendMessage(relayUrl, session.sessionId, {
+    type: 'complete',
+    text: 'Notion token saved. Setup complete!'
+  }).catch(() => {})
 
   return config.NOTION_TOKEN
 }
