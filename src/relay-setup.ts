@@ -1,15 +1,11 @@
 /**
- * Relay-first setup flow for better-notion-mcp (stdio mode).
+ * Credential resolution for better-notion-mcp (stdio mode).
  *
- * Always shows the relay URL at startup so users can configure the Notion
- * token via browser. If the user skips, the server starts in degraded mode
- * (help and content_convert tools only).
- *
- * Resolution order:
- * 1. Environment variable (NOTION_TOKEN -- checked by caller in stdio.ts)
- * 2. Encrypted config file (~/.config/mcp/config.enc)
- * 3. Relay setup (browser-based form via relay server)
- * 4. Degraded mode (limited tools)
+ * Resolution order (relay only when ALL local sources are empty):
+ * 1. ENV VARS          -- NOTION_TOKEN (checked by caller in stdio.ts)
+ * 2. RELAY CONFIG      -- Saved from previous relay setup (~/.config/mcp/config.enc)
+ * 3. RELAY SETUP       -- Interactive, ONLY when steps 1-2 are ALL empty
+ * 4. DEGRADED MODE     -- Limited tools (help + content_convert only)
  */
 
 import { writeConfig } from '@n24q02m/mcp-relay-core'
@@ -22,27 +18,26 @@ const DEFAULT_RELAY_URL = 'https://better-notion-mcp.n24q02m.com'
 const REQUIRED_FIELDS = ['NOTION_TOKEN']
 
 /**
- * Resolve Notion token or trigger relay setup (relay-first design).
+ * Resolve Notion token: config file -> relay setup -> degraded mode.
  *
- * Resolution order:
+ * Relay is ONLY triggered when steps 1-2 are ALL empty (first-time setup).
+ *
+ * Resolution order (env var already checked by caller in stdio.ts):
  * 1. Encrypted config file (~/.config/mcp/config.enc)
- * 2. Relay setup (browser-based form via relay server)
+ * 2. Relay setup (interactive, only when no local credentials exist)
+ * 3. Degraded mode (limited tools)
  *
- * Returns the NOTION_TOKEN string, or null if setup fails/skipped.
- *
- * Note: Environment variable NOTION_TOKEN is NOT checked here --
- * startStdio() in transports/stdio.ts already handles that.
- * This function is only called when NOTION_TOKEN is not set.
+ * Returns the NOTION_TOKEN string, or null for degraded mode.
  */
 export async function ensureConfig(): Promise<string | null> {
-  // Check config file
+  // 1. Check saved relay config file
   const result = await resolveConfig(SERVER_NAME, REQUIRED_FIELDS)
   if (result.config !== null) {
     console.error(`Notion config loaded from ${result.source}`)
     return result.config.NOTION_TOKEN
   }
 
-  // No config found -- always trigger relay setup (relay-first)
+  // 2. No local credentials found -- trigger relay setup
   console.error('No Notion token found. Starting relay setup...')
 
   const relayUrl = DEFAULT_RELAY_URL
