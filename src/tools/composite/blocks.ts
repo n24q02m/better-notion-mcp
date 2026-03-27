@@ -99,7 +99,7 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
         await notion.blocks.children.append({
           block_id: input.block_id,
           children: blocksList as any,
-          ...(input.position && { position: input.position })
+          ...(input.position && { position: input.position as any })
         })
         return {
           action: 'append',
