@@ -281,8 +281,7 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         break
       case 'callout': {
         const calloutText = richTextToMarkdown(block.callout.rich_text)
-        const calloutIcon = block.callout.icon?.emoji || ''
-        const calloutType = getCalloutTypeFromIcon(calloutIcon)
+        const calloutType = resolveCalloutType(block.callout)
         lines.push(`> [!${calloutType}] ${calloutText}`)
         if (block.callout.children && block.callout.children.length > 0) {
           const childMd = blocksToMarkdown(block.callout.children)
@@ -876,6 +875,29 @@ function getCalloutTypeFromIcon(icon: string): string {
     '\u274c': 'ERROR'
   }
   return iconMap[icon] || 'NOTE'
+}
+
+const NOTION_ICON_URL_REGEX = /^https:\/\/www\.notion\.so\/icons\/(.+)_([a-z]+)\.svg$/
+
+function resolveCalloutType(callout: any): string {
+  const icon = callout.icon
+
+  if (!icon) return 'none'
+
+  if (icon.type === 'emoji' && icon.emoji) {
+    return getCalloutTypeFromIcon(icon.emoji)
+  }
+
+  if (icon.type === 'external' && icon.external?.url) {
+    const match = icon.external.url.match(NOTION_ICON_URL_REGEX)
+    if (match) {
+      const iconName = match[1]
+      const iconColor = match[2]
+      return `${iconColor}:${iconName}`
+    }
+  }
+
+  return 'NOTE'
 }
 
 // ============================================================

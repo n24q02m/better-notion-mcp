@@ -331,9 +331,7 @@ describe('markdownToBlocks', () => {
           expect(blocks).toHaveLength(1)
           expect(blocks[0].type).toBe('callout')
           expect(blocks[0].callout.color).toBe(`${color}_background`)
-          expect(blocks[0].callout.icon.external.url).toBe(
-            `https://www.notion.so/icons/search_${color}.svg`
-          )
+          expect(blocks[0].callout.icon.external.url).toBe(`https://www.notion.so/icons/search_${color}.svg`)
         }
       })
 
@@ -376,9 +374,7 @@ describe('markdownToBlocks', () => {
         expect(blocks).toHaveLength(1)
         expect(blocks[0].type).toBe('callout')
         expect(blocks[0].callout.color).toBe('gray_background')
-        expect(blocks[0].callout.icon.external.url).toBe(
-          'https://www.notion.so/icons/search_gray.svg'
-        )
+        expect(blocks[0].callout.icon.external.url).toBe('https://www.notion.so/icons/search_gray.svg')
       })
 
       it('should not match color-only without colon as custom callout', () => {
@@ -392,9 +388,7 @@ describe('markdownToBlocks', () => {
         const blocks = markdownToBlocks('> [!blue:help_circle] Text')
         expect(blocks).toHaveLength(1)
         expect(blocks[0].type).toBe('callout')
-        expect(blocks[0].callout.icon.external.url).toBe(
-          'https://www.notion.so/icons/help_circle_blue.svg'
-        )
+        expect(blocks[0].callout.icon.external.url).toBe('https://www.notion.so/icons/help_circle_blue.svg')
       })
     })
   })
@@ -1044,7 +1038,8 @@ describe('blocksToMarkdown', () => {
       })
 
       it('should preserve all standard callout round-trips', () => {
-        const types = ['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION', 'INFO', 'SUCCESS', 'ERROR']
+        // INFO shares the same emoji as NOTE, so it round-trips to NOTE — exclude from exact check
+        const types = ['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION', 'SUCCESS', 'ERROR']
         for (const type of types) {
           const input = `> [!${type}] Test text`
           const blocks = markdownToBlocks(input)
@@ -1052,6 +1047,13 @@ describe('blocksToMarkdown', () => {
           expect(output).toContain(`[!${type}]`)
           expect(output).toContain('Test text')
         }
+      })
+
+      it('should round-trip INFO as NOTE (shared emoji)', () => {
+        const blocks = markdownToBlocks('> [!INFO] Test text')
+        const output = blocksToMarkdown(blocks)
+        expect(output).toContain('[!NOTE]')
+        expect(output).toContain('Test text')
       })
     })
   })
@@ -1904,7 +1906,14 @@ describe('collectMentionIds', () => {
               type: 'mention',
               mention: { page: { id: 'page-aaa' } },
               plain_text: 'Untitled',
-              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: 'default'
+              }
             }
           ]
         }
@@ -1926,7 +1935,14 @@ describe('collectMentionIds', () => {
               type: 'mention',
               mention: { database: { id: 'db-bbb' } },
               plain_text: 'Untitled',
-              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: 'default'
+              }
             }
           ]
         }
@@ -1947,7 +1963,14 @@ describe('collectMentionIds', () => {
               type: 'mention',
               mention: { page: { id: 'page-ccc' } },
               plain_text: 'My Real Page',
-              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: 'default'
+              }
             }
           ]
         }
@@ -1972,7 +1995,14 @@ describe('collectMentionIds', () => {
                     type: 'mention',
                     mention: { page: { id: 'nested-page' } },
                     plain_text: 'Untitled',
-                    annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+                    annotations: {
+                      bold: false,
+                      italic: false,
+                      strikethrough: false,
+                      underline: false,
+                      code: false,
+                      color: 'default'
+                    }
                   }
                 ]
               }
@@ -1997,14 +2027,28 @@ describe('collectMentionIds', () => {
                 type: 'mention',
                 mention: { page: { id: 'cell-page' } },
                 plain_text: 'Untitled',
-                annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+                annotations: {
+                  bold: false,
+                  italic: false,
+                  strikethrough: false,
+                  underline: false,
+                  code: false,
+                  color: 'default'
+                }
               }
             ],
             [
               {
                 type: 'text',
                 text: { content: 'Normal text' },
-                annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+                annotations: {
+                  bold: false,
+                  italic: false,
+                  strikethrough: false,
+                  underline: false,
+                  code: false,
+                  color: 'default'
+                }
               }
             ]
           ]
@@ -2025,7 +2069,14 @@ describe('collectMentionIds', () => {
             {
               type: 'text',
               text: { content: 'Just plain text' },
-              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: 'default'
+              }
             }
           ]
         }
@@ -2051,7 +2102,14 @@ describe('replaceMentionTitles', () => {
               type: 'mention',
               mention: { page: { id: 'page-111' } },
               plain_text: 'Untitled',
-              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: 'default'
+              }
             }
           ]
         }
@@ -2072,7 +2130,14 @@ describe('replaceMentionTitles', () => {
               type: 'mention',
               mention: { page: { id: 'page-222' } },
               plain_text: 'Untitled',
-              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: 'default'
+              }
             }
           ]
         }
@@ -2098,7 +2163,14 @@ describe('replaceMentionTitles', () => {
                     type: 'mention',
                     mention: { page: { id: 'child-page' } },
                     plain_text: 'Untitled',
-                    annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+                    annotations: {
+                      bold: false,
+                      italic: false,
+                      strikethrough: false,
+                      underline: false,
+                      code: false,
+                      color: 'default'
+                    }
                   }
                 ]
               }
@@ -2123,7 +2195,14 @@ describe('replaceMentionTitles', () => {
                 type: 'mention',
                 mention: { page: { id: 'table-page' } },
                 plain_text: 'Untitled',
-                annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' }
+                annotations: {
+                  bold: false,
+                  italic: false,
+                  strikethrough: false,
+                  underline: false,
+                  code: false,
+                  color: 'default'
+                }
               }
             ]
           ]
