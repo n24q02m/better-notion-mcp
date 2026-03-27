@@ -138,6 +138,43 @@ describe('blocks', () => {
         'content required for append'
       )
     })
+
+    it('should pass position with type "start" to Notion API', async () => {
+      mockNotion.blocks.children.append.mockResolvedValue({})
+
+      const result = await blocks(mockNotion as any, {
+        action: 'append',
+        block_id: 'block-1',
+        content: 'Hello world',
+        position: { type: 'start' }
+      } as any)
+
+      expect(result.action).toBe('append')
+      expect(result.appended_count).toBe(1)
+      expect(mockNotion.blocks.children.append).toHaveBeenCalledWith({
+        block_id: 'block-1',
+        children: expect.any(Array),
+        position: { type: 'start' }
+      })
+    })
+
+    it('should pass position with type "after_block" to Notion API', async () => {
+      mockNotion.blocks.children.append.mockResolvedValue({})
+
+      const result = await blocks(mockNotion as any, {
+        action: 'append',
+        block_id: 'block-1',
+        content: 'Hello world',
+        position: { type: 'after_block', after_block: { id: 'target-block-id' } }
+      } as any)
+
+      expect(result.action).toBe('append')
+      expect(mockNotion.blocks.children.append).toHaveBeenCalledWith({
+        block_id: 'block-1',
+        children: expect.any(Array),
+        position: { type: 'after_block', after_block: { id: 'target-block-id' } }
+      })
+    })
   })
 
   describe('update', () => {
