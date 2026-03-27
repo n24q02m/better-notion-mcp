@@ -12,6 +12,10 @@ export interface BlocksInput {
   action: 'get' | 'children' | 'append' | 'update' | 'delete'
   block_id: string
   content?: string // Markdown format
+  position?: {
+    type: 'start' | 'after_block' | 'end'
+    after_block?: { id: string }
+  }
 }
 
 /**
@@ -94,7 +98,8 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
         const blocksList = markdownToBlocks(input.content)
         await notion.blocks.children.append({
           block_id: input.block_id,
-          children: blocksList as any
+          children: blocksList as any,
+          ...(input.position && { position: input.position })
         })
         return {
           action: 'append',

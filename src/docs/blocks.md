@@ -97,6 +97,16 @@ Returns markdown of child blocks.
 {"action": "append", "block_id": "page-id", "content": "## New Section\nParagraph text"}
 ```
 
+With position — insert at the beginning:
+```json
+{"action": "append", "block_id": "page-id", "content": "First!", "position": {"type": "start"}}
+```
+
+With position — insert after a specific block:
+```json
+{"action": "append", "block_id": "page-id", "content": "Inserted after target", "position": {"type": "after_block", "after_block": {"id": "target-block-id"}}}
+```
+
 ### update
 ```json
 {"action": "update", "block_id": "block-id", "content": "Updated text"}
@@ -110,3 +120,4 @@ Returns markdown of child blocks.
 ## Parameters
 - `block_id` - Block ID (required)
 - `content` - Markdown content (for append/update)
+- `position` - Insert position (append only). Object with `type` (`"start"` or `"after_block"`). When `type` is `"after_block"`, include `after_block: {id: "block-id"}`. Omit to append at the end.
