@@ -980,6 +980,80 @@ describe('blocksToMarkdown', () => {
       expect(md).toContain('> [!NOTE] Title')
       expect(md).toContain('> Child content')
     })
+
+    describe('custom callout styling', () => {
+      it('should serialize Notion external icon callout to custom syntax', () => {
+        const blocks: NotionBlock[] = [
+          {
+            object: 'block',
+            type: 'callout',
+            callout: {
+              rich_text: [plainRichText('Status text')],
+              icon: {
+                type: 'external',
+                external: { url: 'https://www.notion.so/icons/search_gray.svg' }
+              },
+              color: 'gray_background'
+            }
+          }
+        ]
+        const md = blocksToMarkdown(blocks)
+        expect(md).toBe('> [!gray:search] Status text')
+      })
+
+      it('should serialize callout with no icon to [!none]', () => {
+        const blocks: NotionBlock[] = [
+          {
+            object: 'block',
+            type: 'callout',
+            callout: {
+              rich_text: [plainRichText('No icon text')],
+              color: 'default'
+            }
+          }
+        ]
+        const md = blocksToMarkdown(blocks)
+        expect(md).toBe('> [!none] No icon text')
+      })
+
+      it('should fall back to NOTE for non-Notion external icon URL', () => {
+        const blocks: NotionBlock[] = [
+          {
+            object: 'block',
+            type: 'callout',
+            callout: {
+              rich_text: [plainRichText('Custom icon')],
+              icon: {
+                type: 'external',
+                external: { url: 'https://example.com/icon.png' }
+              },
+              color: 'gray_background'
+            }
+          }
+        ]
+        const md = blocksToMarkdown(blocks)
+        expect(md).toContain('[!NOTE]')
+      })
+
+      it('should round-trip custom callout', () => {
+        const input = '> [!gray:search] Status text'
+        const blocks = markdownToBlocks(input)
+        const output = blocksToMarkdown(blocks)
+        expect(output).toContain('[!gray:search]')
+        expect(output).toContain('Status text')
+      })
+
+      it('should preserve all standard callout round-trips', () => {
+        const types = ['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION', 'INFO', 'SUCCESS', 'ERROR']
+        for (const type of types) {
+          const input = `> [!${type}] Test text`
+          const blocks = markdownToBlocks(input)
+          const output = blocksToMarkdown(blocks)
+          expect(output).toContain(`[!${type}]`)
+          expect(output).toContain('Test text')
+        }
+      })
+    })
   })
 
   describe('child_page blocks', () => {
