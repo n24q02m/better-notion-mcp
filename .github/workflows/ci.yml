@@ -54,7 +54,6 @@ jobs:
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
         with:
           files: coverage/lcov.info
-          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Build project
         run: bun run build
