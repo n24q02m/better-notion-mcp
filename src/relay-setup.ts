@@ -1,9 +1,15 @@
 /**
- * Zero-env-config relay setup flow for stdio mode.
+ * Relay-first setup flow for better-notion-mcp (stdio mode).
  *
- * When NOTION_TOKEN is not set, this module resolves the token from the
- * encrypted config file or triggers the relay page setup to collect
- * the token from the user via a browser-based form.
+ * Always shows the relay URL at startup so users can configure the Notion
+ * token via browser. If the user skips, the server starts in degraded mode
+ * (help and content_convert tools only).
+ *
+ * Resolution order:
+ * 1. Environment variable (NOTION_TOKEN -- checked by caller in stdio.ts)
+ * 2. Encrypted config file (~/.config/mcp/config.enc)
+ * 3. Relay setup (browser-based form via relay server)
+ * 4. Degraded mode (limited tools)
  */
 
 import { writeConfig } from '@n24q02m/mcp-relay-core'
@@ -16,13 +22,13 @@ const DEFAULT_RELAY_URL = 'https://better-notion-mcp.n24q02m.com'
 const REQUIRED_FIELDS = ['NOTION_TOKEN']
 
 /**
- * Resolve Notion token or trigger relay setup.
+ * Resolve Notion token or trigger relay setup (relay-first design).
  *
  * Resolution order:
  * 1. Encrypted config file (~/.config/mcp/config.enc)
  * 2. Relay setup (browser-based form via relay server)
  *
- * Returns the NOTION_TOKEN string, or null if setup fails/times out.
+ * Returns the NOTION_TOKEN string, or null if setup fails/skipped.
  *
  * Note: Environment variable NOTION_TOKEN is NOT checked here --
  * startStdio() in transports/stdio.ts already handles that.
@@ -36,7 +42,7 @@ export async function ensureConfig(): Promise<string | null> {
     return result.config.NOTION_TOKEN
   }
 
-  // No config found -- trigger relay setup
+  // No config found -- always trigger relay setup (relay-first)
   console.error('No Notion token found. Starting relay setup...')
 
   const relayUrl = DEFAULT_RELAY_URL
@@ -57,7 +63,11 @@ export async function ensureConfig(): Promise<string | null> {
   let config: Record<string, string>
   try {
     config = await pollForResult(relayUrl, session)
-  } catch {
+  } catch (err: any) {
+    if (err?.message === 'RELAY_SKIPPED') {
+      console.error('Relay setup skipped by user. Notion tools will be limited.')
+      return null
+    }
     console.error('Relay setup timed out or session expired')
     return null
   }
