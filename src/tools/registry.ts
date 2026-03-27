@@ -184,7 +184,27 @@ const TOOLS = [
           description: 'Action to perform'
         },
         block_id: { type: 'string', description: 'Block ID' },
-        content: { type: 'string', description: 'Markdown content (for append/update)' }
+        content: { type: 'string', description: 'Markdown content (for append/update)' },
+        position: {
+          type: 'object',
+          description: 'Insert position (append only). Omit to append at end.',
+          properties: {
+            type: {
+              type: 'string',
+              enum: ['start', 'after_block'],
+              description: 'Position type: "start" for beginning, "after_block" for after a specific block'
+            },
+            after_block: {
+              type: 'object',
+              description: 'Required when type is "after_block"',
+              properties: {
+                id: { type: 'string', description: 'Block ID to insert after' }
+              },
+              required: ['id']
+            }
+          },
+          required: ['type']
+        }
       },
       required: ['action', 'block_id']
     }
