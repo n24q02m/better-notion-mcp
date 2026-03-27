@@ -7,6 +7,7 @@ import type { Client } from '@notionhq/client'
 import { formatCover } from '../helpers/covers.js'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { formatIcon } from '../helpers/icons.js'
+import { isValidBase64 } from '../helpers/id.js'
 import { blocksToMarkdown, collectMentionIds, markdownToBlocks, replaceMentionTitles } from '../helpers/markdown.js'
 import { autoPaginate, fetchChildrenRecursive, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties, extractPageProperties } from '../helpers/properties.js'
@@ -89,6 +90,11 @@ export interface PagesInput {
   parent_id?: string
   properties?: Record<string, any>
   icon?: string
+  icon_file?: {
+    filename: string
+    content: string // Base64-encoded file content
+    content_type?: string // MIME type, inferred from filename if omitted
+  }
   cover?: string
 
   // get_property params
@@ -136,6 +142,70 @@ export async function pages(notion: Client, input: PagesInput): Promise<PagesRes
   })()
 }
 
+const EXTENSION_MIME_TYPES: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  svg: 'image/svg+xml',
+  ico: 'image/x-icon',
+  bmp: 'image/bmp'
+}
+
+/**
+ * Upload a file and return a file_upload icon object for the Notion API.
+ * Handles the full create → send flow internally.
+ */
+async function uploadIconFile(
+  notion: Client,
+  iconFile: NonNullable<PagesInput['icon_file']>
+): Promise<{ type: string; file_upload: { id: string } }> {
+  if (!iconFile.filename) {
+    throw new NotionMCPError(
+      'icon_file.filename is required',
+      'VALIDATION_ERROR',
+      'Provide a filename for the icon file (e.g. "logo.png")'
+    )
+  }
+  if (!iconFile.content) {
+    throw new NotionMCPError(
+      'icon_file.content is required',
+      'VALIDATION_ERROR',
+      'Provide base64-encoded file content for the icon'
+    )
+  }
+  if (!isValidBase64(iconFile.content)) {
+    throw new NotionMCPError(
+      'icon_file.content is not valid base64',
+      'VALIDATION_ERROR',
+      'Encode the file as base64 first'
+    )
+  }
+
+  // Infer content_type from filename extension if not provided
+  const contentType =
+    iconFile.content_type ||
+    EXTENSION_MIME_TYPES[iconFile.filename.split('.').pop()?.toLowerCase() || ''] ||
+    'application/octet-stream'
+
+  // Step 1: Create file upload session
+  const upload: any = await (notion as any).fileUploads.create({
+    filename: iconFile.filename,
+    content_type: contentType
+  })
+
+  // Step 2: Send file content
+  const fileBuffer = Buffer.from(iconFile.content, 'base64')
+  const blob = new Blob([fileBuffer], { type: contentType })
+  await (notion as any).fileUploads.send({
+    file_upload_id: upload.id,
+    file: { data: blob, filename: iconFile.filename }
+  })
+
+  return { type: 'file_upload', file_upload: { id: upload.id } }
+}
+
 /**
  * Create page with title and content
  * Maps to: POST /v1/pages + PATCH /v1/blocks/{id}/children
@@ -175,7 +245,11 @@ async function createPage(notion: Client, input: PagesInput): Promise<CreatePage
   }
 
   const pageData: any = { parent, properties }
-  if (input.icon) pageData.icon = formatIcon(input.icon)
+  if (input.icon_file) {
+    pageData.icon = await uploadIconFile(notion, input.icon_file)
+  } else if (input.icon) {
+    pageData.icon = formatIcon(input.icon)
+  }
   if (input.cover) pageData.cover = formatCover(input.cover)
 
   const page = await notion.pages.create(pageData)
@@ -370,7 +444,11 @@ async function updatePage(notion: Client, input: PagesInput): Promise<UpdatePage
   const updates: any = {}
 
   // Update metadata
-  if (input.icon) updates.icon = formatIcon(input.icon)
+  if (input.icon_file) {
+    updates.icon = await uploadIconFile(notion, input.icon_file)
+  } else if (input.icon) {
+    updates.icon = formatIcon(input.icon)
+  }
   if (input.cover) updates.cover = formatCover(input.cover)
   if (input.archived !== undefined) updates.archived = input.archived
 

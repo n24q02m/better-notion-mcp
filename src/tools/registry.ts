@@ -91,6 +91,16 @@ const TOOLS = [
           description:
             'Icon: emoji (e.g. "📋"), external URL (https://...), or built-in shorthand (name:color, e.g. "document:gray")'
         },
+        icon_file: {
+          type: 'object',
+          description: 'Upload a file as page icon (one call). Overrides icon if both provided.',
+          properties: {
+            filename: { type: 'string', description: 'Filename with extension (e.g. "logo.png")' },
+            content: { type: 'string', description: 'Base64-encoded file content' },
+            content_type: { type: 'string', description: 'MIME type (optional, inferred from filename)' }
+          },
+          required: ['filename', 'content']
+        },
         cover: {
           type: 'string',
           description:
