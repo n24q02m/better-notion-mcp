@@ -411,6 +411,7 @@ export function parseRichText(text: string): RichText[] {
   let code = false
   let strikethrough = false
   let noMoreCloseBrackets = false
+  let noMoreCloseBracketsMention = false
 
   const flushCurrent = () => {
     if (current) {
@@ -422,26 +423,30 @@ export function parseRichText(text: string): RichText[] {
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
     const next = text[i + 1]
-
     // Page mention @[Title](page-id-or-url) — must come before link handling
+    // Optimized: prevents O(N²) worst-case when string has many @[ without matching closing ]
     if (char === '@' && next === '[') {
-      const closeBracket = text.indexOf(']', i + 2)
-      if (closeBracket !== -1 && closeBracket + 1 < text.length && text[closeBracket + 1] === '(') {
-        const closeParen = text.indexOf(')', closeBracket + 2)
-        if (closeParen !== -1) {
-          flushCurrent()
+      if (!noMoreCloseBracketsMention) {
+        const closeBracket = text.indexOf(']', i + 2)
+        if (closeBracket === -1) {
+          noMoreCloseBracketsMention = true
+        } else if (closeBracket + 1 < text.length && text[closeBracket + 1] === '(') {
+          const closeParen = text.indexOf(')', closeBracket + 2)
+          if (closeParen !== -1) {
+            flushCurrent()
 
-          const mentionTitle = text.slice(i + 2, closeBracket)
-          const mentionTarget = text.slice(closeBracket + 2, closeParen)
+            const mentionTitle = text.slice(i + 2, closeBracket)
+            const mentionTarget = text.slice(closeBracket + 2, closeParen)
 
-          // Extract 32-char hex page ID from Notion URL or use as-is
-          const idMatch = mentionTarget.match(/([a-f0-9]{32})/)
-          const pageId = idMatch ? idMatch[1] : mentionTarget
+            // Extract 32-char hex page ID from Notion URL or use as-is
+            const idMatch = mentionTarget.match(/([a-f0-9]{32})/)
+            const pageId = idMatch ? idMatch[1] : mentionTarget
 
-          richText.push(createMention({ page: { id: pageId } }, mentionTitle, { bold, italic, code, strikethrough }))
+            richText.push(createMention({ page: { id: pageId } }, mentionTitle, { bold, italic, code, strikethrough }))
 
-          i = closeParen
-          continue
+            i = closeParen
+            continue
+          }
         }
       }
     }
