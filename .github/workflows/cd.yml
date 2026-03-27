@@ -97,9 +97,8 @@ jobs:
 
       - run: bun run build
 
-      - run: npm publish --no-git-checks --tag ${{ needs.release.outputs.is_prerelease == 'true' && 'beta' || 'latest' }}
+      - run: npm publish --provenance --no-git-checks --tag ${{ needs.release.outputs.is_prerelease == 'true' && 'beta' || 'latest' }}
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   # ============================================================================
   # Build Docker (multi-arch)
