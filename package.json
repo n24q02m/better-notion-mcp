@@ -57,15 +57,15 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.28.0",
-    "@n24q02m/mcp-relay-core": "^1.0.8",
-    "@notionhq/client": "^5.15.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@n24q02m/mcp-relay-core": "^1.1.0",
+    "@notionhq/client": "^5.16.0",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.3.1",
+    "express-rate-limit": "^8.3.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.9",
+    "@biomejs/biome": "^2.4.10",
     "@types/express": "^5.0.6",
     "@types/node": "^24.12.0",
     "@vitest/coverage-v8": "^4.1.2",
