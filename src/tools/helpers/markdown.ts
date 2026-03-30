@@ -522,7 +522,9 @@ export function parseRichText(text: string): RichText[] {
 function richTextToMarkdown(richText: RichText[]): string {
   if (!richText || !Array.isArray(richText)) return ''
 
-  let result = ''
+  // ⚡ Bolt: Use array push and join instead of += concatenation
+  // proactively reducing intermediate garbage collection pressure.
+  const result: string[] = []
   for (let i = 0; i < richText.length; i++) {
     const rt = richText[i]
     if (!rt) continue
@@ -532,11 +534,11 @@ function richTextToMarkdown(richText: RichText[]): string {
       const title = rt.plain_text || rt.text?.content || 'Untitled'
       const id = rt.mention.page?.id || rt.mention.database?.id || ''
       if (id) {
-        result += `@[${title}](${id})`
+        result.push(`@[${title}](${id})`)
         continue
       }
       // Fallback for other mention types (user, date, etc.)
-      result += title
+      result.push(title)
       continue
     }
 
@@ -550,10 +552,10 @@ function richTextToMarkdown(richText: RichText[]): string {
     if (annotations.code) text = `\`${text}\``
     if (annotations.strikethrough) text = `~~${text}~~`
     if (rt.text.link) text = `[${text}](${rt.text.link.url})`
-    result += text
+    result.push(text)
   }
 
-  return result
+  return result.join('')
 }
 
 /**
