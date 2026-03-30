@@ -30,6 +30,10 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 - **Tiered token optimization** -- ~77% reduction via compressed descriptions + on-demand `help` tool
 - **Dual transport** -- local stdio (token) or remote HTTP (OAuth 2.1, no token needed)
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/n24q02m-better-notion-mcp).
+
 ## Quick Start
 
 ### Claude Code Plugin (Recommended)
