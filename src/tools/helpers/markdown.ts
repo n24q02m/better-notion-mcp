@@ -411,6 +411,7 @@ export function parseRichText(text: string): RichText[] {
   let code = false
   let strikethrough = false
   let noMoreCloseBrackets = false
+  let noMoreMentionCloseBrackets = false
 
   const flushCurrent = () => {
     if (current) {
@@ -424,9 +425,13 @@ export function parseRichText(text: string): RichText[] {
     const next = text[i + 1]
 
     // Page mention @[Title](page-id-or-url) — must come before link handling
-    if (char === '@' && next === '[') {
+    // ⚡ Bolt: Added algorithmic short-circuiting to prevent O(N^2) lookaheads on pathological inputs
+    // with many `@[` but no `]`.
+    if (char === '@' && next === '[' && !noMoreMentionCloseBrackets) {
       const closeBracket = text.indexOf(']', i + 2)
-      if (closeBracket !== -1 && closeBracket + 1 < text.length && text[closeBracket + 1] === '(') {
+      if (closeBracket === -1) {
+        noMoreMentionCloseBrackets = true
+      } else if (closeBracket + 1 < text.length && text[closeBracket + 1] === '(') {
         const closeParen = text.indexOf(')', closeBracket + 2)
         if (closeParen !== -1) {
           flushCurrent()
