@@ -107,6 +107,22 @@ describe('ensureConfig', () => {
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('timed out'))
   })
 
+  it('returns null when relay setup is skipped by user', async () => {
+    vi.mocked(resolveConfig).mockResolvedValue({ config: null, source: null })
+    vi.mocked(createSession).mockResolvedValue({
+      sessionId: 'test-session',
+      keyPair: {} as any,
+      passphrase: 'word1-word2-word3-word4',
+      relayUrl: 'https://better-notion-mcp.n24q02m.com/setup?s=test'
+    })
+    vi.mocked(pollForResult).mockRejectedValue(new Error('RELAY_SKIPPED'))
+
+    const result = await ensureConfig()
+
+    expect(result).toBeNull()
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('skipped by user'))
+  })
+
   it('logs relay URL to stderr for user visibility', async () => {
     vi.mocked(resolveConfig).mockResolvedValue({ config: null, source: null })
     const relayUrl = 'https://better-notion-mcp.n24q02m.com/setup?s=abc#k=key&p=pass'
