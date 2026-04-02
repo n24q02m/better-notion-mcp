@@ -49,55 +49,59 @@ interface StoredNotionToken {
   createdAt: number
 }
 
-/** Resolve a bearer token to a Notion access token */
-function resolveNotionToken(
-  bearerToken: string,
-  notionTokens: Map<string, StoredNotionToken>,
-  boundTokens: Map<string, StoredNotionToken>,
+/** Grouped state for the Notion OAuth provider to avoid prop-drilling multiple Maps */
+interface ProviderState {
+  pendingAuths: Map<string, PendingAuth>
+  authCodes: Map<string, StoredAuthCode>
+  notionTokens: Map<string, StoredNotionToken>
+  boundTokens: Map<string, StoredNotionToken>
+  verifyCache: Map<string, { expiresAt: number; userId: string; userName: string | null }>
   pendingBinds: Map<string, { notionToken: StoredNotionToken; expiresAt: number; sourceIp?: string }>
-): string | undefined {
+}
+
+/** Resolve a bearer token to a Notion access token */
+function resolveNotionToken(bearerToken: string, state: ProviderState): string | undefined {
   // 1. Direct lookup by our opaque access token
-  const byToken = notionTokens.get(bearerToken)
+  const byToken = state.notionTokens.get(bearerToken)
   if (byToken) return byToken.notionAccessToken
 
   // 2. Previously bound external token (e.g., Claude Code's sk-ant-*)
-  const bound = boundTokens.get(bearerToken)
+  const bound = state.boundTokens.get(bearerToken)
   if (bound) return bound.notionAccessToken
 
   // 3. One-shot pending bind — claim the first available unexpired slot.
+  // This is consumed immediately (one token per OAuth flow) to prevent
+  // cross-user leaks. Only the first unknown token to arrive claims the bind.
+  // IP-scoped: both IPs must be known and must match.
   const now = Date.now()
   const claimIp = requestContext.getStore()?.ip
-  for (const [clientId, pending] of pendingBinds) {
+  for (const [clientId, pending] of state.pendingBinds) {
     if (now > pending.expiresAt) {
-      pendingBinds.delete(clientId)
+      state.pendingBinds.delete(clientId)
       continue
     }
     // Strict IP check: both IPs must be known and must match.
+    // If either IP is unknown, reject the bind to prevent bypass via proxy misconfiguration.
     if (!pending.sourceIp || !claimIp || pending.sourceIp !== claimIp) {
       continue
     }
     // Consume the pending bind — one-shot, no other token can claim this
-    pendingBinds.delete(clientId)
-    boundTokens.set(bearerToken, pending.notionToken)
+    state.pendingBinds.delete(clientId)
+    state.boundTokens.set(bearerToken, pending.notionToken)
     return pending.notionToken.notionAccessToken
   }
   return undefined
 }
 
-async function verifyAccessToken(
-  token: string,
-  config: NotionOAuthConfig,
-  notionTokens: Map<string, StoredNotionToken>,
-  boundTokens: Map<string, StoredNotionToken>,
-  pendingBinds: Map<string, { notionToken: StoredNotionToken; expiresAt: number; sourceIp?: string }>,
-  verifyCache: Map<string, { expiresAt: number; userId: string; userName: string | null }>
-) {
-  const notionToken = resolveNotionToken(token, notionTokens, boundTokens, pendingBinds)
+/** Validates a bearer token and resolves it to a Notion session */
+async function verifyAccessToken(token: string, config: NotionOAuthConfig, state: ProviderState) {
+  const notionToken = resolveNotionToken(token, state)
   if (!notionToken) {
     throw new InvalidTokenError('No Notion token found. Please re-authenticate.')
   }
 
-  const cached = verifyCache.get(notionToken)
+  // Check verification cache to avoid calling Notion API on every request
+  const cached = state.verifyCache.get(notionToken)
   if (cached && Date.now() < cached.expiresAt) {
     return {
       token: notionToken,
@@ -111,7 +115,9 @@ async function verifyAccessToken(
   try {
     const notion = new Client({ auth: notionToken, notionVersion: '2025-09-03' })
     const me = await notion.users.me({})
-    verifyCache.set(notionToken, {
+
+    // Cache the verification result
+    state.verifyCache.set(notionToken, {
       expiresAt: Date.now() + VERIFY_CACHE_TTL,
       userId: me.id,
       userName: me.name
@@ -125,40 +131,60 @@ async function verifyAccessToken(
       extra: { userId: me.id, userName: me.name }
     }
   } catch {
-    verifyCache.delete(notionToken)
+    // Remove stale cache entry if token became invalid
+    state.verifyCache.delete(notionToken)
     throw new InvalidTokenError('Invalid or expired Notion token')
   }
 }
 
+/** Handles auth code exchange, issuing our opaque token and storing the Notion token server-side */
 async function exchangeAuthorizationCode(
   client: { client_id: string },
   authorizationCode: string,
   codeVerifier: string | undefined,
-  authCodes: Map<string, StoredAuthCode>,
-  notionTokens: Map<string, StoredNotionToken>,
-  pendingBinds: Map<string, { notionToken: StoredNotionToken; expiresAt: number; sourceIp?: string }>
+  state: ProviderState
 ) {
-  const stored = authCodes.get(authorizationCode)
-  if (!stored) throw new InvalidTokenError('Invalid or expired authorization code')
+  const stored = state.authCodes.get(authorizationCode)
+  if (!stored) {
+    throw new InvalidTokenError('Invalid or expired authorization code')
+  }
+
+  // Verify client binding — auth code must be exchanged by the same client that initiated the flow
   if (stored.clientId && stored.clientId !== client.client_id) {
     throw new InvalidTokenError('Auth code was not issued to this client')
   }
 
+  // Verify PKCE S256 — prevents auth code interception attacks
   if (stored.codeChallenge && stored.codeChallengeMethod === 'S256') {
-    if (!codeVerifier) throw new InvalidTokenError('code_verifier is required')
+    if (!codeVerifier) {
+      throw new InvalidTokenError('code_verifier is required')
+    }
     const expectedChallenge = createHash('sha256').update(codeVerifier).digest('base64url')
+
     const expectedBuffer = Buffer.from(expectedChallenge, 'utf8')
     const storedBuffer = Buffer.from(stored.codeChallenge, 'utf8')
+
     if (expectedBuffer.byteLength !== storedBuffer.byteLength || !timingSafeEqual(expectedBuffer, storedBuffer)) {
       throw new InvalidTokenError('code_verifier does not match the challenge')
     }
   }
 
-  authCodes.delete(authorizationCode)
+  state.authCodes.delete(authorizationCode)
+
+  // Issue our own opaque access token — never expose the Notion token to the client
   const opaqueToken = randomBytes(48).toString('hex')
-  const entry: StoredNotionToken = { notionAccessToken: stored.notionAccessToken, createdAt: Date.now() }
-  notionTokens.set(opaqueToken, entry)
-  pendingBinds.set(client.client_id, {
+  const entry: StoredNotionToken = {
+    notionAccessToken: stored.notionAccessToken,
+    createdAt: Date.now()
+  }
+
+  state.notionTokens.set(opaqueToken, entry)
+
+  // Create a one-shot pending bind for clients that use their own identity tokens
+  // (e.g., Claude Code sends sk-ant-* instead of our opaque token).
+  // The first unknown bearer token to arrive within PENDING_BIND_TTL claims this bind.
+  // IP-scoped: only requests from the same IP as this POST /token can claim it.
+  state.pendingBinds.set(client.client_id, {
     notionToken: entry,
     expiresAt: Date.now() + PENDING_BIND_TTL,
     sourceIp: requestContext.getStore()?.ip
@@ -167,17 +193,24 @@ async function exchangeAuthorizationCode(
   return { access_token: opaqueToken, token_type: 'bearer', expires_in: 86400 }
 }
 
+/** Proxies refresh token requests to Notion with our credentials */
 async function exchangeRefreshToken(
   client: { client_id: string },
   refreshToken: string,
   notionBasicAuth: string,
-  notionTokens: Map<string, StoredNotionToken>,
-  pendingBinds: Map<string, { notionToken: StoredNotionToken; expiresAt: number; sourceIp?: string }>
+  state: ProviderState
 ) {
-  const params = new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken })
+  const params = new URLSearchParams({
+    grant_type: 'refresh_token',
+    refresh_token: refreshToken
+  })
+
   const response = await globalThis.fetch(NOTION_TOKEN_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Authorization: `Basic ${notionBasicAuth}` },
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: `Basic ${notionBasicAuth}`
+    },
     body: params.toString()
   })
 
@@ -190,46 +223,48 @@ async function exchangeRefreshToken(
   }
 
   const data = (await response.json()) as { access_token: string; token_type: string; expires_in?: number }
+
+  // Store the refreshed Notion token
   const opaqueToken = randomBytes(48).toString('hex')
-  const entry: StoredNotionToken = { notionAccessToken: data.access_token, createdAt: Date.now() }
-  notionTokens.set(opaqueToken, entry)
-  pendingBinds.set(client.client_id, {
+  const entry: StoredNotionToken = {
+    notionAccessToken: data.access_token,
+    createdAt: Date.now()
+  }
+  state.notionTokens.set(opaqueToken, entry)
+  state.pendingBinds.set(client.client_id, {
     notionToken: entry,
     expiresAt: Date.now() + PENDING_BIND_TTL,
     sourceIp: requestContext.getStore()?.ip
   })
 
-  return { access_token: opaqueToken, token_type: 'bearer', expires_in: data.expires_in ?? 86400 }
+  return {
+    access_token: opaqueToken,
+    token_type: 'bearer',
+    expires_in: data.expires_in ?? 86400
+  }
 }
 
 /** Cleanup expired entries periodically */
-function startCleanupInterval(
-  pendingAuths: Map<string, PendingAuth>,
-  authCodes: Map<string, StoredAuthCode>,
-  notionTokens: Map<string, StoredNotionToken>,
-  pendingBinds: Map<string, { notionToken: StoredNotionToken; expiresAt: number; sourceIp?: string }>,
-  boundTokens: Map<string, StoredNotionToken>,
-  verifyCache: Map<string, { expiresAt: number; userId: string; userName: string | null }>
-) {
+function startCleanupInterval(state: ProviderState) {
   return setInterval(() => {
     const now = Date.now()
-    for (const [key, val] of pendingAuths) {
-      if (now - val.createdAt > PENDING_AUTH_TTL) pendingAuths.delete(key)
+    for (const [key, val] of state.pendingAuths) {
+      if (now - val.createdAt > PENDING_AUTH_TTL) state.pendingAuths.delete(key)
     }
-    for (const [key, val] of authCodes) {
-      if (now - val.createdAt > AUTH_CODE_TTL) authCodes.delete(key)
+    for (const [key, val] of state.authCodes) {
+      if (now - val.createdAt > AUTH_CODE_TTL) state.authCodes.delete(key)
     }
-    for (const [key, val] of notionTokens) {
-      if (now - val.createdAt > NOTION_TOKEN_TTL) notionTokens.delete(key)
+    for (const [key, val] of state.notionTokens) {
+      if (now - val.createdAt > NOTION_TOKEN_TTL) state.notionTokens.delete(key)
     }
-    for (const [key, val] of pendingBinds) {
-      if (now > val.expiresAt) pendingBinds.delete(key)
+    for (const [key, val] of state.pendingBinds) {
+      if (now > val.expiresAt) state.pendingBinds.delete(key)
     }
-    for (const [key, val] of boundTokens) {
-      if (now - val.createdAt > NOTION_TOKEN_TTL) boundTokens.delete(key)
+    for (const [key, val] of state.boundTokens) {
+      if (now - val.createdAt > NOTION_TOKEN_TTL) state.boundTokens.delete(key)
     }
-    for (const [key, val] of verifyCache) {
-      if (now > val.expiresAt) verifyCache.delete(key)
+    for (const [key, val] of state.verifyCache) {
+      if (now > val.expiresAt) state.verifyCache.delete(key)
     }
   }, 60_000)
 }
@@ -237,24 +272,47 @@ function startCleanupInterval(
 /**
  * Creates a ProxyOAuthServerProvider that delegates OAuth to Notion
  * with a callback relay pattern.
+ *
+ * The flow:
+ * 1. MCP client registers via DCR (stateless HMAC)
+ * 2. MCP client calls /authorize with their redirect_uri
+ * 3. We redirect to Notion OAuth with OUR callback URL (not the client's)
+ * 4. User authorizes on Notion → Notion redirects to our /callback
+ * 5. We exchange Notion's code for a Notion token
+ * 6. We issue our own auth code and redirect to the MCP client's redirect_uri
+ * 7. MCP client calls /token with our auth code → we issue an opaque access token
+ * 8. MCP client calls /mcp with Bearer token → we resolve to stored Notion token
+ *
+ * Notion tokens are stored server-side. The client never sees them directly.
+ * This handles MCP clients (like Claude Code) that use their own identity tokens.
  */
 export function createNotionOAuthProvider(config: NotionOAuthConfig) {
   const clientStore = new StatelessClientStore(config.dcrSecret)
   const callbackUrl = `${config.publicUrl}/callback`
+
+  // Notion's token endpoint requires HTTP Basic auth with the integration's credentials
   const notionBasicAuth = Buffer.from(`${config.notionClientId}:${config.notionClientSecret}`).toString('base64')
 
-  const pendingAuths = new Map<string, PendingAuth>()
-  const authCodes = new Map<string, StoredAuthCode>()
-  const notionTokens = new Map<string, StoredNotionToken>()
-  const boundTokens = new Map<string, StoredNotionToken>()
-  const verifyCache = new Map<string, { expiresAt: number; userId: string; userName: string | null }>()
-  const pendingBinds = new Map<string, { notionToken: StoredNotionToken; expiresAt: number; sourceIp?: string }>()
+  const state: ProviderState = {
+    pendingAuths: new Map<string, PendingAuth>(),
+    authCodes: new Map<string, StoredAuthCode>(),
+    notionTokens: new Map<string, StoredNotionToken>(),
+    boundTokens: new Map<string, StoredNotionToken>(),
+    verifyCache: new Map<string, { expiresAt: number; userId: string; userName: string | null }>(),
+    pendingBinds: new Map<string, { notionToken: StoredNotionToken; expiresAt: number; sourceIp?: string }>()
+  }
 
   const provider = new ProxyOAuthServerProvider({
-    endpoints: { authorizationUrl: NOTION_AUTH_URL, tokenUrl: NOTION_TOKEN_URL },
-    verifyAccessToken: (token) =>
-      verifyAccessToken(token, config, notionTokens, boundTokens, pendingBinds, verifyCache),
+    endpoints: {
+      authorizationUrl: NOTION_AUTH_URL,
+      tokenUrl: NOTION_TOKEN_URL
+    },
+
+    verifyAccessToken: (token) => verifyAccessToken(token, config, state),
+
     getClient: async (clientId: string) => clientStore.getClient(clientId),
+
+    // Inject Notion's Basic auth on token exchange requests
     fetch: async (url, init) => {
       const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : (url as { url: string }).url
       if (urlStr === NOTION_TOKEN_URL) {
@@ -266,12 +324,19 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
     }
   })
 
+  // Notion handles PKCE validation, skip local check
   provider.skipLocalPkceValidation = true
-  Object.defineProperty(provider, 'clientsStore', { get: () => clientStore })
 
+  // Override clientsStore with our stateless store for DCR
+  Object.defineProperty(provider, 'clientsStore', {
+    get: () => clientStore
+  })
+
+  // Override authorize: redirect to Notion with OUR callback URL, not client's
   provider.authorize = async (client, params, res) => {
     const ourState = randomBytes(32).toString('hex')
-    pendingAuths.set(ourState, {
+
+    state.pendingAuths.set(ourState, {
       clientId: client.client_id,
       clientRedirectUri: params.redirectUri,
       clientState: params.state,
@@ -287,16 +352,27 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
     notionUrl.searchParams.set('redirect_uri', callbackUrl)
     notionUrl.searchParams.set('state', ourState)
     notionUrl.searchParams.set('owner', 'user')
+
     res.redirect(notionUrl.toString())
   }
 
+  // Override exchangeAuthorizationCode: issue opaque token, store Notion token server-side
   provider.exchangeAuthorizationCode = (client, authorizationCode, codeVerifier) =>
-    exchangeAuthorizationCode(client, authorizationCode, codeVerifier, authCodes, notionTokens, pendingBinds)
+    exchangeAuthorizationCode(client, authorizationCode, codeVerifier, state)
 
+  // Override exchangeRefreshToken: proxy to Notion with our credentials
   provider.exchangeRefreshToken = (client, refreshToken) =>
-    exchangeRefreshToken(client, refreshToken, notionBasicAuth, notionTokens, pendingBinds)
+    exchangeRefreshToken(client, refreshToken, notionBasicAuth, state)
 
-  startCleanupInterval(pendingAuths, authCodes, notionTokens, pendingBinds, boundTokens, verifyCache)
+  // Cleanup expired entries periodically
+  startCleanupInterval(state)
 
-  return { provider, clientStore, pendingAuths, authCodes, callbackUrl, notionBasicAuth }
+  return {
+    provider,
+    clientStore,
+    pendingAuths: state.pendingAuths,
+    authCodes: state.authCodes,
+    callbackUrl,
+    notionBasicAuth
+  }
 }
