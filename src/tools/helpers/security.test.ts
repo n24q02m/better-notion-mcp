@@ -42,6 +42,10 @@ describe('Security Utilities', () => {
       expect(isSafeUrl('javascript%3aalert(1)')).toBe(false)
       expect(isSafeUrl('javascript%3Aalert(1)')).toBe(false)
     })
+    it('should handle malformed URLs that fail parsing even with a base URL', () => {
+      // This string triggers the inner catch block in isSafeUrl
+      expect(isSafeUrl('\\\\')).toBe(false)
+    })
   })
 
   it('should allow valid relative or absolute URLs that fail parsing but are not dangerous', () => {
