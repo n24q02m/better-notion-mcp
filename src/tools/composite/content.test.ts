@@ -21,12 +21,17 @@ describe('contentConvert', () => {
     })
 
     it('should throw error if content is not a string', async () => {
-      await expect(
-        contentConvert({
+      try {
+        await contentConvert({
           direction: 'markdown-to-blocks',
           content: ['not', 'a', 'string']
-        })
-      ).rejects.toThrow('Content must be a string for markdown-to-blocks')
+        } as any)
+        throw new Error('Should have thrown')
+      } catch (error: any) {
+        expect(error.message).toBe('Content must be a string for markdown-to-blocks')
+        expect(error.code).toBe('VALIDATION_ERROR')
+        expect(error.suggestion).toBe('Provide a string content')
+      }
     })
   })
 
@@ -100,41 +105,61 @@ describe('contentConvert', () => {
     })
 
     it('should throw error if content is invalid JSON string', async () => {
-      await expect(
-        contentConvert({
+      try {
+        await contentConvert({
           direction: 'blocks-to-markdown',
           content: '{ invalid json }'
         })
-      ).rejects.toThrow('Content must be a valid JSON array or array object for blocks-to-markdown')
+        throw new Error('Should have thrown')
+      } catch (error: any) {
+        expect(error.message).toBe('Content must be a valid JSON array or array object for blocks-to-markdown')
+        expect(error.code).toBe('VALIDATION_ERROR')
+        expect(error.suggestion).toBe('Provide a valid JSON array or object')
+      }
     })
 
     it('should throw error if content is not an array (after parsing)', async () => {
       // Test direct non-array input
-      await expect(
-        contentConvert({
+      try {
+        await contentConvert({
           direction: 'blocks-to-markdown',
           content: { not: 'an array' } as any
         })
-      ).rejects.toThrow('Content must be an array for blocks-to-markdown')
+        throw new Error('Should have thrown')
+      } catch (error: any) {
+        expect(error.message).toBe('Content must be an array for blocks-to-markdown')
+        expect(error.code).toBe('VALIDATION_ERROR')
+        expect(error.suggestion).toBe('Provide an array content')
+      }
 
       // Test JSON object that is not an array
-      await expect(
-        contentConvert({
+      try {
+        await contentConvert({
           direction: 'blocks-to-markdown',
           content: '{"not": "an array"}'
         })
-      ).rejects.toThrow('Content must be an array for blocks-to-markdown')
+        throw new Error('Should have thrown')
+      } catch (error: any) {
+        expect(error.message).toBe('Content must be an array for blocks-to-markdown')
+        expect(error.code).toBe('VALIDATION_ERROR')
+        expect(error.suggestion).toBe('Provide an array content')
+      }
     })
   })
 
   describe('unsupported direction', () => {
     it('should throw error for invalid direction', async () => {
-      await expect(
-        contentConvert({
+      try {
+        await contentConvert({
           direction: 'invalid-direction' as any,
           content: 'some content'
         })
-      ).rejects.toThrow('Unsupported direction: invalid-direction')
+        throw new Error('Should have thrown')
+      } catch (error: any) {
+        expect(error.message).toBe('Unsupported direction: invalid-direction')
+        expect(error.code).toBe('VALIDATION_ERROR')
+        expect(error.suggestion).toBe('Provide a valid direction')
+      }
     })
   })
 })
