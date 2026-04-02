@@ -35,10 +35,23 @@ export function formatId(id: string): string {
 /**
  * Check if a string is valid base64 encoding
  * Used to validate file_content before Buffer.from
+ * Implements strict validation by checking character set, length, and canonicality
  */
 export function isValidBase64(str: string): boolean {
-  if (str.length === 0) return false
-  // Must be length divisible by 4 and only contain base64 chars
-  if (str.length % 4 !== 0) return false
-  return /^[A-Za-z0-9+/]*={0,2}$/.test(str)
+  if (typeof str !== 'string' || str.length === 0 || str.length % 4 !== 0) {
+    return false
+  }
+
+  // Basic regex check for character set and padding structure
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(str)) {
+    return false
+  }
+
+  // Strict check: Buffer roundtrip to ensure canonicality
+  try {
+    const buffer = Buffer.from(str, 'base64')
+    return buffer.toString('base64') === str
+  } catch {
+    return false
+  }
 }
