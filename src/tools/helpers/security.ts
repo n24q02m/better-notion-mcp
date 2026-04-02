@@ -17,17 +17,21 @@ const SAFETY_WARNING =
  * Prevents XSS attacks via javascript:, data:, vbscript:, etc.
  */
 export function isSafeUrl(url: string): boolean {
+  // Reject URLs containing whitespace or control characters which could bypass checks
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: Intentionally matching control characters for security sanitization
+  if (/[\s\x00-\x1F\x7F]/.test(url)) {
+    return false
+  }
+
+  const lowerUrl = url.toLowerCase()
+
   try {
-    const parsed = new URL(url)
+    const parsed = new URL(lowerUrl)
     return ['http:', 'https:', 'mailto:', 'tel:'].includes(parsed.protocol)
   } catch {
     // If URL parsing fails, it might be a relative path or an invalid URL
     // For relative paths like "/foo" or "foo", they are generally safe,
     // but we can reject strictly for now, or check for dangerous prefixes.
-
-    // Normalize URL by removing whitespace and control characters which could bypass checks
-    // biome-ignore lint/suspicious/noControlCharactersInRegex: Intentionally matching control characters for security sanitization
-    const lowerUrl = url.toLowerCase().replace(/[\s\x00-\x1F\x7F]+/g, '')
 
     try {
       new URL(lowerUrl, 'http://relative-check.internal')
