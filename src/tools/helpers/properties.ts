@@ -21,7 +21,7 @@ function toRelation(value: any): { relation: { id: string }[] } {
     if (value.startsWith('[')) {
       try {
         const parsed = JSON.parse(value)
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.every((v) => typeof v === 'string')) {
           return { relation: parsed.map((v: string) => ({ id: extractPageId(v) })) }
         }
       } catch {

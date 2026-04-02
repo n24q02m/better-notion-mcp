@@ -54,6 +54,13 @@ export async function contentConvert(input: ContentConvertInput): Promise<any> {
             'Provide an array content'
           )
         }
+        if (!content.every((b) => typeof b === 'object' && b !== null)) {
+          throw new NotionMCPError(
+            'Content must be an array of objects for blocks-to-markdown',
+            'VALIDATION_ERROR',
+            'Provide an array of block objects'
+          )
+        }
         const markdown = blocksToMarkdown(content as any)
         return {
           direction: input.direction,
