@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   type CreateDatabasePageResponse,
-  type CreateDatabaseResponse,
   type CreateDataSourceResponse,
+  type DatabasesResponse,
   type DeleteDatabasePageResponse,
   databases,
   type GetDatabaseResponse,
@@ -83,7 +83,7 @@ describe('databases', () => {
         parent_id: 'page-1',
         title: 'My DB',
         properties: { Name: { title: {} } }
-      })) as CreateDatabaseResponse
+      })) as Extract<DatabasesResponse, { action: 'create' }>
 
       expect(result).toEqual({
         action: 'create',

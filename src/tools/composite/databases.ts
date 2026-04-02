@@ -60,7 +60,7 @@ export interface DatabasesInput {
   }>
 }
 
-export interface CreateDatabaseResponse {
+interface CreateDatabaseResponse {
   action: 'create'
   database_id: string
   data_source_id?: string
