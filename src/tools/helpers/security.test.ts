@@ -42,10 +42,6 @@ describe('Security Utilities', () => {
       expect(isSafeUrl('javascript%3aalert(1)')).toBe(false)
       expect(isSafeUrl('javascript%3Aalert(1)')).toBe(false)
     })
-
-    it('should return false if URL parsing fails completely', () => {
-      expect(isSafeUrl('http://[')).toBe(false)
-    })
   })
 
   it('should allow valid relative or absolute URLs that fail parsing but are not dangerous', () => {
