@@ -103,4 +103,18 @@ describe('isValidBase64', () => {
   it('should reject string with spaces', () => {
     expect(isValidBase64('aG Vs')).toBe(false)
   })
+
+  it('should reject non-canonical base64', () => {
+    // 'aB==' has bits set in the padding area that shouldn't be there
+    expect(isValidBase64('aB==')).toBe(false)
+  })
+
+  it('should reject incorrect padding placement', () => {
+    expect(isValidBase64('a=bc')).toBe(false)
+    expect(isValidBase64('==AA')).toBe(false)
+  })
+
+  it('should reject too many padding characters', () => {
+    expect(isValidBase64('a===')).toBe(false)
+  })
 })

@@ -42,6 +42,12 @@ describe('Security Utilities', () => {
       expect(isSafeUrl('javascript%3aalert(1)')).toBe(false)
       expect(isSafeUrl('javascript%3Aalert(1)')).toBe(false)
     })
+
+    it('should reject URLs with dangerous characters like CRLF or null bytes anywhere', () => {
+      expect(isSafeUrl('http://example.com\r\n/unsafe')).toBe(false)
+      expect(isSafeUrl('https://example.com/path\0withnull')).toBe(false)
+      expect(isSafeUrl('mailto:user@\texample.com')).toBe(false)
+    })
   })
 
   it('should allow valid relative or absolute URLs that fail parsing but are not dangerous', () => {

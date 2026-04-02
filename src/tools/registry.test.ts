@@ -231,11 +231,9 @@ describe('registerTools', () => {
       })
     })
 
-    it('should throw NotionMCPError with DOC_NOT_FOUND when readFileSync throws', async () => {
+    it('should throw NotionMCPError with DOC_NOT_FOUND when readFile throws', async () => {
       const handler = server.getHandler(2)
-      vi.mocked(readFile).mockImplementation(() => {
-        throw new Error('ENOENT: no such file or directory')
-      })
+      vi.mocked(readFile).mockRejectedValue(new Error('ENOENT: no such file or directory'))
 
       const promise = handler({ params: { uri: 'notion://docs/pages' } })
       await expect(promise).rejects.toThrow(NotionMCPError)
@@ -425,9 +423,7 @@ describe('registerTools', () => {
 
     it('should return isError for help tool when doc file is missing', async () => {
       const handler = server.getHandler(3)
-      vi.mocked(readFile).mockImplementation(() => {
-        throw new Error('ENOENT: no such file or directory')
-      })
+      vi.mocked(readFile).mockRejectedValue(new Error('ENOENT: no such file or directory'))
 
       const result = await handler({
         params: { name: 'help', arguments: { tool_name: 'pages' } }
