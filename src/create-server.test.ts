@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import { createMCPServer } from './create-server.js'
 
@@ -45,5 +46,23 @@ describe('createMCPServer', () => {
     const server = createMCPServer(factory) as any
 
     expect(server.capabilities).toEqual({ tools: {}, resources: {} })
+  })
+
+  it('should return default version 0.0.0 when package.json reading fails', () => {
+    vi.mocked(readFileSync).mockImplementationOnce(() => {
+      throw new Error('File not found')
+    })
+    const factory = vi.fn()
+    const server = createMCPServer(factory) as any
+
+    expect(server.serverInfo.version).toBe('0.0.0')
+  })
+
+  it('should return 0.0.0 if version is missing in package.json', () => {
+    vi.mocked(readFileSync).mockImplementationOnce(() => JSON.stringify({}))
+    const factory = vi.fn()
+    const server = createMCPServer(factory) as any
+
+    expect(server.serverInfo.version).toBe('0.0.0')
   })
 })
