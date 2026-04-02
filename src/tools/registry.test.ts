@@ -436,6 +436,29 @@ describe('registerTools', () => {
       expect(result.isError).toBe(true)
       expect(result.content[0].text).toContain('Documentation not found for: pages')
     })
+    it('should return error for help tool when tool_name is invalid', async () => {
+      const handler = server.getHandler(3)
+
+      const result = await handler({
+        params: { name: 'help', arguments: { tool_name: 'nonexistent' } }
+      })
+
+      expect(result.isError).toBe(true)
+      expect(result.content[0].text).toContain('Invalid tool name: nonexistent')
+      expect(result.content[0].text).toContain('Valid tools:')
+    })
+
+    it('should return error for help tool when tool_name is "help"', async () => {
+      const handler = server.getHandler(3)
+
+      const result = await handler({
+        params: { name: 'help', arguments: { tool_name: 'help' } }
+      })
+
+      expect(result.isError).toBe(true)
+      expect(result.content[0].text).toContain('Invalid tool name: help')
+      expect(result.content[0].text).toContain('Valid tools:')
+    })
 
     it('should return error for unknown tool', async () => {
       const handler = server.getHandler(3)
@@ -446,6 +469,15 @@ describe('registerTools', () => {
       expect(result.isError).toBe(true)
       expect(result.content[0].text).toContain('Unknown tool: nonexistent_tool')
       expect(result.content[0].text).toContain('Available tools:')
+    })
+    it('should suggest closest match for unknown tool', async () => {
+      const handler = server.getHandler(3)
+      const result = await handler({
+        params: { name: 'page', arguments: { action: 'get' } }
+      })
+
+      expect(result.isError).toBe(true)
+      expect(result.content[0].text).toContain("Did you mean 'pages'?")
     })
 
     it('should wrap NotionMCPError in isError response', async () => {
