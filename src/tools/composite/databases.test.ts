@@ -196,6 +196,59 @@ describe('databases', () => {
     it('should throw when database_id is missing', async () => {
       await expect(databases(notion, { action: 'get' })).rejects.toThrow('database_id required')
     })
+
+    it('should fall back to data source name from database container if title is missing', async () => {
+      mockNotion.databases.retrieve.mockResolvedValueOnce(
+        makeDbRetrieveResponse({
+          data_sources: [{ id: 'ds-1', name: 'Fallback Name' }]
+        })
+      )
+      mockNotion.dataSources.retrieve.mockResolvedValueOnce(
+        makeDataSourceResponse({
+          title: [], // No title
+          properties: { Name: { type: 'title', id: 'prop-1' } }
+        })
+      )
+
+      const result = (await databases(notion, { action: 'get', database_id: 'db-1' })) as GetDatabaseResponse
+
+      expect(result.data_source?.name).toBe('Fallback Name')
+    })
+
+    it('should clean up expired cache entries via ExpirationQueue', async () => {
+      const startTime = 1000000
+      vi.setSystemTime(startTime)
+
+      // Add one entry
+      mockNotion.databases.retrieve.mockResolvedValue(
+        makeDbRetrieveResponse({ id: 'db-1', data_sources: [{ id: 'ds-1' }] })
+      )
+      mockNotion.dataSources.retrieve.mockResolvedValue(makeDataSourceResponse({ id: 'ds-1' }))
+      await databases(notion, { action: 'get', database_id: 'db-1' })
+      expect(mockNotion.dataSources.retrieve).toHaveBeenCalledTimes(1)
+
+      // Verify it is cached
+      await databases(notion, { action: 'get', database_id: 'db-1' })
+      expect(mockNotion.dataSources.retrieve).toHaveBeenCalledTimes(1)
+
+      // Advance time past TTL (5 min = 300,000ms)
+      vi.setSystemTime(startTime + 400000)
+
+      // Add another entry, which should trigger cleanup of the first
+      mockNotion.databases.retrieve.mockResolvedValue(
+        makeDbRetrieveResponse({ id: 'db-2', data_sources: [{ id: 'ds-2' }] })
+      )
+      mockNotion.dataSources.retrieve.mockResolvedValue(makeDataSourceResponse({ id: 'ds-2' }))
+      await databases(notion, { action: 'get', database_id: 'db-2' })
+      expect(mockNotion.dataSources.retrieve).toHaveBeenCalledTimes(2)
+
+      // Verify first entry was cleaned from cache and must be refetched
+      mockNotion.databases.retrieve.mockResolvedValue(
+        makeDbRetrieveResponse({ id: 'db-1', data_sources: [{ id: 'ds-1' }] })
+      )
+      await databases(notion, { action: 'get', database_id: 'db-1' })
+      expect(mockNotion.dataSources.retrieve).toHaveBeenCalledTimes(3)
+    })
   })
 
   describe('query', () => {

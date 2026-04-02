@@ -14,6 +14,9 @@ import * as RichText from '../helpers/richtext.js'
 
 // Cache for data source schema (properties)
 const schemaCache = new Map<string, { properties: any; dataSourceInfo: any; expiresAt: number }>()
+const expirationQueue: { key: string; expiresAt: number }[] = []
+let headIndex = 0
+
 const SCHEMA_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 /**
@@ -21,6 +24,8 @@ const SCHEMA_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
  */
 export function clearSchemaCache() {
   schemaCache.clear()
+  expirationQueue.length = 0
+  headIndex = 0
 }
 
 export interface DatabasesInput {
@@ -219,10 +224,32 @@ async function resolveDataSourceId(notion: Client, id: string): Promise<{ databa
  */
 async function getDataSourceSchema(
   notion: Client,
-  dataSourceId: string
+  dataSourceId: string,
+  fallbackName?: string
 ): Promise<{ properties: any; dataSourceInfo: any }> {
+  const now = Date.now()
+
+  // Amortized O(1) cleanup: poll front of queue and break on first unexpired
+  while (headIndex < expirationQueue.length) {
+    const entry = expirationQueue[headIndex]
+    if (entry.expiresAt > now) break
+
+    // Entry expired, remove from cache if still there
+    const cached = schemaCache.get(entry.key)
+    if (cached && cached.expiresAt <= now) {
+      schemaCache.delete(entry.key)
+    }
+    headIndex++
+
+    // Periodically reclaim array space to prevent unbounded growth
+    if (headIndex > 100) {
+      expirationQueue.splice(0, headIndex)
+      headIndex = 0
+    }
+  }
+
   const cached = schemaCache.get(dataSourceId)
-  if (cached && Date.now() < cached.expiresAt) {
+  if (cached && cached.expiresAt > now) {
     return {
       properties: cached.properties,
       dataSourceInfo: cached.dataSourceInfo
@@ -236,15 +263,17 @@ async function getDataSourceSchema(
   const properties = dataSource.properties
   const dataSourceInfo = {
     id: dataSource.id,
-    name: dataSource.title?.[0]?.plain_text || dataSource.name || 'Untitled Source'
+    name: dataSource.title?.[0]?.plain_text || fallbackName || 'Untitled Source'
   }
 
   if (properties) {
+    const expiresAt = now + SCHEMA_CACHE_TTL
     schemaCache.set(dataSourceId, {
       properties,
       dataSourceInfo,
-      expiresAt: Date.now() + SCHEMA_CACHE_TTL
+      expiresAt
     })
+    expirationQueue.push({ key: dataSourceId, expiresAt })
   }
 
   return { properties, dataSourceInfo }
@@ -356,7 +385,11 @@ async function getDatabase(notion: Client, input: DatabasesInput): Promise<GetDa
   let dataSourceInfo: any = null
 
   if (database.data_sources && database.data_sources.length > 0) {
-    const { properties, dataSourceInfo: info } = await getDataSourceSchema(notion, database.data_sources[0].id)
+    const { properties, dataSourceInfo: info } = await getDataSourceSchema(
+      notion,
+      database.data_sources[0].id,
+      database.data_sources[0].name
+    )
     dataSourceInfo = info
 
     // Format properties for AI-friendly output
