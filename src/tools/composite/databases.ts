@@ -92,7 +92,7 @@ export interface QueryDatabaseResponse {
   results: Record<string, any>[]
 }
 
-export interface CreateDatabasePageResponse {
+interface CreateDatabasePageResponse {
   action: 'create_page'
   database_id: string
   data_source_id: string

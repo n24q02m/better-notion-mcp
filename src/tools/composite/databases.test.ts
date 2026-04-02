@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  type CreateDatabasePageResponse,
   type CreateDatabaseResponse,
   type CreateDataSourceResponse,
+  type DatabasesResponse,
   type DeleteDatabasePageResponse,
   databases,
   type GetDatabaseResponse,
@@ -413,7 +413,7 @@ describe('databases', () => {
         action: 'create_page',
         database_id: 'db-1',
         page_properties: { Name: 'New Item', Status: 'Active' }
-      })) as CreateDatabasePageResponse
+      })) as Extract<DatabasesResponse, { action: 'create_page' }>
 
       expect(result.action).toBe('create_page')
       expect(result.database_id).toBe('db-1')
@@ -441,7 +441,7 @@ describe('databases', () => {
         action: 'create_page',
         database_id: 'db-1',
         pages: [{ properties: { Name: 'Item 1' } }, { properties: { Name: 'Item 2' } }]
-      })) as CreateDatabasePageResponse
+      })) as Extract<DatabasesResponse, { action: 'create_page' }>
 
       expect(result.processed).toBe(2)
       expect(result.results).toHaveLength(2)
