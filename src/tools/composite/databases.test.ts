@@ -3,6 +3,7 @@ import {
   type CreateDatabasePageResponse,
   type CreateDatabaseResponse,
   type CreateDataSourceResponse,
+  clearSchemaCache,
   type DeleteDatabasePageResponse,
   databases,
   type GetDatabaseResponse,
@@ -68,6 +69,7 @@ function makeDataSourceResponse(overrides: Record<string, any> = {}) {
 describe('databases', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    clearSchemaCache()
   })
 
   describe('create', () => {
