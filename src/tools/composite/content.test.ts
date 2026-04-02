@@ -124,6 +124,14 @@ describe('contentConvert', () => {
           content: '{"not": "an array"}'
         })
       ).rejects.toThrow('Content must be an array for blocks-to-markdown')
+
+      // Test JSON array with non-object elements
+      await expect(
+        contentConvert({
+          direction: 'blocks-to-markdown',
+          content: '[1, 2, 3]'
+        })
+      ).rejects.toThrow('Content must be an array of objects for blocks-to-markdown')
     })
   })
 
