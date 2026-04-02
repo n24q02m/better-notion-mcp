@@ -95,6 +95,40 @@ describe('link', () => {
   })
 })
 
+describe('colored', () => {
+  it('should create colored text', () => {
+    const result = RichText.colored('warning', 'red')
+    expect(result.type).toBe('text')
+    expect(result.text.content).toBe('warning')
+    expect(result.annotations.color).toBe('red')
+    expect(result.annotations.bold).toBe(false)
+  })
+
+  it('should handle default color', () => {
+    const result = RichText.colored('normal', 'default')
+    expect(result.annotations.color).toBe('default')
+  })
+
+  it('should accept all valid color values', () => {
+    const colors: RichText.Color[] = [
+      'default',
+      'gray',
+      'brown',
+      'orange',
+      'yellow',
+      'green',
+      'blue',
+      'purple',
+      'pink',
+      'red'
+    ]
+    for (const color of colors) {
+      const result = RichText.colored('test', color)
+      expect(result.annotations.color).toBe(color)
+    }
+  })
+})
+
 describe('formatText', () => {
   it('should create text with no options (defaults)', () => {
     const result = RichText.formatText('plain')
