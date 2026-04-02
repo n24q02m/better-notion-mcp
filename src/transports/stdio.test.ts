@@ -74,8 +74,16 @@ describe('startStdio', () => {
 
     // Call the factory to verify it returns a Client (singleton)
     const factory = vi.mocked(createMCPServer).mock.calls[0][0]
-    const client = factory()
-    expect(client).toBeDefined()
+    const client1 = factory()
+    const client2 = factory()
+    expect(client1).toBeDefined()
+    expect(client1).toBe(client2)
+
+    const { Client } = await import('@notionhq/client')
+    expect(Client).toHaveBeenCalledWith({
+      auth: 'ntn_test_token',
+      notionVersion: '2025-09-03'
+    })
   })
 
   it('should use relay token when NOTION_TOKEN is not set', async () => {
@@ -90,8 +98,16 @@ describe('startStdio', () => {
 
     // Call the factory — should return a Client with the relay token
     const factory = vi.mocked(createMCPServer).mock.calls[0][0]
-    const client = factory()
-    expect(client).toBeDefined()
+    const client1 = factory()
+    const client2 = factory()
+    expect(client1).toBeDefined()
+    expect(client1).toBe(client2)
+
+    const { Client } = await import('@notionhq/client')
+    expect(Client).toHaveBeenCalledWith({
+      auth: 'ntn_relay_token',
+      notionVersion: '2025-09-03'
+    })
   })
 
   it('should create degraded factory when no token is available', async () => {
