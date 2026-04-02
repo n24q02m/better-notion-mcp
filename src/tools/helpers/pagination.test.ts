@@ -226,4 +226,19 @@ describe('processBatches', () => {
     expect(results).toEqual([])
     expect(processFn).not.toHaveBeenCalled()
   })
+
+  it('should handle errors in processFn and stop further processing', async () => {
+    const items = [1, 2, 3, 4, 5]
+    const error = new Error('Process failed')
+    const processFn = vi.fn(async (x: number) => {
+      if (x === 2) throw error
+      return x * 2
+    })
+
+    await expect(processBatches(items, processFn, { batchSize: 1, concurrency: 1 })).rejects.toThrow('Process failed')
+
+    expect(processFn).toHaveBeenCalledWith(1)
+    expect(processFn).toHaveBeenCalledWith(2)
+    expect(processFn).not.toHaveBeenCalledWith(3)
+  })
 })
