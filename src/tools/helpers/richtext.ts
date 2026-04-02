@@ -88,17 +88,6 @@ export function link(content: string, url: string): RichTextItem {
 }
 
 /**
- * Create colored text
- */
-export function colored(content: string, color: Color): RichTextItem {
-  return {
-    type: 'text',
-    text: { content, link: null },
-    annotations: { ...DEFAULT_ANNOTATIONS, color }
-  }
-}
-
-/**
  * Apply multiple formatting styles
  */
 export function formatText(
