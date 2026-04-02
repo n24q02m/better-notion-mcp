@@ -140,4 +140,40 @@ describe('ensureConfig', () => {
 
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining(relayUrl))
   })
+
+  it('swallows fetch failure when notifying relay server', async () => {
+    vi.mocked(resolveConfig).mockResolvedValue({ config: null, source: null })
+    vi.mocked(createSession).mockResolvedValue({
+      sessionId: 'test-session',
+      keyPair: {} as any,
+      passphrase: 'word',
+      relayUrl: 'https://relay.com'
+    })
+    vi.mocked(pollForResult).mockResolvedValue({ NOTION_TOKEN: 'token' })
+
+    const fetchMock = vi.fn().mockRejectedValue(new Error('Fetch failed'))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await ensureConfig()
+
+    expect(result).toBe('token')
+    expect(fetchMock).toHaveBeenCalled()
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('saved successfully'))
+
+    vi.unstubAllGlobals()
+  })
+
+  it('throws when writeConfig fails', async () => {
+    vi.mocked(resolveConfig).mockResolvedValue({ config: null, source: null })
+    vi.mocked(createSession).mockResolvedValue({
+      sessionId: 'test-session',
+      keyPair: {} as any,
+      passphrase: 'word',
+      relayUrl: 'https://relay.com'
+    })
+    vi.mocked(pollForResult).mockResolvedValue({ NOTION_TOKEN: 'token' })
+    vi.mocked(writeConfig).mockRejectedValue(new Error('Write failed'))
+
+    await expect(ensureConfig()).rejects.toThrow('Write failed')
+  })
 })
