@@ -3,9 +3,9 @@ import {
   type CreateDatabasePageResponse,
   type CreateDatabaseResponse,
   type CreateDataSourceResponse,
+  type DatabasesResponse,
   type DeleteDatabasePageResponse,
   databases,
-  type GetDatabaseResponse,
   type ListDataSourceTemplatesResponse,
   type QueryDatabaseResponse,
   type UpdateDatabasePageResponse,
@@ -137,7 +137,10 @@ describe('databases', () => {
       mockNotion.databases.retrieve.mockResolvedValueOnce(makeDbRetrieveResponse())
       mockNotion.dataSources.retrieve.mockResolvedValueOnce(makeDataSourceResponse())
 
-      const result = (await databases(notion, { action: 'get', database_id: 'db-1' })) as GetDatabaseResponse
+      const result = (await databases(notion, { action: 'get', database_id: 'db-1' })) as Extract<
+        DatabasesResponse,
+        { action: 'get' }
+      >
 
       expect(result).toEqual({
         action: 'get',
@@ -175,7 +178,10 @@ describe('databases', () => {
         })
       )
 
-      const result = (await databases(notion, { action: 'get', database_id: 'db-1' })) as GetDatabaseResponse
+      const result = (await databases(notion, { action: 'get', database_id: 'db-1' })) as Extract<
+        DatabasesResponse,
+        { action: 'get' }
+      >
 
       expect(result.schema.Tags.options).toEqual(['A', 'B'])
       expect(result.schema.Total.expression).toBe('prop("Price") * prop("Qty")')
@@ -184,7 +190,10 @@ describe('databases', () => {
     it('should handle empty data_sources array', async () => {
       mockNotion.databases.retrieve.mockResolvedValueOnce(makeDbRetrieveResponse({ data_sources: [] }))
 
-      const result = (await databases(notion, { action: 'get', database_id: 'db-1' })) as GetDatabaseResponse
+      const result = (await databases(notion, { action: 'get', database_id: 'db-1' })) as Extract<
+        DatabasesResponse,
+        { action: 'get' }
+      >
 
       expect(result.data_source).toBeNull()
       expect(result.schema).toEqual({})

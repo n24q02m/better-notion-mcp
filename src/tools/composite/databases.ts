@@ -68,7 +68,7 @@ export interface CreateDatabaseResponse {
   created: boolean
 }
 
-export interface GetDatabaseResponse {
+interface GetDatabaseResponse {
   action: 'get'
   database_id: string
   title: string
