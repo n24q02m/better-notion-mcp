@@ -60,7 +60,7 @@ export interface DatabasesInput {
   }>
 }
 
-export interface CreateDatabaseResponse {
+interface CreateDatabaseResponse {
   action: 'create'
   database_id: string
   data_source_id?: string
@@ -68,7 +68,7 @@ export interface CreateDatabaseResponse {
   created: boolean
 }
 
-export interface GetDatabaseResponse {
+interface GetDatabaseResponse {
   action: 'get'
   database_id: string
   title: string
@@ -84,7 +84,7 @@ export interface GetDatabaseResponse {
   schema: Record<string, any>
 }
 
-export interface QueryDatabaseResponse {
+interface QueryDatabaseResponse {
   action: 'query'
   database_id: string
   data_source_id: string
@@ -92,7 +92,7 @@ export interface QueryDatabaseResponse {
   results: Record<string, any>[]
 }
 
-export interface CreateDatabasePageResponse {
+interface CreateDatabasePageResponse {
   action: 'create_page'
   database_id: string
   data_source_id: string
@@ -104,7 +104,7 @@ export interface CreateDatabasePageResponse {
   }[]
 }
 
-export interface UpdateDatabasePageResponse {
+interface UpdateDatabasePageResponse {
   action: 'update_page'
   processed: number
   results: {
@@ -113,7 +113,7 @@ export interface UpdateDatabasePageResponse {
   }[]
 }
 
-export interface DeleteDatabasePageResponse {
+interface DeleteDatabasePageResponse {
   action: 'delete_page'
   processed: number
   results: {
@@ -122,26 +122,26 @@ export interface DeleteDatabasePageResponse {
   }[]
 }
 
-export interface CreateDataSourceResponse {
+interface CreateDataSourceResponse {
   action: 'create_data_source'
   data_source_id: string
   database_id: string
   created: boolean
 }
 
-export interface UpdateDataSourceResponse {
+interface UpdateDataSourceResponse {
   action: 'update_data_source'
   data_source_id: string
   updated: boolean
 }
 
-export interface UpdateDatabaseResponse {
+interface UpdateDatabaseResponse {
   action: 'update_database'
   database_id: string
   updated: boolean
 }
 
-export interface ListDataSourceTemplatesResponse {
+interface ListDataSourceTemplatesResponse {
   action: 'list_templates'
   database_id: string
   data_source_id: string
