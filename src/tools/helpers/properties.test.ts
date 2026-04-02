@@ -324,6 +324,20 @@ describe('convertToNotionProperties', () => {
         Project: value
       })
     })
+
+    it('treats malformed JSON starting with [ as a single value', () => {
+      const result = convertToNotionProperties({ Project: '[invalid' }, { Project: 'relation' })
+      expect(result).toEqual({
+        Project: { relation: [{ id: '[invalid' }] }
+      })
+    })
+
+    it('handles JSON array with non-string elements by falling back to single value', () => {
+      const result = convertToNotionProperties({ Project: '[123]' }, { Project: 'relation' })
+      expect(result).toEqual({
+        Project: { relation: [{ id: '[123]' }] }
+      })
+    })
   })
 
   describe('mixed properties with schema', () => {
