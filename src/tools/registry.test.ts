@@ -11,11 +11,11 @@ vi.mock('./composite/workspace.js', () => ({ workspace: vi.fn() }))
 vi.mock('./composite/file-uploads.js', () => ({ fileUploads: vi.fn() }))
 
 // Mock node:fs
-vi.mock('node:fs', () => ({
-  readFileSync: vi.fn().mockReturnValue('# Mock documentation content')
+vi.mock('node:fs/promises', () => ({
+  readFile: vi.fn().mockResolvedValue('# Mock documentation content')
 }))
 
-import { readFileSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import { blocks } from './composite/blocks.js'
 import { commentsManage } from './composite/comments.js'
 import { contentConvert } from './composite/content.js'
@@ -206,14 +206,14 @@ describe('registerTools', () => {
         mimeType: 'text/markdown',
         text: '# Mock documentation content'
       })
-      expect(readFileSync).toHaveBeenCalledWith(expect.stringContaining('pages.md'), 'utf-8')
+      expect(readFile).toHaveBeenCalledWith(expect.stringContaining('pages.md'), 'utf-8')
     })
 
     it('should read the correct file for each resource', async () => {
       const handler = server.getHandler(2)
 
       for (const uri of EXPECTED_RESOURCE_URIS) {
-        vi.mocked(readFileSync).mockReturnValue(`# Doc for ${uri}`)
+        vi.mocked(readFile).mockResolvedValue(`# Doc for ${uri}`)
         const result = await handler({ params: { uri } })
 
         expect(result.contents[0].uri).toBe(uri)
@@ -231,11 +231,9 @@ describe('registerTools', () => {
       })
     })
 
-    it('should throw NotionMCPError with DOC_NOT_FOUND when readFileSync throws', async () => {
+    it('should throw NotionMCPError with DOC_NOT_FOUND when readFile throws', async () => {
       const handler = server.getHandler(2)
-      vi.mocked(readFileSync).mockImplementation(() => {
-        throw new Error('ENOENT: no such file or directory')
-      })
+      vi.mocked(readFile).mockRejectedValue(new Error('ENOENT: no such file or directory'))
 
       const promise = handler({ params: { uri: 'notion://docs/pages' } })
       await expect(promise).rejects.toThrow(NotionMCPError)
@@ -411,13 +409,13 @@ describe('registerTools', () => {
 
     it('should route help tool and read documentation file', async () => {
       const handler = server.getHandler(3)
-      vi.mocked(readFileSync).mockReturnValue('# Pages Documentation\n\nFull docs here.')
+      vi.mocked(readFile).mockResolvedValue('# Pages Documentation\n\nFull docs here.')
 
       const result = await handler({
         params: { name: 'help', arguments: { tool_name: 'pages' } }
       })
 
-      expect(readFileSync).toHaveBeenCalledWith(expect.stringContaining('pages.md'), 'utf-8')
+      expect(readFile).toHaveBeenCalledWith(expect.stringContaining('pages.md'), 'utf-8')
       const parsed = JSON.parse(result.content[0].text)
       expect(parsed.tool).toBe('pages')
       expect(parsed.documentation).toBe('# Pages Documentation\n\nFull docs here.')
@@ -425,9 +423,7 @@ describe('registerTools', () => {
 
     it('should return isError for help tool when doc file is missing', async () => {
       const handler = server.getHandler(3)
-      vi.mocked(readFileSync).mockImplementation(() => {
-        throw new Error('ENOENT: no such file or directory')
-      })
+      vi.mocked(readFile).mockRejectedValue(new Error('ENOENT: no such file or directory'))
 
       const result = await handler({
         params: { name: 'help', arguments: { tool_name: 'pages' } }
