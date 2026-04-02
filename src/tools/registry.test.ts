@@ -487,5 +487,17 @@ describe('registerTools', () => {
       expect(result.content[0].text).toContain('<untrusted_notion_content>')
       expect(result.isError).toBeUndefined()
     })
+
+    it('should return error for help tool with invalid tool_name', async () => {
+      const handler = server.getHandler(3)
+
+      const result = await handler({
+        params: { name: 'help', arguments: { tool_name: 'nonexistent_tool' } }
+      })
+
+      expect(result.isError).toBe(true)
+      expect(result.content[0].text).toContain('Invalid tool name: nonexistent_tool')
+      expect(result.content[0].text).toContain('Valid tools:')
+    })
   })
 })
