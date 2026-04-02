@@ -349,6 +349,23 @@ describe('withErrorHandling', () => {
 
     expect(await wrapped('world')).toBe('hello world')
   })
+
+  it('should pass through NotionMCPError instances unchanged', async () => {
+    const originalError = new NotionMCPError('already enhanced', 'CUSTOM_CODE', 'some suggestion', { foo: 'bar' })
+    const fn = async () => {
+      throw originalError
+    }
+    const wrapped = withErrorHandling(fn)
+
+    try {
+      await wrapped()
+      expect.unreachable('should have thrown')
+    } catch (error) {
+      expect(error).toBe(originalError)
+      expect(error).toBeInstanceOf(NotionMCPError)
+      expect((error as NotionMCPError).code).toBe('CUSTOM_CODE')
+    }
+  })
 })
 
 describe('retryWithBackoff', () => {
@@ -364,8 +381,8 @@ describe('retryWithBackoff', () => {
   it('should succeed after retries', async () => {
     const fn = vi
       .fn()
-      .mockRejectedValueOnce({ message: 'fail 1' })
-      .mockRejectedValueOnce({ message: 'fail 2' })
+      .mockImplementationOnce(() => Promise.reject({ message: 'fail 1' }))
+      .mockImplementationOnce(() => Promise.reject({ message: 'fail 2' }))
       .mockResolvedValue('ok')
 
     const result = await retryWithBackoff(fn, { initialDelay: 1, maxDelay: 10 })
@@ -375,7 +392,7 @@ describe('retryWithBackoff', () => {
   })
 
   it('should give up after maxRetries', async () => {
-    const fn = vi.fn().mockRejectedValue({ message: 'always fails' })
+    const fn = vi.fn().mockImplementation(() => Promise.reject({ message: 'always fails' }))
 
     await expect(retryWithBackoff(fn, { maxRetries: 2, initialDelay: 1, maxDelay: 5 })).rejects.toThrow(NotionMCPError)
 
@@ -384,7 +401,7 @@ describe('retryWithBackoff', () => {
   })
 
   it('should not retry on UNAUTHORIZED', async () => {
-    const fn = vi.fn().mockRejectedValue({ code: 'UNAUTHORIZED', message: 'bad token' })
+    const fn = vi.fn().mockImplementation(() => Promise.reject({ code: 'UNAUTHORIZED', message: 'bad token' }))
 
     await expect(retryWithBackoff(fn, { maxRetries: 3, initialDelay: 1 })).rejects.toMatchObject({
       code: 'UNAUTHORIZED'
@@ -394,7 +411,7 @@ describe('retryWithBackoff', () => {
   })
 
   it('should not retry on NOT_FOUND', async () => {
-    const fn = vi.fn().mockRejectedValue({ code: 'NOT_FOUND', message: 'gone' })
+    const fn = vi.fn().mockImplementation(() => Promise.reject({ code: 'NOT_FOUND', message: 'gone' }))
 
     await expect(retryWithBackoff(fn, { maxRetries: 3, initialDelay: 1 })).rejects.toMatchObject({ code: 'NOT_FOUND' })
 
@@ -402,7 +419,10 @@ describe('retryWithBackoff', () => {
   })
 
   it('should retry on other error codes', async () => {
-    const fn = vi.fn().mockRejectedValueOnce({ code: 'RATE_LIMITED', message: 'slow down' }).mockResolvedValue('ok')
+    const fn = vi
+      .fn()
+      .mockImplementationOnce(() => Promise.reject({ code: 'RATE_LIMITED', message: 'slow down' }))
+      .mockResolvedValue('ok')
 
     const result = await retryWithBackoff(fn, { initialDelay: 1 })
 
@@ -420,7 +440,7 @@ describe('retryWithBackoff', () => {
   })
 
   it('should enhance the last error when all retries fail', async () => {
-    const fn = vi.fn().mockRejectedValue({ message: 'transient' })
+    const fn = vi.fn().mockImplementation(() => Promise.reject({ message: 'transient' }))
 
     try {
       await retryWithBackoff(fn, { maxRetries: 1, initialDelay: 1 })
