@@ -54,6 +54,32 @@ export async function contentConvert(input: ContentConvertInput): Promise<any> {
             'Provide an array content'
           )
         }
+
+        // Validate each block in the array
+        for (const block of content) {
+          if (!block || typeof block !== 'object') {
+            throw new NotionMCPError(
+              'Each block in the content array must be a valid object',
+              'VALIDATION_ERROR',
+              'Provide a valid array of block objects'
+            )
+          }
+          if (!('type' in block)) {
+            throw new NotionMCPError(
+              'Each block in the content array must have a "type" property',
+              'VALIDATION_ERROR',
+              'Provide a valid array of block objects with "type" properties'
+            )
+          }
+          if (typeof block.type !== 'string') {
+            throw new NotionMCPError(
+              'Each block in the content array must have a "type" string property',
+              'VALIDATION_ERROR',
+              'Provide a valid array of block objects with string "type" properties'
+            )
+          }
+        }
+
         const markdown = blocksToMarkdown(content as any)
         return {
           direction: input.direction,
