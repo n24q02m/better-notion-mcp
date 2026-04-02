@@ -437,6 +437,18 @@ describe('registerTools', () => {
       expect(result.content[0].text).toContain('Documentation not found for: pages')
     })
 
+    it('should return error for help tool with invalid tool_name', async () => {
+      const handler = server.getHandler(3)
+
+      const result = await handler({
+        params: { name: 'help', arguments: { tool_name: 'invalid_tool' } }
+      })
+
+      expect(result.isError).toBe(true)
+      expect(result.content[0].text).toContain('Invalid tool name: invalid_tool')
+      expect(result.content[0].text).toContain('Suggestion: Valid tools:')
+    })
+
     it('should return error for unknown tool', async () => {
       const handler = server.getHandler(3)
       const result = await handler({
