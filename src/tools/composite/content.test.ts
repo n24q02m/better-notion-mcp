@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { contentConvert } from './content'
+import { contentConvert } from './content.js'
 
 // Integration tests using real markdown helpers
 // We do not mock dependencies because we cannot reliably mock ESM imports in this environment without vitest runner.
