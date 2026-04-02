@@ -240,17 +240,17 @@ describe('populateDeepChildren', () => {
           })
         }
       }
-    };
-    const blocks = [{ id: 'parent-1', type: 'toggle', has_children: true, toggle: {} }];
+    }
+    const blocks = [{ id: 'parent-1', type: 'toggle', has_children: true, toggle: {} }]
 
-    await populateDeepChildren(mockNotion as any, blocks);
+    await populateDeepChildren(mockNotion as any, blocks)
 
     expect(mockNotion.blocks.children.list).toHaveBeenCalledWith({
       block_id: 'parent-1',
       start_cursor: undefined,
       page_size: 100
-    });
-    expect(blocks[0].toggle.children).toHaveLength(1);
-    expect(blocks[0].toggle.children[0].id).toBe('child-1');
-  });
-});
+    })
+    expect((blocks[0] as any).toggle.children).toHaveLength(1)
+    expect((blocks[0] as any).toggle.children[0].id).toBe('child-1')
+  })
+})
