@@ -3,7 +3,7 @@
  * Consolidated registration for maximum coverage with minimal tools
  */
 
-import { readFileSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js'
@@ -399,7 +399,7 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
     }
 
     try {
-      const content = readFileSync(join(DOCS_DIR, resource.file), 'utf-8')
+      const content = await readFile(join(DOCS_DIR, resource.file), 'utf-8')
       return {
         contents: [{ uri, mimeType: 'text/markdown', text: content }]
       }
@@ -465,7 +465,7 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
           }
           const docFile = `${toolName}.md`
           try {
-            const content = readFileSync(join(DOCS_DIR, docFile), 'utf-8')
+            const content = await readFile(join(DOCS_DIR, docFile), 'utf-8')
             result = { tool: toolName, documentation: content }
           } catch {
             throw new NotionMCPError(`Documentation not found for: ${toolName}`, 'DOC_NOT_FOUND', 'Check tool_name')
