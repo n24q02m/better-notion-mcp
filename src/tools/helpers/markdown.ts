@@ -255,49 +255,120 @@ function indentChildren(children: NotionBlock[]): string {
   return blocksToMarkdown(children).replace(/^/gm, '  ')
 }
 
+/**
+ * Helper functions for rendering specific block types to markdown
+ */
+function renderHeadingBlock(block: NotionBlock): string {
+  const level = block.type === 'heading_1' ? 1 : block.type === 'heading_2' ? 2 : 3
+  const heading = block[block.type]
+  let md = `${'#'.repeat(level)} ${richTextToMarkdown(heading.rich_text)}`
+  if (heading.children?.length > 0) {
+    md += `\n${blocksToMarkdown(heading.children)}`
+  }
+  return md
+}
+
+function renderListItemBlock(block: NotionBlock): string {
+  switch (block.type) {
+    case 'bulleted_list_item': {
+      let md = `- ${richTextToMarkdown(block.bulleted_list_item.rich_text)}`
+      if (block.bulleted_list_item.children?.length > 0) {
+        md += `\n${indentChildren(block.bulleted_list_item.children)}`
+      }
+      return md
+    }
+    case 'numbered_list_item': {
+      let md = `1. ${richTextToMarkdown(block.numbered_list_item.rich_text)}`
+      if (block.numbered_list_item.children?.length > 0) {
+        md += `\n${indentChildren(block.numbered_list_item.children)}`
+      }
+      return md
+    }
+    case 'to_do': {
+      let md = `- [${block.to_do.checked ? 'x' : ' '}] ${richTextToMarkdown(block.to_do.rich_text)}`
+      if (block.to_do.children?.length > 0) {
+        md += `\n${indentChildren(block.to_do.children)}`
+      }
+      return md
+    }
+    default:
+      return ''
+  }
+}
+
+function renderQuoteBlock(block: NotionBlock): string {
+  let md = `> ${richTextToMarkdown(block.quote.rich_text)}`
+  if (block.quote.children?.length > 0) {
+    const childMd = blocksToMarkdown(block.quote.children)
+    md += `\n${childMd.replace(/^/gm, '> ')}`
+  }
+  return md
+}
+
+function renderCalloutBlock(block: NotionBlock): string {
+  const calloutText = richTextToMarkdown(block.callout.rich_text)
+  const calloutIcon = block.callout.icon?.emoji || ''
+  const calloutType = getCalloutTypeFromIcon(calloutIcon)
+  let md = `> [!${calloutType}] ${calloutText}`
+  if (block.callout.children?.length > 0) {
+    const childMd = blocksToMarkdown(block.callout.children)
+    md += `\n${childMd.replace(/^/gm, '> ')}`
+  }
+  return md
+}
+
+function renderTableBlock(block: NotionBlock): string {
+  const tableRows = block.table?.children || []
+  const lines: string[] = []
+  if (tableRows.length > 0) {
+    for (let rowIdx = 0; rowIdx < tableRows.length; rowIdx++) {
+      const row = tableRows[rowIdx]
+      const cells = (row.table_row?.cells || []).map((cell: RichText[]) => richTextToMarkdown(cell))
+      lines.push(`| ${cells.join(' | ')} |`)
+      if (rowIdx === 0 && block.table?.has_column_header) {
+        lines.push(`| ${cells.map(() => '---').join(' | ')} |`)
+      }
+    }
+  }
+  return lines.join('\n')
+}
+
+function renderColumnListBlock(block: NotionBlock): string {
+  const lines: string[] = [':::columns']
+  const columns = block.column_list?.children || []
+  for (let colIdx = 0; colIdx < columns.length; colIdx++) {
+    const col = columns[colIdx]
+    const ratio = col.column?.format?.column_ratio
+    lines.push(ratio !== undefined ? `:::column{width=${ratio}}` : ':::column')
+    const columnChildren = col.column?.children || []
+    if (columnChildren.length > 0) {
+      lines.push(blocksToMarkdown(columnChildren))
+    }
+    if (colIdx < columns.length - 1) {
+      lines.push('')
+    }
+  }
+  lines.push(':::end')
+  return lines.join('\n')
+}
+
 export function blocksToMarkdown(blocks: NotionBlock[]): string {
   const lines: string[] = []
 
   for (const block of blocks) {
     switch (block.type) {
       case 'heading_1':
-        lines.push(`# ${richTextToMarkdown(block.heading_1.rich_text)}`)
-        if (block.heading_1.children?.length > 0) {
-          lines.push(blocksToMarkdown(block.heading_1.children))
-        }
-        break
       case 'heading_2':
-        lines.push(`## ${richTextToMarkdown(block.heading_2.rich_text)}`)
-        if (block.heading_2.children?.length > 0) {
-          lines.push(blocksToMarkdown(block.heading_2.children))
-        }
-        break
       case 'heading_3':
-        lines.push(`### ${richTextToMarkdown(block.heading_3.rich_text)}`)
-        if (block.heading_3.children?.length > 0) {
-          lines.push(blocksToMarkdown(block.heading_3.children))
-        }
+        lines.push(renderHeadingBlock(block))
         break
       case 'paragraph':
         lines.push(richTextToMarkdown(block.paragraph.rich_text))
         break
       case 'bulleted_list_item':
-        lines.push(`- ${richTextToMarkdown(block.bulleted_list_item.rich_text)}`)
-        if (block.bulleted_list_item.children?.length > 0) {
-          lines.push(indentChildren(block.bulleted_list_item.children))
-        }
-        break
       case 'numbered_list_item':
-        lines.push(`1. ${richTextToMarkdown(block.numbered_list_item.rich_text)}`)
-        if (block.numbered_list_item.children?.length > 0) {
-          lines.push(indentChildren(block.numbered_list_item.children))
-        }
-        break
       case 'to_do':
-        lines.push(`- [${block.to_do.checked ? 'x' : ' '}] ${richTextToMarkdown(block.to_do.rich_text)}`)
-        if (block.to_do.children?.length > 0) {
-          lines.push(indentChildren(block.to_do.children))
-        }
+        lines.push(renderListItemBlock(block))
         break
       case 'code':
         lines.push(`\`\`\`${block.code.language || ''}`)
@@ -305,26 +376,14 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         lines.push('```')
         break
       case 'quote':
-        lines.push(`> ${richTextToMarkdown(block.quote.rich_text)}`)
-        if (block.quote.children?.length > 0) {
-          const childMd = blocksToMarkdown(block.quote.children)
-          lines.push(childMd.replace(/^/gm, '> '))
-        }
+        lines.push(renderQuoteBlock(block))
         break
       case 'divider':
         lines.push('---')
         break
-      case 'callout': {
-        const calloutText = richTextToMarkdown(block.callout.rich_text)
-        const calloutIcon = block.callout.icon?.emoji || ''
-        const calloutType = getCalloutTypeFromIcon(calloutIcon)
-        lines.push(`> [!${calloutType}] ${calloutText}`)
-        if (block.callout.children?.length > 0) {
-          const childMd = blocksToMarkdown(block.callout.children)
-          lines.push(childMd.replace(/^/gm, '> '))
-        }
+      case 'callout':
+        lines.push(renderCalloutBlock(block))
         break
-      }
       case 'toggle': {
         const toggleText = richTextToMarkdown(block.toggle.rich_text)
         lines.push('<details>')
@@ -351,39 +410,12 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
       case 'equation':
         lines.push(`$$${block.equation.expression}$$`)
         break
-      case 'table': {
-        const tableRows = block.table?.children || []
-        if (tableRows.length > 0) {
-          for (let rowIdx = 0; rowIdx < tableRows.length; rowIdx++) {
-            const row = tableRows[rowIdx]
-            const cells = (row.table_row?.cells || []).map((cell: RichText[]) => richTextToMarkdown(cell))
-            lines.push(`| ${cells.join(' | ')} |`)
-            // Add header separator after first row if table has column header
-            if (rowIdx === 0 && block.table?.has_column_header) {
-              lines.push(`| ${cells.map(() => '---').join(' | ')} |`)
-            }
-          }
-        }
+      case 'table':
+        lines.push(renderTableBlock(block))
         break
-      }
-      case 'column_list': {
-        lines.push(':::columns')
-        const columns = block.column_list?.children || []
-        for (let colIdx = 0; colIdx < columns.length; colIdx++) {
-          const col = columns[colIdx]
-          const ratio = col.column?.format?.column_ratio
-          lines.push(ratio !== undefined ? `:::column{width=${ratio}}` : ':::column')
-          const columnChildren = col.column?.children || []
-          if (columnChildren.length > 0) {
-            lines.push(blocksToMarkdown(columnChildren))
-          }
-          if (colIdx < columns.length - 1) {
-            lines.push('')
-          }
-        }
-        lines.push(':::end')
+      case 'column_list':
+        lines.push(renderColumnListBlock(block))
         break
-      }
       case 'table_of_contents':
         lines.push('[toc]')
         break
