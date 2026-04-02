@@ -1,5 +1,5 @@
-import { writeFileSync, unlinkSync, mkdirSync } from 'node:fs'
-import { describe, expect, it, vi, beforeAll, afterAll } from 'vitest'
+import { unlinkSync, writeFileSync } from 'node:fs'
+import { describe, expect, it, vi } from 'vitest'
 import { NotionMCPError } from './errors'
 import { formatIcon, resolveIcon } from './icons'
 
@@ -179,7 +179,9 @@ describe('resolveIcon', () => {
       expect(mockNotion.fileUploads.send).toHaveBeenCalled()
       expect(mockNotion.fileUploads.complete).toHaveBeenCalled()
     } finally {
-      try { unlinkSync(testPath) } catch {}
+      try {
+        unlinkSync(testPath)
+      } catch {}
     }
   })
 })

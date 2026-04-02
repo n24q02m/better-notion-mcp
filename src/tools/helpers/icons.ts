@@ -73,7 +73,7 @@ export function formatIcon(value: string): { type: string; [key: string]: any } 
   // upload:/path marker for deferred file upload
   if (value.startsWith('upload:')) {
     const path = value.slice('upload:'.length)
-    if (!path || !path.startsWith('/')) {
+    if (!path?.startsWith('/')) {
       throw new NotionMCPError(
         `Invalid upload icon path: "${value}". Provide an absolute path after "upload:".`,
         'VALIDATION_ERROR',

@@ -355,7 +355,7 @@ describe('fileUploads', () => {
         return { status: 'uploaded' }
       })
 
-      const result = await fileUploads(mockNotion as any, {
+      const _result = await fileUploads(mockNotion as any, {
         action: 'upload',
         filename: 'logo.png',
         content_type: 'image/png',
