@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { autoPaginate, fetchChildrenRecursive, processBatches } from './pagination'
+import { autoPaginate, fetchChildrenRecursive, populateDeepChildren, processBatches } from './pagination'
 
 describe('autoPaginate', () => {
   it('should return results from a single page', async () => {
@@ -227,3 +227,30 @@ describe('processBatches', () => {
     expect(processFn).not.toHaveBeenCalled()
   })
 })
+
+describe('populateDeepChildren', () => {
+  it('should call fetchChildrenRecursive with autoPaginate', async () => {
+    const mockNotion = {
+      blocks: {
+        children: {
+          list: vi.fn().mockResolvedValue({
+            results: [{ id: 'child-1', type: 'paragraph', has_children: false, paragraph: {} }],
+            next_cursor: null,
+            has_more: false
+          })
+        }
+      }
+    };
+    const blocks = [{ id: 'parent-1', type: 'toggle', has_children: true, toggle: {} }];
+
+    await populateDeepChildren(mockNotion as any, blocks);
+
+    expect(mockNotion.blocks.children.list).toHaveBeenCalledWith({
+      block_id: 'parent-1',
+      start_cursor: undefined,
+      page_size: 100
+    });
+    expect(blocks[0].toggle.children).toHaveLength(1);
+    expect(blocks[0].toggle.children[0].id).toBe('child-1');
+  });
+});

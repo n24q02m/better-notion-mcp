@@ -1,3 +1,5 @@
+import type { Client } from '@notionhq/client'
+
 /**
  * Pagination Helper
  * Auto-handles paginated Notion API responses
@@ -135,4 +137,15 @@ export async function processBatches<T, R>(
   await Promise.all(workers)
 
   return results
+}
+
+/**
+ * Recursively fetch and populate children for blocks using auto-pagination
+ */
+export async function populateDeepChildren(notion: Client, blocks: any[]): Promise<void> {
+  await fetchChildrenRecursive(blocks, async (blockId) => {
+    return autoPaginate((cursor) =>
+      notion.blocks.children.list({ block_id: blockId, start_cursor: cursor, page_size: 100 })
+    ) as any
+  })
 }
