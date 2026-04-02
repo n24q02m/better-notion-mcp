@@ -890,7 +890,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       if (!result.isError) {
         const text = extractText(result)
         const parsed = safeParse(text)
-        expect(parsed.results).toBeDefined()
+        expect(parsed.comments).toBeDefined()
       }
     })
   })
