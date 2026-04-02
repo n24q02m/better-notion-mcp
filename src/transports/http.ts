@@ -43,40 +43,45 @@ function loadConfig(): HttpConfig {
   }
 }
 
-/** Configure core Express middleware */
-function setupAppMiddleware(app: express.Express) {
+export async function startHttp() {
+  const config = loadConfig()
+  const serverUrl = new URL(config.publicUrl)
+
+  const { provider, pendingAuths, authCodes, callbackUrl, notionBasicAuth } = createNotionOAuthProvider({
+    notionClientId: config.notionClientId,
+    notionClientSecret: config.notionClientSecret,
+    dcrSecret: config.dcrSecret,
+    publicUrl: config.publicUrl
+  })
+
+  const app = express()
+
   // Trust exactly 2 reverse proxies (Cloudflare + Caddy) for correct req.ip
   app.set('trust proxy', 2)
   app.disable('x-powered-by')
+
+  // Rate limit MCP endpoints per IP
+  const mcpRateLimit = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 120,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false
+  })
+
+  // Rate limit OAuth endpoints per IP to prevent abuse/brute-force
+  const authRateLimit = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 20, // Strict limit for auth endpoints
+    standardHeaders: 'draft-7',
+    legacyHeaders: false
+  })
 
   // Propagate request IP via AsyncLocalStorage for IP-scoped pending binds
   app.use((req, _res, next) => {
     const ip = req.ip || req.socket.remoteAddress || undefined
     requestContext.run({ ip }, next)
   })
-}
 
-/** Configure OAuth 2.1 routes and callback relay */
-function setupOAuthRoutes(
-  app: express.Express,
-  {
-    provider,
-    serverUrl,
-    authRateLimit,
-    pendingAuths,
-    authCodes,
-    callbackUrl,
-    notionBasicAuth
-  }: {
-    provider: any
-    serverUrl: URL
-    authRateLimit: any
-    pendingAuths: Map<string, any>
-    authCodes: Map<string, any>
-    callbackUrl: string
-    notionBasicAuth: string
-  }
-) {
   // OAuth endpoints (/.well-known/*, /authorize, /token, /register)
   app.use(
     mcpAuthRouter({
@@ -89,6 +94,8 @@ function setupOAuthRoutes(
   )
 
   // Notion OAuth callback relay
+  // Notion redirects here after user authorizes. We exchange the code,
+  // store the token, issue our own auth code, and redirect to MCP client.
   app.get('/callback', authRateLimit, async (req, res) => {
     const { code, state, error } = req.query as Record<string, string>
 
@@ -176,19 +183,7 @@ function setupOAuthRoutes(
       res.status(500).json({ error: 'server_error', error_description: 'Internal server error' })
     }
   })
-}
 
-/** Configure MCP protocol endpoints */
-function setupMcpRoutes(
-  app: express.Express,
-  {
-    mcpRateLimit,
-    provider
-  }: {
-    mcpRateLimit: any
-    provider: any
-  }
-) {
   const authMiddleware = requireBearerAuth({ verifier: provider })
   const jsonParser = express.json()
   const transports: Map<string, StreamableHTTPServerTransport> = new Map()
@@ -286,48 +281,6 @@ function setupMcpRoutes(
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', mode: 'remote', timestamp: new Date().toISOString() })
   })
-}
-
-export async function startHttp() {
-  const config = loadConfig()
-  const serverUrl = new URL(config.publicUrl)
-
-  const { provider, pendingAuths, authCodes, callbackUrl, notionBasicAuth } = createNotionOAuthProvider({
-    notionClientId: config.notionClientId,
-    notionClientSecret: config.notionClientSecret,
-    dcrSecret: config.dcrSecret,
-    publicUrl: config.publicUrl
-  })
-
-  const app = express()
-
-  // Rate limit MCP endpoints per IP
-  const mcpRateLimit = rateLimit({
-    windowMs: 60 * 1000,
-    limit: 120,
-    standardHeaders: 'draft-7',
-    legacyHeaders: false
-  })
-
-  // Rate limit OAuth endpoints per IP to prevent abuse/brute-force
-  const authRateLimit = rateLimit({
-    windowMs: 60 * 1000,
-    limit: 20, // Strict limit for auth endpoints
-    standardHeaders: 'draft-7',
-    legacyHeaders: false
-  })
-
-  setupAppMiddleware(app)
-  setupOAuthRoutes(app, {
-    provider,
-    serverUrl,
-    authRateLimit,
-    pendingAuths,
-    authCodes,
-    callbackUrl,
-    notionBasicAuth
-  })
-  setupMcpRoutes(app, { mcpRateLimit, provider })
 
   app.listen(config.port, '0.0.0.0', () => {
     console.info(`Remote MCP server listening on port ${config.port}`)
