@@ -255,6 +255,69 @@ function indentChildren(children: NotionBlock[]): string {
   return blocksToMarkdown(children).replace(/^/gm, '  ')
 }
 
+function calloutToMarkdown(block: NotionBlock): string[] {
+  const lines: string[] = []
+  const calloutText = richTextToMarkdown(block.callout.rich_text)
+  const calloutIcon = block.callout.icon?.emoji || ''
+  const calloutType = getCalloutTypeFromIcon(calloutIcon)
+  lines.push(`> [!${calloutType}] ${calloutText}`)
+  if (block.callout.children?.length > 0) {
+    const childMd = blocksToMarkdown(block.callout.children)
+    lines.push(childMd.replace(/^/gm, '> '))
+  }
+  return lines
+}
+
+function toggleToMarkdown(block: NotionBlock): string[] {
+  const lines: string[] = []
+  const toggleText = richTextToMarkdown(block.toggle.rich_text)
+  lines.push('<details>')
+  lines.push(`<summary>${toggleText}</summary>`)
+  if (block.toggle.children && block.toggle.children.length > 0) {
+    lines.push('')
+    lines.push(blocksToMarkdown(block.toggle.children))
+  }
+  lines.push('</details>')
+  return lines
+}
+
+function tableToMarkdown(block: NotionBlock): string[] {
+  const lines: string[] = []
+  const tableRows = block.table?.children || []
+  if (tableRows.length > 0) {
+    for (let rowIdx = 0; rowIdx < tableRows.length; rowIdx++) {
+      const row = tableRows[rowIdx]
+      const cells = (row.table_row?.cells || []).map((cell: RichText[]) => richTextToMarkdown(cell))
+      lines.push(`| ${cells.join(' | ')} |`)
+      // Add header separator after first row if table has column header
+      if (rowIdx === 0 && block.table?.has_column_header) {
+        lines.push(`| ${cells.map(() => '---').join(' | ')} |`)
+      }
+    }
+  }
+  return lines
+}
+
+function columnListToMarkdown(block: NotionBlock): string[] {
+  const lines: string[] = []
+  lines.push(':::columns')
+  const columns = block.column_list?.children || []
+  for (let colIdx = 0; colIdx < columns.length; colIdx++) {
+    const col = columns[colIdx]
+    const ratio = col.column?.format?.column_ratio
+    lines.push(ratio !== undefined ? `:::column{width=${ratio}}` : ':::column')
+    const columnChildren = col.column?.children || []
+    if (columnChildren.length > 0) {
+      lines.push(blocksToMarkdown(columnChildren))
+    }
+    if (colIdx < columns.length - 1) {
+      lines.push('')
+    }
+  }
+  lines.push(':::end')
+  return lines
+}
+
 export function blocksToMarkdown(blocks: NotionBlock[]): string {
   const lines: string[] = []
 
@@ -314,28 +377,12 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
       case 'divider':
         lines.push('---')
         break
-      case 'callout': {
-        const calloutText = richTextToMarkdown(block.callout.rich_text)
-        const calloutIcon = block.callout.icon?.emoji || ''
-        const calloutType = getCalloutTypeFromIcon(calloutIcon)
-        lines.push(`> [!${calloutType}] ${calloutText}`)
-        if (block.callout.children?.length > 0) {
-          const childMd = blocksToMarkdown(block.callout.children)
-          lines.push(childMd.replace(/^/gm, '> '))
-        }
+      case 'callout':
+        lines.push(...calloutToMarkdown(block))
         break
-      }
-      case 'toggle': {
-        const toggleText = richTextToMarkdown(block.toggle.rich_text)
-        lines.push('<details>')
-        lines.push(`<summary>${toggleText}</summary>`)
-        if (block.toggle.children && block.toggle.children.length > 0) {
-          lines.push('')
-          lines.push(blocksToMarkdown(block.toggle.children))
-        }
-        lines.push('</details>')
+      case 'toggle':
+        lines.push(...toggleToMarkdown(block))
         break
-      }
       case 'image': {
         const imageUrl = block.image?.file?.url || block.image?.external?.url || ''
         const caption = block.image?.caption ? richTextToMarkdown(block.image.caption) : ''
@@ -351,39 +398,12 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
       case 'equation':
         lines.push(`$$${block.equation.expression}$$`)
         break
-      case 'table': {
-        const tableRows = block.table?.children || []
-        if (tableRows.length > 0) {
-          for (let rowIdx = 0; rowIdx < tableRows.length; rowIdx++) {
-            const row = tableRows[rowIdx]
-            const cells = (row.table_row?.cells || []).map((cell: RichText[]) => richTextToMarkdown(cell))
-            lines.push(`| ${cells.join(' | ')} |`)
-            // Add header separator after first row if table has column header
-            if (rowIdx === 0 && block.table?.has_column_header) {
-              lines.push(`| ${cells.map(() => '---').join(' | ')} |`)
-            }
-          }
-        }
+      case 'table':
+        lines.push(...tableToMarkdown(block))
         break
-      }
-      case 'column_list': {
-        lines.push(':::columns')
-        const columns = block.column_list?.children || []
-        for (let colIdx = 0; colIdx < columns.length; colIdx++) {
-          const col = columns[colIdx]
-          const ratio = col.column?.format?.column_ratio
-          lines.push(ratio !== undefined ? `:::column{width=${ratio}}` : ':::column')
-          const columnChildren = col.column?.children || []
-          if (columnChildren.length > 0) {
-            lines.push(blocksToMarkdown(columnChildren))
-          }
-          if (colIdx < columns.length - 1) {
-            lines.push('')
-          }
-        }
-        lines.push(':::end')
+      case 'column_list':
+        lines.push(...columnListToMarkdown(block))
         break
-      }
       case 'table_of_contents':
         lines.push('[toc]')
         break
