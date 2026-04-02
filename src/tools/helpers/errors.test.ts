@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   aiReadableMessage,
   enhanceError,
+  findClosestMatch,
   NotionMCPError,
   retryWithBackoff,
   suggestFixes,
@@ -364,8 +365,8 @@ describe('retryWithBackoff', () => {
   it('should succeed after retries', async () => {
     const fn = vi
       .fn()
-      .mockRejectedValueOnce({ message: 'fail 1' })
-      .mockRejectedValueOnce({ message: 'fail 2' })
+      .mockImplementationOnce(() => Promise.reject({ message: 'fail 1' }))
+      .mockImplementationOnce(() => Promise.reject({ message: 'fail 2' }))
       .mockResolvedValue('ok')
 
     const result = await retryWithBackoff(fn, { initialDelay: 1, maxDelay: 10 })
@@ -375,7 +376,7 @@ describe('retryWithBackoff', () => {
   })
 
   it('should give up after maxRetries', async () => {
-    const fn = vi.fn().mockRejectedValue({ message: 'always fails' })
+    const fn = vi.fn().mockImplementation(() => Promise.reject({ message: 'always fails' }))
 
     await expect(retryWithBackoff(fn, { maxRetries: 2, initialDelay: 1, maxDelay: 5 })).rejects.toThrow(NotionMCPError)
 
@@ -384,7 +385,7 @@ describe('retryWithBackoff', () => {
   })
 
   it('should not retry on UNAUTHORIZED', async () => {
-    const fn = vi.fn().mockRejectedValue({ code: 'UNAUTHORIZED', message: 'bad token' })
+    const fn = vi.fn().mockImplementation(() => Promise.reject({ code: 'UNAUTHORIZED', message: 'bad token' }))
 
     await expect(retryWithBackoff(fn, { maxRetries: 3, initialDelay: 1 })).rejects.toMatchObject({
       code: 'UNAUTHORIZED'
@@ -394,7 +395,7 @@ describe('retryWithBackoff', () => {
   })
 
   it('should not retry on NOT_FOUND', async () => {
-    const fn = vi.fn().mockRejectedValue({ code: 'NOT_FOUND', message: 'gone' })
+    const fn = vi.fn().mockImplementation(() => Promise.reject({ code: 'NOT_FOUND', message: 'gone' }))
 
     await expect(retryWithBackoff(fn, { maxRetries: 3, initialDelay: 1 })).rejects.toMatchObject({ code: 'NOT_FOUND' })
 
@@ -402,7 +403,10 @@ describe('retryWithBackoff', () => {
   })
 
   it('should retry on other error codes', async () => {
-    const fn = vi.fn().mockRejectedValueOnce({ code: 'RATE_LIMITED', message: 'slow down' }).mockResolvedValue('ok')
+    const fn = vi
+      .fn()
+      .mockImplementationOnce(() => Promise.reject({ code: 'RATE_LIMITED', message: 'slow down' }))
+      .mockResolvedValue('ok')
 
     const result = await retryWithBackoff(fn, { initialDelay: 1 })
 
@@ -420,7 +424,7 @@ describe('retryWithBackoff', () => {
   })
 
   it('should enhance the last error when all retries fail', async () => {
-    const fn = vi.fn().mockRejectedValue({ message: 'transient' })
+    const fn = vi.fn().mockImplementation(() => Promise.reject({ message: 'transient' }))
 
     try {
       await retryWithBackoff(fn, { maxRetries: 1, initialDelay: 1 })
@@ -429,5 +433,30 @@ describe('retryWithBackoff', () => {
       expect(error).toBeInstanceOf(NotionMCPError)
       expect((error as NotionMCPError).code).toBe('UNKNOWN_ERROR')
     }
+  })
+})
+
+describe('findClosestMatch', () => {
+  it('should return null for empty input or empty options', () => {
+    expect(findClosestMatch('', ['option'])).toBeNull()
+    expect(findClosestMatch('input', [])).toBeNull()
+  })
+
+  it('should return option if it is a prefix of input or vice versa (case-insensitive)', () => {
+    expect(findClosestMatch('prop', ['property', 'other'])).toBe('property')
+    expect(findClosestMatch('PROPERTY', ['prop', 'other'])).toBe('prop')
+    expect(findClosestMatch('property', ['Prop', 'other'])).toBe('Prop')
+  })
+
+  it('should return closest match based on bigram similarity', () => {
+    expect(findClosestMatch('propety', ['property', 'something else'])).toBe('property')
+  })
+
+  it('should return null if no match is above threshold', () => {
+    expect(findClosestMatch('xyz', ['abc', 'def'])).toBeNull()
+  })
+
+  it('should return the match with the highest score', () => {
+    expect(findClosestMatch('test', ['testing', 'tent'])).toBe('testing')
   })
 })
