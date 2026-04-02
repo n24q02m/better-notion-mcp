@@ -869,6 +869,54 @@ describe('databases', () => {
     })
   })
 
+  describe('ID resolution', () => {
+    it('should resolve data_source_id when database retrieval fails with object_not_found', async () => {
+      mockNotion.databases.retrieve.mockRejectedValueOnce({ code: 'object_not_found' })
+      mockNotion.dataSources.retrieve.mockResolvedValueOnce({
+        id: 'ds-123',
+        parent: { database_id: 'db-456' }
+      })
+      mockNotion.dataSources.listTemplates.mockResolvedValueOnce({ templates: [], next_cursor: null, has_more: false })
+
+      const result = await databases(notion, {
+        action: 'list_templates',
+        database_id: 'ds-123'
+      })
+
+      expect(result.action).toBe('list_templates')
+      expect(mockNotion.databases.retrieve).toHaveBeenCalled()
+      expect(mockNotion.dataSources.retrieve).toHaveBeenCalledWith({ data_source_id: 'ds123' })
+    })
+
+    it('should throw NOT_FOUND when both database and data source are not found', async () => {
+      mockNotion.databases.retrieve.mockRejectedValueOnce({ code: 'object_not_found' })
+      mockNotion.dataSources.retrieve.mockRejectedValueOnce({ code: 'object_not_found' })
+
+      await expect(
+        databases(notion, {
+          action: 'list_templates',
+          database_id: 'non-existent'
+        })
+      ).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+        message: expect.stringContaining('is not a valid database or data source')
+      })
+    })
+
+    it('should rethrow non-object_not_found errors from database retrieval', async () => {
+      const error = new Error('API Error') as any
+      error.code = 'internal_server_error'
+      mockNotion.databases.retrieve.mockRejectedValueOnce(error)
+
+      await expect(
+        databases(notion, {
+          action: 'list_templates',
+          database_id: 'db-1'
+        })
+      ).rejects.toThrow('API Error')
+    })
+  })
+
   describe('unknown action', () => {
     it('should throw on unknown action', async () => {
       await expect(databases(notion, { action: 'invalid' as any })).rejects.toThrow('Unknown action: invalid')

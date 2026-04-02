@@ -156,8 +156,35 @@ describe('commentsManage', () => {
     it('should throw without page_id', async () => {
       await expect(commentsManage(mockNotion as any, { action: 'list' })).rejects.toMatchObject({
         code: 'VALIDATION_ERROR',
-        message: 'page_id required for list action'
+        message: 'page_id required for list action',
+        suggestion: 'Provide page_id'
       })
+    })
+
+    it('should handle errors during pagination', async () => {
+      mockNotion.comments.list
+        .mockResolvedValueOnce({
+          results: [
+            {
+              id: 'c1',
+              created_time: '2024-01-01',
+              created_by: { id: 'u1' },
+              discussion_id: 'd1',
+              rich_text: [],
+              parent: { type: 'page_id', page_id: 'p1' }
+            }
+          ],
+          has_more: true,
+          next_cursor: 'next'
+        })
+        .mockRejectedValueOnce(new Error('Pagination failed'))
+
+      await expect(
+        commentsManage(mockNotion as any, {
+          action: 'list',
+          page_id: 'page-1'
+        })
+      ).rejects.toThrow('Pagination failed')
     })
   })
 
@@ -232,8 +259,20 @@ describe('commentsManage', () => {
     it('should throw without comment_id', async () => {
       await expect(commentsManage(mockNotion as any, { action: 'get' })).rejects.toMatchObject({
         code: 'VALIDATION_ERROR',
-        message: 'comment_id required for get action'
+        message: 'comment_id required for get action',
+        suggestion: 'Provide comment_id'
       })
+    })
+
+    it('should throw when Notion API returns an error', async () => {
+      mockNotion.comments.retrieve.mockRejectedValue(new Error('Retrieve failed'))
+
+      await expect(
+        commentsManage(mockNotion as any, {
+          action: 'get',
+          comment_id: 'comment-1'
+        })
+      ).rejects.toThrow('Retrieve failed')
     })
   })
 
@@ -268,7 +307,8 @@ describe('commentsManage', () => {
     it('should throw without content', async () => {
       await expect(commentsManage(mockNotion as any, { action: 'create', page_id: 'page-1' })).rejects.toMatchObject({
         code: 'VALIDATION_ERROR',
-        message: 'content required for create action'
+        message: 'content required for create action',
+        suggestion: 'Provide comment content'
       })
     })
 
@@ -277,6 +317,18 @@ describe('commentsManage', () => {
         code: 'VALIDATION_ERROR',
         message: 'Either page_id or discussion_id is required for create action'
       })
+    })
+
+    it('should throw when Notion API returns an error', async () => {
+      mockNotion.comments.create.mockRejectedValue(new Error('Create failed'))
+
+      await expect(
+        commentsManage(mockNotion as any, {
+          action: 'create',
+          page_id: 'page-1',
+          content: 'Hello'
+        })
+      ).rejects.toThrow('Create failed')
     })
   })
 

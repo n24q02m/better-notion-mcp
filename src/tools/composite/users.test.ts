@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { users } from './users'
+import { users } from './users.js'
 
 const mockNotion = {
   users: {
@@ -76,7 +76,8 @@ describe('users', () => {
 
       await expect(users(mockNotion as any, { action: 'list' })).rejects.toMatchObject({
         code: 'RESTRICTED_RESOURCE',
-        message: expect.stringContaining('does not have permission')
+        message: expect.stringContaining('does not have permission'),
+        suggestion: expect.stringContaining('Use action "from_workspace"')
       })
     })
 
@@ -84,7 +85,8 @@ describe('users', () => {
       mockNotion.users.list.mockRejectedValue({ code: 'RESTRICTED_RESOURCE' })
 
       await expect(users(mockNotion as any, { action: 'list' })).rejects.toMatchObject({
-        code: 'RESTRICTED_RESOURCE'
+        code: 'RESTRICTED_RESOURCE',
+        suggestion: expect.stringContaining('Use action "from_workspace"')
       })
     })
 
@@ -140,10 +142,31 @@ describe('users', () => {
       expect(result.email).toBeUndefined()
     })
 
+    it('should default name to Unknown when missing', async () => {
+      mockNotion.users.retrieve.mockResolvedValue({
+        id: 'user-1',
+        type: 'person',
+        avatar_url: null,
+        person: {}
+      })
+
+      const result = await users(mockNotion as any, { action: 'get', user_id: 'user-1' })
+
+      expect(result.name).toBe('Unknown')
+    })
+
     it('should throw without user_id', async () => {
       await expect(users(mockNotion as any, { action: 'get' })).rejects.toMatchObject({
         code: 'VALIDATION_ERROR',
         message: 'user_id required for get action'
+      })
+    })
+
+    it('should handle Notion API errors', async () => {
+      mockNotion.users.retrieve.mockRejectedValue({ code: 'object_not_found' })
+
+      await expect(users(mockNotion as any, { action: 'get', user_id: 'missing' })).rejects.toMatchObject({
+        code: 'NOT_FOUND'
       })
     })
   })
@@ -177,6 +200,14 @@ describe('users', () => {
       const result = await users(mockNotion as any, { action: 'me' })
 
       expect(result.name).toBe('Bot')
+    })
+
+    it('should handle Notion API errors', async () => {
+      mockNotion.users.retrieve.mockRejectedValue({ code: 'unauthorized' })
+
+      await expect(users(mockNotion as any, { action: 'me' })).rejects.toMatchObject({
+        code: 'UNAUTHORIZED'
+      })
     })
   })
 
@@ -245,6 +276,14 @@ describe('users', () => {
 
       expect(result.total).toBe(0)
       expect(result.users).toEqual([])
+    })
+
+    it('should handle Notion API errors', async () => {
+      mockNotion.search.mockRejectedValue({ code: 'rate_limited' })
+
+      await expect(users(mockNotion as any, { action: 'from_workspace' })).rejects.toMatchObject({
+        code: 'RATE_LIMITED'
+      })
     })
   })
 

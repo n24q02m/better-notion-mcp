@@ -8,7 +8,7 @@ import { formatCover } from '../helpers/covers.js'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { formatIcon } from '../helpers/icons.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
-import { autoPaginate, fetchChildrenRecursive, processBatches } from '../helpers/pagination.js'
+import { autoPaginate, populateDeepChildren, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties, extractPageProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
 
@@ -218,11 +218,7 @@ async function getPage(notion: Client, input: PagesInput): Promise<GetPageResult
   )
 
   // Recursively fetch children for blocks that need them (tables, toggles, columns)
-  await fetchChildrenRecursive(blocks as any[], async (blockId) => {
-    return autoPaginate((cursor) =>
-      notion.blocks.children.list({ block_id: blockId, start_cursor: cursor, page_size: 100 })
-    ) as any
-  })
+  await populateDeepChildren(notion, blocks as any[])
 
   const markdown = blocksToMarkdown(blocks as any)
 

@@ -303,6 +303,13 @@ describe('convertToNotionProperties', () => {
       })
     })
 
+    it('falls back to single value if JSON array contains non-string elements', () => {
+      const result = convertToNotionProperties({ Projects: '["abc123", 123]' }, { Projects: 'relation' })
+      expect(result).toEqual({
+        Projects: { relation: [{ id: '["abc123", 123]' }] }
+      })
+    })
+
     it('converts empty string to empty relation array', () => {
       const result = convertToNotionProperties({ Project: '' }, { Project: 'relation' })
       expect(result).toEqual({
@@ -322,6 +329,20 @@ describe('convertToNotionProperties', () => {
       const result = convertToNotionProperties({ Project: value }, { Project: 'relation' })
       expect(result).toEqual({
         Project: value
+      })
+    })
+
+    it('treats malformed JSON starting with [ as a single value', () => {
+      const result = convertToNotionProperties({ Project: '[invalid' }, { Project: 'relation' })
+      expect(result).toEqual({
+        Project: { relation: [{ id: '[invalid' }] }
+      })
+    })
+
+    it('handles JSON array with non-string elements by falling back to single value', () => {
+      const result = convertToNotionProperties({ Project: '[123]' }, { Project: 'relation' })
+      expect(result).toEqual({
+        Project: { relation: [{ id: '[123]' }] }
       })
     })
   })

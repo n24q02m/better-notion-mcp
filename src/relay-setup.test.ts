@@ -27,6 +27,7 @@ describe('ensureConfig', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('returns token from config file', async () => {
@@ -139,5 +140,42 @@ describe('ensureConfig', () => {
     await ensureConfig()
 
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining(relayUrl))
+  })
+
+  it('returns token even if completion notification fetch fails', async () => {
+    vi.mocked(resolveConfig).mockResolvedValue({ config: null, source: null })
+    vi.mocked(createSession).mockResolvedValue({
+      sessionId: 'test-session',
+      keyPair: {} as any,
+      passphrase: 'word1-word2-word3-word4',
+      relayUrl: 'https://better-notion-mcp.n24q02m.com/setup?s=test'
+    })
+    vi.mocked(pollForResult).mockResolvedValue({
+      NOTION_TOKEN: 'ntn_relay_token_123'
+    })
+
+    const fetchMock = vi.fn().mockRejectedValue(new Error('Network error'))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await ensureConfig()
+
+    expect(result).toBe('ntn_relay_token_123')
+    expect(fetchMock).toHaveBeenCalled()
+  })
+
+  it('returns null and logs generic timeout message when pollForResult fails with unknown error', async () => {
+    vi.mocked(resolveConfig).mockResolvedValue({ config: null, source: null })
+    vi.mocked(createSession).mockResolvedValue({
+      sessionId: 'test-session',
+      keyPair: {} as any,
+      passphrase: 'word1-word2-word3-word4',
+      relayUrl: 'https://better-notion-mcp.n24q02m.com/setup?s=test'
+    })
+    vi.mocked(pollForResult).mockRejectedValue(new Error('Some other error'))
+
+    const result = await ensureConfig()
+
+    expect(result).toBeNull()
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('timed out or session expired'))
   })
 })
