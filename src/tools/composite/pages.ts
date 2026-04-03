@@ -480,6 +480,44 @@ async function archivePage(notion: Client, input: PagesInput): Promise<ArchivePa
 }
 
 /**
+ * Sanitize block for creation by stripping read-only fields and null values.
+ */
+function sanitizeBlockForCreation(block: any): any {
+  const {
+    id,
+    parent,
+    created_time,
+    last_edited_time,
+    created_by,
+    last_edited_by,
+    has_children,
+    archived,
+    in_trash,
+    request_id,
+    object,
+    ...rest
+  } = block
+
+  // Strip null values inside block type data (e.g., paragraph.icon: null)
+  // Notion API rejects null where it expects object or undefined
+  const blockType = rest.type
+  if (blockType && rest[blockType] && typeof rest[blockType] === 'object') {
+    for (const key of Object.keys(rest[blockType])) {
+      if (rest[blockType][key] === null) {
+        delete rest[blockType][key]
+      }
+    }
+  }
+
+  // If the block has populated children (from deep fetch), sanitize those too
+  if (rest[blockType]?.children) {
+    rest[blockType].children = rest[blockType].children.map(sanitizeBlockForCreation)
+  }
+
+  return rest
+}
+
+/**
  * Duplicate page
  * Maps to: GET /v1/pages/{id} + POST /v1/pages + GET/PATCH /v1/blocks
  */
@@ -490,26 +528,34 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
     throw new NotionMCPError('page_id or page_ids required', 'VALIDATION_ERROR', 'Provide at least one page ID')
   }
 
-  // Process duplicates in batches to improve performance while respecting rate limits
-  const results = await processBatches(
+  // 1. Fetch metadata and content for all pages in parallel
+  // This phase is read-heavy and can benefit from higher concurrency
+  const sourceData = await processBatches(
     pageIds,
     async (pageId) => {
-      // Get original page and content in parallel
-
       const [originalPage, originalBlocks] = await Promise.all([
         notion.pages.retrieve({ page_id: pageId }) as Promise<any>,
-
         autoPaginate((cursor) =>
           notion.blocks.children.list({
             block_id: pageId,
-
             start_cursor: cursor,
-
             page_size: 100
           })
         )
       ])
 
+      // Recursively fetch children for complex blocks to ensure complete duplication
+      await populateDeepChildren(notion, originalBlocks)
+
+      return { pageId, originalPage, originalBlocks }
+    },
+    { batchSize: 10, concurrency: 3 }
+  )
+
+  // 2. Create duplicates and append content in parallel
+  const results = await processBatches(
+    sourceData,
+    async ({ pageId, originalPage, originalBlocks }) => {
       // Sanitize parent - API response may include extra fields that
       // the create endpoint rejects (e.g. database_id in data_source parent)
       const rawParent = originalPage.parent
@@ -524,47 +570,31 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
         parent = rawParent
       }
 
-      // Create duplicate
+      // Sanitize blocks for creation
+      const sanitizedBlocks = originalBlocks.map(sanitizeBlockForCreation)
+
+      // Split blocks: first 100 can go into the creation call
+      const firstBatch = sanitizedBlocks.slice(0, 100)
+      const remainingBlocks = sanitizedBlocks.slice(100)
+
+      // Create duplicate with initial content
       const duplicatedPage: any = await notion.pages.create({
         parent,
         properties: originalPage.properties,
         icon: originalPage.icon,
-        cover: originalPage.cover
-      })
+        cover: originalPage.cover,
+        children: firstBatch.length > 0 ? (firstBatch as any) : undefined
+      } as any)
 
-      // Copy content — strip read-only fields that the create endpoint rejects
-      if (originalBlocks.length > 0) {
-        const sanitizedBlocks = originalBlocks.map((block: any) => {
-          const {
-            id,
-            parent,
-            created_time,
-            last_edited_time,
-            created_by,
-            last_edited_by,
-            has_children,
-            archived,
-            in_trash,
-            request_id,
-            object,
-            ...rest
-          } = block
-          // Strip null values inside block type data (e.g., paragraph.icon: null)
-          // Notion API rejects null where it expects object or undefined
-          const blockType = rest.type
-          if (blockType && rest[blockType] && typeof rest[blockType] === 'object') {
-            for (const key of Object.keys(rest[blockType])) {
-              if (rest[blockType][key] === null) {
-                delete rest[blockType][key]
-              }
-            }
-          }
-          return rest
-        })
-        await notion.blocks.children.append({
-          block_id: duplicatedPage.id,
-          children: sanitizedBlocks as any
-        })
+      // Append remaining blocks in chunks of 100 to stay within API limits
+      if (remainingBlocks.length > 0) {
+        for (let i = 0; i < remainingBlocks.length; i += 100) {
+          const chunk = remainingBlocks.slice(i, i + 100)
+          await notion.blocks.children.append({
+            block_id: duplicatedPage.id,
+            children: chunk as any
+          })
+        }
       }
 
       return {
@@ -573,7 +603,7 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
         url: duplicatedPage.url
       }
     },
-    { batchSize: 5, concurrency: 3 }
+    { batchSize: 5, concurrency: 2 } // Lower concurrency for write operations to avoid 429s
   )
 
   return {

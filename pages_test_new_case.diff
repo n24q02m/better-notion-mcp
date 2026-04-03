@@ -1,0 +1,60 @@
+<<<<<<< SEARCH
+    it('throws without page_id or page_ids', async () => {
+      await expect(pages(mockNotion as any, { action: 'duplicate' })).rejects.toThrow('page_id or page_ids required')
+    })
+  })
+=======
+    it('throws without page_id or page_ids', async () => {
+      await expect(pages(mockNotion as any, { action: 'duplicate' })).rejects.toThrow('page_id or page_ids required')
+    })
+
+    it('handles chunking for more than 100 blocks', async () => {
+      const manyBlocks = Array.from({ length: 150 }, (_, i) => ({
+        id: `block-${i}`,
+        type: 'paragraph',
+        paragraph: { rich_text: [{ plain_text: `Block ${i}` }] }
+      }))
+
+      mockNotion.pages.retrieve.mockResolvedValue({
+        id: 'orig-many',
+        parent: { type: 'page_id', page_id: 'parent-1' },
+        properties: {},
+        icon: null,
+        cover: null
+      })
+      mockNotion.blocks.children.list.mockResolvedValue({
+        results: manyBlocks,
+        next_cursor: null,
+        has_more: false
+      })
+      mockNotion.pages.create.mockResolvedValue({
+        id: 'dup-many',
+        url: 'https://notion.so/dup-many'
+      })
+      mockNotion.blocks.children.append.mockResolvedValue({ results: [] })
+
+      await pages(mockNotion as any, { action: 'duplicate', page_id: 'orig-many' })
+
+      // First 100 blocks should be in create
+      expect(mockNotion.pages.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          children: expect.arrayContaining([
+            expect.objectContaining({ type: 'paragraph' })
+          ])
+        })
+      )
+      const createCall = mockNotion.pages.create.mock.calls.find(call => (call[0] as any).children?.length === 100)
+      expect(createCall).toBeDefined()
+
+      // Remaining 50 blocks should be in append
+      expect(mockNotion.blocks.children.append).toHaveBeenCalledWith({
+        block_id: 'dup-many',
+        children: expect.arrayContaining([
+          expect.objectContaining({ type: 'paragraph' })
+        ])
+      })
+      const appendCall = mockNotion.blocks.children.append.mock.calls.find(call => (call[0] as any).children?.length === 50)
+      expect(appendCall).toBeDefined()
+    })
+  })
+>>>>>>> REPLACE
