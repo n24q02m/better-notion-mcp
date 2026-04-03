@@ -97,12 +97,8 @@ export function convertToNotionProperties(
       // Could be multi_select, relation, people, files
       // Only assume multi_select if all elements are strings
       if (value.length > 0 && value.every((v) => typeof v === 'string')) {
-        const multiSelect = new Array(value.length)
-        for (let j = 0; j < value.length; j++) {
-          multiSelect[j] = { name: value[j] }
-        }
         converted[key] = {
-          multi_select: multiSelect
+          multi_select: value.map((v: string) => ({ name: v }))
         }
       } else {
         converted[key] = value
@@ -142,9 +138,7 @@ export function extractPageProperties(pageProperties: any): any {
     } else if (p.type === 'select' && p.select) {
       properties[key] = p.select.name
     } else if (p.type === 'multi_select' && p.multi_select) {
-      const arr = new Array(p.multi_select.length)
-      for (let j = 0; j < p.multi_select.length; j++) arr[j] = p.multi_select[j].name
-      properties[key] = arr
+      properties[key] = p.multi_select.map((m: any) => m.name)
     } else if (p.type === 'number') {
       properties[key] = p.number
     } else if (p.type === 'checkbox') {
