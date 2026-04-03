@@ -29,8 +29,7 @@ function loadConfig(): HttpConfig {
 
   for (const key of required) {
     if (!process.env[key]) {
-      console.error(`Missing required env var: ${key}`)
-      process.exit(1)
+      throw new Error(`Missing required env var: ${key}`)
     }
   }
 

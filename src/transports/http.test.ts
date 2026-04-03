@@ -103,21 +103,10 @@ describe('startHttp', () => {
     process.env = originalEnv
   })
 
-  it('should exit if PUBLIC_URL is missing', async () => {
+  it('should throw if PUBLIC_URL is missing', async () => {
     delete process.env.PUBLIC_URL
-    const mockExit = vi.spyOn(process, 'exit').mockImplementation((() => {
-      throw new Error('process.exit')
-    }) as any)
-    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {})
-
     const { startHttp } = await import('./http.js')
-    await expect(startHttp()).rejects.toThrow('process.exit')
-
-    expect(mockError).toHaveBeenCalledWith('Missing required env var: PUBLIC_URL')
-    expect(mockExit).toHaveBeenCalledWith(1)
-
-    mockExit.mockRestore()
-    mockError.mockRestore()
+    await expect(startHttp()).rejects.toThrow('Missing required env var: PUBLIC_URL')
   })
 
   it('should register OAuth router, health, and MCP endpoints', async () => {
@@ -791,9 +780,89 @@ describe('startHttp', () => {
     })
   })
 
+  describe('loadConfig', () => {
+    it('should throw error when PUBLIC_URL is missing', async () => {
+      delete process.env.PUBLIC_URL
+      const { startHttp } = await import('./http.js')
+      await expect(startHttp()).rejects.toThrow('Missing required env var: PUBLIC_URL')
+    })
+
+    it('should use default port 8080 when PORT is missing', async () => {
+      delete process.env.PORT
+      const { startHttp } = await import('./http.js')
+      const express = (await import('express')).default
+      await startHttp()
+      const app = (express as any).mock.results[0]?.value
+      expect(app.listen).toHaveBeenCalledWith(8080, '0.0.0.0', expect.any(Function))
+    })
+  })
+
+  describe('StreamableHTTPServerTransport callbacks', () => {
+    it('should generate UUID in sessionIdGenerator', async () => {
+      const { isInitializeRequest: mockIsInit } = await import('@modelcontextprotocol/sdk/types.js')
+      ;(mockIsInit as any).mockReturnValue(true)
+
+      const { StreamableHTTPServerTransport: MockTransport } = await import(
+        '@modelcontextprotocol/sdk/server/streamableHttp.js'
+      )
+
+      let capturedConfig: any = null
+      ;(MockTransport as any).mockImplementation(function (this: any, config: any) {
+        capturedConfig = config
+        this.sessionId = null
+        this.handleRequest = vi.fn()
+      })
+
+      const handlers = await startAndGetHandlers()
+      const postHandler = handlers['POST:/mcp']?.at(-1) as Fn
+      await postHandler({ headers: {}, body: { method: 'initialize' }, auth: { token: 't' } }, mockRes())
+
+      expect(capturedConfig.sessionIdGenerator).toBeDefined()
+      const id = capturedConfig.sessionIdGenerator()
+      expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
+    })
+
+    it('should cleanup on transport.onclose', async () => {
+      const { isInitializeRequest: mockIsInit } = await import('@modelcontextprotocol/sdk/types.js')
+      ;(mockIsInit as any).mockReturnValue(true)
+
+      const { StreamableHTTPServerTransport: MockTransport } = await import(
+        '@modelcontextprotocol/sdk/server/streamableHttp.js'
+      )
+
+      let transportInstance: any = null
+      ;(MockTransport as any).mockImplementation(function (this: any, config: any) {
+        transportInstance = this
+        this.sessionId = null
+        this.handleRequest = vi.fn()
+        // We simulate onsessioninitialized being called when the transport is "connected" or handled
+        this._config = config
+      })
+
+      const handlers = await startAndGetHandlers()
+      const postHandler = handlers['POST:/mcp']?.at(-1) as Fn
+      await postHandler({ headers: {}, body: { method: 'initialize' }, auth: { token: 't' } }, mockRes())
+
+      expect(transportInstance.onclose).toBeDefined()
+
+      // Call it manually to simulate the internal logic in startHttp
+      transportInstance._config.onsessioninitialized('test-session-to-close')
+      transportInstance.sessionId = 'test-session-to-close'
+
+      // Trigger onclose
+      transportInstance.onclose()
+
+      // Verify it's removed by trying a GET
+      const getHandler = handlers['GET:/mcp']?.at(-1) as Fn
+      const res = mockRes()
+      await getHandler({ headers: { 'mcp-session-id': 'test-session-to-close' }, auth: { token: 't' } }, res)
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Invalid or missing session' }))
+    })
+  })
+
   describe('IP propagation middleware', () => {
     it('should run requestContext with IP from req.ip', async () => {
-      const { requestContext } = await import('../auth/notion-oauth-provider.js')
       const mockLog = vi.spyOn(console, 'info').mockImplementation(() => {})
 
       const { startHttp } = await import('./http.js')
@@ -812,11 +881,22 @@ describe('startHttp', () => {
 
       if (ipMiddleware) {
         const middleware = ipMiddleware[0]
-        const req = { ip: '192.168.1.1', socket: { remoteAddress: '10.0.0.1' } }
-        const next = vi.fn()
-        // Just verify it calls next without throwing
-        middleware(req, {}, next)
-        expect(next).toHaveBeenCalled()
+        const req1 = { ip: '192.168.1.1', socket: { remoteAddress: '10.0.0.1' } }
+        const next1 = vi.fn()
+        middleware(req1, {}, next1)
+        expect(next1).toHaveBeenCalled()
+
+        // Test socket.remoteAddress fallback
+        const req2 = { socket: { remoteAddress: '10.0.0.2' } }
+        const next2 = vi.fn()
+        middleware(req2, {}, next2)
+        expect(next2).toHaveBeenCalled()
+
+        // Test undefined fallback
+        const req3 = { socket: {} }
+        const next3 = vi.fn()
+        middleware(req3, {}, next3)
+        expect(next3).toHaveBeenCalled()
       }
 
       mockLog.mockRestore()
