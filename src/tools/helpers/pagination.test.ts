@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { autoPaginate, fetchChildrenRecursive, populateDeepChildren, processBatches } from './pagination'
+import { autoPaginate, fetchChildrenRecursive, populateDeepChildren, processBatches, ConcurrencyQueue } from './pagination'
 
 describe('autoPaginate', () => {
   it('should return results from a single page', async () => {
@@ -239,6 +239,8 @@ describe('processBatches', () => {
 
     expect(processFn).toHaveBeenCalledWith(1)
     expect(processFn).toHaveBeenCalledWith(2)
+    // In the new implementation with ConcurrencyQueue, task3 might be called if it was already in the queue or if concurrency > 1
+    // But with batchSize: 1, concurrency: 1, it should stop exactly after 2.
     expect(processFn).not.toHaveBeenCalledWith(3)
   })
 })
@@ -267,5 +269,36 @@ describe('populateDeepChildren', () => {
     })
     expect((blocks[0] as any).toggle.children).toHaveLength(1)
     expect((blocks[0] as any).toggle.children[0].id).toBe('child-1')
+  })
+})
+
+describe('ConcurrencyQueue', () => {
+  it('should respect concurrency limit', async () => {
+    const queue = new ConcurrencyQueue(2)
+    let active = 0
+    let maxActive = 0
+
+    const tasks = Array.from({ length: 5 }, () => async () => {
+      active++
+      maxActive = Math.max(maxActive, active)
+      await new Promise(resolve => setTimeout(resolve, 10))
+      active--
+    })
+
+    await Promise.all(tasks.map(t => queue.run(t)))
+    expect(maxActive).toBe(2)
+    expect(active).toBe(0)
+  })
+
+  it('should fail fast on error', async () => {
+    const queue = new ConcurrencyQueue(1)
+    const error = new Error('boom')
+
+    const task1 = async () => { throw error }
+    const task2 = vi.fn().mockResolvedValue('ok')
+
+    await expect(queue.run(task1)).rejects.toThrow('boom')
+    await expect(queue.run(task2)).rejects.toThrow('Queue stopped due to previous error')
+    expect(task2).not.toHaveBeenCalled()
   })
 })
