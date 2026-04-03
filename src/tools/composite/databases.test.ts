@@ -123,6 +123,27 @@ describe('databases', () => {
       expect(call.is_inline).toBe(true)
     })
 
+    it('should include icon and cover when provided', async () => {
+      mockNotion.databases.create.mockResolvedValueOnce({
+        id: 'db-icon',
+        url: 'https://notion.so/db-icon',
+        data_sources: [{ id: 'ds-icon' }]
+      })
+
+      await databases(notion, {
+        action: 'create',
+        parent_id: 'page-1',
+        title: 'DB with icon',
+        properties: { Name: { title: {} } },
+        icon: 'robot:gray',
+        cover: 'https://example.com/cover.jpg'
+      })
+
+      const call = mockNotion.databases.create.mock.calls[0][0]
+      expect(call.icon).toBeDefined()
+      expect(call.cover).toBeDefined()
+    })
+
     it('should throw when required params are missing', async () => {
       await expect(databases(notion, { action: 'create', parent_id: 'page-1', title: 'No Props' })).rejects.toThrow(
         'parent_id, title, and properties required'

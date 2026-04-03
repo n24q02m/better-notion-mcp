@@ -410,6 +410,23 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
       case 'breadcrumb':
         lines.push('[breadcrumb]')
         break
+      case 'file':
+      case 'pdf':
+      case 'video':
+      case 'audio': {
+        const mediaData = block[block.type]
+        const mediaUrl = mediaData?.file?.url || mediaData?.external?.url || ''
+        const mediaCaption = mediaData?.caption ? richTextToMarkdown(mediaData.caption) : ''
+        const mediaName = mediaData?.name || mediaCaption || block.type
+        lines.push(`[${mediaName}](${mediaUrl})`)
+        break
+      }
+      case 'child_page':
+        lines.push(`[${block.child_page.title}](${block.id})`)
+        break
+      case 'child_database':
+        lines.push(`[${block.child_database.title}](${block.id})`)
+        break
       default:
         // Unsupported block type, skip
         break

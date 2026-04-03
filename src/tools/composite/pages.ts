@@ -26,6 +26,8 @@ export interface GetPageResult {
   created_time: string
   last_edited_time: string
   archived: boolean
+  icon: any
+  cover: any
   properties: Record<string, any>
   content: string
   block_count: number
@@ -232,6 +234,8 @@ async function getPage(notion: Client, input: PagesInput): Promise<GetPageResult
     created_time: page.created_time,
     last_edited_time: page.last_edited_time,
     archived: page.archived,
+    icon: page.icon || null,
+    cover: page.cover || null,
     properties,
     content: markdown,
     block_count: blocks.length

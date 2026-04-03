@@ -283,6 +283,14 @@ async function createDatabase(notion: Client, input: DatabasesInput): Promise<Cr
     dbData.is_inline = input.is_inline
   }
 
+  if (input.icon) {
+    dbData.icon = formatIcon(input.icon)
+  }
+
+  if (input.cover) {
+    dbData.cover = formatCover(input.cover)
+  }
+
   const database: any = await notion.databases.create(dbData)
 
   return {
