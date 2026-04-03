@@ -440,6 +440,72 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
  * Parse inline markdown formatting to rich text
  * Supports: bold, italic, code, strikethrough, links, mentions, colors
  */
+function tryParseMention(
+  text: string,
+  index: number,
+  formatting: { bold: boolean; italic: boolean; code: boolean; strikethrough: boolean }
+): { richText: RichText; nextIndex: number } | null | 'no-more' {
+  if (text[index] !== '@' || text[index + 1] !== '[') return null
+
+  const closeBracket = text.indexOf(']', index + 2)
+  if (closeBracket === -1) return 'no-more'
+
+  if (closeBracket + 1 < text.length && text[closeBracket + 1] === '(') {
+    const closeParen = text.indexOf(')', closeBracket + 2)
+    if (closeParen !== -1) {
+      const mentionTitle = text.slice(index + 2, closeBracket)
+      const mentionTarget = text.slice(closeBracket + 2, closeParen)
+
+      // Extract 32-char hex page ID from Notion URL or use as-is
+      const idMatch = mentionTarget.match(/([a-f0-9]{32})/)
+      const pageId = idMatch ? idMatch[1] : mentionTarget
+
+      return {
+        richText: createMention({ page: { id: pageId } }, mentionTitle, formatting),
+        nextIndex: closeParen
+      }
+    }
+  }
+  return null
+}
+
+function tryParseLink(
+  text: string,
+  index: number,
+  formatting: { bold: boolean; italic: boolean; code: boolean; strikethrough: boolean }
+): { richText: RichText; nextIndex: number } | null | 'no-more' {
+  if (text[index] !== '[') return null
+
+  const closeBracket = text.indexOf(']', index + 1)
+  if (closeBracket === -1) return 'no-more'
+
+  if (closeBracket + 1 < text.length && text[closeBracket + 1] === '(') {
+    const closeParen = text.indexOf(')', closeBracket + 2)
+    if (closeParen !== -1) {
+      const linkText = text.slice(index + 1, closeBracket)
+      const linkUrl = text.slice(closeBracket + 2, closeParen)
+      const isSafe = isSafeUrl(linkUrl)
+
+      return {
+        richText: {
+          type: 'text',
+          text: { content: linkText, link: isSafe ? { url: linkUrl } : null },
+          annotations: {
+            ...formatting,
+            underline: false,
+            color: 'default'
+          }
+        },
+        nextIndex: closeParen
+      }
+    }
+  }
+  return null
+}
+/**
+ * Parse inline markdown formatting to rich text
+ * Supports: bold, italic, code, strikethrough, links, mentions, colors
+ */
 export function parseRichText(text: string): RichText[] {
   const richText: RichText[] = []
   let current = ''
@@ -460,66 +526,33 @@ export function parseRichText(text: string): RichText[] {
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
     const next = text[i + 1]
+    const formatting = { bold, italic, code, strikethrough }
 
     // Page mention @[Title](page-id-or-url) — must come before link handling
     // ⚡ Bolt: Added algorithmic short-circuiting to prevent O(N^2) lookaheads on pathological inputs
     // with many `@[` but no `]`.
-    if (char === '@' && next === '[' && !noMoreMentionCloseBrackets) {
-      const closeBracket = text.indexOf(']', i + 2)
-      if (closeBracket === -1) {
+    if (!noMoreMentionCloseBrackets) {
+      const mentionResult = tryParseMention(text, i, formatting)
+      if (mentionResult === 'no-more') {
         noMoreMentionCloseBrackets = true
-      } else if (closeBracket + 1 < text.length && text[closeBracket + 1] === '(') {
-        const closeParen = text.indexOf(')', closeBracket + 2)
-        if (closeParen !== -1) {
-          flushCurrent()
-
-          const mentionTitle = text.slice(i + 2, closeBracket)
-          const mentionTarget = text.slice(closeBracket + 2, closeParen)
-
-          // Extract 32-char hex page ID from Notion URL or use as-is
-          const idMatch = mentionTarget.match(/([a-f0-9]{32})/)
-          const pageId = idMatch ? idMatch[1] : mentionTarget
-
-          richText.push(createMention({ page: { id: pageId } }, mentionTitle, { bold, italic, code, strikethrough }))
-
-          i = closeParen
-          continue
-        }
+      } else if (mentionResult) {
+        flushCurrent()
+        richText.push(mentionResult.richText)
+        i = mentionResult.nextIndex
+        continue
       }
     }
 
     // Link [text](url) — optimized to avoid O(N²) on pathological inputs
-    if (char === '[' && !noMoreCloseBrackets) {
-      const closeBracket = text.indexOf(']', i + 1)
-      if (closeBracket === -1) {
-        // No more ] in the rest of the string, skip future indexOf calls
+    if (!noMoreCloseBrackets) {
+      const linkResult = tryParseLink(text, i, formatting)
+      if (linkResult === 'no-more') {
         noMoreCloseBrackets = true
-      } else if (closeBracket + 1 < text.length && text[closeBracket + 1] === '(') {
-        const closeParen = text.indexOf(')', closeBracket + 2)
-
-        if (closeParen !== -1) {
-          flushCurrent()
-
-          const linkText = text.slice(i + 1, closeBracket)
-          const linkUrl = text.slice(closeBracket + 2, closeParen)
-          const isSafe = isSafeUrl(linkUrl)
-
-          richText.push({
-            type: 'text',
-            text: { content: linkText, link: isSafe ? { url: linkUrl } : null },
-            annotations: {
-              bold,
-              italic,
-              strikethrough,
-              underline: false,
-              code,
-              color: 'default'
-            }
-          })
-
-          i = closeParen
-          continue
-        }
+      } else if (linkResult) {
+        flushCurrent()
+        richText.push(linkResult.richText)
+        i = linkResult.nextIndex
+        continue
       }
     }
 
@@ -557,7 +590,6 @@ export function parseRichText(text: string): RichText[] {
 
   return richText.length > 0 ? richText : [createRichText(text)]
 }
-
 /**
  * Convert rich text array to plain markdown
  */
