@@ -208,6 +208,8 @@ describe('pages', () => {
         created_time: '2024-01-01T00:00:00.000Z',
         last_edited_time: '2024-01-02T00:00:00.000Z',
         archived: false,
+        icon: null,
+        cover: null,
         properties: { Name: 'Test' },
         content: '# Mock markdown',
         block_count: 1

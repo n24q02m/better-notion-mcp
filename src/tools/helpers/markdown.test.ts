@@ -1345,13 +1345,102 @@ describe('blocksToMarkdown', () => {
     })
   })
 
+  describe('media blocks', () => {
+    it('should render file block as link', () => {
+      const blocks: NotionBlock[] = [
+        {
+          object: 'block',
+          type: 'file',
+          file: { file: { url: 'https://example.com/doc.pdf' }, name: 'document.pdf', caption: [] }
+        }
+      ]
+      expect(blocksToMarkdown(blocks)).toBe('[document.pdf](https://example.com/doc.pdf)')
+    })
+
+    it('should render pdf block as link', () => {
+      const blocks: NotionBlock[] = [
+        {
+          object: 'block',
+          type: 'pdf',
+          pdf: { external: { url: 'https://example.com/report.pdf' }, caption: [] }
+        }
+      ]
+      expect(blocksToMarkdown(blocks)).toBe('[pdf](https://example.com/report.pdf)')
+    })
+
+    it('should render video block as link', () => {
+      const blocks: NotionBlock[] = [
+        {
+          object: 'block',
+          type: 'video',
+          video: { external: { url: 'https://youtube.com/watch?v=123' }, caption: [] }
+        }
+      ]
+      expect(blocksToMarkdown(blocks)).toBe('[video](https://youtube.com/watch?v=123)')
+    })
+
+    it('should render audio block as link', () => {
+      const blocks: NotionBlock[] = [
+        {
+          object: 'block',
+          type: 'audio',
+          audio: { file: { url: 'https://example.com/song.mp3' }, caption: [] }
+        }
+      ]
+      expect(blocksToMarkdown(blocks)).toBe('[audio](https://example.com/song.mp3)')
+    })
+
+    it('should use caption as name when name is absent', () => {
+      const blocks: NotionBlock[] = [
+        {
+          object: 'block',
+          type: 'file',
+          file: {
+            file: { url: 'https://example.com/f.zip' },
+            caption: [
+              {
+                type: 'text',
+                text: { content: 'My archive' },
+                annotations: {
+                  bold: false,
+                  italic: false,
+                  strikethrough: false,
+                  underline: false,
+                  code: false,
+                  color: 'default'
+                }
+              }
+            ]
+          }
+        }
+      ]
+      expect(blocksToMarkdown(blocks)).toBe('[My archive](https://example.com/f.zip)')
+    })
+  })
+
+  describe('child page and database blocks', () => {
+    it('should render child_page as link', () => {
+      const blocks: NotionBlock[] = [
+        { object: 'block', type: 'child_page', id: 'page-123', child_page: { title: 'My Sub Page' } }
+      ]
+      expect(blocksToMarkdown(blocks)).toBe('[My Sub Page](page-123)')
+    })
+
+    it('should render child_database as link', () => {
+      const blocks: NotionBlock[] = [
+        { object: 'block', type: 'child_database', id: 'db-456', child_database: { title: 'Tasks DB' } }
+      ]
+      expect(blocksToMarkdown(blocks)).toBe('[Tasks DB](db-456)')
+    })
+  })
+
   describe('unsupported block types', () => {
     it('should skip unknown block types', () => {
       const blocks: NotionBlock[] = [
         {
           object: 'block',
-          type: 'audio',
-          audio: { url: 'https://example.com/song.mp3' }
+          type: 'unsupported',
+          unsupported: {}
         }
       ]
       expect(blocksToMarkdown(blocks)).toBe('')

@@ -138,6 +138,65 @@ describe('blocks', () => {
         'content required for append'
       )
     })
+
+    it('should pass position start when specified', async () => {
+      mockNotion.blocks.children.append.mockResolvedValue({})
+
+      await blocks(mockNotion as any, {
+        action: 'append',
+        block_id: 'block-1',
+        content: 'Prepended',
+        position: 'start'
+      })
+
+      expect(mockNotion.blocks.children.append).toHaveBeenCalledWith({
+        block_id: 'block-1',
+        children: expect.any(Array),
+        position: { type: 'start' }
+      })
+    })
+
+    it('should pass position after_block with after_block_id', async () => {
+      mockNotion.blocks.children.append.mockResolvedValue({})
+
+      await blocks(mockNotion as any, {
+        action: 'append',
+        block_id: 'block-1',
+        content: 'Inserted after',
+        position: 'after_block',
+        after_block_id: 'target-block'
+      })
+
+      expect(mockNotion.blocks.children.append).toHaveBeenCalledWith({
+        block_id: 'block-1',
+        children: expect.any(Array),
+        position: { type: 'after_block', after_block: { id: 'target-block' } }
+      })
+    })
+
+    it('should throw when after_block without after_block_id', async () => {
+      await expect(
+        blocks(mockNotion as any, {
+          action: 'append',
+          block_id: 'block-1',
+          content: 'Missing ID',
+          position: 'after_block'
+        })
+      ).rejects.toThrow('after_block_id required')
+    })
+
+    it('should not include position when using default end', async () => {
+      mockNotion.blocks.children.append.mockResolvedValue({})
+
+      await blocks(mockNotion as any, {
+        action: 'append',
+        block_id: 'block-1',
+        content: 'Default append'
+      })
+
+      const call = mockNotion.blocks.children.append.mock.calls[0][0]
+      expect(call.position).toBeUndefined()
+    })
   })
 
   describe('update', () => {
