@@ -6,12 +6,16 @@ const mockNotion = {
     list: vi.fn(),
     retrieve: vi.fn(),
     create: vi.fn()
+  },
+  blocks: {
+    retrieve: vi.fn()
   }
 }
 
 describe('commentsManage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+
   })
 
   describe('list', () => {
@@ -49,8 +53,8 @@ describe('commentsManage', () => {
 
       expect(result.page_id).toBe('page-1')
       expect(result.total_comments).toBe(2)
-      expect(result.comments).toHaveLength(2)
-      expect(result.comments[0]).toEqual({
+      expect(result.results).toHaveLength(2)
+      expect(result.results[0]).toEqual({
         id: 'comment-1',
         created_time: '2024-01-01',
         created_by: { id: 'user-1' },
@@ -58,7 +62,7 @@ describe('commentsManage', () => {
         text: 'Hello',
         parent: { type: 'page_id', page_id: 'page-1' }
       })
-      expect(result.comments[1]).toEqual({
+      expect(result.results[1]).toEqual({
         id: 'comment-2',
         created_time: '2024-01-02',
         created_by: { id: 'user-2' },
@@ -86,13 +90,14 @@ describe('commentsManage', () => {
 
       expect(result.page_id).toBe('page-1')
       expect(result.total_comments).toBe(0)
-      expect(result.comments).toEqual([])
+      expect(result.results).toEqual([])
     })
 
-    it('should throw COMMENTS_LIST_UNAVAILABLE when Notion returns object_not_found', async () => {
+    it('should throw COMMENTS_LIST_UNAVAILABLE when Notion returns object_not_found but page exists', async () => {
       const notFoundError = new Error('Not found')
       ;(notFoundError as any).code = 'object_not_found'
       mockNotion.comments.list.mockRejectedValue(notFoundError)
+      mockNotion.blocks.retrieve.mockResolvedValue({ id: 'page-1' })
 
       await expect(
         commentsManage(mockNotion as any, {
@@ -102,6 +107,23 @@ describe('commentsManage', () => {
       ).rejects.toMatchObject({
         code: 'COMMENTS_LIST_UNAVAILABLE',
         message: 'Cannot list comments for this page'
+      })
+      expect(mockNotion.blocks.retrieve).toHaveBeenCalledWith({ block_id: 'page-1' })
+    })
+
+    it('should re-throw object_not_found (wrapped as NOT_FOUND) if page itself does not exist', async () => {
+      const notFoundError = new Error('Not found')
+      ;(notFoundError as any).code = 'object_not_found'
+      mockNotion.comments.list.mockRejectedValue(notFoundError)
+      mockNotion.blocks.retrieve.mockRejectedValue(notFoundError)
+
+      await expect(
+        commentsManage(mockNotion as any, {
+          action: 'list',
+          page_id: 'page-1'
+        })
+      ).rejects.toMatchObject({
+        code: 'NOT_FOUND'
       })
     })
 
@@ -150,7 +172,7 @@ describe('commentsManage', () => {
         page_id: 'page-1'
       })
 
-      expect(result.comments[0].display_name).toBe('John Doe')
+      expect(result.results[0].display_name).toBe('John Doe')
     })
 
     it('should throw without page_id', async () => {

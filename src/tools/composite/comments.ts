@@ -39,7 +39,7 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
           return {
             page_id: input.page_id,
             total_comments: comments.length,
-            comments: comments.map((comment: any) => ({
+            results: comments.map((comment: any) => ({
               id: comment.id,
               created_time: comment.created_time,
               created_by: comment.created_by,
@@ -51,11 +51,24 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
           }
         } catch (error: any) {
           if (error.code === 'object_not_found') {
-            throw new NotionMCPError(
-              'Cannot list comments for this page',
-              'COMMENTS_LIST_UNAVAILABLE',
-              'This is a known Notion API limitation with OAuth integrations (API version 2025-09-03). The comments.list endpoint may return 404 even when the page exists and has comments. Workaround: use comments/get with a specific comment_id, or use comments/create which works normally.'
-            )
+            // Distinguish between a real 404 and the known Notion API bug (OAuth 404)
+            // by checking if the block/page actually exists.
+            try {
+              await notion.blocks.retrieve({ block_id: input.page_id })
+              // If retrieve succeeds, it's the known API bug
+              throw new NotionMCPError(
+                'Cannot list comments for this page',
+                'COMMENTS_LIST_UNAVAILABLE',
+                'This is a known Notion API limitation with OAuth integrations (API version 2025-09-03). The comments.list endpoint may return 404 even when the page exists and has comments. Workaround: use comments/get with a specific comment_id, or use comments/create which works normally.'
+              )
+            } catch (innerError: any) {
+              // If the block itself is not found, it's a real 404
+              if (innerError.code === 'object_not_found') {
+                throw error
+              }
+              // Other error (unauthorized, rate limited, etc.)
+              throw innerError
+            }
           }
           throw error
         }
