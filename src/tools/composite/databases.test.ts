@@ -8,6 +8,7 @@ import {
   type GetDatabaseResponse,
   type ListDataSourceTemplatesResponse,
   type QueryDatabaseResponse,
+  schemaCache,
   type UpdateDatabasePageResponse,
   type UpdateDatabaseResponse,
   type UpdateDataSourceResponse
@@ -68,6 +69,7 @@ function makeDataSourceResponse(overrides: Record<string, any> = {}) {
 describe('databases', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    schemaCache.clear()
   })
 
   describe('create', () => {
@@ -275,6 +277,41 @@ describe('databases', () => {
           page_size: 100
         })
       )
+    })
+
+    it('should use cached schema on subsequent queries for smart search', async () => {
+      mockNotion.databases.retrieve.mockResolvedValue(makeDbRetrieveResponse())
+      mockNotion.dataSources.retrieve.mockResolvedValueOnce(
+        makeDataSourceResponse({
+          properties: {
+            Name: { type: 'title', id: 'prop-1' }
+          }
+        })
+      )
+      mockNotion.dataSources.query.mockResolvedValue({
+        results: [],
+        next_cursor: null,
+        has_more: false
+      })
+
+      // First query populates the cache
+      await databases(notion, {
+        action: 'query',
+        database_id: 'db-1',
+        search: 'first'
+      })
+
+      expect(mockNotion.dataSources.retrieve).toHaveBeenCalledTimes(1)
+
+      // Second query uses the cache
+      await databases(notion, {
+        action: 'query',
+        database_id: 'db-1',
+        search: 'second'
+      })
+
+      // Still 1, meaning it used cache
+      expect(mockNotion.dataSources.retrieve).toHaveBeenCalledTimes(1)
     })
 
     it('should build OR filter for smart search on text properties', async () => {
@@ -608,6 +645,18 @@ describe('databases', () => {
         code: 'VALIDATION_ERROR'
       })
     })
+
+    it('should throw validation error when page_id is missing in update batch', async () => {
+      await expect(
+        databases(notion, {
+          action: 'update_page',
+          pages: [{ properties: { Status: 'Done' } } as any]
+        })
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('page_id required for each item'),
+        code: 'VALIDATION_ERROR'
+      })
+    })
   })
 
   describe('delete_page', () => {
@@ -645,6 +694,21 @@ describe('databases', () => {
         page_id: 'page-solo',
         archived: true
       })
+    })
+
+    it('should extract page_ids from pages array if provided', async () => {
+      mockNotion.pages.update.mockResolvedValueOnce({}).mockResolvedValueOnce({})
+
+      const result = (await databases(notion, {
+        action: 'delete_page',
+        pages: [{ page_id: 'page-3', properties: {} }, { page_id: 'page-4', properties: {} }, { properties: {} } as any]
+      })) as DeleteDatabasePageResponse
+
+      expect(result.processed).toBe(2)
+      expect(result.results).toEqual([
+        { page_id: 'page-3', deleted: true },
+        { page_id: 'page-4', deleted: true }
+      ])
     })
 
     it('should throw when no page ids provided', async () => {
@@ -935,6 +999,21 @@ describe('databases', () => {
           database_id: 'db-1'
         })
       ).rejects.toThrow('API Error')
+    })
+
+    it('should rethrow unexpected Notion API errors from database retrieval', async () => {
+      const error = new Error('Notion API Error') as any
+      error.code = 'rate_limited'
+      mockNotion.databases.retrieve.mockRejectedValueOnce(error)
+
+      await expect(
+        databases(notion, {
+          action: 'list_templates',
+          database_id: 'db-1'
+        })
+      ).rejects.toMatchObject({
+        code: 'RATE_LIMITED'
+      })
     })
   })
 

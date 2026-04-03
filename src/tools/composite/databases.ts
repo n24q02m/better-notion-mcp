@@ -12,9 +12,34 @@ import { autoPaginate, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties, extractPageProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
 
-// Cache for data source schema (properties)
-const schemaCache = new Map<string, { properties: any; expiresAt: number }>()
+// Cache for data source schema (properties and title)
+export const schemaCache = new Map<string, { properties: any; title: any[]; expiresAt: number }>()
 const SCHEMA_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+/**
+ * Get data source schema with caching
+ */
+async function getDataSourceSchema(notion: Client, dataSourceId: string): Promise<{ properties: any; title: any[] }> {
+  const cached = schemaCache.get(dataSourceId)
+  if (cached && Date.now() < cached.expiresAt) {
+    return { properties: cached.properties, title: cached.title }
+  }
+
+  const dataSource: any = await (notion as any).dataSources.retrieve({
+    data_source_id: dataSourceId
+  })
+
+  const properties = dataSource.properties || {}
+  const title = dataSource.title || []
+
+  schemaCache.set(dataSourceId, {
+    properties,
+    title,
+    expiresAt: Date.now() + SCHEMA_CACHE_TTL
+  })
+
+  return { properties, title }
+}
 
 export interface DatabasesInput {
   action:
@@ -321,18 +346,17 @@ async function getDatabase(notion: Client, input: DatabasesInput): Promise<GetDa
   let dataSourceInfo: any = null
 
   if (database.data_sources && database.data_sources.length > 0) {
-    const dataSource: any = await (notion as any).dataSources.retrieve({
-      data_source_id: database.data_sources[0].id
-    })
+    const dsId = database.data_sources[0].id
+    const { properties, title } = await getDataSourceSchema(notion, dsId)
 
     dataSourceInfo = {
-      id: dataSource.id,
-      name: dataSource.title?.[0]?.plain_text || database.data_sources[0].name
+      id: dsId,
+      name: title?.[0]?.plain_text || database.data_sources[0].name
     }
 
     // Format properties for AI-friendly output
-    if (dataSource.properties) {
-      for (const [name, prop] of Object.entries(dataSource.properties)) {
+    if (properties) {
+      for (const [name, prop] of Object.entries(properties)) {
         const p = prop as any
         schema[name] = {
           type: p.type,
@@ -384,24 +408,7 @@ async function queryDatabase(notion: Client, input: DatabasesInput): Promise<Que
 
   // Smart search across text properties
   if (input.search && !filter) {
-    let properties: any
-
-    const cached = schemaCache.get(dataSourceId)
-    if (cached && Date.now() < cached.expiresAt) {
-      properties = cached.properties
-    } else {
-      const dataSource: any = await (notion as any).dataSources.retrieve({
-        data_source_id: dataSourceId
-      })
-      properties = dataSource.properties
-
-      if (properties) {
-        schemaCache.set(dataSourceId, {
-          properties,
-          expiresAt: Date.now() + SCHEMA_CACHE_TTL
-        })
-      }
-    }
+    const { properties } = await getDataSourceSchema(notion, dataSourceId)
 
     const textProps = []
     if (properties) {
@@ -481,12 +488,10 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
   const { databaseId, dataSourceId } = await resolveDataSourceId(notion, input.database_id)
 
   // Fetch schema for property type mapping
-  const dataSource: any = await (notion as any).dataSources.retrieve({
-    data_source_id: dataSourceId
-  })
+  const { properties: dataSourceProperties } = await getDataSourceSchema(notion, dataSourceId)
   const schema: Record<string, string> = {}
-  if (dataSource.properties) {
-    for (const [name, prop] of Object.entries(dataSource.properties)) {
+  if (dataSourceProperties) {
+    for (const [name, prop] of Object.entries(dataSourceProperties)) {
       schema[name] = (prop as any).type
     }
   }
