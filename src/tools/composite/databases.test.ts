@@ -8,6 +8,7 @@ import {
   type GetDatabaseResponse,
   type ListDataSourceTemplatesResponse,
   type QueryDatabaseResponse,
+  schemaCache,
   type UpdateDatabasePageResponse,
   type UpdateDatabaseResponse,
   type UpdateDataSourceResponse
@@ -68,6 +69,7 @@ function makeDataSourceResponse(overrides: Record<string, any> = {}) {
 describe('databases', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    schemaCache.clear()
   })
 
   describe('create', () => {
@@ -218,6 +220,40 @@ describe('databases', () => {
   })
 
   describe('query', () => {
+    it('should hit schema cache on consecutive searches', async () => {
+      mockNotion.databases.retrieve.mockResolvedValue(makeDbRetrieveResponse())
+      mockNotion.dataSources.retrieve.mockResolvedValueOnce(
+        makeDataSourceResponse({
+          properties: {
+            Name: { type: 'title', id: 'prop-1' }
+          }
+        })
+      )
+      mockNotion.dataSources.query.mockResolvedValue({
+        results: [],
+        next_cursor: null,
+        has_more: false
+      })
+
+      // First call, should trigger retrieve
+      await databases(notion, {
+        action: 'query',
+        database_id: 'db-1',
+        search: 'hello'
+      })
+
+      expect(mockNotion.dataSources.retrieve).toHaveBeenCalledTimes(1)
+
+      // Second call, should hit cache
+      await databases(notion, {
+        action: 'query',
+        database_id: 'db-1',
+        search: 'world'
+      })
+
+      expect(mockNotion.dataSources.retrieve).toHaveBeenCalledTimes(1)
+    })
+
     it('should query via data source and format results', async () => {
       mockNotion.databases.retrieve.mockResolvedValueOnce(makeDbRetrieveResponse())
       mockNotion.dataSources.query.mockResolvedValueOnce({
