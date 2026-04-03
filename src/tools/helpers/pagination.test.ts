@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { autoPaginate, fetchChildrenRecursive, populateDeepChildren, processBatches, ConcurrencyQueue } from './pagination'
+import {
+  autoPaginate,
+  ConcurrencyQueue,
+  fetchChildrenRecursive,
+  populateDeepChildren,
+  processBatches
+} from './pagination'
 
 describe('autoPaginate', () => {
   it('should return results from a single page', async () => {
@@ -281,11 +287,11 @@ describe('ConcurrencyQueue', () => {
     const tasks = Array.from({ length: 5 }, () => async () => {
       active++
       maxActive = Math.max(maxActive, active)
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
       active--
     })
 
-    await Promise.all(tasks.map(t => queue.run(t)))
+    await Promise.all(tasks.map((t) => queue.run(t)))
     expect(maxActive).toBe(2)
     expect(active).toBe(0)
   })
@@ -294,7 +300,9 @@ describe('ConcurrencyQueue', () => {
     const queue = new ConcurrencyQueue(1)
     const error = new Error('boom')
 
-    const task1 = async () => { throw error }
+    const task1 = async () => {
+      throw error
+    }
     const task2 = vi.fn().mockResolvedValue('ok')
 
     await expect(queue.run(task1)).rejects.toThrow('boom')

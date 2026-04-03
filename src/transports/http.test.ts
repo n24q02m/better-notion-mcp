@@ -793,7 +793,7 @@ describe('startHttp', () => {
 
   describe('IP propagation middleware', () => {
     it('should run requestContext with IP from req.ip', async () => {
-      const { requestContext } = await import('../auth/notion-oauth-provider.js')
+      await await import('../auth/notion-oauth-provider.js')
       const mockLog = vi.spyOn(console, 'info').mockImplementation(() => {})
 
       const { startHttp } = await import('./http.js')
