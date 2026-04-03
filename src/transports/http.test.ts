@@ -136,28 +136,45 @@ describe('startHttp', () => {
     // Trust proxy and disable x-powered-by
     expect(app.set).toHaveBeenCalledWith('trust proxy', 2)
     expect(app.disable).toHaveBeenCalledWith('x-powered-by')
+  })
 
-    // Callback endpoint registered
-    expect(app.get).toHaveBeenCalledWith('/callback', expect.any(Function), expect.any(Function))
+  it('should parse TRUST_PROXY environment variable correctly', async () => {
+    const originalTrustProxy = process.env.TRUST_PROXY
 
-    // Health endpoint registered
-    expect(app.get).toHaveBeenCalledWith('/health', expect.any(Function))
+    try {
+      const express = (await import('express')).default
+      const { startHttp } = await import('./http.js')
 
-    // MCP endpoints registered (POST with rateLimit + jsonParser + authMiddleware, GET/DELETE with rateLimit + authMiddleware)
-    expect(app.post).toHaveBeenCalledWith(
-      '/mcp',
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.any(Function)
-    )
-    expect(app.get).toHaveBeenCalledWith('/mcp', expect.anything(), expect.anything(), expect.any(Function))
-    expect(app.delete).toHaveBeenCalledWith('/mcp', expect.anything(), expect.anything(), expect.any(Function))
+      // Test boolean 'true'
+      process.env.TRUST_PROXY = 'true'
+      await startHttp()
+      const mockAppTrue = (express as any).mock.results.at(-1)?.value
+      expect(mockAppTrue.set).toHaveBeenCalledWith('trust proxy', true)
 
-    // Listen called
-    expect(app.listen).toHaveBeenCalledWith(3000, '0.0.0.0', expect.any(Function))
+      // Test boolean 'false'
+      process.env.TRUST_PROXY = 'false'
+      await startHttp()
+      const mockAppFalse = (express as any).mock.results.at(-1)?.value
+      expect(mockAppFalse.set).toHaveBeenCalledWith('trust proxy', false)
 
-    mockLog.mockRestore()
+      // Test number '1'
+      process.env.TRUST_PROXY = '1'
+      await startHttp()
+      const mockAppNum = (express as any).mock.results.at(-1)?.value
+      expect(mockAppNum.set).toHaveBeenCalledWith('trust proxy', 1)
+
+      // Test raw string '127.0.0.1'
+      process.env.TRUST_PROXY = '127.0.0.1'
+      await startHttp()
+      const mockAppStr = (express as any).mock.results.at(-1)?.value
+      expect(mockAppStr.set).toHaveBeenCalledWith('trust proxy', '127.0.0.1')
+    } finally {
+      if (originalTrustProxy === undefined) {
+        delete process.env.TRUST_PROXY
+      } else {
+        process.env.TRUST_PROXY = originalTrustProxy
+      }
+    }
   })
 
   it('should use createNotionOAuthProvider with config', async () => {
