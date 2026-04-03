@@ -1,8 +1,3 @@
-/**
- * HTTP Transport — Remote mode with OAuth 2.1
- * Express server with Notion OAuth callback relay, Streamable HTTP transport, and session management
- */
-
 import { randomBytes, randomUUID } from 'node:crypto'
 import { requireBearerAuth } from '@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js'
 import { mcpAuthRouter } from '@modelcontextprotocol/sdk/server/auth/router.js'
@@ -22,6 +17,7 @@ interface HttpConfig {
   notionClientId: string
   notionClientSecret: string
   dcrSecret: string
+  trustProxy: string | number | boolean
 }
 
 function loadConfig(): HttpConfig {
@@ -34,12 +30,23 @@ function loadConfig(): HttpConfig {
     }
   }
 
+  const trustProxyRaw = process.env.TRUST_PROXY ?? '2'
+  let trustProxy: string | number | boolean = trustProxyRaw
+  if (trustProxyRaw === 'true') {
+    trustProxy = true
+  } else if (trustProxyRaw === 'false') {
+    trustProxy = false
+  } else if (/^\d+$/.test(trustProxyRaw)) {
+    trustProxy = parseInt(trustProxyRaw, 10)
+  }
+
   return {
     port: parseInt(process.env.PORT ?? '8080', 10),
     publicUrl: process.env.PUBLIC_URL!,
     notionClientId: process.env.NOTION_OAUTH_CLIENT_ID!,
     notionClientSecret: process.env.NOTION_OAUTH_CLIENT_SECRET!,
-    dcrSecret: process.env.DCR_SERVER_SECRET!
+    dcrSecret: process.env.DCR_SERVER_SECRET!,
+    trustProxy
   }
 }
 
@@ -56,8 +63,8 @@ export async function startHttp() {
 
   const app = express()
 
-  // Trust exactly 2 reverse proxies (Cloudflare + Caddy) for correct req.ip
-  app.set('trust proxy', 2)
+  // Trust reverse proxies for correct req.ip (configurable for different environments)
+  app.set('trust proxy', config.trustProxy)
   app.disable('x-powered-by')
 
   // Rate limit MCP endpoints per IP
