@@ -45,12 +45,6 @@ Via marketplace (includes skills: /organize-database, /bulk-update):
 
 Plugin uses remote OAuth — no `NOTION_TOKEN` needed. Browser opens for Notion authorization on first use.
 
-### Gemini CLI Extension
-
-```bash
-gemini extensions install https://github.com/n24q02m/better-notion-mcp
-```
-
 ### Codex CLI
 
 Add to `~/.codex/config.toml`:
