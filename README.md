@@ -1,5 +1,7 @@
 # Better Notion MCP
 
+[![SafeSkill 77/100](https://img.shields.io/badge/SafeSkill-77%2F100_Passes%20with%20Notes-yellow)](https://safeskill.dev/scan/n24q02m-better-notion-mcp)
+
 mcp-name: io.github.n24q02m/better-notion-mcp
 
 **Markdown-first Notion API server for AI agents -- 9 composite tools replacing 28+ endpoint calls**
