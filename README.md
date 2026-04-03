@@ -30,89 +30,14 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 - **Tiered token optimization** -- ~77% reduction via compressed descriptions + on-demand `help` tool
 - **Dual transport** -- local stdio (token) or remote HTTP (OAuth 2.1, no token needed)
 
-## Quick Start
+## Setup
 
-### Claude Code Plugin (Recommended)
+**With AI Agent** -- copy and send this to your AI agent:
 
-Via marketplace (includes skills: /organize-database, /bulk-update):
+> Please set up @n24q02m/better-notion-mcp for me. Follow this guide:
+> https://raw.githubusercontent.com/n24q02m/better-notion-mcp/main/docs/setup-with-agent.md
 
-```bash
-/plugin marketplace add n24q02m/claude-plugins
-/plugin install better-notion-mcp@n24q02m-plugins
-```
-
-
-
-Plugin uses remote OAuth — no `NOTION_TOKEN` needed. Browser opens for Notion authorization on first use.
-
-### Codex CLI
-
-Add to `~/.codex/config.toml`:
-
-```toml
-[mcp_servers.better-notion-mcp]
-command = "npx"
-args = ["-y", "@n24q02m/better-notion-mcp"]
-```
-
-### MCP Server
-
-#### Option 1: Remote (OAuth) -- No token needed
-
-Connect directly via URL with OAuth authentication. Your MCP client handles the OAuth flow automatically.
-
-```jsonc
-{
-  "mcpServers": {
-    "better-notion": {
-      "type": "http",
-      "url": "https://better-notion-mcp.n24q02m.com/mcp"
-    }
-  }
-}
-```
-
-#### Option 2: npx
-
-Get your token: <https://www.notion.so/my-integrations> -> Create integration -> Copy token -> Share pages
-
-Set `NOTION_TOKEN` in `~/.claude/settings.local.json` or your shell profile:
-
-```bash
-export NOTION_TOKEN="ntn_..."
-```
-
-Then add to your MCP client config:
-
-```jsonc
-{
-  "mcpServers": {
-    "better-notion": {
-      "command": "npx",
-      "args": ["-y", "@n24q02m/better-notion-mcp@latest"]
-    }
-  }
-}
-```
-
-Other runners: `bun x`, `pnpm dlx`, `yarn dlx` also work.
-
-#### Option 3: Docker
-
-```jsonc
-{
-  "mcpServers": {
-    "better-notion": {
-      "command": "docker",
-      "args": [
-        "run", "-i", "--rm",
-        "-e", "NOTION_TOKEN",
-        "n24q02m/better-notion-mcp:latest"
-      ]
-    }
-  }
-}
-```
+**Manual Setup** -- follow [docs/setup-manual.md](docs/setup-manual.md)
 
 ## Tools
 

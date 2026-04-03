@@ -52,7 +52,7 @@ function generatePKCE() {
 }
 
 // Open browser cross-platform (safe: no user input in args)
-function openBrowser(url) {
+function _openBrowser(url) {
   if (process.platform === 'darwin') {
     execFile('open', [url])
   } else if (process.platform === 'win32') {
@@ -100,8 +100,8 @@ console.log('\n--- OAuth Authorization ---')
 const authCode = await new Promise((resolve, reject) => {
   const timeout = setTimeout(() => {
     server.close()
-    reject(new Error('OAuth timeout (120s) - user did not authorize'))
-  }, 120_000)
+    reject(new Error('OAuth timeout (300s) - user did not authorize'))
+  }, 300_000)
 
   const server = createServer((req, res) => {
     const url = new URL(req.url, `http://127.0.0.1:${CALLBACK_PORT}`)
@@ -152,9 +152,7 @@ const authCode = await new Promise((resolve, reject) => {
     authUrl.searchParams.set('code_challenge_method', 'S256')
     authUrl.searchParams.set('state', state)
 
-    console.log('  Opening browser for Notion authorization...')
-    console.log(`  URL: ${authUrl.toString().slice(0, 80)}...`)
-    openBrowser(authUrl.toString())
+    console.log(`  FULL_AUTH_URL:${authUrl.toString()}`)
     console.log('  Waiting for authorization (timeout: 120s)...\n')
   })
 })
