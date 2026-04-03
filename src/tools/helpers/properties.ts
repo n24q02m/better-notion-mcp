@@ -119,9 +119,9 @@ export function convertToNotionProperties(
 }
 
 /**
- * Highly optimized extraction of properties from a Notion page response.
- * Uses direct string building and fixed-length arrays to avoid
- * creating thousands of intermediate arrays during large `.map()` chains.
+ * Extraction of properties from a Notion page response.
+ * Uses idiomatic patterns for string building and fixed-length arrays to
+ * balance performance and maintainability.
  */
 export function extractPageProperties(pageProperties: any): any {
   const properties: any = {}
@@ -132,13 +132,9 @@ export function extractPageProperties(pageProperties: any): any {
     const p = pageProperties[key] as any
 
     if (p.type === 'title' && p.title) {
-      let str = ''
-      for (let j = 0; j < p.title.length; j++) str += p.title[j].plain_text || ''
-      properties[key] = str
+      properties[key] = p.title.map((t: any) => t.plain_text || '').join('')
     } else if (p.type === 'rich_text' && p.rich_text) {
-      let str = ''
-      for (let j = 0; j < p.rich_text.length; j++) str += p.rich_text[j].plain_text || ''
-      properties[key] = str
+      properties[key] = p.rich_text.map((t: any) => t.plain_text || '').join('')
     } else if (p.type === 'select' && p.select) {
       properties[key] = p.select.name
     } else if (p.type === 'multi_select' && p.multi_select) {
