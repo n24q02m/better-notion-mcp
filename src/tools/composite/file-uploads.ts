@@ -126,22 +126,22 @@ async function sendFileUpload(notion: Client, input: FileUploadsInput): Promise<
     )
   }
 
-  // Validate base64 format before processing
-  if (!isValidBase64(input.file_content)) {
-    throw new NotionMCPError(
-      'file_content is not valid base64 encoding',
-      'VALIDATION_ERROR',
-      'Encode the file as base64 first. Example: Buffer.from(fileBytes).toString("base64"). The string must only contain A-Z, a-z, 0-9, +, /, and = padding.'
-    )
-  }
-
-  // Check file size before processing to prevent OOM
+  // Check file size before processing to prevent OOM (cheap length check first)
   const approximateSize = (input.file_content.length * 3) / 4
   if (approximateSize > MAX_FILE_SIZE_BYTES) {
     throw new NotionMCPError(
       `File content exceeds maximum size of ${MAX_FILE_SIZE_MB}MB per request.`,
       'VALIDATION_ERROR',
       "Split the file into smaller parts and use the 'part_number' parameter for multi-part upload."
+    )
+  }
+
+  // Validate base64 format after size check (regex is more expensive)
+  if (!isValidBase64(input.file_content)) {
+    throw new NotionMCPError(
+      'file_content is not valid base64 encoding',
+      'VALIDATION_ERROR',
+      'Encode the file as base64 first. Example: Buffer.from(fileBytes).toString("base64"). The string must only contain A-Z, a-z, 0-9, +, /, and = padding.'
     )
   }
 

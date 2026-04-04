@@ -22,6 +22,15 @@ interface HttpConfig {
   notionClientId: string
   notionClientSecret: string
   dcrSecret: string
+  trustProxy: boolean | number | string
+}
+
+function parseTrustProxy(value?: string): boolean | number | string {
+  if (!value) return 2
+  if (value === 'true') return true
+  if (value === 'false') return false
+  if (/^\d+$/.test(value)) return parseInt(value, 10)
+  return value
 }
 
 function loadConfig(): HttpConfig {
@@ -39,7 +48,8 @@ function loadConfig(): HttpConfig {
     publicUrl: process.env.PUBLIC_URL!,
     notionClientId: process.env.NOTION_OAUTH_CLIENT_ID!,
     notionClientSecret: process.env.NOTION_OAUTH_CLIENT_SECRET!,
-    dcrSecret: process.env.DCR_SERVER_SECRET!
+    dcrSecret: process.env.DCR_SERVER_SECRET!,
+    trustProxy: parseTrustProxy(process.env.TRUST_PROXY)
   }
 }
 
@@ -56,8 +66,8 @@ export async function startHttp() {
 
   const app = express()
 
-  // Trust exactly 2 reverse proxies (Cloudflare + Caddy) for correct req.ip
-  app.set('trust proxy', 2)
+  // Trust proxies for correct req.ip based on environment configuration
+  app.set('trust proxy', config.trustProxy)
   app.disable('x-powered-by')
 
   // Rate limit MCP endpoints per IP

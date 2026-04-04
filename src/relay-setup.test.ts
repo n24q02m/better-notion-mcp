@@ -7,14 +7,15 @@ vi.mock('@n24q02m/mcp-relay-core/storage', () => ({
 }))
 vi.mock('@n24q02m/mcp-relay-core/relay', () => ({
   createSession: vi.fn(),
-  pollForResult: vi.fn()
+  pollForResult: vi.fn(),
+  sendMessage: vi.fn()
 }))
 vi.mock('@n24q02m/mcp-relay-core', () => ({
   writeConfig: vi.fn()
 }))
 
 import { writeConfig } from '@n24q02m/mcp-relay-core'
-import { createSession, pollForResult } from '@n24q02m/mcp-relay-core/relay'
+import { createSession, pollForResult, sendMessage } from '@n24q02m/mcp-relay-core/relay'
 import { resolveConfig } from '@n24q02m/mcp-relay-core/storage'
 
 describe('ensureConfig', () => {
@@ -22,12 +23,14 @@ describe('ensureConfig', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.useFakeTimers()
     consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
+    vi.useRealTimers()
   })
 
   it('returns token from config file', async () => {
@@ -67,8 +70,14 @@ describe('ensureConfig', () => {
     vi.mocked(pollForResult).mockResolvedValue({
       NOTION_TOKEN: 'ntn_relay_token_456'
     })
+    vi.mocked(sendMessage).mockResolvedValue('msg-123')
 
-    const result = await ensureConfig()
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const resultPromise = ensureConfig()
+    await vi.runAllTimersAsync()
+    const result = await resultPromise
 
     expect(result).toBe('ntn_relay_token_456')
     expect(createSession).toHaveBeenCalledWith(
@@ -76,9 +85,21 @@ describe('ensureConfig', () => {
       'better-notion-mcp',
       expect.objectContaining({ server: 'better-notion-mcp' })
     )
+    expect(pollForResult).toHaveBeenCalledWith(expect.any(String), expect.any(Object), 2000, 300_000)
     expect(writeConfig).toHaveBeenCalledWith('better-notion-mcp', {
       NOTION_TOKEN: 'ntn_relay_token_456'
     })
+    expect(sendMessage).toHaveBeenCalledWith(
+      expect.any(String),
+      'test-session',
+      expect.objectContaining({ type: 'complete' })
+    )
+
+    // Check for DELETE request
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/sessions/test-session'),
+      expect.objectContaining({ method: 'DELETE' })
+    )
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('saved successfully'))
   })
 
@@ -92,90 +113,61 @@ describe('ensureConfig', () => {
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Cannot reach relay server'))
   })
 
-  it('returns null when relay setup times out', async () => {
+  it('logs security warning to stderr during setup', async () => {
+    vi.mocked(resolveConfig).mockResolvedValue({ config: null, source: null })
+    vi.mocked(createSession).mockResolvedValue({
+      sessionId: 'test',
+      keyPair: {} as any,
+      passphrase: 'test',
+      relayUrl: 'https://test.com'
+    })
+    vi.mocked(pollForResult).mockResolvedValue({ NOTION_TOKEN: 'test' })
+
+    await ensureConfig()
+
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('temporary setup secrets'))
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('expire in 5 minutes'))
+  })
+
+  it('returns null and cleans up when relay setup times out', async () => {
     vi.mocked(resolveConfig).mockResolvedValue({ config: null, source: null })
     vi.mocked(createSession).mockResolvedValue({
       sessionId: 'test-session',
       keyPair: {} as any,
-      passphrase: 'word1-word2-word3-word4',
-      relayUrl: 'https://better-notion-mcp.n24q02m.com/setup?s=test'
+      passphrase: 'test',
+      relayUrl: 'https://test.com'
     })
     vi.mocked(pollForResult).mockRejectedValue(new Error('Relay setup timed out'))
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
 
     const result = await ensureConfig()
 
     expect(result).toBeNull()
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('timed out'))
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/sessions/test-session'),
+      expect.objectContaining({ method: 'DELETE' })
+    )
   })
 
-  it('returns null when relay setup is skipped by user', async () => {
+  it('returns null and does NOT double-delete when setup is skipped', async () => {
+    // pollForResult already handles DELETE for RELAY_SKIPPED
     vi.mocked(resolveConfig).mockResolvedValue({ config: null, source: null })
     vi.mocked(createSession).mockResolvedValue({
       sessionId: 'test-session',
       keyPair: {} as any,
-      passphrase: 'word1-word2-word3-word4',
-      relayUrl: 'https://better-notion-mcp.n24q02m.com/setup?s=test'
+      passphrase: 'test',
+      relayUrl: 'https://test.com'
     })
     vi.mocked(pollForResult).mockRejectedValue(new Error('RELAY_SKIPPED'))
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
 
     const result = await ensureConfig()
 
     expect(result).toBeNull()
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('skipped by user'))
-  })
-
-  it('logs relay URL to stderr for user visibility', async () => {
-    vi.mocked(resolveConfig).mockResolvedValue({ config: null, source: null })
-    const relayUrl = 'https://better-notion-mcp.n24q02m.com/setup?s=abc#k=key&p=pass'
-    vi.mocked(createSession).mockResolvedValue({
-      sessionId: 'abc',
-      keyPair: {} as any,
-      passphrase: 'test',
-      relayUrl
-    })
-    vi.mocked(pollForResult).mockResolvedValue({
-      NOTION_TOKEN: 'ntn_test'
-    })
-
-    await ensureConfig()
-
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining(relayUrl))
-  })
-
-  it('returns token even if completion notification fetch fails', async () => {
-    vi.mocked(resolveConfig).mockResolvedValue({ config: null, source: null })
-    vi.mocked(createSession).mockResolvedValue({
-      sessionId: 'test-session',
-      keyPair: {} as any,
-      passphrase: 'word1-word2-word3-word4',
-      relayUrl: 'https://better-notion-mcp.n24q02m.com/setup?s=test'
-    })
-    vi.mocked(pollForResult).mockResolvedValue({
-      NOTION_TOKEN: 'ntn_relay_token_123'
-    })
-
-    const fetchMock = vi.fn().mockRejectedValue(new Error('Network error'))
-    vi.stubGlobal('fetch', fetchMock)
-
-    const result = await ensureConfig()
-
-    expect(result).toBe('ntn_relay_token_123')
-    expect(fetchMock).toHaveBeenCalled()
-  })
-
-  it('returns null and logs generic timeout message when pollForResult fails with unknown error', async () => {
-    vi.mocked(resolveConfig).mockResolvedValue({ config: null, source: null })
-    vi.mocked(createSession).mockResolvedValue({
-      sessionId: 'test-session',
-      keyPair: {} as any,
-      passphrase: 'word1-word2-word3-word4',
-      relayUrl: 'https://better-notion-mcp.n24q02m.com/setup?s=test'
-    })
-    vi.mocked(pollForResult).mockRejectedValue(new Error('Some other error'))
-
-    const result = await ensureConfig()
-
-    expect(result).toBeNull()
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('timed out or session expired'))
+    expect(fetchMock).not.toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ method: 'DELETE' }))
   })
 })

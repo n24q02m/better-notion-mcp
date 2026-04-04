@@ -21,6 +21,11 @@ describe('normalizeId', () => {
   it('should return string without hyphens unchanged', () => {
     expect(normalizeId('abcdef123456')).toBe('abcdef123456')
   })
+
+  it('should handle non-hex characters and multiple hyphens', () => {
+    expect(normalizeId('g-h-i--j')).toBe('ghij')
+    expect(normalizeId('!@#- %^-&*')).toBe('!@# %^&*')
+  })
 })
 
 describe('isValidNotionId', () => {
