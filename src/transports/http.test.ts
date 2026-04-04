@@ -133,7 +133,7 @@ describe('startHttp', () => {
     // OAuth router mounted
     expect(app.use).toHaveBeenCalled()
 
-    // Trust proxy and disable x-powered-by
+    // Trust proxy defaults to 2 and disable x-powered-by
     expect(app.set).toHaveBeenCalledWith('trust proxy', 2)
     expect(app.disable).toHaveBeenCalledWith('x-powered-by')
 
@@ -158,6 +158,45 @@ describe('startHttp', () => {
     expect(app.listen).toHaveBeenCalledWith(3000, '0.0.0.0', expect.any(Function))
 
     mockLog.mockRestore()
+  })
+
+  it('should parse TRUST_PROXY environment variable correctly', async () => {
+    const originalTrustProxy = process.env.TRUST_PROXY
+
+    try {
+      const express = (await import('express')).default
+      const { startHttp } = await import('./http.js')
+
+      // Test boolean 'true'
+      process.env.TRUST_PROXY = 'true'
+      await startHttp()
+      const mockAppTrue = (express as any).mock.results.at(-1)?.value
+      expect(mockAppTrue.set).toHaveBeenCalledWith('trust proxy', true)
+
+      // Test boolean 'false'
+      process.env.TRUST_PROXY = 'false'
+      await startHttp()
+      const mockAppFalse = (express as any).mock.results.at(-1)?.value
+      expect(mockAppFalse.set).toHaveBeenCalledWith('trust proxy', false)
+
+      // Test number '1'
+      process.env.TRUST_PROXY = '1'
+      await startHttp()
+      const mockAppNum = (express as any).mock.results.at(-1)?.value
+      expect(mockAppNum.set).toHaveBeenCalledWith('trust proxy', 1)
+
+      // Test raw string '127.0.0.1'
+      process.env.TRUST_PROXY = '127.0.0.1'
+      await startHttp()
+      const mockAppStr = (express as any).mock.results.at(-1)?.value
+      expect(mockAppStr.set).toHaveBeenCalledWith('trust proxy', '127.0.0.1')
+    } finally {
+      if (originalTrustProxy === undefined) {
+        delete process.env.TRUST_PROXY
+      } else {
+        process.env.TRUST_PROXY = originalTrustProxy
+      }
+    }
   })
 
   it('should use createNotionOAuthProvider with config', async () => {
@@ -793,7 +832,7 @@ describe('startHttp', () => {
 
   describe('IP propagation middleware', () => {
     it('should run requestContext with IP from req.ip', async () => {
-      const { requestContext } = await import('../auth/notion-oauth-provider.js')
+      await import('../auth/notion-oauth-provider.js')
       const mockLog = vi.spyOn(console, 'info').mockImplementation(() => {})
 
       const { startHttp } = await import('./http.js')

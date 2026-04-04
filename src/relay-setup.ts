@@ -9,7 +9,7 @@
  */
 
 import { writeConfig } from '@n24q02m/mcp-relay-core'
-import { createSession, pollForResult } from '@n24q02m/mcp-relay-core/relay'
+import { createSession, pollForResult, sendMessage } from '@n24q02m/mcp-relay-core/relay'
 import { resolveConfig } from '@n24q02m/mcp-relay-core/storage'
 import { RELAY_SCHEMA } from './relay-schema.js'
 
@@ -53,12 +53,20 @@ export async function ensureConfig(): Promise<string | null> {
 
   // Log URL to stderr (visible to user in MCP client)
   console.error(`\nSetup required. Open this URL to configure:\n${session.relayUrl}\n`)
+  console.error(
+    'This URL contains temporary setup secrets and will expire in 5 minutes. Do NOT share this link or log it in shared systems.\n'
+  )
 
   // Poll for result
   let config: Record<string, string>
   try {
-    config = await pollForResult(relayUrl, session)
+    config = await pollForResult(relayUrl, session, 2000, 300_000)
   } catch (err: any) {
+    // Cleanup session on failure (except skipped which is handled by pollForResult)
+    if (err?.message !== 'RELAY_SKIPPED') {
+      await fetch(`${relayUrl}/api/sessions/${session.sessionId}`, { method: 'DELETE' }).catch(() => {})
+    }
+
     if (err?.message === 'RELAY_SKIPPED') {
       console.error('Relay setup skipped by user. Notion tools will be limited.')
       return null
@@ -71,12 +79,17 @@ export async function ensureConfig(): Promise<string | null> {
   await writeConfig(SERVER_NAME, config)
   console.error('Notion config saved successfully')
 
-  // Notify relay page setup is complete (inline fetch — sendMessage not yet in npm v0.1.0)
-  await fetch(`${relayUrl}/api/sessions/${session.sessionId}/messages`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type: 'complete', text: 'Notion token saved. Setup complete!' })
+  // Notify relay page setup is complete
+  await sendMessage(relayUrl, session.sessionId, {
+    type: 'complete',
+    text: 'Notion token saved. Setup complete!'
   }).catch(() => {})
+
+  // Explicit session cleanup (one-time use)
+  // We wait a tiny bit to ensure the notification was likely received by the browser
+  setTimeout(() => {
+    fetch(`${relayUrl}/api/sessions/${session.sessionId}`, { method: 'DELETE' }).catch(() => {})
+  }, 1000)
 
   return config.NOTION_TOKEN
 }

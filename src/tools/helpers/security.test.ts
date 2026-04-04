@@ -48,13 +48,32 @@ describe('Security Utilities', () => {
       expect(isSafeUrl('https://example.com/path\0withnull')).toBe(false)
       expect(isSafeUrl('mailto:user@\texample.com')).toBe(false)
     })
-  })
 
-  it('should allow valid relative or absolute URLs that fail parsing but are not dangerous', () => {
-    // These fail new URL() parsing but don't match the dangerous protocol checks
-    expect(isSafeUrl('/relative/path')).toBe(true)
-    expect(isSafeUrl('just-a-string')).toBe(true)
-    expect(isSafeUrl('foo.html')).toBe(true)
+    it('should allow valid relative or absolute URLs that fail parsing but are not dangerous', () => {
+      // These fail new URL() parsing but don't match the dangerous protocol checks
+      expect(isSafeUrl('/relative/path')).toBe(true)
+      expect(isSafeUrl('just-a-string')).toBe(true)
+      expect(isSafeUrl('foo.html')).toBe(true)
+    })
+
+    it('should handle complex relative URLs and suspicious prefixes', () => {
+      // Suspicious prefixes in relative URLs
+      expect(isSafeUrl('javascript:alert(1)')).toBe(false)
+      expect(isSafeUrl('java&script:alert(1)')).toBe(false)
+      expect(isSafeUrl('javascript%3aalert(1)')).toBe(false)
+
+      // Characters after delimiters should be safe
+      expect(isSafeUrl('/path?arg=javascript:alert(1)')).toBe(true)
+      expect(isSafeUrl('/path#javascript:alert(1)')).toBe(true)
+      expect(isSafeUrl('page.php?id=123&type=456')).toBe(true)
+      expect(isSafeUrl('/relative/path:with/colon')).toBe(true)
+    })
+
+    it('should reject malformed URLs that fail all parsing (coverage for inner catch)', () => {
+      // http://[ is a malformed absolute URL that will fail the first new URL() call
+      // and also fail the relative URL check new URL(lowerUrl, 'http://relative-check.internal')
+      expect(isSafeUrl('http://[')).toBe(false)
+    })
   })
 
   describe('wrapToolResult', () => {

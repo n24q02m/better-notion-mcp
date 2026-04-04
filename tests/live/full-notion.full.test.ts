@@ -886,11 +886,12 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
         arguments: { action: 'list', page_id: testPageId }
       })
       // Known Notion API bug: comments.list returns 404 with OAuth tokens on 2025-09-03
-      // With integration tokens it should work
+      // With integration tokens it should work, but with OAuth tokens we expect
+      // the improved tool logic to catch it as COMMENTS_LIST_UNAVAILABLE.
       if (!result.isError) {
         const text = extractText(result)
         const parsed = safeParse(text)
-        expect(parsed.comments).toBeDefined()
+        expect(parsed.results).toBeDefined()
       }
     })
   })

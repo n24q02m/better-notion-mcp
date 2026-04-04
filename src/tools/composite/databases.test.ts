@@ -8,6 +8,7 @@ import {
   type GetDatabaseResponse,
   type ListDataSourceTemplatesResponse,
   type QueryDatabaseResponse,
+  schemaCache,
   type UpdateDatabasePageResponse,
   type UpdateDatabaseResponse,
   type UpdateDataSourceResponse
@@ -67,6 +68,7 @@ function makeDataSourceResponse(overrides: Record<string, any> = {}) {
 
 describe('databases', () => {
   beforeEach(() => {
+    schemaCache.clear()
     vi.resetAllMocks()
   })
 
@@ -420,6 +422,7 @@ describe('databases', () => {
 
   describe('create_page', () => {
     beforeEach(() => {
+      schemaCache.clear()
       mockNotion.databases.retrieve.mockResolvedValue(makeDbRetrieveResponse())
       mockNotion.dataSources.retrieve.mockResolvedValue(makeDataSourceResponse())
     })
