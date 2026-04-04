@@ -19,6 +19,7 @@ import type { OAuthClientInformationFull } from '@modelcontextprotocol/sdk/share
  */
 export class StatelessClientStore implements OAuthRegisteredClientsStore {
   private cache = new Map<string, OAuthClientInformationFull>()
+  private readonly MAX_CACHE_SIZE = 1000
 
   constructor(private readonly secret: string) {}
 
@@ -62,6 +63,12 @@ export class StatelessClientStore implements OAuthRegisteredClientsStore {
       client_secret: clientSecret,
       client_id_issued_at: Math.floor(Date.now() / 1000)
     } as OAuthClientInformationFull
+
+    // Evict oldest if cache is full to prevent OOM
+    if (this.cache.size >= this.MAX_CACHE_SIZE) {
+      const oldestKey = this.cache.keys().next().value
+      if (oldestKey) this.cache.delete(oldestKey)
+    }
 
     // Cache for getClient lookups (authorize flow needs redirect_uris)
     this.cache.set(clientId, registered)

@@ -123,6 +123,33 @@ describe('StatelessClientStore', () => {
     })
   })
 
+  describe('eviction', () => {
+    it('should evict the oldest cache entry when exceeding MAX_CACHE_SIZE', () => {
+      const store = new StatelessClientStore(TEST_SECRET)
+
+      // Fill cache to MAX_CACHE_SIZE
+      for (let i = 0; i < 1000; i++) {
+        store.registerClient(makeClient({ client_name: `Client ${i}` }))
+      }
+
+      // Get the first client's ID to check if it gets evicted
+      const firstClient = makeClient({ client_name: 'Client 0' })
+      // Use internal method trick or register it again to see
+      // Actually we can just check if getClient returns empty redirect_uris
+      // because it falls back when not in cache.
+      const firstResult = store.registerClient(firstClient)
+
+      // Fill cache completely to evict the very first
+      for (let i = 0; i < 1000; i++) {
+        store.registerClient(makeClient({ client_name: `New Client ${i}` }))
+      }
+
+      const retrieved = store.getClient(firstResult.client_id)
+      expect(retrieved).toBeDefined()
+      expect(retrieved!.redirect_uris).toEqual([]) // Empty means it fell back, cache was evicted
+    })
+  })
+
   describe('secret rotation', () => {
     it('should produce different credentials with a different secret', () => {
       const store1 = new StatelessClientStore('secret-v1')
