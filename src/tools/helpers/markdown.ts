@@ -287,21 +287,11 @@ function tableToMarkdown(block: NotionBlock): string[] {
   if (tableRows.length > 0) {
     for (let rowIdx = 0; rowIdx < tableRows.length; rowIdx++) {
       const row = tableRows[rowIdx]
-      const rowCells = row.table_row?.cells || []
-      const cells: string[] = []
-      const isHeaderRow = rowIdx === 0 && block.table?.has_column_header
-      const separators: string[] = []
-
-      for (let i = 0; i < rowCells.length; i++) {
-        cells.push(richTextToMarkdown(rowCells[i]))
-        if (isHeaderRow) {
-          separators.push('---')
-        }
-      }
-
+      const cells = (row.table_row?.cells || []).map((cell: RichText[]) => richTextToMarkdown(cell))
       lines.push(`| ${cells.join(' | ')} |`)
-      if (isHeaderRow) {
-        lines.push(`| ${separators.join(' | ')} |`)
+      // Add header separator after first row if table has column header
+      if (rowIdx === 0 && block.table?.has_column_header) {
+        lines.push(`| ${cells.map(() => '---').join(' | ')} |`)
       }
     }
   }
