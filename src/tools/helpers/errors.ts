@@ -1,8 +1,10 @@
 /**
- * Error Handling Utilities
- * AI-friendly error messages and suggestions
+ * Error handling utilities for Notion API
  */
 
+/**
+ * Custom error class for Notion MCP
+ */
 export class NotionMCPError extends Error {
   constructor(
     message: string,
@@ -113,6 +115,9 @@ export function enhanceError(error: any): NotionMCPError {
   )
 }
 
+/**
+ * Map of Notion API error codes to their respective configurations
+ */
 const NOTION_ERROR_MAP: Record<string, { message: string; code: string; suggestion: string }> = {
   unauthorized: {
     message: 'Invalid or missing Notion API token',
@@ -130,7 +135,7 @@ const NOTION_ERROR_MAP: Record<string, { message: string; code: string; suggesti
     message: 'Page or database not found',
     code: 'NOT_FOUND',
     suggestion:
-      'Check the ID is correct. For databases: use the database container ID (from URL), not the data_source ID (from search). If you got this ID from workspace search, try databases/get first to resolve the correct ID.'
+      'Check the ID is correct. For databases: use the database container ID (from URL), not the data_source ID (from search). If you got this ID from search, use databases/get first to resolve the correct ID.'
   },
   rate_limited: {
     message: 'Too many requests to Notion API',
@@ -148,32 +153,39 @@ const NOTION_ERROR_MAP: Record<string, { message: string; code: string; suggesti
     suggestion: 'Wait a moment and try again. Check https://status.notion.so for updates.'
   }
 }
+
+/**
+ * Handle Notion API validation errors with dynamic suggestions
+ */
+function handleValidationError(error: any): NotionMCPError {
+  const bodyMessage: string = error.body?.message || ''
+  let suggestion = 'Check the API documentation for valid parameter formats'
+
+  // Detect common property format mistakes and provide specific guidance
+  if (bodyMessage.includes('rich_text') || bodyMessage.includes('title')) {
+    suggestion =
+      'Property format error. For database page properties, use simple values: {"Name": "text", "Status": "value", "Tags": ["a","b"], "Count": 42, "Done": true, "Due": "2025-01-15"}. The server auto-converts to Notion format.'
+  } else if (bodyMessage.includes('property')) {
+    suggestion =
+      'Property name or type mismatch. Use databases(action="get") to check the schema, then match property names exactly (case-sensitive).'
+  }
+
+  return new NotionMCPError(
+    bodyMessage || 'Invalid request parameters',
+    'VALIDATION_ERROR',
+    suggestion,
+    sanitizeValidationBody(error.body)
+  )
+}
+
 /**
  * Handle specific Notion API errors
  */
 function handleNotionError(error: any): NotionMCPError {
   const code = error.code
-  const message = error.message || 'Unknown Notion API error'
 
   if (code === 'validation_error') {
-    const bodyMessage: string = error.body?.message || ''
-    let suggestion = 'Check the API documentation for valid parameter formats'
-
-    // Detect common property format mistakes and provide specific guidance
-    if (bodyMessage.includes('rich_text') || bodyMessage.includes('title')) {
-      suggestion =
-        'Property format error. For database page properties, use simple values: {"Name": "text", "Status": "value", "Tags": ["a","b"], "Count": 42, "Done": true, "Due": "2025-01-15"}. The server auto-converts to Notion format.'
-    } else if (bodyMessage.includes('property')) {
-      suggestion =
-        'Property name or type mismatch. Use databases(action="get") to check the schema, then match property names exactly (case-sensitive).'
-    }
-
-    return new NotionMCPError(
-      bodyMessage || 'Invalid request parameters',
-      'VALIDATION_ERROR',
-      suggestion,
-      sanitizeValidationBody(error.body)
-    )
+    return handleValidationError(error)
   }
 
   const mapping = NOTION_ERROR_MAP[code]
@@ -181,7 +193,11 @@ function handleNotionError(error: any): NotionMCPError {
     return new NotionMCPError(mapping.message, mapping.code, mapping.suggestion)
   }
 
-  return new NotionMCPError(message, code.toUpperCase(), 'Check the Notion API documentation for this error code')
+  return new NotionMCPError(
+    error.message || 'Unknown Notion API error',
+    code?.toUpperCase() || 'UNKNOWN',
+    'Check the Notion API documentation for this error code'
+  )
 }
 
 /**
