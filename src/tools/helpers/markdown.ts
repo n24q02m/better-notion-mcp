@@ -287,11 +287,32 @@ function tableToMarkdown(block: NotionBlock): string[] {
   if (tableRows.length > 0) {
     for (let rowIdx = 0; rowIdx < tableRows.length; rowIdx++) {
       const row = tableRows[rowIdx]
-      const cells = (row.table_row?.cells || []).map((cell: RichText[]) => richTextToMarkdown(cell))
-      lines.push(`| ${cells.join(' | ')} |`)
-      // Add header separator after first row if table has column header
-      if (rowIdx === 0 && block.table?.has_column_header) {
-        lines.push(`| ${cells.map(() => '---').join(' | ')} |`)
+      const rawCells = row.table_row?.cells || []
+
+      if (rawCells.length === 0) {
+        lines.push('|  |')
+        if (rowIdx === 0 && block.table?.has_column_header) {
+          lines.push('|  |')
+        }
+        continue
+      }
+
+      let rowStr = '|'
+      let headerSep = '|'
+      const isFirstRowHeader = rowIdx === 0 && block.table?.has_column_header
+
+      for (let i = 0; i < rawCells.length; i++) {
+        // Optimization: Consolidate row cell rendering and header separator generation
+        // into a single loop, eliminating redundant array mappings on cell data.
+        rowStr += ` ${richTextToMarkdown(rawCells[i])} |`
+        if (isFirstRowHeader) {
+          headerSep += ' --- |'
+        }
+      }
+
+      lines.push(rowStr)
+      if (isFirstRowHeader) {
+        lines.push(headerSep)
       }
     }
   }
