@@ -7,3 +7,9 @@ https://test.com/setup
 
 Setup required for better-notion-mcp. Open this URL to configure:
 https://test.com/setup
+
+Setup required for better-notion-mcp. Open this URL to configure:
+https://test.com/setup
+
+Setup required for better-notion-mcp. Open this URL to configure:
+https://test.com/setup

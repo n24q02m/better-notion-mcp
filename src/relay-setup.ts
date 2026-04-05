@@ -8,10 +8,10 @@
  * 4. DEGRADED MODE     -- Limited tools (help + content_convert only)
  */
 
+import { appendFile } from 'node:fs/promises'
 import { writeConfig } from '@n24q02m/mcp-relay-core'
 import { createSession, pollForResult, sendMessage } from '@n24q02m/mcp-relay-core/relay'
 import { resolveConfig } from '@n24q02m/mcp-relay-core/storage'
-import { appendFile } from 'node:fs/promises'
 import { RELAY_SCHEMA } from './relay-schema.js'
 
 const SERVER_NAME = 'better-notion-mcp'
@@ -52,13 +52,16 @@ export async function ensureConfig(): Promise<string | null> {
     return null
   }
 
-
   // Log URL to stderr or file (visible to user in MCP client)
-  const securityWarning = 'This URL contains temporary setup secrets and will expire in 3 minutes. Do NOT share this link or log it in shared systems.\n'
+  const securityWarning =
+    'This URL contains temporary setup secrets and will expire in 3 minutes. Do NOT share this link or log it in shared systems.\n'
   console.error(`\n${securityWarning}`)
   if (process.env.NOTION_MCP_SETUP_FILE) {
     try {
-      await appendFile(process.env.NOTION_MCP_SETUP_FILE, `\nSetup required for ${SERVER_NAME}. Open this URL to configure:\n${session.relayUrl}\n`)
+      await appendFile(
+        process.env.NOTION_MCP_SETUP_FILE,
+        `\nSetup required for ${SERVER_NAME}. Open this URL to configure:\n${session.relayUrl}\n`
+      )
       console.error(`Setup URL written to ${process.env.NOTION_MCP_SETUP_FILE}\n`)
     } catch (err) {
       console.error(`Failed to write setup URL to file: ${(err as Error).message}\n`)
