@@ -111,7 +111,7 @@ describe('fetchChildrenRecursive', () => {
     await fetchChildrenRecursive(blocks, fetchChildren)
 
     expect(fetchChildren).toHaveBeenCalledTimes(1)
-    expect(fetchChildren).toHaveBeenCalledWith('table-1')
+    expect(fetchChildren).toHaveBeenCalledWith('table-1', expect.any(Function))
     expect(blocks[0].table.children).toEqual(tableRows)
   })
 

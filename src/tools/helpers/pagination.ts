@@ -14,9 +14,10 @@ export interface PaginatedResponse<T> {
   has_more: boolean
 }
 
-export interface PaginationOptions {
+export interface PaginationOptions<T = any> {
   maxPages?: number // Max pages to fetch (0 = unlimited, capped by MAX_PAGES_SAFETY)
   pageSize?: number // Items per page (default: 100)
+  onPage?: (results: T[]) => void | Promise<void> // Callback for streaming results
 }
 
 /**
@@ -24,9 +25,9 @@ export interface PaginationOptions {
  */
 export async function autoPaginate<T>(
   fetchFn: (cursor?: string, pageSize?: number) => Promise<PaginatedResponse<T>>,
-  options: PaginationOptions = {}
+  options: PaginationOptions<T> = {}
 ): Promise<T[]> {
-  const { maxPages = 0, pageSize = 100 } = options
+  const { maxPages = 0, pageSize = 100, onPage } = options
   const effectiveMax = maxPages > 0 ? Math.min(maxPages, MAX_PAGES_SAFETY) : MAX_PAGES_SAFETY
   const allResults: T[] = []
   let cursor: string | null = null
@@ -35,6 +36,14 @@ export async function autoPaginate<T>(
   do {
     const response = await fetchFn(cursor || undefined, pageSize)
     allResults.push(...response.results)
+
+    if (onPage) {
+      const promise = onPage(response.results)
+      if (promise instanceof Promise) {
+        await promise
+      }
+    }
+
     cursor = response.next_cursor
     pageCount++
 
@@ -117,7 +126,7 @@ export class ConcurrencyQueue {
  */
 export async function fetchChildrenRecursive(
   blocks: any[],
-  fetchChildren: (blockId: string) => Promise<any[]>,
+  fetchChildren: (blockId: string, onPage?: (results: any[]) => Promise<void>) => Promise<any[]>,
   depth = 0,
   queue?: ConcurrencyQueue
 ): Promise<void> {
@@ -128,15 +137,25 @@ export async function fetchChildrenRecursive(
   if (blocksNeedingChildren.length === 0) return
 
   const fetchAndRecurse = async (block: any) => {
-    const children = queue ? await queue.run(() => fetchChildren(block.id)) : await fetchChildren(block.id)
+    let recursed = false
+    const onPage = async (pageResults: any[]) => {
+      recursed = true
+      await fetchChildrenRecursive(pageResults, fetchChildren, depth + 1, queue)
+    }
+
+    // Call fetchChildren. If it supports the callback, recursion happens during the call (page by page).
+    // If not, we'll recurse once at the end.
+    const children = await fetchChildren(block.id, onPage)
 
     // Attach children to the correct property based on block type
     if (block[block.type]) {
       block[block.type].children = children
     }
 
-    // Recurse into children
-    await fetchChildrenRecursive(children, fetchChildren, depth + 1, queue)
+    // If fetchChildren didn't use the onPage callback, recurse now
+    if (!recursed && children.length > 0) {
+      await fetchChildrenRecursive(children, fetchChildren, depth + 1, queue)
+    }
   }
 
   // Parallelize recursive tree traversal.
@@ -170,9 +189,17 @@ export async function populateDeepChildren(notion: Client, blocks: any[]): Promi
 
   await fetchChildrenRecursive(
     blocks,
-    async (blockId) => {
-      return autoPaginate((cursor) =>
-        notion.blocks.children.list({ block_id: blockId, start_cursor: cursor, page_size: 100 })
+    async (blockId, onPage) => {
+      return autoPaginate(
+        (cursor) =>
+          queue.run(() =>
+            notion.blocks.children.list({
+              block_id: blockId,
+              start_cursor: cursor,
+              page_size: 100
+            })
+          ),
+        { onPage }
       ) as any
     },
     0,
