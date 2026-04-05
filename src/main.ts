@@ -32,12 +32,12 @@ export const mode = getTransportMode()
 /**
  * Bootstrap function to start the server with error handling.
  */
-export async function bootstrap(isTest = process.env.NODE_ENV === 'test') {
+export async function bootstrap(selectedMode: string = mode, isTest = process.env.NODE_ENV === 'test') {
   if (isTest) {
     return
   }
   try {
-    await startServer(mode)
+    await startServer(selectedMode)
   } catch (error) {
     console.error('Failed to start server:', error)
     process.exit(1)

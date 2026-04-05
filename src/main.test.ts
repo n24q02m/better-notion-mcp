@@ -22,6 +22,7 @@ describe('main.ts', () => {
 
   afterEach(() => {
     process.env = originalEnv
+    vi.unstubAllEnvs()
   })
 
   describe('getTransportMode', () => {
@@ -38,6 +39,11 @@ describe('main.ts', () => {
     it('should return any value set in TRANSPORT_MODE', () => {
       const env = { TRANSPORT_MODE: 'custom' }
       expect(getTransportMode(env)).toBe('custom')
+    })
+
+    it('should use current process.env if no argument is provided', () => {
+      vi.stubEnv('TRANSPORT_MODE', 'http')
+      expect(getTransportMode()).toBe('http')
     })
   })
 
@@ -72,9 +78,14 @@ describe('main.ts', () => {
       expect(startHttpMock).not.toHaveBeenCalled()
     })
 
-    it('should execute when isTest is false', async () => {
-      await bootstrap(false)
+    it('should execute with default mode when isTest is false', async () => {
+      await bootstrap(undefined, false)
       expect(startStdioMock).toHaveBeenCalled()
+    })
+
+    it('should execute with provided mode when isTest is false', async () => {
+      await bootstrap('http', false)
+      expect(startHttpMock).toHaveBeenCalled()
     })
 
     it('should handle startup errors in bootstrap', async () => {
@@ -83,13 +94,20 @@ describe('main.ts', () => {
 
       startStdioMock.mockRejectedValueOnce(new Error('Test failure'))
 
-      await bootstrap(false)
+      await bootstrap('stdio', false)
 
       expect(consoleSpy).toHaveBeenCalledWith('Failed to start server:', expect.any(Error))
       expect(exitSpy).toHaveBeenCalledWith(1)
 
       consoleSpy.mockRestore()
       exitSpy.mockRestore()
+    })
+
+    it('should correctly initialize global mode from environment', async () => {
+      vi.stubEnv('TRANSPORT_MODE', 'http')
+      vi.resetModules()
+      const { mode: newMode } = await import('./main.js')
+      expect(newMode).toBe('http')
     })
   })
 })
