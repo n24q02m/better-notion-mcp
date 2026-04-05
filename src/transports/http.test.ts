@@ -85,26 +85,22 @@ vi.mock('node:fs', () => ({
 }))
 
 describe('startHttp', () => {
-  const originalEnv = process.env
-
   beforeEach(() => {
     vi.clearAllMocks()
-    process.env = {
-      ...originalEnv,
-      PUBLIC_URL: 'https://better-notion-mcp.n24q02m.com',
-      NOTION_OAUTH_CLIENT_ID: 'test-client-id',
-      NOTION_OAUTH_CLIENT_SECRET: 'test-secret',
-      DCR_SERVER_SECRET: 'test-dcr-secret',
-      PORT: '3000'
-    }
+    vi.resetModules()
+    vi.stubEnv('PUBLIC_URL', 'https://better-notion-mcp.n24q02m.com')
+    vi.stubEnv('NOTION_OAUTH_CLIENT_ID', 'test-client-id')
+    vi.stubEnv('NOTION_OAUTH_CLIENT_SECRET', 'test-secret')
+    vi.stubEnv('DCR_SERVER_SECRET', 'test-dcr-secret')
+    vi.stubEnv('PORT', '3000')
   })
 
   afterEach(() => {
-    process.env = originalEnv
+    vi.unstubAllEnvs()
   })
 
   it('should exit if PUBLIC_URL is missing', async () => {
-    delete process.env.PUBLIC_URL
+    vi.stubEnv('PUBLIC_URL', '')
     const mockExit = vi.spyOn(process, 'exit').mockImplementation((() => {
       throw new Error('process.exit')
     }) as any)
@@ -120,6 +116,56 @@ describe('startHttp', () => {
     mockError.mockRestore()
   })
 
+  it('should exit if NOTION_OAUTH_CLIENT_ID is missing', async () => {
+    vi.stubEnv('NOTION_OAUTH_CLIENT_ID', '')
+    const mockExit = vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('process.exit')
+    }) as any)
+    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const { startHttp } = await import('./http.js')
+    await expect(startHttp()).rejects.toThrow('process.exit')
+
+    expect(mockError).toHaveBeenCalledWith('Missing required env var: NOTION_OAUTH_CLIENT_ID')
+    expect(mockExit).toHaveBeenCalledWith(1)
+
+    mockExit.mockRestore()
+    mockError.mockRestore()
+  })
+
+  it('should exit if NOTION_OAUTH_CLIENT_SECRET is missing', async () => {
+    vi.stubEnv('NOTION_OAUTH_CLIENT_SECRET', '')
+    const mockExit = vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('process.exit')
+    }) as any)
+    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const { startHttp } = await import('./http.js')
+    await expect(startHttp()).rejects.toThrow('process.exit')
+
+    expect(mockError).toHaveBeenCalledWith('Missing required env var: NOTION_OAUTH_CLIENT_SECRET')
+    expect(mockExit).toHaveBeenCalledWith(1)
+
+    mockExit.mockRestore()
+    mockError.mockRestore()
+  })
+
+  it('should exit if DCR_SERVER_SECRET is missing', async () => {
+    vi.stubEnv('DCR_SERVER_SECRET', '')
+    const mockExit = vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('process.exit')
+    }) as any)
+    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const { startHttp } = await import('./http.js')
+    await expect(startHttp()).rejects.toThrow('process.exit')
+
+    expect(mockError).toHaveBeenCalledWith('Missing required env var: DCR_SERVER_SECRET')
+    expect(mockExit).toHaveBeenCalledWith(1)
+
+    mockExit.mockRestore()
+    mockError.mockRestore()
+  })
   it('should register OAuth router, health, and MCP endpoints', async () => {
     const mockLog = vi.spyOn(console, 'info').mockImplementation(() => {})
     const { startHttp } = await import('./http.js')
@@ -666,199 +712,331 @@ describe('startHttp', () => {
     })
   })
 
-  describe('callback route — success flow', () => {
-    it('should exchange token and redirect with clientState', async () => {
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          access_token: 'notion-access-token',
-          token_type: 'bearer',
-          refresh_token: 'notion-refresh-token',
-          expires_in: 3600
-        })
-      })
-      vi.stubGlobal('fetch', mockFetch)
+  describe('StreamableHTTPServerTransport session management', () => {
+    it('should use a valid UUID for sessionIdGenerator', async () => {
+      const { isInitializeRequest: mockIsInit } = await import('@modelcontextprotocol/sdk/types.js')
+      ;(mockIsInit as any).mockReturnValue(true)
 
-      const { createNotionOAuthProvider } = await import('../auth/notion-oauth-provider.js')
-      const handlers = await startAndGetHandlers()
-      const handler = handlers['GET:/callback']?.at(-1) as Fn
-
-      const providerInfo = vi.mocked(createNotionOAuthProvider).mock.results[0].value
-      const pendingAuths: Map<string, any> = providerInfo.pendingAuths
-
-      // Add pending auth with clientState
-      pendingAuths.set('valid-state', {
-        clientId: 'client-1',
-        clientRedirectUri: 'https://example.com/oauth/callback',
-        codeChallenge: 'challenge123',
-        codeChallengeMethod: 'S256',
-        clientState: 'client-state-value',
-        createdAt: Date.now()
-      })
-
-      const req = { query: { code: 'notion-auth-code', state: 'valid-state' } }
-      const res = mockRes()
-      await handler(req, res)
-
-      // Should redirect
-      expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('https://example.com/oauth/callback'))
-      // Should include state param
-      const redirectUrl = res.redirect.mock.calls[0][0]
-      expect(redirectUrl).toContain('state=client-state-value')
-      expect(redirectUrl).toContain('code=')
-
-      // Should have called Notion token exchange
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.notion.com/v1/oauth/token',
-        expect.objectContaining({ method: 'POST' })
+      const { StreamableHTTPServerTransport: MockTransport } = await import(
+        '@modelcontextprotocol/sdk/server/streamableHttp.js'
       )
 
-      vi.unstubAllGlobals()
+      let capturedConfig: any = null
+      ;(MockTransport as any).mockImplementation(function (this: any, config: any) {
+        capturedConfig = config
+        this.sessionId = null
+        this.onclose = null
+        this.handleRequest = vi.fn()
+      })
+
+      const handlers = await startAndGetHandlers()
+      const postHandler = handlers['POST:/mcp']?.at(-1) as Fn
+
+      await postHandler(
+        { headers: {}, body: { jsonrpc: '2.0', method: 'initialize', id: 1 }, auth: { token: 'token' } },
+        mockRes()
+      )
+
+      expect(capturedConfig).toBeDefined()
+      expect(typeof capturedConfig.sessionIdGenerator).toBe('function')
+      const sessionId = capturedConfig.sessionIdGenerator()
+      expect(typeof sessionId).toBe('string')
+      // Basic UUID v4 format check (8-4-4-4-12 hex chars)
+      expect(sessionId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)
     })
 
-    it('should redirect without state param when clientState is absent', async () => {
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          access_token: 'notion-token',
-          token_type: 'bearer'
+    it('should remove session from internal maps on transport.onclose', async () => {
+      const { isInitializeRequest: mockIsInit } = await import('@modelcontextprotocol/sdk/types.js')
+      ;(mockIsInit as any).mockReturnValue(true)
+
+      const { StreamableHTTPServerTransport: MockTransport } = await import(
+        '@modelcontextprotocol/sdk/server/streamableHttp.js'
+      )
+
+      let capturedTransport: any = null
+      let capturedConfig: any = null
+      ;(MockTransport as any).mockImplementation(function (this: any, config: any) {
+        capturedTransport = this
+        capturedConfig = config
+        this.sessionId = 'session-to-close'
+        this.initialized = false
+        this.onclose = null
+        this.handleRequest = vi.fn(async () => {
+          if (capturedConfig?.onsessioninitialized && !this.initialized) {
+            this.initialized = true
+            capturedConfig.onsessioninitialized('session-to-close')
+          }
         })
       })
-      vi.stubGlobal('fetch', mockFetch)
 
-      const { createNotionOAuthProvider } = await import('../auth/notion-oauth-provider.js')
       const handlers = await startAndGetHandlers()
-      const handler = handlers['GET:/callback']?.at(-1) as Fn
+      const postHandler = handlers['POST:/mcp']?.at(-1) as Fn
 
-      const providerInfo = vi.mocked(createNotionOAuthProvider).mock.results[0].value
-      const pendingAuths: Map<string, any> = providerInfo.pendingAuths
+      // Initialize
+      await postHandler(
+        { headers: {}, body: { jsonrpc: '2.0', method: 'initialize', id: 1 }, auth: { token: 'token' } },
 
-      // Add pending auth WITHOUT clientState
-      pendingAuths.set('no-state', {
-        clientId: 'client-1',
-        clientRedirectUri: 'https://example.com/callback',
-        codeChallenge: 'challenge',
-        codeChallengeMethod: 'S256',
-        createdAt: Date.now()
-      })
+        mockRes()
+      )
 
-      const req = { query: { code: 'code', state: 'no-state' } }
-      const res = mockRes()
-      await handler(req, res)
+      // Verify session exists (second POST should call handleRequest on the same transport)
+      const res1 = mockRes()
+      await postHandler({ headers: { 'mcp-session-id': 'session-to-close' }, body: {}, auth: { token: 'token' } }, res1)
+      expect(capturedTransport.handleRequest).toHaveBeenCalledTimes(2)
 
-      const redirectUrl = res.redirect.mock.calls[0][0]
-      expect(redirectUrl).not.toContain('state=')
-      expect(redirectUrl).toContain('code=')
+      // Trigger onclose
+      expect(capturedTransport.onclose).toBeDefined()
+      capturedTransport.onclose()
 
-      vi.unstubAllGlobals()
+      // Verify session is gone (POST without initialize should return 400)
+      ;(mockIsInit as any).mockReturnValue(false)
+      const res2 = mockRes()
+      await postHandler({ headers: { 'mcp-session-id': 'session-to-close' }, body: {}, auth: { token: 'token' } }, res2)
+      expect(res2.status).toHaveBeenCalledWith(400)
+      expect(res2.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.objectContaining({ message: expect.stringContaining('Bad request') })
+        })
+      )
     })
 
-    it('should return 502 when Notion token exchange fails', async () => {
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 401,
-        body: { cancel: vi.fn() }
-      })
-      vi.stubGlobal('fetch', mockFetch)
+    describe('callback route — flows', () => {
+      it('should return 400 when error query param is present', async () => {
+        const handlers = await startAndGetHandlers()
+        const handler = handlers['GET:/callback']?.at(-1) as Fn
 
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        const req = { query: { error: 'access_denied' } }
+        const res = mockRes()
+        await handler(req, res)
 
-      const { createNotionOAuthProvider } = await import('../auth/notion-oauth-provider.js')
-      const handlers = await startAndGetHandlers()
-      const handler = handlers['GET:/callback']?.at(-1) as Fn
-
-      const providerInfo = vi.mocked(createNotionOAuthProvider).mock.results[0].value
-      const pendingAuths: Map<string, any> = providerInfo.pendingAuths
-
-      pendingAuths.set('fail-state', {
-        clientId: 'client-1',
-        clientRedirectUri: 'https://example.com/callback',
-        codeChallenge: 'challenge',
-        codeChallengeMethod: 'S256',
-        createdAt: Date.now()
+        expect(res.status).toHaveBeenCalledWith(400)
+        expect(res.json).toHaveBeenCalledWith({
+          error: 'oauth_error',
+          error_description: 'access_denied'
+        })
       })
 
-      const req = { query: { code: 'bad-code', state: 'fail-state' } }
-      const res = mockRes()
-      await handler(req, res)
+      it('should return 400 when code or state is missing', async () => {
+        const handlers = await startAndGetHandlers()
+        const handler = handlers['GET:/callback']?.at(-1) as Fn
 
-      expect(res.status).toHaveBeenCalledWith(502)
-      expect(res.json).toHaveBeenCalledWith({
-        error: 'token_exchange_failed',
-        error_description: 'Failed to exchange code with Notion'
+        const res1 = mockRes()
+        await handler({ query: { state: 'state' } }, res1)
+        expect(res1.status).toHaveBeenCalledWith(400)
+
+        const res2 = mockRes()
+        await handler({ query: { code: 'code' } }, res2)
+        expect(res2.status).toHaveBeenCalledWith(400)
       })
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('token exchange failed'), 401)
 
-      consoleSpy.mockRestore()
-      vi.unstubAllGlobals()
+      it('should return 400 when state is unknown', async () => {
+        const handlers = await startAndGetHandlers()
+        const handler = handlers['GET:/callback']?.at(-1) as Fn
+
+        const req = { query: { code: 'code', state: 'unknown' } }
+        const res = mockRes()
+        await handler(req, res)
+
+        expect(res.status).toHaveBeenCalledWith(400)
+        expect(res.json).toHaveBeenCalledWith({
+          error: 'invalid_state',
+          error_description: 'Unknown or expired state'
+        })
+      })
+
+      it('should exchange token and redirect with clientState', async () => {
+        const mockFetch = vi.fn().mockResolvedValue({
+          ok: true,
+          json: async () => ({
+            access_token: 'notion-access-token',
+            token_type: 'bearer',
+            refresh_token: 'notion-refresh-token',
+            expires_in: 3600
+          })
+        })
+        vi.stubGlobal('fetch', mockFetch)
+
+        const { createNotionOAuthProvider } = await import('../auth/notion-oauth-provider.js')
+        const handlers = await startAndGetHandlers()
+        const handler = handlers['GET:/callback']?.at(-1) as Fn
+
+        const providerInfo = vi.mocked(createNotionOAuthProvider).mock.results[0].value
+        const pendingAuths: Map<string, any> = providerInfo.pendingAuths
+
+        // Add pending auth with clientState
+        pendingAuths.set('valid-state', {
+          clientId: 'client-1',
+          clientRedirectUri: 'https://example.com/oauth/callback',
+          codeChallenge: 'challenge123',
+          codeChallengeMethod: 'S256',
+          clientState: 'client-state-value',
+          createdAt: Date.now()
+        })
+
+        const req = { query: { code: 'notion-auth-code', state: 'valid-state' } }
+        const res = mockRes()
+        await handler(req, res)
+
+        // Should redirect
+        expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('https://example.com/oauth/callback'))
+        // Should include state param
+        const redirectUrl = res.redirect.mock.calls[0][0]
+        expect(redirectUrl).toContain('state=client-state-value')
+        expect(redirectUrl).toContain('code=')
+
+        // Should have called Notion token exchange
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.notion.com/v1/oauth/token',
+          expect.objectContaining({ method: 'POST' })
+        )
+
+        vi.unstubAllGlobals()
+      })
+
+      it('should redirect without state param when clientState is absent', async () => {
+        const mockFetch = vi.fn().mockResolvedValue({
+          ok: true,
+          json: async () => ({
+            access_token: 'notion-token',
+            token_type: 'bearer'
+          })
+        })
+        vi.stubGlobal('fetch', mockFetch)
+
+        const { createNotionOAuthProvider } = await import('../auth/notion-oauth-provider.js')
+        const handlers = await startAndGetHandlers()
+        const handler = handlers['GET:/callback']?.at(-1) as Fn
+
+        const providerInfo = vi.mocked(createNotionOAuthProvider).mock.results[0].value
+        const pendingAuths: Map<string, any> = providerInfo.pendingAuths
+
+        // Add pending auth WITHOUT clientState
+        pendingAuths.set('no-state', {
+          clientId: 'client-1',
+          clientRedirectUri: 'https://example.com/callback',
+          codeChallenge: 'challenge',
+          codeChallengeMethod: 'S256',
+          createdAt: Date.now()
+        })
+
+        const req = { query: { code: 'code', state: 'no-state' } }
+        const res = mockRes()
+        await handler(req, res)
+
+        const redirectUrl = res.redirect.mock.calls[0][0]
+        expect(redirectUrl).not.toContain('state=')
+        expect(redirectUrl).toContain('code=')
+
+        vi.unstubAllGlobals()
+      })
+
+      it('should return 502 when Notion token exchange fails', async () => {
+        const mockFetch = vi.fn().mockResolvedValue({
+          ok: false,
+          status: 401,
+          body: { cancel: vi.fn() }
+        })
+        vi.stubGlobal('fetch', mockFetch)
+
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+        const { createNotionOAuthProvider } = await import('../auth/notion-oauth-provider.js')
+        const handlers = await startAndGetHandlers()
+        const handler = handlers['GET:/callback']?.at(-1) as Fn
+
+        const providerInfo = vi.mocked(createNotionOAuthProvider).mock.results[0].value
+        const pendingAuths: Map<string, any> = providerInfo.pendingAuths
+
+        pendingAuths.set('fail-state', {
+          clientId: 'client-1',
+          clientRedirectUri: 'https://example.com/callback',
+          codeChallenge: 'challenge',
+          codeChallengeMethod: 'S256',
+          createdAt: Date.now()
+        })
+
+        const req = { query: { code: 'bad-code', state: 'fail-state' } }
+        const res = mockRes()
+        await handler(req, res)
+
+        expect(res.status).toHaveBeenCalledWith(502)
+        expect(res.json).toHaveBeenCalledWith({
+          error: 'token_exchange_failed',
+          error_description: 'Failed to exchange code with Notion'
+        })
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('token exchange failed'), 401)
+
+        consoleSpy.mockRestore()
+        vi.unstubAllGlobals()
+      })
+
+      it('should return 500 when callback handler throws', async () => {
+        const mockFetch = vi.fn().mockRejectedValue(new Error('Network error'))
+        vi.stubGlobal('fetch', mockFetch)
+
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+        const { createNotionOAuthProvider } = await import('../auth/notion-oauth-provider.js')
+        const handlers = await startAndGetHandlers()
+        const handler = handlers['GET:/callback']?.at(-1) as Fn
+
+        const providerInfo = vi.mocked(createNotionOAuthProvider).mock.results[0].value
+        const pendingAuths: Map<string, any> = providerInfo.pendingAuths
+
+        pendingAuths.set('error-state', {
+          clientId: 'client-1',
+          clientRedirectUri: 'https://example.com/callback',
+          codeChallenge: 'challenge',
+          codeChallengeMethod: 'S256',
+          createdAt: Date.now()
+        })
+
+        const req = { query: { code: 'code', state: 'error-state' } }
+        const res = mockRes()
+        await handler(req, res)
+
+        expect(res.status).toHaveBeenCalledWith(500)
+        expect(res.json).toHaveBeenCalledWith({
+          error: 'server_error',
+          error_description: 'Internal server error'
+        })
+        expect(consoleSpy).toHaveBeenCalledWith('Callback handler error:', expect.any(Error))
+
+        consoleSpy.mockRestore()
+        vi.unstubAllGlobals()
+      })
     })
 
-    it('should return 500 when callback handler throws', async () => {
-      const mockFetch = vi.fn().mockRejectedValue(new Error('Network error'))
-      vi.stubGlobal('fetch', mockFetch)
+    describe('IP propagation middleware', () => {
+      it('should run requestContext with IP from req.ip', async () => {
+        await import('../auth/notion-oauth-provider.js')
+        const mockLog = vi.spyOn(console, 'info').mockImplementation(() => {})
 
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        const { startHttp } = await import('./http.js')
+        const express = (await import('express')).default
+        await startHttp()
 
-      const { createNotionOAuthProvider } = await import('../auth/notion-oauth-provider.js')
-      const handlers = await startAndGetHandlers()
-      const handler = handlers['GET:/callback']?.at(-1) as Fn
+        const app = (express as any).mock.results[0]?.value
+        // The middleware is the first app.use() call — find it
+        const useCalls = app.use.mock.calls
+        // The IP middleware is passed as a function to app.use()
+        // It's the one that calls requestContext.run
+        const ipMiddleware = useCalls.find((call: any[]) => {
+          const fn = call[0]
+          return typeof fn === 'function' && fn.length === 3 // (req, res, next) arity
+        })
 
-      const providerInfo = vi.mocked(createNotionOAuthProvider).mock.results[0].value
-      const pendingAuths: Map<string, any> = providerInfo.pendingAuths
+        if (ipMiddleware) {
+          const middleware = ipMiddleware[0]
+          const req = { ip: '192.168.1.1', socket: { remoteAddress: '10.0.0.1' } }
+          const next = vi.fn()
+          // Just verify it calls next without throwing
+          middleware(req, {}, next)
+          expect(next).toHaveBeenCalled()
+        }
 
-      pendingAuths.set('error-state', {
-        clientId: 'client-1',
-        clientRedirectUri: 'https://example.com/callback',
-        codeChallenge: 'challenge',
-        codeChallengeMethod: 'S256',
-        createdAt: Date.now()
+        mockLog.mockRestore()
       })
-
-      const req = { query: { code: 'code', state: 'error-state' } }
-      const res = mockRes()
-      await handler(req, res)
-
-      expect(res.status).toHaveBeenCalledWith(500)
-      expect(res.json).toHaveBeenCalledWith({
-        error: 'server_error',
-        error_description: 'Internal server error'
-      })
-      expect(consoleSpy).toHaveBeenCalledWith('Callback handler error:', expect.any(Error))
-
-      consoleSpy.mockRestore()
-      vi.unstubAllGlobals()
-    })
-  })
-
-  describe('IP propagation middleware', () => {
-    it('should run requestContext with IP from req.ip', async () => {
-      await import('../auth/notion-oauth-provider.js')
-      const mockLog = vi.spyOn(console, 'info').mockImplementation(() => {})
-
-      const { startHttp } = await import('./http.js')
-      const express = (await import('express')).default
-      await startHttp()
-
-      const app = (express as any).mock.results[0]?.value
-      // The middleware is the first app.use() call — find it
-      const useCalls = app.use.mock.calls
-      // The IP middleware is passed as a function to app.use()
-      // It's the one that calls requestContext.run
-      const ipMiddleware = useCalls.find((call: any[]) => {
-        const fn = call[0]
-        return typeof fn === 'function' && fn.length === 3 // (req, res, next) arity
-      })
-
-      if (ipMiddleware) {
-        const middleware = ipMiddleware[0]
-        const req = { ip: '192.168.1.1', socket: { remoteAddress: '10.0.0.1' } }
-        const next = vi.fn()
-        // Just verify it calls next without throwing
-        middleware(req, {}, next)
-        expect(next).toHaveBeenCalled()
-      }
-
-      mockLog.mockRestore()
     })
   })
 })
