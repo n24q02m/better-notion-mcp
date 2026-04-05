@@ -97,12 +97,8 @@ export function convertToNotionProperties(
       // Could be multi_select, relation, people, files
       // Only assume multi_select if all elements are strings
       if (value.length > 0 && value.every((v) => typeof v === 'string')) {
-        const multiSelect = new Array(value.length)
-        for (let j = 0; j < value.length; j++) {
-          multiSelect[j] = { name: value[j] }
-        }
         converted[key] = {
-          multi_select: multiSelect
+          multi_select: value.map((v: string) => ({ name: v }))
         }
       } else {
         converted[key] = value
@@ -142,9 +138,7 @@ export function extractPageProperties(pageProperties: any): any {
     } else if (p.type === 'select' && p.select) {
       properties[key] = p.select.name
     } else if (p.type === 'multi_select' && p.multi_select) {
-      const arr = new Array(p.multi_select.length)
-      for (let j = 0; j < p.multi_select.length; j++) arr[j] = p.multi_select[j].name
-      properties[key] = arr
+      properties[key] = p.multi_select.map((v: any) => v.name)
     } else if (p.type === 'number') {
       properties[key] = p.number
     } else if (p.type === 'checkbox') {
@@ -158,20 +152,13 @@ export function extractPageProperties(pageProperties: any): any {
     } else if (p.type === 'date' && p.date) {
       properties[key] = p.date.start + (p.date.end ? ` to ${p.date.end}` : '')
     } else if (p.type === 'relation' && p.relation) {
-      const arr = new Array(p.relation.length)
-      for (let j = 0; j < p.relation.length; j++) arr[j] = p.relation[j].id
-      properties[key] = arr
+      properties[key] = p.relation.map((r: any) => r.id)
     } else if (p.type === 'rollup' && p.rollup) {
       properties[key] = p.rollup
     } else if (p.type === 'people' && p.people) {
-      const arr = new Array(p.people.length)
-      for (let j = 0; j < p.people.length; j++) arr[j] = p.people[j].name || p.people[j].id
-      properties[key] = arr
+      properties[key] = p.people.map((p: any) => p.name || p.id)
     } else if (p.type === 'files' && p.files) {
-      const arr = new Array(p.files.length)
-      for (let j = 0; j < p.files.length; j++)
-        arr[j] = p.files[j].file?.url || p.files[j].external?.url || p.files[j].name
-      properties[key] = arr
+      properties[key] = p.files.map((f: any) => f.file?.url || f.external?.url || f.name)
     } else if (p.type === 'formula' && p.formula) {
       properties[key] = p.formula.type ? (p.formula[p.formula.type] ?? null) : null
     } else if (p.type === 'created_time') {
