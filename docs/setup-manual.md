@@ -210,7 +210,10 @@ Point clients to your server:
 
 No manual token setup. Users authorize via Notion's OAuth flow in the browser.
 
-### Zero-Config Relay
+### Zero-Config Relay (BETA)
+
+> **Note**: Relay is a **BETA** credential provisioning flow. For stable production use, prefer environment variables. The relay blocks server startup on first run and may time out in some MCP clients.
+
 
 If `NOTION_TOKEN` is not set in stdio mode, the server opens a relay setup page:
 1. A setup URL appears in the terminal
