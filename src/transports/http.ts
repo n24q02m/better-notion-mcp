@@ -26,7 +26,7 @@ interface HttpConfig {
 }
 
 function parseTrustProxy(value?: string): boolean | number | string {
-  if (!value) return 2
+  if (!value) return false
   if (value === 'true') return true
   if (value === 'false') return false
   if (/^\d+$/.test(value)) return parseInt(value, 10)
@@ -94,6 +94,7 @@ export async function startHttp() {
 
   // OAuth endpoints (/.well-known/*, /authorize, /token, /register)
   app.use(
+    authRateLimit,
     mcpAuthRouter({
       provider,
       issuerUrl: serverUrl,
