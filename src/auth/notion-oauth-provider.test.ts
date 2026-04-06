@@ -66,8 +66,17 @@ describe('createNotionOAuthProvider', () => {
   describe('verifyAccessToken', () => {
     it('should return AuthInfo via opaque token lookup', async () => {
       const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
-      authCodes.set('code-1', { notionAccessToken: 'valid-token', createdAt: Date.now() })
-      const tokens = await provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1')
+      authCodes.set('code-1', {
+        notionAccessToken: 'valid-token',
+        createdAt: Date.now(),
+        codeChallenge: 'GtSJbMT37cqR-58aHsbbZc3oI08k5VDyJSpq1iwbvHY',
+        codeChallengeMethod: 'S256'
+      })
+      const tokens = await provider.exchangeAuthorizationCode(
+        { client_id: 'c1', client_secret: 's1' } as any,
+        'code-1',
+        'dummy-verifier'
+      )
 
       const result = await provider.verifyAccessToken(tokens.access_token)
       expect(result.token).toBe('valid-token')
@@ -80,9 +89,14 @@ describe('createNotionOAuthProvider', () => {
     it('should resolve external tokens via one-shot pending bind', async () => {
       const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
 
-      authCodes.set('code-1', { notionAccessToken: 'valid-token', createdAt: Date.now() })
+      authCodes.set('code-1', {
+        notionAccessToken: 'valid-token',
+        createdAt: Date.now(),
+        codeChallenge: 'GtSJbMT37cqR-58aHsbbZc3oI08k5VDyJSpq1iwbvHY',
+        codeChallengeMethod: 'S256'
+      })
       await requestContext.run({ ip: '10.0.0.1' }, () =>
-        provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1')
+        provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1', 'dummy-verifier')
       )
 
       // First unknown token claims the pending bind (same IP)
@@ -99,9 +113,14 @@ describe('createNotionOAuthProvider', () => {
     it('should reject a SECOND unknown token after bind is consumed (one-shot)', async () => {
       const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
 
-      authCodes.set('code-1', { notionAccessToken: 'valid-token', createdAt: Date.now() })
+      authCodes.set('code-1', {
+        notionAccessToken: 'valid-token',
+        createdAt: Date.now(),
+        codeChallenge: 'GtSJbMT37cqR-58aHsbbZc3oI08k5VDyJSpq1iwbvHY',
+        codeChallengeMethod: 'S256'
+      })
       await requestContext.run({ ip: '10.0.0.1' }, () =>
-        provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1')
+        provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1', 'dummy-verifier')
       )
 
       // First token claims the bind (same IP)
@@ -116,9 +135,14 @@ describe('createNotionOAuthProvider', () => {
     it('should reject unknown tokens after pending bind expires', async () => {
       const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
 
-      authCodes.set('code-1', { notionAccessToken: 'valid-token', createdAt: Date.now() })
+      authCodes.set('code-1', {
+        notionAccessToken: 'valid-token',
+        createdAt: Date.now(),
+        codeChallenge: 'GtSJbMT37cqR-58aHsbbZc3oI08k5VDyJSpq1iwbvHY',
+        codeChallengeMethod: 'S256'
+      })
       await requestContext.run({ ip: '10.0.0.1' }, () =>
-        provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1')
+        provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1', 'dummy-verifier')
       )
 
       // Advance past the 30-second pending bind TTL
@@ -133,9 +157,14 @@ describe('createNotionOAuthProvider', () => {
     it('should still accept bound tokens after pending bind expires', async () => {
       const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
 
-      authCodes.set('code-1', { notionAccessToken: 'valid-token', createdAt: Date.now() })
+      authCodes.set('code-1', {
+        notionAccessToken: 'valid-token',
+        createdAt: Date.now(),
+        codeChallenge: 'GtSJbMT37cqR-58aHsbbZc3oI08k5VDyJSpq1iwbvHY',
+        codeChallengeMethod: 'S256'
+      })
       await requestContext.run({ ip: '10.0.0.1' }, () =>
-        provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1')
+        provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1', 'dummy-verifier')
       )
 
       // Bind during pending period (same IP)
@@ -151,8 +180,17 @@ describe('createNotionOAuthProvider', () => {
 
     it('should use verification cache on subsequent calls', async () => {
       const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
-      authCodes.set('code-1', { notionAccessToken: 'valid-token', createdAt: Date.now() })
-      const tokens = await provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1')
+      authCodes.set('code-1', {
+        notionAccessToken: 'valid-token',
+        createdAt: Date.now(),
+        codeChallenge: 'GtSJbMT37cqR-58aHsbbZc3oI08k5VDyJSpq1iwbvHY',
+        codeChallengeMethod: 'S256'
+      })
+      const tokens = await provider.exchangeAuthorizationCode(
+        { client_id: 'c1', client_secret: 's1' } as any,
+        'code-1',
+        'dummy-verifier'
+      )
 
       // First call hits Notion API
       const r1 = await provider.verifyAccessToken(tokens.access_token)
@@ -165,8 +203,17 @@ describe('createNotionOAuthProvider', () => {
 
     it('should bypass cache after VERIFY_CACHE_TTL expires', async () => {
       const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
-      authCodes.set('code-1', { notionAccessToken: 'valid-token', createdAt: Date.now() })
-      const tokens = await provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1')
+      authCodes.set('code-1', {
+        notionAccessToken: 'valid-token',
+        createdAt: Date.now(),
+        codeChallenge: 'GtSJbMT37cqR-58aHsbbZc3oI08k5VDyJSpq1iwbvHY',
+        codeChallengeMethod: 'S256'
+      })
+      const tokens = await provider.exchangeAuthorizationCode(
+        { client_id: 'c1', client_secret: 's1' } as any,
+        'code-1',
+        'dummy-verifier'
+      )
 
       // First call populates cache
       await provider.verifyAccessToken(tokens.access_token)
@@ -188,11 +235,16 @@ describe('createNotionOAuthProvider', () => {
     it('should reject pending bind from a different IP (IP-scoped)', async () => {
       const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
 
-      authCodes.set('code-1', { notionAccessToken: 'valid-token', createdAt: Date.now() })
+      authCodes.set('code-1', {
+        notionAccessToken: 'valid-token',
+        createdAt: Date.now(),
+        codeChallenge: 'GtSJbMT37cqR-58aHsbbZc3oI08k5VDyJSpq1iwbvHY',
+        codeChallengeMethod: 'S256'
+      })
 
       // Exchange from IP 1.2.3.4 (simulates POST /token from legitimate client)
       await requestContext.run({ ip: '1.2.3.4' }, () =>
-        provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1')
+        provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1', 'dummy-verifier')
       )
 
       // Attacker tries to claim from different IP
@@ -204,11 +256,16 @@ describe('createNotionOAuthProvider', () => {
     it('should allow pending bind from the same IP (IP-scoped)', async () => {
       const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
 
-      authCodes.set('code-1', { notionAccessToken: 'valid-token', createdAt: Date.now() })
+      authCodes.set('code-1', {
+        notionAccessToken: 'valid-token',
+        createdAt: Date.now(),
+        codeChallenge: 'GtSJbMT37cqR-58aHsbbZc3oI08k5VDyJSpq1iwbvHY',
+        codeChallengeMethod: 'S256'
+      })
 
       // Exchange from IP 1.2.3.4
       await requestContext.run({ ip: '1.2.3.4' }, () =>
-        provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1')
+        provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1', 'dummy-verifier')
       )
 
       // Legitimate client claims from same IP
@@ -220,8 +277,17 @@ describe('createNotionOAuthProvider', () => {
 
     it('should throw for invalid Notion token', async () => {
       const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
-      authCodes.set('code-1', { notionAccessToken: 'expired-notion-token', createdAt: Date.now() })
-      const tokens = await provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1')
+      authCodes.set('code-1', {
+        notionAccessToken: 'expired-notion-token',
+        createdAt: Date.now(),
+        codeChallenge: 'GtSJbMT37cqR-58aHsbbZc3oI08k5VDyJSpq1iwbvHY',
+        codeChallengeMethod: 'S256'
+      })
+      const tokens = await provider.exchangeAuthorizationCode(
+        { client_id: 'c1', client_secret: 's1' } as any,
+        'code-1',
+        'dummy-verifier'
+      )
 
       // Use the opaque token directly (not pending bind) to test Notion API validation
       await expect(provider.verifyAccessToken(tokens.access_token)).rejects.toThrow('Invalid or expired Notion token')
@@ -231,15 +297,30 @@ describe('createNotionOAuthProvider', () => {
       const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
 
       // First: store a valid token and populate cache
-      authCodes.set('code-1', { notionAccessToken: 'valid-token', createdAt: Date.now() })
-      const tokens = await provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1')
+      authCodes.set('code-1', {
+        notionAccessToken: 'valid-token',
+        createdAt: Date.now(),
+        codeChallenge: 'GtSJbMT37cqR-58aHsbbZc3oI08k5VDyJSpq1iwbvHY',
+        codeChallengeMethod: 'S256'
+      })
+      const tokens = await provider.exchangeAuthorizationCode(
+        { client_id: 'c1', client_secret: 's1' } as any,
+        'code-1',
+        'dummy-verifier'
+      )
       await provider.verifyAccessToken(tokens.access_token)
 
       // Now store a code with an invalid notion token under a DIFFERENT opaque token
-      authCodes.set('code-2', { notionAccessToken: 'now-invalid-token', createdAt: Date.now() })
+      authCodes.set('code-2', {
+        notionAccessToken: 'now-invalid-token',
+        createdAt: Date.now(),
+        codeChallenge: 'GtSJbMT37cqR-58aHsbbZc3oI08k5VDyJSpq1iwbvHY',
+        codeChallengeMethod: 'S256'
+      })
       const tokens2 = await provider.exchangeAuthorizationCode(
         { client_id: 'c2', client_secret: 's2' } as any,
-        'code-2'
+        'code-2',
+        'dummy-verifier'
       )
 
       // This should fail and delete the cache entry for 'now-invalid-token'
@@ -249,10 +330,19 @@ describe('createNotionOAuthProvider', () => {
     it('should reject pending bind when IP is unknown', async () => {
       const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
 
-      authCodes.set('code-1', { notionAccessToken: 'valid-token', createdAt: Date.now() })
+      authCodes.set('code-1', {
+        notionAccessToken: 'valid-token',
+        createdAt: Date.now(),
+        codeChallenge: 'GtSJbMT37cqR-58aHsbbZc3oI08k5VDyJSpq1iwbvHY',
+        codeChallengeMethod: 'S256'
+      })
 
       // Exchange WITHOUT requestContext — no IP stored
-      await provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1')
+      await provider.exchangeAuthorizationCode(
+        { client_id: 'c1', client_secret: 's1' } as any,
+        'code-1',
+        'dummy-verifier'
+      )
 
       // Even with IP, the pending bind has no sourceIp so strict check rejects
       await requestContext.run({ ip: '1.2.3.4' }, () =>
@@ -263,11 +353,16 @@ describe('createNotionOAuthProvider', () => {
     it('should reject pending bind when claim IP is unknown (no requestContext)', async () => {
       const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
 
-      authCodes.set('code-1', { notionAccessToken: 'valid-token', createdAt: Date.now() })
+      authCodes.set('code-1', {
+        notionAccessToken: 'valid-token',
+        createdAt: Date.now(),
+        codeChallenge: 'GtSJbMT37cqR-58aHsbbZc3oI08k5VDyJSpq1iwbvHY',
+        codeChallengeMethod: 'S256'
+      })
 
       // Exchange WITH IP
       await requestContext.run({ ip: '1.2.3.4' }, () =>
-        provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1')
+        provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1', 'dummy-verifier')
       )
 
       // Claim WITHOUT requestContext — claimIp is undefined, strict check rejects
@@ -311,12 +406,15 @@ describe('createNotionOAuthProvider', () => {
 
       authCodes.set('test-code', {
         notionAccessToken: 'notion-token-123',
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        codeChallenge: 'GtSJbMT37cqR-58aHsbbZc3oI08k5VDyJSpq1iwbvHY',
+        codeChallengeMethod: 'S256'
       })
 
       const result = await provider.exchangeAuthorizationCode(
         { client_id: 'test', client_secret: 'test' } as any,
-        'test-code'
+        'test-code',
+        'dummy-verifier'
       )
 
       // Should return opaque token, NOT the Notion token
@@ -410,18 +508,31 @@ describe('createNotionOAuthProvider', () => {
 
       // Client B tries to exchange Client A's auth code
       await expect(
-        provider.exchangeAuthorizationCode({ client_id: 'client-B', client_secret: 'test' } as any, 'bound-code')
+        provider.exchangeAuthorizationCode(
+          { client_id: 'client-B', client_secret: 'test' } as any,
+          'bound-code',
+          'dummy-verifier'
+        )
       ).rejects.toThrow('Auth code was not issued to this client')
     })
 
     it('should create a pending bind with IP from requestContext', async () => {
       const { provider, authCodes } = createNotionOAuthProvider(TEST_CONFIG)
 
-      authCodes.set('code-ip', { notionAccessToken: 'valid-token', createdAt: Date.now() })
+      authCodes.set('code-ip', {
+        notionAccessToken: 'valid-token',
+        createdAt: Date.now(),
+        codeChallenge: 'GtSJbMT37cqR-58aHsbbZc3oI08k5VDyJSpq1iwbvHY',
+        codeChallengeMethod: 'S256'
+      })
 
       // Exchange within requestContext — pending bind should have sourceIp
       await requestContext.run({ ip: '192.168.1.1' }, () =>
-        provider.exchangeAuthorizationCode({ client_id: 'ip-client', client_secret: 's1' } as any, 'code-ip')
+        provider.exchangeAuthorizationCode(
+          { client_id: 'ip-client', client_secret: 's1' } as any,
+          'code-ip',
+          'dummy-verifier'
+        )
       )
 
       // Verify bind works from same IP
@@ -436,13 +547,16 @@ describe('createNotionOAuthProvider', () => {
 
       authCodes.set('unbound-code', {
         notionAccessToken: 'notion-token-unbound',
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        codeChallenge: 'GtSJbMT37cqR-58aHsbbZc3oI08k5VDyJSpq1iwbvHY',
+        codeChallengeMethod: 'S256'
         // no clientId — any client can exchange
       })
 
       const result = await provider.exchangeAuthorizationCode(
         { client_id: 'any-client', client_secret: 'test' } as any,
-        'unbound-code'
+        'unbound-code',
+        'dummy-verifier'
       )
       expect(result.access_token).toHaveLength(96)
     })
