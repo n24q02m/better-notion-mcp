@@ -30,8 +30,12 @@ vi.mock('@notionhq/client', () => ({
   Client: vi.fn()
 }))
 
-vi.mock('./relay-setup.js', () => ({
-  ensureConfig: vi.fn().mockResolvedValue(null)
+vi.mock('./credential-state.js', () => ({
+  resolveCredentialState: vi.fn().mockResolvedValue('awaiting_setup'),
+  getNotionToken: vi.fn().mockReturnValue(null),
+  getState: vi.fn().mockReturnValue('awaiting_setup'),
+  getSetupUrl: vi.fn().mockReturnValue(null),
+  triggerRelaySetup: vi.fn().mockResolvedValue(null)
 }))
 
 describe('initServer (delegates to startStdio)', () => {
@@ -58,6 +62,11 @@ describe('initServer (delegates to startStdio)', () => {
 
   it('should initialize server successfully with NOTION_TOKEN', async () => {
     process.env.NOTION_TOKEN = 'secret_token'
+
+    // Re-mock to return configured state for this test
+    const { resolveCredentialState, getNotionToken } = await import('./credential-state.js')
+    vi.mocked(resolveCredentialState).mockResolvedValue('configured')
+    vi.mocked(getNotionToken).mockReturnValue('secret_token')
 
     const server = await initServer()
 

@@ -13,8 +13,12 @@ vi.mock('../create-server.js', () => ({
   createMCPServer: vi.fn(() => ({ connect: vi.fn() }))
 }))
 
-vi.mock('../relay-setup.js', () => ({
-  ensureConfig: vi.fn()
+vi.mock('../credential-state.js', () => ({
+  resolveCredentialState: vi.fn(),
+  getNotionToken: vi.fn(),
+  getState: vi.fn(),
+  getSetupUrl: vi.fn(),
+  triggerRelaySetup: vi.fn()
 }))
 
 vi.mock('../tools/helpers/errors.js', () => ({
@@ -31,7 +35,7 @@ vi.mock('../tools/helpers/errors.js', () => ({
 }))
 
 vi.mock('node:fs', () => ({
-  readFileSync: vi.fn().mockReturnValue(JSON.stringify({ version: '2.22.0' }))
+  readFileSync: vi.fn().mockReturnValue(JSON.stringify({ version: '2.24.0' }))
 }))
 
 vi.mock('../tools/registry.js', () => ({
@@ -45,7 +49,13 @@ vi.mock('@modelcontextprotocol/sdk/server/index.js', () => ({
 }))
 
 import { createMCPServer } from '../create-server.js'
-import { ensureConfig } from '../relay-setup.js'
+import {
+  getNotionToken,
+  getSetupUrl,
+  getState,
+  resolveCredentialState,
+  triggerRelaySetup
+} from '../credential-state.js'
 
 describe('startStdio', () => {
   const originalEnv = process.env
@@ -62,14 +72,16 @@ describe('startStdio', () => {
     vi.resetModules()
   })
 
-  it('should use NOTION_TOKEN from env when available', async () => {
+  it('should use NOTION_TOKEN from env when state is configured', async () => {
+    vi.mocked(resolveCredentialState).mockResolvedValue('configured')
+    vi.mocked(getNotionToken).mockReturnValue('ntn_test_token')
     process.env.NOTION_TOKEN = 'ntn_test_token'
     const { startStdio } = await import('./stdio.js')
 
     const server = await startStdio()
 
     expect(server).toBeDefined()
-    expect(ensureConfig).not.toHaveBeenCalled()
+    expect(resolveCredentialState).toHaveBeenCalled()
     expect(createMCPServer).toHaveBeenCalledWith(expect.any(Function))
 
     // Call the factory to verify it returns a Client (singleton)
@@ -86,17 +98,18 @@ describe('startStdio', () => {
     })
   })
 
-  it('should use relay token when NOTION_TOKEN is not set', async () => {
-    vi.mocked(ensureConfig).mockResolvedValue('ntn_relay_token')
+  it('should use relay token when config is loaded from file', async () => {
+    vi.mocked(resolveCredentialState).mockResolvedValue('configured')
+    vi.mocked(getNotionToken).mockReturnValue('ntn_relay_token')
     const { startStdio } = await import('./stdio.js')
 
     const server = await startStdio()
 
     expect(server).toBeDefined()
-    expect(ensureConfig).toHaveBeenCalled()
+    expect(resolveCredentialState).toHaveBeenCalled()
     expect(createMCPServer).toHaveBeenCalledWith(expect.any(Function))
 
-    // Call the factory — should return a Client with the relay token
+    // Call the factory -- should return a Client with the relay token
     const factory = vi.mocked(createMCPServer).mock.calls[0][0]
     const client1 = factory()
     const client2 = factory()
@@ -111,7 +124,11 @@ describe('startStdio', () => {
   })
 
   it('should create degraded factory when no token is available', async () => {
-    vi.mocked(ensureConfig).mockResolvedValue(null)
+    vi.mocked(resolveCredentialState).mockResolvedValue('awaiting_setup')
+    vi.mocked(getNotionToken).mockReturnValue(null)
+    vi.mocked(getState).mockReturnValue('awaiting_setup')
+    vi.mocked(getSetupUrl).mockReturnValue(null)
+    vi.mocked(triggerRelaySetup).mockResolvedValue(null)
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { startStdio } = await import('./stdio.js')
 
@@ -121,20 +138,30 @@ describe('startStdio', () => {
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('NOTION_TOKEN not set'))
     expect(createMCPServer).toHaveBeenCalledWith(expect.any(Function))
 
-    // Call the factory — should throw NotionMCPError
+    // Call the factory -- should throw NotionMCPError
     const factory = vi.mocked(createMCPServer).mock.calls[0][0]
-    expect(() => factory()).toThrow('NOTION_TOKEN environment variable is not set')
+    expect(() => factory()).toThrow('Notion token not configured')
 
     consoleSpy.mockRestore()
   })
 
-  it('should skip relay when NOTION_TOKEN is already set', async () => {
-    process.env.NOTION_TOKEN = 'ntn_env_token'
+  it('should return setup URL when relay is in progress', async () => {
+    vi.mocked(resolveCredentialState).mockResolvedValue('awaiting_setup')
+    vi.mocked(getNotionToken).mockReturnValue(null)
+    vi.mocked(getState).mockReturnValue('setup_in_progress')
+    vi.mocked(getSetupUrl).mockReturnValue('https://better-notion-mcp.n24q02m.com/setup/abc123')
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { startStdio } = await import('./stdio.js')
 
     await startStdio()
 
-    // ensureConfig should not be called when env var is present
-    expect(ensureConfig).not.toHaveBeenCalled()
+    const factory = vi.mocked(createMCPServer).mock.calls[0][0]
+    try {
+      factory()
+    } catch (err: any) {
+      expect(err.suggestion).toContain('https://better-notion-mcp.n24q02m.com/setup/abc123')
+    }
+
+    consoleSpy.mockRestore()
   })
 })
