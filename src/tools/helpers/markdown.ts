@@ -255,8 +255,7 @@ function indentChildren(children: NotionBlock[]): string {
   return blocksToMarkdown(children).replace(/^/gm, '  ')
 }
 
-function calloutToMarkdown(block: NotionBlock): string[] {
-  const lines: string[] = []
+function calloutToMarkdown(block: NotionBlock, lines: string[]): void {
   const calloutText = richTextToMarkdown(block.callout.rich_text)
   const calloutIcon = block.callout.icon?.emoji || ''
   const calloutType = getCalloutTypeFromIcon(calloutIcon)
@@ -265,11 +264,9 @@ function calloutToMarkdown(block: NotionBlock): string[] {
     const childMd = blocksToMarkdown(block.callout.children)
     lines.push(childMd.replace(/^/gm, '> '))
   }
-  return lines
 }
 
-function toggleToMarkdown(block: NotionBlock): string[] {
-  const lines: string[] = []
+function toggleToMarkdown(block: NotionBlock, lines: string[]): void {
   const toggleText = richTextToMarkdown(block.toggle.rich_text)
   lines.push('<details>')
   lines.push(`<summary>${toggleText}</summary>`)
@@ -278,49 +275,55 @@ function toggleToMarkdown(block: NotionBlock): string[] {
     lines.push(blocksToMarkdown(block.toggle.children))
   }
   lines.push('</details>')
-  return lines
 }
 
-function tableToMarkdown(block: NotionBlock): string[] {
-  const lines: string[] = []
+function tableToMarkdown(block: NotionBlock, lines: string[]): void {
   const tableRows = block.table?.children || []
-  if (tableRows.length > 0) {
-    for (let rowIdx = 0; rowIdx < tableRows.length; rowIdx++) {
-      const row = tableRows[rowIdx]
-      const rawCells = row.table_row?.cells || []
+  if (tableRows.length === 0) return
 
-      if (rawCells.length === 0) {
+  const hasColumnHeader = block.table?.has_column_header || false
+  const tableWidth = block.table?.table_width || 0
+
+  for (let rowIdx = 0; rowIdx < tableRows.length; rowIdx++) {
+    const row = tableRows[rowIdx]
+    const rawCells = row.table_row?.cells || []
+
+    if (rawCells.length === 0) {
+      if (tableWidth > 0) {
+        let emptyRow = '|'
+        let emptySep = '|'
+        for (let i = 0; i < tableWidth; i++) {
+          emptyRow += '  |'
+          emptySep += ' --- |'
+        }
+        lines.push(emptyRow)
+        if (rowIdx === 0 && hasColumnHeader) {
+          lines.push(emptySep)
+        }
+      } else {
         lines.push('|  |')
-        if (rowIdx === 0 && block.table?.has_column_header) {
-          lines.push('|  |')
-        }
-        continue
+        if (rowIdx === 0 && hasColumnHeader) lines.push('| --- |')
       }
+      continue
+    }
 
-      let rowStr = '|'
+    let rowStr = '|'
+    for (let i = 0; i < rawCells.length; i++) {
+      rowStr += ` ${richTextToMarkdown(rawCells[i])} |`
+    }
+    lines.push(rowStr)
+
+    if (rowIdx === 0 && hasColumnHeader) {
       let headerSep = '|'
-      const isFirstRowHeader = rowIdx === 0 && block.table?.has_column_header
-
       for (let i = 0; i < rawCells.length; i++) {
-        // Optimization: Consolidate row cell rendering and header separator generation
-        // into a single loop, eliminating redundant array mappings on cell data.
-        rowStr += ` ${richTextToMarkdown(rawCells[i])} |`
-        if (isFirstRowHeader) {
-          headerSep += ' --- |'
-        }
+        headerSep += ' --- |'
       }
-
-      lines.push(rowStr)
-      if (isFirstRowHeader) {
-        lines.push(headerSep)
-      }
+      lines.push(headerSep)
     }
   }
-  return lines
 }
 
-function columnListToMarkdown(block: NotionBlock): string[] {
-  const lines: string[] = []
+function columnListToMarkdown(block: NotionBlock, lines: string[]): void {
   lines.push(':::columns')
   const columns = block.column_list?.children || []
   for (let colIdx = 0; colIdx < columns.length; colIdx++) {
@@ -336,7 +339,6 @@ function columnListToMarkdown(block: NotionBlock): string[] {
     }
   }
   lines.push(':::end')
-  return lines
 }
 
 export function blocksToMarkdown(blocks: NotionBlock[]): string {
@@ -399,10 +401,10 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         lines.push('---')
         break
       case 'callout':
-        lines.push(...calloutToMarkdown(block))
+        calloutToMarkdown(block, lines)
         break
       case 'toggle':
-        lines.push(...toggleToMarkdown(block))
+        toggleToMarkdown(block, lines)
         break
       case 'image': {
         const imageUrl = block.image?.file?.url || block.image?.external?.url || ''
@@ -420,10 +422,10 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         lines.push(`$$${block.equation.expression}$$`)
         break
       case 'table':
-        lines.push(...tableToMarkdown(block))
+        tableToMarkdown(block, lines)
         break
       case 'column_list':
-        lines.push(...columnListToMarkdown(block))
+        columnListToMarkdown(block, lines)
         break
       case 'table_of_contents':
         lines.push('[toc]')
@@ -696,24 +698,25 @@ interface TableParseResult {
 }
 
 function parseTable(lines: string[], startIndex: number): TableParseResult | null {
-  const tableLines: string[] = []
+  const parsedRows: string[][] = []
   let i = startIndex
 
-  // Collect all consecutive pipe-delimited lines
-  while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].includes('|')) {
-    tableLines.push(lines[i])
+  // Collect and parse all consecutive pipe-delimited lines
+  while (i < lines.length) {
+    const line = lines[i].trim()
+    if (!line.startsWith('|') || !line.includes('|')) break
+
+    const cells: string[] = []
+    const rawCells = line.split('|')
+    // Skip the first and last empty elements caused by leading/trailing pipes
+    for (let j = 1; j < rawCells.length - 1; j++) {
+      cells.push(rawCells[j].trim())
+    }
+    parsedRows.push(cells)
     i++
   }
 
-  if (tableLines.length < 1) return null
-
-  const parsedRows = tableLines.map((line) => {
-    const cells = line
-      .split('|')
-      .map((cell) => cell.trim())
-      .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1) // Remove empty first/last
-    return cells
-  })
+  if (parsedRows.length < 1) return null
 
   // Check for separator row (contains ---)
   let hasHeader = false
@@ -722,15 +725,25 @@ function parseTable(lines: string[], startIndex: number): TableParseResult | nul
 
   if (parsedRows.length >= 2) {
     const possibleSeparator = parsedRows[1]
-    const isSeparator = possibleSeparator.every((cell) => /^[-:]+$/.test(cell.trim()))
+    let isSeparator = possibleSeparator.length > 0
+    for (let j = 0; j < possibleSeparator.length; j++) {
+      if (!/^[-:]+$/.test(possibleSeparator[j])) {
+        isSeparator = false
+        break
+      }
+    }
 
     if (isSeparator) {
       hasHeader = true
       headerRow = parsedRows[0]
-      dataRows.push(...parsedRows.slice(2))
+      for (let j = 2; j < parsedRows.length; j++) {
+        dataRows.push(parsedRows[j])
+      }
     } else {
       headerRow = parsedRows[0]
-      dataRows.push(...parsedRows.slice(1))
+      for (let j = 1; j < parsedRows.length; j++) {
+        dataRows.push(parsedRows[j])
+      }
     }
   } else {
     headerRow = parsedRows[0]
