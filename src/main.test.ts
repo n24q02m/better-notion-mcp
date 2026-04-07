@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { bootstrap, getTransportMode, mode, startServer } from './main.js'
 
 const startHttpMock = vi.fn()
 const startStdioMock = vi.fn()
@@ -26,22 +25,26 @@ describe('main.ts', () => {
   })
 
   describe('getTransportMode', () => {
-    it('should default to stdio mode if TRANSPORT_MODE is not set', () => {
+    it('should default to stdio mode if TRANSPORT_MODE is not set', async () => {
+      const { getTransportMode } = await import('./main.js')
       const env = {}
       expect(getTransportMode(env)).toBe('stdio')
     })
 
-    it('should use value from TRANSPORT_MODE if set', () => {
+    it('should use value from TRANSPORT_MODE if set', async () => {
+      const { getTransportMode } = await import('./main.js')
       const env = { TRANSPORT_MODE: 'http' }
       expect(getTransportMode(env)).toBe('http')
     })
 
-    it('should return any value set in TRANSPORT_MODE', () => {
+    it('should return any value set in TRANSPORT_MODE', async () => {
+      const { getTransportMode } = await import('./main.js')
       const env = { TRANSPORT_MODE: 'custom' }
       expect(getTransportMode(env)).toBe('custom')
     })
 
-    it('should use current process.env if no argument is provided', () => {
+    it('should use current process.env if no argument is provided', async () => {
+      const { getTransportMode } = await import('./main.js')
       vi.stubEnv('TRANSPORT_MODE', 'http')
       expect(getTransportMode()).toBe('http')
     })
@@ -49,18 +52,21 @@ describe('main.ts', () => {
 
   describe('startServer', () => {
     it('should call startHttp when mode is http', async () => {
+      const { startServer } = await import('./main.js')
       await startServer('http')
       expect(startHttpMock).toHaveBeenCalled()
       expect(startStdioMock).not.toHaveBeenCalled()
     })
 
     it('should call startStdio when mode is stdio', async () => {
+      const { startServer } = await import('./main.js')
       await startServer('stdio')
       expect(startStdioMock).toHaveBeenCalled()
       expect(startHttpMock).not.toHaveBeenCalled()
     })
 
     it('should call startStdio when mode is anything else', async () => {
+      const { startServer } = await import('./main.js')
       await startServer('invalid')
       expect(startStdioMock).toHaveBeenCalled()
       expect(startHttpMock).not.toHaveBeenCalled()
@@ -68,27 +74,32 @@ describe('main.ts', () => {
   })
 
   describe('bootstrap and exports', () => {
-    it('should export the selected mode', () => {
+    it('should export the selected mode', async () => {
+      const { mode } = await import('./main.js')
       expect(typeof mode).toBe('string')
     })
 
     it('should skip execution in test mode by default', async () => {
+      const { bootstrap } = await import('./main.js')
       await bootstrap()
       expect(startStdioMock).not.toHaveBeenCalled()
       expect(startHttpMock).not.toHaveBeenCalled()
     })
 
     it('should execute with default mode when isTest is false', async () => {
+      const { bootstrap } = await import('./main.js')
       await bootstrap(undefined, false)
       expect(startStdioMock).toHaveBeenCalled()
     })
 
     it('should execute with provided mode when isTest is false', async () => {
+      const { bootstrap } = await import('./main.js')
       await bootstrap('http', false)
       expect(startHttpMock).toHaveBeenCalled()
     })
 
     it('should handle startup errors in bootstrap', async () => {
+      const { bootstrap } = await import('./main.js')
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any)
 
@@ -108,6 +119,26 @@ describe('main.ts', () => {
       vi.resetModules()
       const { mode: newMode } = await import('./main.js')
       expect(newMode).toBe('http')
+    })
+
+    it('should NOT automatically execute bootstrap on module load in test environment', async () => {
+      vi.resetModules()
+      await import('./main.js')
+      expect(startHttpMock).not.toHaveBeenCalled()
+      expect(startStdioMock).not.toHaveBeenCalled()
+    })
+
+    it('should automatically execute bootstrap on module load if not in test environment', async () => {
+      vi.stubEnv('NODE_ENV', 'production')
+      vi.stubEnv('TRANSPORT_MODE', 'http')
+      vi.resetModules()
+
+      await import('./main.js')
+
+      // Wait for the un-awaited bootstrap() call to complete
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(startHttpMock).toHaveBeenCalled()
     })
   })
 })
