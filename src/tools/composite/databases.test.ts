@@ -937,7 +937,7 @@ describe('databases', () => {
           action: 'list_templates',
           database_id: 'db-1'
         })
-      ).rejects.toThrow('API Error')
+      ).rejects.toThrow('Notion internal server error')
     })
   })
 
