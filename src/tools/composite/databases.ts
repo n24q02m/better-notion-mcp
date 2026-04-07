@@ -41,6 +41,45 @@ async function getDataSourceSchema(notion: Client, dataSourceId: string): Promis
 }
 
 /**
+ * Extract simple property type mapping from data source schema
+ */
+async function getDataSourcePropertyTypes(notion: Client, dataSourceId: string): Promise<Record<string, string>> {
+  const properties = await getDataSourceSchema(notion, dataSourceId)
+  const schema: Record<string, string> = {}
+  if (properties) {
+    for (const [name, prop] of Object.entries(properties)) {
+      schema[name] = (prop as any).type
+    }
+  }
+  return schema
+}
+
+/**
+ * Format data source properties into AI-friendly schema object
+ */
+function formatDataSourceSchema(properties: any): Record<string, any> {
+  const schema: Record<string, any> = {}
+  if (!properties) return schema
+
+  for (const [name, prop] of Object.entries(properties)) {
+    const p = prop as any
+    schema[name] = {
+      type: p.type,
+      id: p.id
+    }
+
+    if (p.type === 'select' && p.select?.options) {
+      schema[name].options = p.select.options.map((o: any) => o.name)
+    } else if (p.type === 'multi_select' && p.multi_select?.options) {
+      schema[name].options = p.multi_select.options.map((o: any) => o.name)
+    } else if (p.type === 'formula' && p.formula) {
+      schema[name].expression = p.formula.expression
+    }
+  }
+  return schema
+}
+
+/**
  * Build a filter that searches across all title and rich_text properties
  */
 function buildSearchFilter(properties: any, search: string): any | null {
@@ -72,6 +111,45 @@ function buildSearchFilter(properties: any, search: string): any | null {
 async function getSmartSearchFilter(notion: Client, dataSourceId: string, search: string): Promise<any | null> {
   const properties = await getDataSourceSchema(notion, dataSourceId)
   return buildSearchFilter(properties, search)
+}
+
+/**
+ * Resolve filter for query: explicit filters take precedence over smart search
+ */
+async function getSmartQueryFilter(notion: Client, dataSourceId: string, input: DatabasesInput): Promise<any | null> {
+  if (input.filters) return input.filters
+  if (input.search) {
+    return await getSmartSearchFilter(notion, dataSourceId, input.search)
+  }
+  return null
+}
+
+/**
+ * Query data source with pagination support and limit
+ */
+async function queryDataSourcePaginated(
+  notion: Client,
+  dataSourceId: string,
+  params: { filter?: any; sorts?: any[]; limit?: number }
+): Promise<any[]> {
+  const queryParams: any = { data_source_id: dataSourceId }
+  if (params.filter) queryParams.filter = params.filter
+  if (params.sorts) queryParams.sorts = params.sorts
+
+  const allResults = await autoPaginate(async (cursor) => {
+    const response: any = await (notion as any).dataSources.query({
+      ...queryParams,
+      start_cursor: cursor,
+      page_size: 100
+    })
+    return {
+      results: response.results,
+      next_cursor: response.next_cursor,
+      has_more: response.has_more
+    }
+  })
+
+  return params.limit ? allResults.slice(0, params.limit) : allResults
 }
 
 /**
@@ -404,23 +482,7 @@ async function getDatabase(notion: Client, input: DatabasesInput): Promise<GetDa
     }
 
     // Format properties for AI-friendly output
-    if (properties) {
-      for (const [name, prop] of Object.entries(properties)) {
-        const p = prop as any
-        schema[name] = {
-          type: p.type,
-          id: p.id
-        }
-
-        if (p.type === 'select' && p.select?.options) {
-          schema[name].options = p.select.options.map((o: any) => o.name)
-        } else if (p.type === 'multi_select' && p.multi_select?.options) {
-          schema[name].options = p.multi_select.options.map((o: any) => o.name)
-        } else if (p.type === 'formula' && p.formula) {
-          schema[name].expression = p.formula.expression
-        }
-      }
-    }
+    Object.assign(schema, formatDataSourceSchema(properties))
   }
 
   return {
@@ -453,35 +515,17 @@ async function queryDatabase(notion: Client, input: DatabasesInput): Promise<Que
   // Smart resolve: accepts both database_id and data_source_id
   const { databaseId, dataSourceId } = await resolveDataSourceId(notion, input.database_id)
 
-  let filter = input.filters
+  // Resolve filter (explicit or smart search)
+  const filter = await getSmartQueryFilter(notion, dataSourceId, input)
 
-  // Smart search across text properties
-  if (input.search && !filter) {
-    filter = await getSmartSearchFilter(notion, dataSourceId, input.search)
-  }
-
-  const queryParams: any = { data_source_id: dataSourceId }
-  if (filter) queryParams.filter = filter
-  if (input.sorts) queryParams.sorts = input.sorts
-
-  // Fetch with pagination
-  const allResults = await autoPaginate(async (cursor) => {
-    const response: any = await (notion as any).dataSources.query({
-      ...queryParams,
-      start_cursor: cursor,
-      page_size: 100
-    })
-    return {
-      results: response.results,
-      next_cursor: response.next_cursor,
-      has_more: response.has_more
-    }
+  // Execute paginated query
+  const results = await queryDataSourcePaginated(notion, dataSourceId, {
+    filter,
+    sorts: input.sorts,
+    limit: input.limit
   })
 
-  // Limit results if specified
-  const results = input.limit ? allResults.slice(0, input.limit) : allResults
-
-  // Format results
+  // Format results for AI-friendly output
   const formattedResults = formatDatabaseResults(results)
 
   return {
@@ -510,13 +554,7 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
   const { databaseId, dataSourceId } = await resolveDataSourceId(notion, input.database_id)
 
   // Fetch schema for property type mapping
-  const properties = await getDataSourceSchema(notion, dataSourceId)
-  const schema: Record<string, string> = {}
-  if (properties) {
-    for (const [name, prop] of Object.entries(properties)) {
-      schema[name] = (prop as any).type
-    }
-  }
+  const schema = await getDataSourcePropertyTypes(notion, dataSourceId)
 
   const items = input.pages || (input.page_properties ? [{ properties: input.page_properties }] : [])
 
