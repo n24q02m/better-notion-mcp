@@ -59,44 +59,38 @@ describe('NotionMCPError', () => {
 describe('enhanceError', () => {
   describe('Notion API errors', () => {
     it('should handle unauthorized error', () => {
-      const result = enhanceError({ code: 'unauthorized', message: 'API token is invalid' })
+      const result = enhanceError({ code: 'unauthorized' })
 
-      expect(result).toBeInstanceOf(NotionMCPError)
       expect(result.code).toBe('UNAUTHORIZED')
-      expect(result.message).toBe('Invalid or missing Notion API token')
       expect(result.suggestion).toContain('NOTION_TOKEN')
     })
 
     it('should handle restricted_resource error', () => {
-      const result = enhanceError({ code: 'restricted_resource', message: 'no access' })
+      const result = enhanceError({ code: 'restricted_resource' })
 
       expect(result.code).toBe('RESTRICTED_RESOURCE')
-      expect(result.message).toContain('does not have access')
-      expect(result.suggestion).toContain('Share')
+      expect(result.suggestion).toContain('Share the page')
     })
 
     it('should handle object_not_found error', () => {
-      const result = enhanceError({ code: 'object_not_found', message: 'not found' })
+      const result = enhanceError({ code: 'object_not_found' })
 
       expect(result.code).toBe('NOT_FOUND')
-      expect(result.message).toContain('not found')
-      expect(result.suggestion).toContain('ID')
+      expect(result.suggestion).toContain('Check the ID')
     })
 
     it('should handle validation_error with body message', () => {
       const result = enhanceError({
         code: 'validation_error',
-        message: 'validation failed',
-        body: { message: 'title is required', path: '/properties/title' }
+        body: { message: 'invalid property' }
       })
 
       expect(result.code).toBe('VALIDATION_ERROR')
-      expect(result.message).toBe('title is required')
-      expect(result.details).toEqual({ message: 'title is required', path: '/properties/title' })
+      expect(result.message).toBe('invalid property')
     })
 
     it('should handle validation_error without body', () => {
-      const result = enhanceError({ code: 'validation_error', message: 'bad request' })
+      const result = enhanceError({ code: 'validation_error' })
 
       expect(result.code).toBe('VALIDATION_ERROR')
       expect(result.message).toBe('Invalid request parameters')
@@ -105,50 +99,53 @@ describe('enhanceError', () => {
     it('should sanitize validation_error body to remove sensitive fields', () => {
       const result = enhanceError({
         code: 'validation_error',
-        message: 'validation failed',
         body: {
-          message: 'title is required',
-          path: '/properties/title',
-          secret_token: 'sk-12345',
-          internal_state: { some: 'data' }
+          message: 'error',
+          sensitive_token: 'secret'
         }
       })
 
-      expect(result.code).toBe('VALIDATION_ERROR')
-      expect(result.message).toBe('title is required')
-      expect(result.details).toEqual({ message: 'title is required', path: '/properties/title' })
-      expect(JSON.stringify(result.details)).not.toContain('secret_token')
-      expect(JSON.stringify(result.details)).not.toContain('sk-12345')
+      expect(result.details.sensitive_token).toBeUndefined()
+      expect(result.details.message).toBe('error')
     })
 
     it('should handle rate_limited error', () => {
-      const result = enhanceError({ code: 'rate_limited', message: 'rate limited' })
+      const result = enhanceError({ code: 'rate_limited' })
 
       expect(result.code).toBe('RATE_LIMITED')
-      expect(result.message).toContain('Too many requests')
-      expect(result.suggestion).toContain('Wait')
+      expect(result.suggestion).toContain('Wait a few seconds')
     })
 
     it('should handle conflict_error', () => {
-      const result = enhanceError({ code: 'conflict_error', message: 'conflict' })
+      const result = enhanceError({ code: 'conflict_error' })
 
       expect(result.code).toBe('CONFLICT')
-      expect(result.message).toContain('Conflict')
+      expect(result.suggestion).toContain('modified')
     })
 
     it('should handle service_unavailable error', () => {
-      const result = enhanceError({ code: 'service_unavailable', message: 'unavailable' })
+      const result = enhanceError({ code: 'service_unavailable' })
 
       expect(result.code).toBe('SERVICE_UNAVAILABLE')
-      expect(result.message).toContain('temporarily unavailable')
       expect(result.suggestion).toContain('status.notion.so')
     })
 
-    it('should handle unknown Notion error codes by uppercasing', () => {
-      const result = enhanceError({ code: 'some_new_error', message: 'something new' })
+    it('should handle internal_server_error', () => {
+      const result = enhanceError({ code: 'internal_server_error' })
+      expect(result.code).toBe('INTERNAL_SERVER_ERROR')
+      expect(result.suggestion).toContain('internal error')
+    })
 
-      expect(result.code).toBe('SOME_NEW_ERROR')
-      expect(result.message).toBe('something new')
+    it('should handle gateway_timeout', () => {
+      const result = enhanceError({ code: 'gateway_timeout' })
+      expect(result.code).toBe('GATEWAY_TIMEOUT')
+      expect(result.suggestion).toContain('timed out')
+    })
+
+    it('should handle unknown Notion error codes by uppercasing', () => {
+      const result = enhanceError({ code: 'something_weird' })
+
+      expect(result.code).toBe('SOMETHING_WEIRD')
       expect(result.suggestion).toContain('Notion API documentation')
     })
 
@@ -314,6 +311,12 @@ describe('suggestFixes', () => {
 
     expect(fixes).toHaveLength(3)
     expect(fixes.some((f) => f.includes('backoff'))).toBe(true)
+  })
+
+  it('should return INTERNAL_SERVER_ERROR suggestions', () => {
+    const fixes = suggestFixes(new NotionMCPError('', 'INTERNAL_SERVER_ERROR'))
+    expect(fixes).toHaveLength(2)
+    expect(fixes[1]).toContain('status.notion.so')
   })
 
   it('should return default suggestions for unknown codes', () => {

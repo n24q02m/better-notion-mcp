@@ -3,10 +3,10 @@
  */
 export class NotionMCPError extends Error {
   constructor(
-    public message: string,
-    public code: string,
-    public suggestion?: string,
-    public details?: any
+    message: string,
+    public readonly code: string,
+    public readonly suggestion?: string,
+    public readonly details?: any
   ) {
     super(message)
     this.name = 'NotionMCPError'
@@ -14,7 +14,7 @@ export class NotionMCPError extends Error {
 
   toJSON() {
     return {
-      error: this.name,
+      error: 'NotionMCPError',
       code: this.code,
       message: this.message,
       suggestion: this.suggestion,
@@ -147,6 +147,41 @@ const NOTION_ERROR_MAP: Record<string, { message: string; code: string; suggesti
     message: 'Notion API is temporarily unavailable',
     code: 'SERVICE_UNAVAILABLE',
     suggestion: 'Wait a moment and try again. Check https://status.notion.so for updates.'
+  },
+  internal_server_error: {
+    message: 'Notion internal server error',
+    code: 'INTERNAL_SERVER_ERROR',
+    suggestion: 'Notion is experiencing an internal error. Try again later or check https://status.notion.so'
+  },
+  invalid_json: {
+    message: 'Invalid JSON in request body',
+    code: 'INVALID_JSON',
+    suggestion: 'Check your JSON syntax and ensure it matches the Notion API requirements.'
+  },
+  invalid_request_url: {
+    message: 'Invalid request URL',
+    code: 'INVALID_REQUEST_URL',
+    suggestion: 'The URL used for the API request is invalid. This may be an internal error.'
+  },
+  invalid_request: {
+    message: 'Invalid request',
+    code: 'INVALID_REQUEST',
+    suggestion: 'The request is invalid. Check the parameters and try again.'
+  },
+  database_connection_unavailable: {
+    message: 'Database connection unavailable',
+    code: 'DATABASE_CONNECTION_UNAVAILABLE',
+    suggestion: 'Notion could not connect to the database. Try again later.'
+  },
+  gateway_timeout: {
+    message: 'Notion API gateway timeout',
+    code: 'GATEWAY_TIMEOUT',
+    suggestion: 'The request timed out. Wait a moment and try again.'
+  },
+  missing_version: {
+    message: 'Notion API version header is missing',
+    code: 'MISSING_VERSION',
+    suggestion: 'The Notion-Version header is required. This is likely an internal error in the SDK or server.'
   }
 }
 
@@ -242,49 +277,55 @@ export function aiReadableMessage(error: NotionMCPError): string {
 }
 
 /**
+ * Static mapping of MCP error codes to repair suggestions
+ */
+const FIX_SUGGESTIONS_MAP: Record<string, string[]> = {
+  UNAUTHORIZED: [
+    'Check that NOTION_TOKEN is set in your environment',
+    'Verify token at https://www.notion.so/my-integrations',
+    'Create a new integration token if needed'
+  ],
+  RESTRICTED_RESOURCE: [
+    'Open the page/database in Notion',
+    'Click "..." menu → Add connections → Select your integration',
+    'Grant access to parent pages if needed'
+  ],
+  NOT_FOUND: [
+    'Verify the page/database ID is correct',
+    'Check that the resource was not deleted',
+    'Ensure you have access permissions'
+  ],
+  VALIDATION_ERROR: [
+    'Check parameter types and formats',
+    'Review required vs optional parameters',
+    'Verify property names match database schema'
+  ],
+  RATE_LIMITED: [
+    'Reduce request frequency',
+    'Implement exponential backoff retry logic',
+    'Batch multiple operations together'
+  ],
+  INTERNAL_SERVER_ERROR: ['Try again in a few moments', 'Check Notion API status at https://status.notion.so'],
+  INVALID_JSON: ['Check your JSON syntax', 'Ensure all required fields are present'],
+  DATABASE_CONNECTION_UNAVAILABLE: ['Wait a few moments and try again', 'Check Notion API status'],
+  GATEWAY_TIMEOUT: ['The request timed out', 'Try again in a few moments'],
+  MISSING_VERSION: ['Ensure your client or SDK is sending the required Notion-Version header']
+}
+
+/**
+ * Default repair suggestions when no specific code matches
+ */
+const DEFAULT_FIXES = [
+  'Check Notion API status at https://status.notion.so',
+  'Review request parameters',
+  'Try again in a few moments'
+]
+
+/**
  * Suggest fixes based on error
  */
 export function suggestFixes(error: NotionMCPError): string[] {
-  const suggestions: string[] = []
-
-  switch (error.code) {
-    case 'UNAUTHORIZED':
-      suggestions.push('Check that NOTION_TOKEN is set in your environment')
-      suggestions.push('Verify token at https://www.notion.so/my-integrations')
-      suggestions.push('Create a new integration token if needed')
-      break
-
-    case 'RESTRICTED_RESOURCE':
-      suggestions.push('Open the page/database in Notion')
-      suggestions.push('Click "..." menu → Add connections → Select your integration')
-      suggestions.push('Grant access to parent pages if needed')
-      break
-
-    case 'NOT_FOUND':
-      suggestions.push('Verify the page/database ID is correct')
-      suggestions.push('Check that the resource was not deleted')
-      suggestions.push('Ensure you have access permissions')
-      break
-
-    case 'VALIDATION_ERROR':
-      suggestions.push('Check parameter types and formats')
-      suggestions.push('Review required vs optional parameters')
-      suggestions.push('Verify property names match database schema')
-      break
-
-    case 'RATE_LIMITED':
-      suggestions.push('Reduce request frequency')
-      suggestions.push('Implement exponential backoff retry logic')
-      suggestions.push('Batch multiple operations together')
-      break
-
-    default:
-      suggestions.push('Check Notion API status at https://status.notion.so')
-      suggestions.push('Review request parameters')
-      suggestions.push('Try again in a few moments')
-  }
-
-  return suggestions
+  return FIX_SUGGESTIONS_MAP[error.code] || DEFAULT_FIXES
 }
 
 /**
