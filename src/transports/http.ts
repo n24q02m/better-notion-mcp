@@ -94,6 +94,7 @@ export async function startHttp() {
 
   // OAuth endpoints (/.well-known/*, /authorize, /token, /register)
   app.use(
+    authRateLimit,
     mcpAuthRouter({
       provider,
       issuerUrl: serverUrl,
