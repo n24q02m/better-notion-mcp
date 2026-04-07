@@ -97,12 +97,8 @@ export function convertToNotionProperties(
       // Could be multi_select, relation, people, files
       // Only assume multi_select if all elements are strings
       if (value.length > 0 && value.every((v) => typeof v === 'string')) {
-        const multiSelect = new Array(value.length)
-        for (let j = 0; j < value.length; j++) {
-          multiSelect[j] = { name: value[j] }
-        }
         converted[key] = {
-          multi_select: multiSelect
+          multi_select: value.map((v: string) => ({ name: v }))
         }
       } else {
         converted[key] = value
