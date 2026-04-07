@@ -25,6 +25,10 @@ describe('normalizeId', () => {
   it('should handle non-hex characters and multiple hyphens', () => {
     expect(normalizeId('g-h-i--j')).toBe('ghij')
     expect(normalizeId('!@#- %^-&*')).toBe('!@# %^&*')
+    expect(normalizeId('---')).toBe('')
+    expect(normalizeId('🔥-id')).toBe('🔥id')
+    expect(normalizeId('-abc-')).toBe('abc')
+    expect(normalizeId(' a - b ')).toBe(' a  b ')
   })
 })
 
