@@ -123,9 +123,19 @@ export async function fetchChildrenRecursive(
 ): Promise<void> {
   if (depth >= MAX_DEPTH) return
 
-  const blocksNeedingChildren = blocks.filter((b) => b.has_children && BLOCKS_NEEDING_CHILDREN.has(b.type))
+  // ⚡ Bolt Optimization:
+  // Pre-calculate blocks needing children in a single pass to avoid creating
+  // intermediate arrays with chained `.filter().map()`.
+  const blocksToFetch: any[] = []
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]
+    if (block.has_children && BLOCKS_NEEDING_CHILDREN.has(block.type)) {
+      blocksToFetch.push(block)
+    }
+  }
 
-  if (blocksNeedingChildren.length === 0) return
+  // Early return prevents unnecessary function allocation and queue setup
+  if (blocksToFetch.length === 0) return
 
   const fetchAndRecurse = async (block: any) => {
     const children = queue ? await queue.run(() => fetchChildren(block.id)) : await fetchChildren(block.id)
@@ -139,11 +149,16 @@ export async function fetchChildrenRecursive(
     await fetchChildrenRecursive(children, fetchChildren, depth + 1, queue)
   }
 
+  const promises: Promise<void>[] = new Array(blocksToFetch.length)
+  for (let i = 0; i < blocksToFetch.length; i++) {
+    promises[i] = fetchAndRecurse(blocksToFetch[i])
+  }
+
   // Parallelize recursive tree traversal.
   // Using Promise.all allows recursion into children to start as soon as their
   // parent's fetch is complete, rather than waiting for the entire peer batch.
   // Concurrency is managed globally via the shared queue.
-  await Promise.all(blocksNeedingChildren.map((block) => fetchAndRecurse(block)))
+  await Promise.all(promises)
 }
 
 /**
