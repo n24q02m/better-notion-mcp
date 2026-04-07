@@ -16,7 +16,7 @@ import { createMCPServer } from '../create-server.js'
 
 const NOTION_TOKEN_URL = 'https://api.notion.com/v1/oauth/token'
 
-interface HttpConfig {
+export interface HttpConfig {
   port: number
   publicUrl: string
   notionClientId: string
@@ -25,7 +25,7 @@ interface HttpConfig {
   trustProxy: boolean | number | string
 }
 
-function parseTrustProxy(value?: string): boolean | number | string {
+export function parseTrustProxy(value?: string): boolean | number | string {
   if (!value) return 2
   if (value === 'true') return true
   if (value === 'false') return false
@@ -33,7 +33,7 @@ function parseTrustProxy(value?: string): boolean | number | string {
   return value
 }
 
-function loadConfig(): HttpConfig {
+export function loadConfig(): HttpConfig {
   const required = ['PUBLIC_URL', 'NOTION_OAUTH_CLIENT_ID', 'NOTION_OAUTH_CLIENT_SECRET', 'DCR_SERVER_SECRET'] as const
 
   for (const key of required) {
