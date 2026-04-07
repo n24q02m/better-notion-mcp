@@ -133,8 +133,8 @@ describe('startHttp', () => {
     // OAuth router mounted
     expect(app.use).toHaveBeenCalled()
 
-    // Trust proxy defaults to 2 and disable x-powered-by
-    expect(app.set).toHaveBeenCalledWith('trust proxy', 2)
+    // Trust proxy defaults to false and disable x-powered-by
+    expect(app.set).toHaveBeenCalledWith('trust proxy', false)
     expect(app.disable).toHaveBeenCalledWith('x-powered-by')
 
     // Callback endpoint registered
