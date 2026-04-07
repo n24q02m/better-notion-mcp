@@ -6,6 +6,23 @@
  *   - "http": Remote mode with OAuth 2.1 via Notion
  */
 
+import { realpathSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
+/**
+ * Checks if the current module is the main entry point.
+ */
+export function isMain(importMetaUrl: string): boolean {
+  const entrypoint = process.argv[1]
+  if (!entrypoint) return false
+
+  try {
+    return realpathSync(fileURLToPath(importMetaUrl)) === realpathSync(entrypoint)
+  } catch {
+    return false
+  }
+}
+
 /**
  * Validates and returns the transport mode from the environment.
  */
@@ -32,10 +49,7 @@ export const mode = getTransportMode()
 /**
  * Bootstrap function to start the server with error handling.
  */
-export async function bootstrap(selectedMode: string = mode, isTest = process.env.NODE_ENV === 'test') {
-  if (isTest) {
-    return
-  }
+export async function bootstrap(selectedMode: string = mode) {
   try {
     await startServer(selectedMode)
   } catch (error) {
@@ -45,4 +59,6 @@ export async function bootstrap(selectedMode: string = mode, isTest = process.en
 }
 
 // Only execute bootstrap if we're the main module.
-bootstrap()
+if (isMain(import.meta.url)) {
+  bootstrap()
+}

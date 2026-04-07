@@ -1,5 +1,7 @@
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { bootstrap, getTransportMode, mode, startServer } from './main.js'
+import { bootstrap, getTransportMode, isMain, mode, startServer } from './main.js'
 
 const startHttpMock = vi.fn()
 const startStdioMock = vi.fn()
@@ -14,15 +16,40 @@ vi.mock('./transports/stdio.js', () => ({
 
 describe('main.ts', () => {
   const originalEnv = process.env
+  const originalArgv = process.argv
 
   beforeEach(() => {
     vi.clearAllMocks()
     process.env = { ...originalEnv, NODE_ENV: 'test' }
+    process.argv = [...originalArgv]
   })
 
   afterEach(() => {
     process.env = originalEnv
+    process.argv = originalArgv
     vi.unstubAllEnvs()
+  })
+
+  describe('isMain', () => {
+    it('should return true when process.argv[1] matches the file path', () => {
+      // Get the absolute path to src/main.ts
+      const currentDir = dirname(fileURLToPath(import.meta.url))
+      const mainPath = join(currentDir, 'main.ts')
+      const mainUrl = `file://${mainPath}`
+
+      process.argv[1] = mainPath
+      expect(isMain(mainUrl)).toBe(true)
+    })
+
+    it('should return false when process.argv[1] does not match', () => {
+      process.argv[1] = '/some/other/file.js'
+      expect(isMain(import.meta.url)).toBe(false)
+    })
+
+    it('should return false when process.argv[1] is undefined', () => {
+      process.argv = [process.argv[0]]
+      expect(isMain(import.meta.url)).toBe(false)
+    })
   })
 
   describe('getTransportMode', () => {
@@ -72,19 +99,13 @@ describe('main.ts', () => {
       expect(typeof mode).toBe('string')
     })
 
-    it('should skip execution in test mode by default', async () => {
+    it('should execute with default mode', async () => {
       await bootstrap()
-      expect(startStdioMock).not.toHaveBeenCalled()
-      expect(startHttpMock).not.toHaveBeenCalled()
-    })
-
-    it('should execute with default mode when isTest is false', async () => {
-      await bootstrap(undefined, false)
       expect(startStdioMock).toHaveBeenCalled()
     })
 
-    it('should execute with provided mode when isTest is false', async () => {
-      await bootstrap('http', false)
+    it('should execute with provided mode', async () => {
+      await bootstrap('http')
       expect(startHttpMock).toHaveBeenCalled()
     })
 
@@ -94,7 +115,7 @@ describe('main.ts', () => {
 
       startStdioMock.mockRejectedValueOnce(new Error('Test failure'))
 
-      await bootstrap('stdio', false)
+      await bootstrap('stdio')
 
       expect(consoleSpy).toHaveBeenCalledWith('Failed to start server:', expect.any(Error))
       expect(exitSpy).toHaveBeenCalledWith(1)
