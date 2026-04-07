@@ -458,125 +458,169 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
 }
 
 /**
- * Parse inline markdown formatting to rich text
- * Supports: bold, italic, code, strikethrough, links, mentions, colors
+ * Internal class for parsing inline markdown formatting to rich text.
+ * Encapsulates parsing state and provides modular methods for different formatting types.
  */
-export function parseRichText(text: string): RichText[] {
-  const richText: RichText[] = []
-  let current = ''
-  let bold = false
-  let italic = false
-  let code = false
-  let strikethrough = false
-  let noMoreCloseBrackets = false
-  let noMoreMentionCloseBrackets = false
+class InlineParser {
+  private richText: RichText[] = []
+  private current = ''
+  private bold = false
+  private italic = false
+  private code = false
+  private strikethrough = false
+  private noMoreCloseBrackets = false
+  private noMoreMentionCloseBrackets = false
+  private i = 0
 
-  const flushCurrent = () => {
-    if (current) {
-      richText.push(createRichText(current, { bold, italic, code, strikethrough }))
-      current = ''
+  constructor(private text: string) {}
+
+  public parse(): RichText[] {
+    for (this.i = 0; this.i < this.text.length; this.i++) {
+      const char = this.text[this.i]
+      const next = this.text[this.i + 1]
+
+      // Page mention @[Title](page-id-or-url) — must come before link handling
+      if (this.tryParseMention(char, next)) continue
+
+      // Link [text](url)
+      if (this.tryParseLink(char)) continue
+
+      // Basic formatting (bold, italic, code, strikethrough)
+      if (this.tryParseFormatting(char, next)) continue
+
+      this.current += char
+    }
+
+    this.flushCurrent()
+
+    return this.richText.length > 0 ? this.richText : [createRichText(this.text)]
+  }
+
+  private flushCurrent() {
+    if (this.current) {
+      this.richText.push(
+        createRichText(this.current, {
+          bold: this.bold,
+          italic: this.italic,
+          code: this.code,
+          strikethrough: this.strikethrough
+        })
+      )
+      this.current = ''
     }
   }
 
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i]
-    const next = text[i + 1]
-
-    // Page mention @[Title](page-id-or-url) — must come before link handling
+  private tryParseMention(char: string, next: string): boolean {
     // ⚡ Bolt: Added algorithmic short-circuiting to prevent O(N^2) lookaheads on pathological inputs
     // with many `@[` but no `]`.
-    if (char === '@' && next === '[' && !noMoreMentionCloseBrackets) {
-      const closeBracket = text.indexOf(']', i + 2)
+    if (char === '@' && next === '[' && !this.noMoreMentionCloseBrackets) {
+      const closeBracket = this.text.indexOf(']', this.i + 2)
       if (closeBracket === -1) {
-        noMoreMentionCloseBrackets = true
-      } else if (closeBracket + 1 < text.length && text[closeBracket + 1] === '(') {
-        const closeParen = text.indexOf(')', closeBracket + 2)
+        this.noMoreMentionCloseBrackets = true
+      } else if (closeBracket + 1 < this.text.length && this.text[closeBracket + 1] === '(') {
+        const closeParen = this.text.indexOf(')', closeBracket + 2)
         if (closeParen !== -1) {
-          flushCurrent()
+          this.flushCurrent()
 
-          const mentionTitle = text.slice(i + 2, closeBracket)
-          const mentionTarget = text.slice(closeBracket + 2, closeParen)
+          const mentionTitle = this.text.slice(this.i + 2, closeBracket)
+          const mentionTarget = this.text.slice(closeBracket + 2, closeParen)
 
           // Extract 32-char hex page ID from Notion URL or use as-is
           const idMatch = mentionTarget.match(/([a-f0-9]{32})/)
           const pageId = idMatch ? idMatch[1] : mentionTarget
 
-          richText.push(createMention({ page: { id: pageId } }, mentionTitle, { bold, italic, code, strikethrough }))
+          this.richText.push(
+            createMention({ page: { id: pageId } }, mentionTitle, {
+              bold: this.bold,
+              italic: this.italic,
+              code: this.code,
+              strikethrough: this.strikethrough
+            })
+          )
 
-          i = closeParen
-          continue
+          this.i = closeParen
+          return true
         }
       }
     }
+    return false
+  }
 
+  private tryParseLink(char: string): boolean {
     // Link [text](url) — optimized to avoid O(N²) on pathological inputs
-    if (char === '[' && !noMoreCloseBrackets) {
-      const closeBracket = text.indexOf(']', i + 1)
+    if (char === '[' && !this.noMoreCloseBrackets) {
+      const closeBracket = this.text.indexOf(']', this.i + 1)
       if (closeBracket === -1) {
         // No more ] in the rest of the string, skip future indexOf calls
-        noMoreCloseBrackets = true
-      } else if (closeBracket + 1 < text.length && text[closeBracket + 1] === '(') {
-        const closeParen = text.indexOf(')', closeBracket + 2)
+        this.noMoreCloseBrackets = true
+      } else if (closeBracket + 1 < this.text.length && this.text[closeBracket + 1] === '(') {
+        const closeParen = this.text.indexOf(')', closeBracket + 2)
 
         if (closeParen !== -1) {
-          flushCurrent()
+          this.flushCurrent()
 
-          const linkText = text.slice(i + 1, closeBracket)
-          const linkUrl = text.slice(closeBracket + 2, closeParen)
+          const linkText = this.text.slice(this.i + 1, closeBracket)
+          const linkUrl = this.text.slice(closeBracket + 2, closeParen)
           const isSafe = isSafeUrl(linkUrl)
 
-          richText.push({
+          this.richText.push({
             type: 'text',
             text: { content: linkText, link: isSafe ? { url: linkUrl } : null },
             annotations: {
-              bold,
-              italic,
-              strikethrough,
+              bold: this.bold,
+              italic: this.italic,
+              strikethrough: this.strikethrough,
               underline: false,
-              code,
+              code: this.code,
               color: 'default'
             }
           })
 
-          i = closeParen
-          continue
+          this.i = closeParen
+          return true
         }
       }
     }
-
-    // Bold **text**
-    if (char === '*' && next === '*') {
-      flushCurrent()
-      bold = !bold
-      i++ // Skip next *
-      continue
-    }
-    // Italic *text*
-    else if (char === '*' && next !== '*') {
-      flushCurrent()
-      italic = !italic
-      continue
-    }
-    // Code `text`
-    else if (char === '`') {
-      flushCurrent()
-      code = !code
-      continue
-    }
-    // Strikethrough ~~text~~
-    else if (char === '~' && next === '~') {
-      flushCurrent()
-      strikethrough = !strikethrough
-      i++ // Skip next ~
-      continue
-    }
-
-    current += char
+    return false
   }
 
-  flushCurrent()
+  private tryParseFormatting(char: string, next: string): boolean {
+    // Bold **text**
+    if (char === '*' && next === '*') {
+      this.flushCurrent()
+      this.bold = !this.bold
+      this.i++ // Skip next *
+      return true
+    }
+    // Italic *text*
+    if (char === '*' && next !== '*') {
+      this.flushCurrent()
+      this.italic = !this.italic
+      return true
+    }
+    // Code `text`
+    if (char === '`') {
+      this.flushCurrent()
+      this.code = !this.code
+      return true
+    }
+    // Strikethrough ~~text~~
+    if (char === '~' && next === '~') {
+      this.flushCurrent()
+      this.strikethrough = !this.strikethrough
+      this.i++ // Skip next ~
+      return true
+    }
+    return false
+  }
+}
 
-  return richText.length > 0 ? richText : [createRichText(text)]
+/**
+ * Parse inline markdown formatting to rich text
+ * Supports: bold, italic, code, strikethrough, links, mentions, colors
+ */
+export function parseRichText(text: string): RichText[] {
+  return new InlineParser(text).parse()
 }
 
 /**
