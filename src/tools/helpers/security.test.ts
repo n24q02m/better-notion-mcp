@@ -68,6 +68,7 @@ describe('Security Utilities', () => {
       expect(isSafeUrl('javascript:alert(1)')).toBe(false)
       expect(isSafeUrl('java&script:alert(1)')).toBe(false)
       expect(isSafeUrl('javascript%3aalert(1)')).toBe(false)
+      expect(isSafeUrl('javascript&colon;alert(1)')).toBe(false)
 
       // Characters after delimiters should be safe
       expect(isSafeUrl('/path?arg=javascript:alert(1)')).toBe(true)
@@ -75,6 +76,9 @@ describe('Security Utilities', () => {
       expect(isSafeUrl('page.php?id=123&type=456')).toBe(true)
       expect(isSafeUrl('/relative/path:with/colon')).toBe(true)
       expect(isSafeUrl('folder/sub:folder')).toBe(true)
+      expect(isSafeUrl('./foo:bar')).toBe(true)
+      expect(isSafeUrl('../foo:bar')).toBe(true)
+      expect(isSafeUrl('foo/bar:baz')).toBe(true)
     })
 
     it('should reject malformed URLs that fail all parsing (coverage for inner catch)', () => {
