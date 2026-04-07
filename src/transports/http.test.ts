@@ -110,10 +110,65 @@ describe('startHttp', () => {
     }) as any)
     const mockError = vi.spyOn(console, 'error').mockImplementation(() => {})
 
+    vi.resetModules()
     const { startHttp } = await import('./http.js')
     await expect(startHttp()).rejects.toThrow('process.exit')
 
     expect(mockError).toHaveBeenCalledWith('Missing required env var: PUBLIC_URL')
+    expect(mockExit).toHaveBeenCalledWith(1)
+
+    mockExit.mockRestore()
+    mockError.mockRestore()
+  })
+
+  it('should exit if NOTION_OAUTH_CLIENT_ID is missing', async () => {
+    delete process.env.NOTION_OAUTH_CLIENT_ID
+    const mockExit = vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('process.exit')
+    }) as any)
+    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    vi.resetModules()
+    const { startHttp } = await import('./http.js')
+    await expect(startHttp()).rejects.toThrow('process.exit')
+
+    expect(mockError).toHaveBeenCalledWith('Missing required env var: NOTION_OAUTH_CLIENT_ID')
+    expect(mockExit).toHaveBeenCalledWith(1)
+
+    mockExit.mockRestore()
+    mockError.mockRestore()
+  })
+
+  it('should exit if NOTION_OAUTH_CLIENT_SECRET is missing', async () => {
+    delete process.env.NOTION_OAUTH_CLIENT_SECRET
+    const mockExit = vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('process.exit')
+    }) as any)
+    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    vi.resetModules()
+    const { startHttp } = await import('./http.js')
+    await expect(startHttp()).rejects.toThrow('process.exit')
+
+    expect(mockError).toHaveBeenCalledWith('Missing required env var: NOTION_OAUTH_CLIENT_SECRET')
+    expect(mockExit).toHaveBeenCalledWith(1)
+
+    mockExit.mockRestore()
+    mockError.mockRestore()
+  })
+
+  it('should exit if DCR_SERVER_SECRET is missing', async () => {
+    delete process.env.DCR_SERVER_SECRET
+    const mockExit = vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('process.exit')
+    }) as any)
+    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    vi.resetModules()
+    const { startHttp } = await import('./http.js')
+    await expect(startHttp()).rejects.toThrow('process.exit')
+
+    expect(mockError).toHaveBeenCalledWith('Missing required env var: DCR_SERVER_SECRET')
     expect(mockExit).toHaveBeenCalledWith(1)
 
     mockExit.mockRestore()
@@ -587,7 +642,7 @@ describe('startHttp', () => {
   })
 
   describe('DELETE /mcp with valid session', () => {
-    it('should handle delete on valid session with matching owner', async () => {
+    it('should handle delete on valid session and exercise lifecycle hooks', async () => {
       const { isInitializeRequest: mockIsInit } = await import('@modelcontextprotocol/sdk/types.js')
       ;(mockIsInit as any).mockReturnValue(true)
 
@@ -596,14 +651,16 @@ describe('startHttp', () => {
       )
 
       let capturedConfig: any = null
+      let transportInstance: any = null
       ;(MockTransport as any).mockImplementation(function (this: any, config: any) {
         capturedConfig = config
+        transportInstance = this
         this.sessionId = null
         this.onclose = null
         this.handleRequest = vi.fn(async () => {
           if (capturedConfig?.onsessioninitialized && !this.sessionId) {
-            this.sessionId = 'del-session-id'
-            capturedConfig.onsessioninitialized('del-session-id')
+            this.sessionId = capturedConfig.sessionIdGenerator()
+            capturedConfig.onsessioninitialized(this.sessionId)
           }
         })
       })
@@ -617,10 +674,23 @@ describe('startHttp', () => {
         mockRes()
       )
 
+      expect(transportInstance.sessionId).toBeDefined()
+      const sessionId = transportInstance.sessionId
+
+      // Exercise onclose for coverage
+      transportInstance.onclose()
+
+      // Re-initialize for DELETE test
+      await postHandler(
+        { headers: {}, body: { jsonrpc: '2.0', method: 'initialize', id: 1 }, auth: { token: 'owner-token' } },
+        mockRes()
+      )
+      const newSessionId = transportInstance.sessionId
+
       // DELETE with valid session
       const deleteHandler = handlers['DELETE:/mcp']?.at(-1) as Fn
       const res = mockRes()
-      await deleteHandler({ headers: { 'mcp-session-id': 'del-session-id' }, auth: { token: 'owner-token' } }, res)
+      await deleteHandler({ headers: { 'mcp-session-id': newSessionId }, auth: { token: 'owner-token' } }, res)
 
       // Should NOT return error
       expect(res.status).not.toHaveBeenCalledWith(400)
