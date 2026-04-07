@@ -149,9 +149,9 @@ Your MCP client handles the OAuth flow automatically. A browser window opens for
 
 No manual token setup. The OAuth flow opens a browser for Notion authorization. Users grant access to specific pages/databases during the flow.
 
-### Zero-Config Relay (BETA)
+### Zero-Config Relay
 
-> **Note**: Relay is a **BETA** credential provisioning flow. For stable production use, prefer the `NOTION_TOKEN` environment variable above. The relay blocks server startup on first run and may time out in some MCP clients.
+> **Recommended.** The relay is the primary setup method. Credentials are encrypted end-to-end and stored locally. Environment variables are supported for backward compatibility.
 
 If `NOTION_TOKEN` is not set, the server opens a relay setup page:
 1. A setup URL appears in the terminal
