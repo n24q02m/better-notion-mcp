@@ -230,18 +230,20 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
     }
 
     // Verify PKCE S256 — prevents auth code interception attacks
-    if (stored.codeChallenge && stored.codeChallengeMethod === 'S256') {
-      if (!codeVerifier) {
-        throw new InvalidTokenError('code_verifier is required')
-      }
-      const expectedChallenge = createHash('sha256').update(codeVerifier).digest('base64url')
+    if (!stored.codeChallenge || stored.codeChallengeMethod !== 'S256') {
+      throw new InvalidTokenError('PKCE code_challenge is required and method must be S256')
+    }
 
-      const expectedBuffer = Buffer.from(expectedChallenge, 'utf8')
-      const storedBuffer = Buffer.from(stored.codeChallenge, 'utf8')
+    if (!codeVerifier) {
+      throw new InvalidTokenError('code_verifier is required')
+    }
 
-      if (expectedBuffer.byteLength !== storedBuffer.byteLength || !timingSafeEqual(expectedBuffer, storedBuffer)) {
-        throw new InvalidTokenError('code_verifier does not match the challenge')
-      }
+    const expectedChallenge = createHash('sha256').update(codeVerifier).digest('base64url')
+    const expectedBuffer = Buffer.from(expectedChallenge, 'utf8')
+    const storedBuffer = Buffer.from(stored.codeChallenge, 'utf8')
+
+    if (expectedBuffer.byteLength !== storedBuffer.byteLength || !timingSafeEqual(expectedBuffer, storedBuffer)) {
+      throw new InvalidTokenError('code_verifier does not match the challenge')
     }
 
     authCodes.delete(authorizationCode)
