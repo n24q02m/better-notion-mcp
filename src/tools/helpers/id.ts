@@ -7,7 +7,8 @@
 const UUID_REGEX = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i
 
 /**
- * Normalize a Notion ID by removing hyphens
+ * Normalize a Notion ID by removing hyphens.
+ * Example: 'a3802967-3621-4b04-b6af-bfef1b7687b3' -> 'a380296736214b04b6afbfef1b7687b3'
  * Ensures consistent comparison regardless of input format
  */
 export function normalizeId(id: string): string {
@@ -15,8 +16,7 @@ export function normalizeId(id: string): string {
 }
 
 /**
- * Validate whether a string looks like a Notion UUID
- * Accepts: "a3802967-3621-4b04-b6af-bfef1b7687b3" or "a380296736214b04b6afbfef1b7687b3"
+ * Check if a string is a valid Notion ID (32 hex chars, with or without hyphens).
  */
 export function isValidNotionId(id: string): boolean {
   return UUID_REGEX.test(id)

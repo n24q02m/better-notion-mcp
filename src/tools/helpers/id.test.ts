@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatId, isValidBase64, isValidNotionId, normalizeId } from './id'
+import { formatId, isValidBase64, isValidNotionId, normalizeId } from './id.js'
 
 describe('normalizeId', () => {
   it('should strip hyphens from UUID', () => {
@@ -29,6 +29,16 @@ describe('normalizeId', () => {
     expect(normalizeId('🔥-id')).toBe('🔥id')
     expect(normalizeId('-abc-')).toBe('abc')
     expect(normalizeId(' a - b ')).toBe(' a  b ')
+  })
+
+  it('should handle tabs, newlines and other whitespace', () => {
+    expect(normalizeId('a-b\tc-d\ne-f')).toBe('ab\tcd\nef')
+    expect(normalizeId('   -   ')).toBe('      ')
+  })
+
+  it('should handle non-hex alphanumeric characters', () => {
+    expect(normalizeId('xyz-123-GHI')).toBe('xyz123GHI')
+    expect(normalizeId('already_normalized_with_underscores')).toBe('already_normalized_with_underscores')
   })
 })
 
