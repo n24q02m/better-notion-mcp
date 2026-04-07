@@ -457,14 +457,8 @@ export function parseRichText(text: string): RichText[] {
     }
   }
 
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i]
-    const next = text[i + 1]
-
-    // Page mention @[Title](page-id-or-url) — must come before link handling
-    // ⚡ Bolt: Added algorithmic short-circuiting to prevent O(N^2) lookaheads on pathological inputs
-    // with many `@[` but no `]`.
-    if (char === '@' && next === '[' && !noMoreMentionCloseBrackets) {
+  const tryParseMention = (i: number): number => {
+    if (text[i] === '@' && text[i + 1] === '[' && !noMoreMentionCloseBrackets) {
       const closeBracket = text.indexOf(']', i + 2)
       if (closeBracket === -1) {
         noMoreMentionCloseBrackets = true
@@ -472,38 +466,30 @@ export function parseRichText(text: string): RichText[] {
         const closeParen = text.indexOf(')', closeBracket + 2)
         if (closeParen !== -1) {
           flushCurrent()
-
           const mentionTitle = text.slice(i + 2, closeBracket)
           const mentionTarget = text.slice(closeBracket + 2, closeParen)
-
-          // Extract 32-char hex page ID from Notion URL or use as-is
           const idMatch = mentionTarget.match(/([a-f0-9]{32})/)
           const pageId = idMatch ? idMatch[1] : mentionTarget
-
           richText.push(createMention({ page: { id: pageId } }, mentionTitle, { bold, italic, code, strikethrough }))
-
-          i = closeParen
-          continue
+          return closeParen
         }
       }
     }
+    return i
+  }
 
-    // Link [text](url) — optimized to avoid O(N²) on pathological inputs
-    if (char === '[' && !noMoreCloseBrackets) {
+  const tryParseLink = (i: number): number => {
+    if (text[i] === '[' && !noMoreCloseBrackets) {
       const closeBracket = text.indexOf(']', i + 1)
       if (closeBracket === -1) {
-        // No more ] in the rest of the string, skip future indexOf calls
         noMoreCloseBrackets = true
       } else if (closeBracket + 1 < text.length && text[closeBracket + 1] === '(') {
         const closeParen = text.indexOf(')', closeBracket + 2)
-
         if (closeParen !== -1) {
           flushCurrent()
-
           const linkText = text.slice(i + 1, closeBracket)
           const linkUrl = text.slice(closeBracket + 2, closeParen)
           const isSafe = isSafeUrl(linkUrl)
-
           richText.push({
             type: 'text',
             text: { content: linkText, link: isSafe ? { url: linkUrl } : null },
@@ -516,48 +502,64 @@ export function parseRichText(text: string): RichText[] {
               color: 'default'
             }
           })
-
-          i = closeParen
-          continue
+          return closeParen
         }
       }
     }
+    return i
+  }
 
-    // Bold **text**
+  const tryParseFormatting = (i: number): number => {
+    const char = text[i]
+    const next = text[i + 1]
     if (char === '*' && next === '*') {
       flushCurrent()
       bold = !bold
-      i++ // Skip next *
-      continue
+      return i + 1
     }
-    // Italic *text*
-    else if (char === '*' && next !== '*') {
+    if (char === '*' && next !== '*') {
       flushCurrent()
       italic = !italic
-      continue
+      return i
     }
-    // Code `text`
-    else if (char === '`') {
+    if (char === '`') {
       flushCurrent()
       code = !code
-      continue
+      return i
     }
-    // Strikethrough ~~text~~
-    else if (char === '~' && next === '~') {
+    if (char === '~' && next === '~') {
       flushCurrent()
       strikethrough = !strikethrough
-      i++ // Skip next ~
+      return i + 1
+    }
+    return -1
+  }
+
+  for (let i = 0; i < text.length; i++) {
+    const mentionEnd = tryParseMention(i)
+    if (mentionEnd !== i) {
+      i = mentionEnd
       continue
     }
 
-    current += char
+    const linkEnd = tryParseLink(i)
+    if (linkEnd !== i) {
+      i = linkEnd
+      continue
+    }
+
+    const formatEnd = tryParseFormatting(i)
+    if (formatEnd !== -1) {
+      i = formatEnd
+      continue
+    }
+
+    current += text[i]
   }
 
   flushCurrent()
-
   return richText.length > 0 ? richText : [createRichText(text)]
 }
-
 /**
  * Convert rich text array to plain markdown
  */
