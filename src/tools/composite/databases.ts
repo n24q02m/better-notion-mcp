@@ -66,6 +66,30 @@ function buildSearchFilter(properties: any, search: string): any | null {
   return null
 }
 
+/**
+ * Get search filter for text properties
+ */
+async function getSmartSearchFilter(notion: Client, dataSourceId: string, search: string): Promise<any | null> {
+  const properties = await getDataSourceSchema(notion, dataSourceId)
+  return buildSearchFilter(properties, search)
+}
+
+/**
+ * Format raw Notion page results into AI-friendly property objects
+ */
+function formatDatabaseResults(results: any[]): Record<string, any>[] {
+  const formattedResults = new Array(results.length)
+  for (let i = 0; i < results.length; i++) {
+    const page: any = results[i]
+    const props = extractPageProperties(page.properties)
+    props.page_id = page.id
+    props.url = page.url
+
+    formattedResults[i] = props
+  }
+  return formattedResults
+}
+
 export interface DatabasesInput {
   action:
     | 'create'
@@ -433,8 +457,7 @@ async function queryDatabase(notion: Client, input: DatabasesInput): Promise<Que
 
   // Smart search across text properties
   if (input.search && !filter) {
-    const properties = await getDataSourceSchema(notion, dataSourceId)
-    filter = buildSearchFilter(properties, input.search)
+    filter = await getSmartSearchFilter(notion, dataSourceId, input.search)
   }
 
   const queryParams: any = { data_source_id: dataSourceId }
@@ -459,15 +482,7 @@ async function queryDatabase(notion: Client, input: DatabasesInput): Promise<Que
   const results = input.limit ? allResults.slice(0, input.limit) : allResults
 
   // Format results
-  const formattedResults = new Array(results.length)
-  for (let i = 0; i < results.length; i++) {
-    const page: any = results[i]
-    const props = extractPageProperties(page.properties)
-    props.page_id = page.id
-    props.url = page.url
-
-    formattedResults[i] = props
-  }
+  const formattedResults = formatDatabaseResults(results)
 
   return {
     action: 'query',
