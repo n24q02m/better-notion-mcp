@@ -90,6 +90,49 @@ function formatDatabaseResults(results: any[]): Record<string, any>[] {
   return formattedResults
 }
 
+/**
+ * Resolves the query filter, prioritizing explicit filters then smart search
+ */
+async function getSmartQueryFilter(
+  notion: Client,
+  dataSourceId: string,
+  input: DatabasesInput
+): Promise<any | undefined> {
+  if (input.filters) return input.filters
+  if (input.search) return getSmartSearchFilter(notion, dataSourceId, input.search)
+  return undefined
+}
+
+/**
+ * Executes a data source query with pagination and optional limit
+ */
+async function executeDataSourceQuery(
+  notion: Client,
+  dataSourceId: string,
+  filter?: any,
+  sorts?: any,
+  limit?: number
+): Promise<any[]> {
+  const queryParams: any = { data_source_id: dataSourceId }
+  if (filter) queryParams.filter = filter
+  if (sorts) queryParams.sorts = sorts
+
+  const allResults = await autoPaginate(async (cursor) => {
+    const response: any = await (notion as any).dataSources.query({
+      ...queryParams,
+      start_cursor: cursor,
+      page_size: 100
+    })
+    return {
+      results: response.results,
+      next_cursor: response.next_cursor,
+      has_more: response.has_more
+    }
+  })
+
+  return limit ? allResults.slice(0, limit) : allResults
+}
+
 export interface DatabasesInput {
   action:
     | 'create'
@@ -453,33 +496,11 @@ async function queryDatabase(notion: Client, input: DatabasesInput): Promise<Que
   // Smart resolve: accepts both database_id and data_source_id
   const { databaseId, dataSourceId } = await resolveDataSourceId(notion, input.database_id)
 
-  let filter = input.filters
+  // Resolve filter (explicit or smart search)
+  const filter = await getSmartQueryFilter(notion, dataSourceId, input)
 
-  // Smart search across text properties
-  if (input.search && !filter) {
-    filter = await getSmartSearchFilter(notion, dataSourceId, input.search)
-  }
-
-  const queryParams: any = { data_source_id: dataSourceId }
-  if (filter) queryParams.filter = filter
-  if (input.sorts) queryParams.sorts = input.sorts
-
-  // Fetch with pagination
-  const allResults = await autoPaginate(async (cursor) => {
-    const response: any = await (notion as any).dataSources.query({
-      ...queryParams,
-      start_cursor: cursor,
-      page_size: 100
-    })
-    return {
-      results: response.results,
-      next_cursor: response.next_cursor,
-      has_more: response.has_more
-    }
-  })
-
-  // Limit results if specified
-  const results = input.limit ? allResults.slice(0, input.limit) : allResults
+  // Execute query with pagination and limit
+  const results = await executeDataSourceQuery(notion, dataSourceId, filter, input.sorts, input.limit)
 
   // Format results
   const formattedResults = formatDatabaseResults(results)
