@@ -75,6 +75,14 @@ describe('Security Utilities', () => {
       expect(isSafeUrl('page.php?id=123&type=456')).toBe(true)
       expect(isSafeUrl('/relative/path:with/colon')).toBe(true)
       expect(isSafeUrl('folder/sub:folder')).toBe(true)
+      // More edge cases for relative URLs
+      expect(isSafeUrl(':foo')).toBe(false)
+      expect(isSafeUrl('&foo')).toBe(false)
+      expect(isSafeUrl('%3afoo')).toBe(false)
+      expect(isSafeUrl('.')).toBe(true)
+      expect(isSafeUrl('..')).toBe(true)
+      expect(isSafeUrl('./foo:bar')).toBe(true)
+      expect(isSafeUrl('../foo&bar')).toBe(true)
     })
 
     it('should reject malformed URLs that fail all parsing (coverage for inner catch)', () => {
