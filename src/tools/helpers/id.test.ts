@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatId, isValidBase64, isValidNotionId, normalizeId } from './id'
+import { formatId, isValidBase64, isValidNotionId, normalizeId } from './id.js'
 
 describe('normalizeId', () => {
   it('should strip hyphens from UUID', () => {
@@ -29,6 +29,19 @@ describe('normalizeId', () => {
     expect(normalizeId('🔥-id')).toBe('🔥id')
     expect(normalizeId('-abc-')).toBe('abc')
     expect(normalizeId(' a - b ')).toBe(' a  b ')
+  })
+
+  it('should handle non-hex strings with various characters', () => {
+    expect(normalizeId('not-a-hex-string')).toBe('notahexstring')
+    expect(normalizeId('123-456-789-0')).toBe('1234567890')
+    expect(normalizeId('id:123-456')).toBe('id:123456')
+    expect(normalizeId('test-case-with-spaces ')).toBe('testcasewithspaces ')
+    expect(normalizeId('hyphen-at-end-')).toBe('hyphenatend')
+    expect(normalizeId('-hyphen-at-start')).toBe('hyphenatstart')
+    expect(normalizeId('multi---hyphen')).toBe('multihyphen')
+    expect(normalizeId('very-long-non-hex-string-with-many-hyphens-and-special-chars-!@#$%^&*()')).toBe(
+      'verylongnonhexstringwithmanyhyphensandspecialchars!@#$%^&*()'
+    )
   })
 })
 
