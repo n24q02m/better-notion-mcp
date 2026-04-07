@@ -490,26 +490,31 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
     throw new NotionMCPError('page_id or page_ids required', 'VALIDATION_ERROR', 'Provide at least one page ID')
   }
 
-  // Process duplicates in batches to improve performance while respecting rate limits
-  const results = await processBatches(
+  // Phase 1: Fetch all original pages and content in parallel.
+  // We use a higher concurrency for read operations to speed up initial data collection.
+  const sourceData = await processBatches(
     pageIds,
     async (pageId) => {
-      // Get original page and content in parallel
-
       const [originalPage, originalBlocks] = await Promise.all([
         notion.pages.retrieve({ page_id: pageId }) as Promise<any>,
-
         autoPaginate((cursor) =>
           notion.blocks.children.list({
             block_id: pageId,
-
             start_cursor: cursor,
-
             page_size: 100
           })
         )
       ])
+      return { pageId, originalPage, originalBlocks }
+    },
+    { batchSize: 5, concurrency: 4 }
+  )
 
+  // Phase 2: Create duplicates and append content.
+  // We use a more conservative concurrency for write operations to respect Notion API rate limits.
+  const results = await processBatches(
+    sourceData,
+    async ({ pageId, originalPage, originalBlocks }) => {
       // Sanitize parent - API response may include extra fields that
       // the create endpoint rejects (e.g. database_id in data_source parent)
       const rawParent = originalPage.parent
@@ -573,7 +578,7 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
         url: duplicatedPage.url
       }
     },
-    { batchSize: 5, concurrency: 3 }
+    { batchSize: 5, concurrency: 2 }
   )
 
   return {
