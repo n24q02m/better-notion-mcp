@@ -16,6 +16,6 @@ describe('RELAY_SCHEMA', () => {
     expect(field.placeholder).toBe('ntn_...')
     expect(field.required).toBe(true)
     expect(field.helpUrl).toBe('https://www.notion.so/my-integrations')
-    expect(field.helpText).toContain('Internal Integration Secret')
+    expect(field.helpText).toBe('Create an integration and copy the Internal Integration Secret')
   })
 })
