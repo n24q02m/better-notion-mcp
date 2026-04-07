@@ -57,6 +57,13 @@ describe('Security Utilities', () => {
     })
 
     it('should handle complex relative URLs and suspicious prefixes', () => {
+      // Suspicious characters in relative URL prefixes
+      expect(isSafeUrl('foo&bar')).toBe(false)
+      expect(isSafeUrl('foo&bar/path')).toBe(false)
+      expect(isSafeUrl('foo%3abar')).toBe(false)
+      expect(isSafeUrl('foo%3abar/path')).toBe(false)
+      expect(isSafeUrl('foo:bar')).toBe(false)
+
       // Suspicious prefixes in relative URLs
       expect(isSafeUrl('javascript:alert(1)')).toBe(false)
       expect(isSafeUrl('java&script:alert(1)')).toBe(false)
@@ -67,6 +74,7 @@ describe('Security Utilities', () => {
       expect(isSafeUrl('/path#javascript:alert(1)')).toBe(true)
       expect(isSafeUrl('page.php?id=123&type=456')).toBe(true)
       expect(isSafeUrl('/relative/path:with/colon')).toBe(true)
+      expect(isSafeUrl('folder/sub:folder')).toBe(true)
     })
 
     it('should reject malformed URLs that fail all parsing (coverage for inner catch)', () => {
