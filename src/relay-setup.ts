@@ -8,6 +8,7 @@
  * 4. DEGRADED MODE     -- Limited tools (help + content_convert only)
  */
 
+import { execFile } from 'node:child_process'
 import { writeConfig } from '@n24q02m/mcp-relay-core'
 import { createSession, pollForResult, sendMessage } from '@n24q02m/mcp-relay-core/relay'
 import { resolveConfig } from '@n24q02m/mcp-relay-core/storage'
@@ -51,20 +52,29 @@ export async function ensureConfig(): Promise<string | null> {
     return null
   }
 
+  // Try to open browser (best-effort)
+  tryOpenBrowser(session.relayUrl)
+
   // Log URL to stderr (visible to user in MCP client)
   console.error(`\nSetup required. Open this URL to configure:\n${session.relayUrl}\n`)
   console.error(
-    'This URL contains temporary setup secrets and will expire in 5 minutes. Do NOT share this link or log it in shared systems.\n'
+    'This URL contains temporary setup secrets and will expire in 3 minutes. Do NOT share this link or log it in shared systems.\n'
   )
+
+  const cleanup = () => {
+    fetch(`${relayUrl}/api/sessions/${session.sessionId}`, { method: 'DELETE' }).catch(() => {})
+  }
+  process.on('SIGINT', cleanup)
+  process.on('SIGTERM', cleanup)
 
   // Poll for result
   let config: Record<string, string>
   try {
-    config = await pollForResult(relayUrl, session, 2000, 300_000)
+    config = await pollForResult(relayUrl, session, 2000, 180_000)
   } catch (err: any) {
     // Cleanup session on failure (except skipped which is handled by pollForResult)
     if (err?.message !== 'RELAY_SKIPPED') {
-      await fetch(`${relayUrl}/api/sessions/${session.sessionId}`, { method: 'DELETE' }).catch(() => {})
+      cleanup()
     }
 
     if (err?.message === 'RELAY_SKIPPED') {
@@ -73,6 +83,9 @@ export async function ensureConfig(): Promise<string | null> {
     }
     console.error('Relay setup timed out or session expired')
     return null
+  } finally {
+    process.removeListener('SIGINT', cleanup)
+    process.removeListener('SIGTERM', cleanup)
   }
 
   // Save to config file for future use
@@ -88,8 +101,24 @@ export async function ensureConfig(): Promise<string | null> {
   // Explicit session cleanup (one-time use)
   // We wait a tiny bit to ensure the notification was likely received by the browser
   setTimeout(() => {
-    fetch(`${relayUrl}/api/sessions/${session.sessionId}`, { method: 'DELETE' }).catch(() => {})
+    cleanup()
   }, 1000)
 
   return config.NOTION_TOKEN
+}
+
+/**
+ * Try to open URL in default browser (best-effort).
+ * Uses execFile (not exec) to avoid shell injection.
+ */
+function tryOpenBrowser(url: string): void {
+  const platform = process.platform
+
+  if (platform === 'darwin') {
+    execFile('open', [url], () => {})
+  } else if (platform === 'win32') {
+    execFile('cmd', ['/c', 'start', '', url], () => {})
+  } else {
+    execFile('xdg-open', [url], () => {})
+  }
 }

@@ -85,7 +85,7 @@ describe('ensureConfig', () => {
       'better-notion-mcp',
       expect.objectContaining({ server: 'better-notion-mcp' })
     )
-    expect(pollForResult).toHaveBeenCalledWith(expect.any(String), expect.any(Object), 2000, 300_000)
+    expect(pollForResult).toHaveBeenCalledWith(expect.any(String), expect.any(Object), 2000, 180_000)
     expect(writeConfig).toHaveBeenCalledWith('better-notion-mcp', {
       NOTION_TOKEN: 'ntn_relay_token_456'
     })
@@ -126,7 +126,7 @@ describe('ensureConfig', () => {
     await ensureConfig()
 
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('temporary setup secrets'))
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('expire in 5 minutes'))
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('expire in 3 minutes'))
   })
 
   it('returns null and cleans up when relay setup times out', async () => {

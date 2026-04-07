@@ -112,7 +112,7 @@ export async function triggerRelaySetup(): Promise<string | null> {
 
     console.error(`\nSetup required. Open this URL to configure:\n${session.relayUrl}\n`)
     console.error(
-      'This URL contains temporary setup secrets and will expire in 5 minutes. Do NOT share this link or log it in shared systems.\n'
+      'This URL contains temporary setup secrets and will expire in 3 minutes. Do NOT share this link or log it in shared systems.\n'
     )
 
     // Start background poll (non-blocking)
@@ -132,8 +132,14 @@ export async function triggerRelaySetup(): Promise<string | null> {
  * Background task that polls relay and applies config when user submits.
  */
 async function pollRelayBackground(relayBaseUrl: string, session: RelaySession): Promise<void> {
+  const cleanup = () => {
+    fetch(`${relayBaseUrl}/api/sessions/${session.sessionId}`, { method: 'DELETE' }).catch(() => {})
+  }
+  process.on('SIGINT', cleanup)
+  process.on('SIGTERM', cleanup)
+
   try {
-    const config = await pollForResult(relayBaseUrl, session, 2000, 300_000)
+    const config = await pollForResult(relayBaseUrl, session, 2000, 180_000)
 
     // Save to config file for future use
     await writeConfig(SERVER_NAME, config)
@@ -151,12 +157,12 @@ async function pollRelayBackground(relayBaseUrl: string, session: RelaySession):
 
     // Explicit session cleanup (one-time use)
     setTimeout(() => {
-      fetch(`${relayBaseUrl}/api/sessions/${session.sessionId}`, { method: 'DELETE' }).catch(() => {})
+      cleanup()
     }, 1000)
   } catch (err: any) {
     // Cleanup session on failure (except skipped)
     if (err?.message !== 'RELAY_SKIPPED') {
-      await fetch(`${relayBaseUrl}/api/sessions/${session.sessionId}`, { method: 'DELETE' }).catch(() => {})
+      cleanup()
     }
 
     if (err?.message === 'RELAY_SKIPPED') {
@@ -165,6 +171,9 @@ async function pollRelayBackground(relayBaseUrl: string, session: RelaySession):
       console.error('Relay setup timed out or session expired')
     }
     _state = 'awaiting_setup'
+  } finally {
+    process.removeListener('SIGINT', cleanup)
+    process.removeListener('SIGTERM', cleanup)
   }
 }
 
