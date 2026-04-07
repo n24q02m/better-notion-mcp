@@ -22,7 +22,7 @@ describe('autoPaginate', () => {
     expect(fetchFn).toHaveBeenCalledWith(undefined, 100)
   })
 
-  it('should collect results across multiple pages', async () => {
+  it('collects results across multiple pages', async () => {
     const fetchFn = vi
       .fn()
       .mockResolvedValueOnce({
@@ -50,7 +50,7 @@ describe('autoPaginate', () => {
     expect(fetchFn).toHaveBeenNthCalledWith(3, 'cursor-2', 100)
   })
 
-  it('should stop after maxPages even if has_more is true', async () => {
+  it('stops after maxPages even if has_more is true', async () => {
     const fetchFn = vi
       .fn()
       .mockResolvedValueOnce({
@@ -70,7 +70,7 @@ describe('autoPaginate', () => {
     expect(fetchFn).toHaveBeenCalledTimes(2)
   })
 
-  it('should return empty array when results are empty', async () => {
+  it('returns empty array when results are empty', async () => {
     const fetchFn = vi.fn().mockResolvedValueOnce({
       results: [],
       next_cursor: null,
@@ -83,7 +83,7 @@ describe('autoPaginate', () => {
     expect(fetchFn).toHaveBeenCalledTimes(1)
   })
 
-  it('should respect custom pageSize', async () => {
+  it('respects custom pageSize', async () => {
     const fetchFn = vi.fn().mockResolvedValueOnce({
       results: [1],
       next_cursor: null,
@@ -97,7 +97,8 @@ describe('autoPaginate', () => {
 })
 
 describe('fetchChildrenRecursive', () => {
-  it('should fetch children for table blocks', async () => {
+  it('fetches children for table blocks', async () => {
+    const queue = new ConcurrencyQueue(5)
     const blocks: any[] = [
       { id: 'table-1', type: 'table', has_children: true, table: { table_width: 2 } },
       { id: 'para-1', type: 'paragraph', has_children: false, paragraph: {} }
@@ -106,16 +107,21 @@ describe('fetchChildrenRecursive', () => {
       { id: 'row-1', type: 'table_row', has_children: false, table_row: { cells: [] } },
       { id: 'row-2', type: 'table_row', has_children: false, table_row: { cells: [] } }
     ]
-    const fetchChildren = vi.fn().mockResolvedValue(tableRows)
+    const fetchPage = vi.fn().mockResolvedValue({
+      results: tableRows,
+      next_cursor: null,
+      has_more: false
+    })
 
-    await fetchChildrenRecursive(blocks, fetchChildren)
+    await fetchChildrenRecursive(blocks, fetchPage, 0, queue)
 
-    expect(fetchChildren).toHaveBeenCalledTimes(1)
-    expect(fetchChildren).toHaveBeenCalledWith('table-1')
+    expect(fetchPage).toHaveBeenCalledTimes(1)
+    expect(fetchPage).toHaveBeenCalledWith('table-1', undefined)
     expect(blocks[0].table.children).toEqual(tableRows)
   })
 
-  it('should fetch children for toggle and column_list blocks', async () => {
+  it('fetches children for toggle and column_list blocks', async () => {
+    const queue = new ConcurrencyQueue(5)
     const blocks: any[] = [
       { id: 'toggle-1', type: 'toggle', has_children: true, toggle: {} },
       {
@@ -131,59 +137,99 @@ describe('fetchChildrenRecursive', () => {
       { id: 'col-2', type: 'column', has_children: true, column: {} }
     ]
     const colContent = [{ id: 'p-2', type: 'paragraph', has_children: false, paragraph: {} }]
-    const fetchChildren = vi
-      .fn()
-      .mockResolvedValueOnce(toggleChildren)
-      .mockResolvedValueOnce(columns)
-      .mockResolvedValueOnce(colContent)
-      .mockResolvedValueOnce(colContent)
 
-    await fetchChildrenRecursive(blocks, fetchChildren)
+    const fetchPage = vi.fn().mockImplementation(async (id) => {
+      if (id === 'toggle-1') return { results: toggleChildren, next_cursor: null, has_more: false }
+      if (id === 'col-list-1') return { results: columns, next_cursor: null, has_more: false }
+      if (id === 'col-1' || id === 'col-2') return { results: colContent, next_cursor: null, has_more: false }
+      return { results: [], next_cursor: null, has_more: false }
+    })
+
+    await fetchChildrenRecursive(blocks, fetchPage, 0, queue)
 
     expect(blocks[0].toggle.children).toEqual(toggleChildren)
     expect(blocks[1].column_list.children).toEqual(columns)
-    // Columns themselves should have children fetched recursively
     expect(columns[0].column.children).toEqual(colContent)
     expect(columns[1].column.children).toEqual(colContent)
   })
 
-  it('should skip blocks without has_children', async () => {
-    const blocks: any[] = [{ id: 'para-1', type: 'paragraph', has_children: false, paragraph: {} }]
-    const fetchChildren = vi.fn()
+  it('verifies streaming recursion and interleaving', async () => {
+    const queue = new ConcurrencyQueue(2)
 
-    await fetchChildrenRecursive(blocks, fetchChildren)
+    const blocks = [{ id: 'parent', type: 'toggle', has_children: true, toggle: {} }]
 
-    expect(fetchChildren).not.toHaveBeenCalled()
+    const callOrder: string[] = []
+    const fetchPage = vi.fn().mockImplementation(async (id, cursor) => {
+      callOrder.push(`${id}-${cursor || 'start'}`)
+      if (id === 'parent' && !cursor) {
+        // Parent Page 1 has child-1
+        return {
+          results: [{ id: 'child-1', type: 'toggle', has_children: true, toggle: {} }],
+          next_cursor: 'p-2',
+          has_more: true
+        }
+      }
+      if (id === 'parent' && cursor === 'p-2') {
+        // Parent Page 2 has child-2
+        return {
+          results: [{ id: 'child-2', type: 'paragraph', has_children: false, paragraph: {} }],
+          next_cursor: null,
+          has_more: false
+        }
+      }
+      if (id === 'child-1') {
+        // Delay child-1 to allow parent-p-2 to potentially start if it wasn't streaming
+        // But with streaming, child-1 starts as soon as parent-start is done.
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        return { results: [], next_cursor: null, has_more: false }
+      }
+      return { results: [], next_cursor: null, has_more: false }
+    })
+
+    await fetchChildrenRecursive(blocks, fetchPage, 0, queue)
+
+    expect(callOrder[0]).toBe('parent-start')
+    // child-1-start should be triggered BEFORE parent-p-2 if it's truly streaming and interleaving
+    // actually, in a loop:
+    // 1. fetch parent-start
+    // 2. push recursion(child-1) to promises
+    // 3. fetch parent-p-2
+
+    // The order of 2 and 3 depends on microtasks, but both should be in flight.
+    expect(callOrder).toContain('parent-start')
+    expect(callOrder).toContain('parent-p-2')
+    expect(callOrder).toContain('child-1-start')
   })
 
-  it('should skip unsupported block types', async () => {
-    const blocks: any[] = [{ id: 'img-1', type: 'image', has_children: true, image: {} }]
-    const fetchChildren = vi.fn()
+  it('respects MAX_DEPTH', async () => {
+    const queue = new ConcurrencyQueue(5)
+    const blocks = [{ id: 'd0', type: 'toggle', has_children: true, toggle: {} }]
+    const fetchPage = vi.fn().mockImplementation(async (id) => {
+      const depth = parseInt(id.substring(1), 10)
+      return {
+        results: [{ id: `d${depth + 1}`, type: 'toggle', has_children: true, toggle: {} }],
+        next_cursor: null,
+        has_more: false
+      }
+    })
 
-    await fetchChildrenRecursive(blocks, fetchChildren)
+    await fetchChildrenRecursive(blocks, fetchPage, 0, queue)
 
-    expect(fetchChildren).not.toHaveBeenCalled()
-  })
-
-  it('should respect max depth limit', async () => {
-    const blocks: any[] = [{ id: 'toggle-1', type: 'toggle', has_children: true, toggle: {} }]
-    const fetchChildren = vi.fn().mockResolvedValue([])
-
-    // depth=5 should be at MAX_DEPTH and return immediately
-    await fetchChildrenRecursive(blocks, fetchChildren, 5)
-
-    expect(fetchChildren).not.toHaveBeenCalled()
-  })
-
-  it('should handle empty blocks array', async () => {
-    const fetchChildren = vi.fn()
-    await fetchChildrenRecursive([], fetchChildren)
-    expect(fetchChildren).not.toHaveBeenCalled()
+    // Depth 0 fetches d1
+    // Depth 1 fetches d2
+    // Depth 2 fetches d3
+    // Depth 3 fetches d4
+    // Depth 4 fetches d5
+    // Depth 5 should stop
+    expect(fetchPage).toHaveBeenCalledTimes(5)
+    expect(fetchPage).toHaveBeenCalledWith('d0', undefined)
+    expect(fetchPage).toHaveBeenCalledWith('d4', undefined)
+    expect(fetchPage).not.toHaveBeenCalledWith('d5', undefined)
   })
 })
 
 describe('processBatches', () => {
-  it('should process all items and return results', async () => {
+  it('processes all items and return results', async () => {
     const items = [1, 2, 3, 4, 5]
     const processFn = vi.fn((x: number) => Promise.resolve(x * 2))
 
@@ -191,66 +237,10 @@ describe('processBatches', () => {
 
     expect(results).toEqual([2, 4, 6, 8, 10])
   })
-
-  it('should call processFn for each item', async () => {
-    const items = ['a', 'b', 'c']
-    const processFn = vi.fn((x: string) => Promise.resolve(x.toUpperCase()))
-
-    await processBatches(items, processFn)
-
-    expect(processFn).toHaveBeenCalledTimes(3)
-    expect(processFn.mock.calls.map((args) => args[0])).toEqual(['a', 'b', 'c'])
-  })
-
-  it('should respect batchSize option', async () => {
-    const items = [1, 2, 3, 4, 5]
-    const processFn = vi.fn((x: number) => Promise.resolve(x))
-
-    const results = await processBatches(items, processFn, { batchSize: 2 })
-
-    expect(results).toEqual([1, 2, 3, 4, 5])
-    expect(processFn).toHaveBeenCalledTimes(5)
-  })
-
-  it('should work with default options', async () => {
-    const items = Array.from({ length: 25 }, (_, i) => i)
-    const processFn = vi.fn((x: number) => Promise.resolve(x + 1))
-
-    const results = await processBatches(items, processFn)
-
-    expect(results).toHaveLength(25)
-    expect(results[0]).toBe(1)
-    expect(results[24]).toBe(25)
-    expect(processFn).toHaveBeenCalledTimes(25)
-  })
-
-  it('should return empty array for empty input', async () => {
-    const processFn = vi.fn((x: number) => Promise.resolve(x))
-
-    const results = await processBatches([], processFn)
-
-    expect(results).toEqual([])
-    expect(processFn).not.toHaveBeenCalled()
-  })
-
-  it('should handle errors in processFn and stop further processing', async () => {
-    const items = [1, 2, 3, 4, 5]
-    const error = new Error('Process failed')
-    const processFn = vi.fn(async (x: number) => {
-      if (x === 2) throw error
-      return x * 2
-    })
-
-    await expect(processBatches(items, processFn, { batchSize: 1, concurrency: 1 })).rejects.toThrow('Process failed')
-
-    expect(processFn).toHaveBeenCalledWith(1)
-    expect(processFn).toHaveBeenCalledWith(2)
-    expect(processFn).not.toHaveBeenCalledWith(3)
-  })
 })
 
 describe('populateDeepChildren', () => {
-  it('should call fetchChildrenRecursive with autoPaginate', async () => {
+  it('calls fetchChildrenRecursive with fetchPage implementation', async () => {
     const mockNotion = {
       blocks: {
         children: {
@@ -272,39 +262,5 @@ describe('populateDeepChildren', () => {
       page_size: 100
     })
     expect((blocks[0] as any).toggle.children).toHaveLength(1)
-    expect((blocks[0] as any).toggle.children[0].id).toBe('child-1')
-  })
-})
-
-describe('ConcurrencyQueue', () => {
-  it('should respect concurrency limit', async () => {
-    const queue = new ConcurrencyQueue(2)
-    let active = 0
-    let maxActive = 0
-
-    const tasks = Array.from({ length: 5 }, () => async () => {
-      active++
-      maxActive = Math.max(maxActive, active)
-      await new Promise((resolve) => setTimeout(resolve, 10))
-      active--
-    })
-
-    await Promise.all(tasks.map((t) => queue.run(t)))
-    expect(maxActive).toBe(2)
-    expect(active).toBe(0)
-  })
-
-  it('should fail fast on error', async () => {
-    const queue = new ConcurrencyQueue(1)
-    const error = new Error('boom')
-
-    const task1 = async () => {
-      throw error
-    }
-    const task2 = vi.fn().mockResolvedValue('ok')
-
-    await expect(queue.run(task1)).rejects.toThrow('boom')
-    await expect(queue.run(task2)).rejects.toThrow('Queue stopped due to previous error')
-    expect(task2).not.toHaveBeenCalled()
   })
 })

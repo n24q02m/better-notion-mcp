@@ -114,36 +114,67 @@ export class ConcurrencyQueue {
 /**
  * Recursively fetch children for blocks that need them (tables, toggles, columns, etc.)
  * Mutates blocks in-place by attaching children arrays.
+ *
+ * Optimized to start recursing into children as soon as the first page of results is available,
+ * rather than waiting for all pages of a block to be fetched.
  */
 export async function fetchChildrenRecursive(
   blocks: any[],
-  fetchChildren: (blockId: string) => Promise<any[]>,
+  fetchPage: (blockId: string, cursor?: string) => Promise<PaginatedResponse<any>>,
   depth = 0,
-  queue?: ConcurrencyQueue
+  queue: ConcurrencyQueue
 ): Promise<void> {
-  if (depth >= MAX_DEPTH) return
+  if (depth >= MAX_DEPTH || blocks.length === 0) return
 
-  const blocksNeedingChildren = blocks.filter((b) => b.has_children && BLOCKS_NEEDING_CHILDREN.has(b.type))
+  const promises: Promise<void>[] = []
 
-  if (blocksNeedingChildren.length === 0) return
-
-  const fetchAndRecurse = async (block: any) => {
-    const children = queue ? await queue.run(() => fetchChildren(block.id)) : await fetchChildren(block.id)
-
-    // Attach children to the correct property based on block type
-    if (block[block.type]) {
-      block[block.type].children = children
+  // Single pass through blocks to avoid multiple array allocations
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]
+    if (block.has_children && BLOCKS_NEEDING_CHILDREN.has(block.type)) {
+      promises.push(fetchBlockChildrenRecursive(block, fetchPage, depth, queue))
     }
-
-    // Recurse into children
-    await fetchChildrenRecursive(children, fetchChildren, depth + 1, queue)
   }
 
-  // Parallelize recursive tree traversal.
-  // Using Promise.all allows recursion into children to start as soon as their
-  // parent's fetch is complete, rather than waiting for the entire peer batch.
-  // Concurrency is managed globally via the shared queue.
-  await Promise.all(blocksNeedingChildren.map((block) => fetchAndRecurse(block)))
+  if (promises.length > 0) {
+    await Promise.all(promises)
+  }
+}
+
+/**
+ * Internal helper to manage pagination and recursion for a single block
+ */
+async function fetchBlockChildrenRecursive(
+  block: any,
+  fetchPage: (blockId: string, cursor?: string) => Promise<PaginatedResponse<any>>,
+  depth: number,
+  queue: ConcurrencyQueue
+): Promise<void> {
+  let cursor: string | undefined
+  let pageCount = 0
+  const maxPages = MAX_PAGES_SAFETY
+  const recursionPromises: Promise<void>[] = []
+  const allChildren: any[] = []
+
+  // Ensure children array exists on the block early
+  if (block[block.type]) {
+    block[block.type].children = allChildren
+  }
+
+  do {
+    const response = await queue.run(() => fetchPage(block.id, cursor))
+    allChildren.push(...response.results)
+
+    // Parallelize: Start recursing into this page's results immediately
+    recursionPromises.push(fetchChildrenRecursive(response.results, fetchPage, depth + 1, queue))
+
+    cursor = response.next_cursor || undefined
+    pageCount++
+  } while (cursor && pageCount < maxPages)
+
+  if (recursionPromises.length > 0) {
+    await Promise.all(recursionPromises)
+  }
 }
 
 /**
@@ -170,10 +201,12 @@ export async function populateDeepChildren(notion: Client, blocks: any[]): Promi
 
   await fetchChildrenRecursive(
     blocks,
-    async (blockId) => {
-      return autoPaginate((cursor) =>
-        notion.blocks.children.list({ block_id: blockId, start_cursor: cursor, page_size: 100 })
-      ) as any
+    async (blockId, cursor) => {
+      return notion.blocks.children.list({
+        block_id: blockId,
+        start_cursor: cursor,
+        page_size: 100
+      }) as any
     },
     0,
     queue
