@@ -85,7 +85,7 @@ describe('ensureConfig', () => {
       'better-notion-mcp',
       expect.objectContaining({ server: 'better-notion-mcp' })
     )
-    expect(pollForResult).toHaveBeenCalledWith(expect.any(String), expect.any(Object), 2000, 300_000)
+    expect(pollForResult).toHaveBeenCalledWith(expect.any(String), expect.any(Object), 2000, 180_000)
     expect(writeConfig).toHaveBeenCalledWith('better-notion-mcp', {
       NOTION_TOKEN: 'ntn_relay_token_456'
     })
@@ -126,7 +126,7 @@ describe('ensureConfig', () => {
     await ensureConfig()
 
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('temporary setup secrets'))
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('expire in 5 minutes'))
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('expire in 3 minutes'))
   })
 
   it('returns null and cleans up when relay setup times out', async () => {
@@ -169,5 +169,27 @@ describe('ensureConfig', () => {
     expect(result).toBeNull()
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('skipped by user'))
     expect(fetchMock).not.toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ method: 'DELETE' }))
+  })
+
+  it('writes setup URL to file when NOTION_MCP_SETUP_FILE is set', async () => {
+    const setupFile = 'test-setup.txt'
+    vi.stubEnv('NOTION_MCP_SETUP_FILE', setupFile)
+
+    vi.mocked(resolveConfig).mockResolvedValue({ config: null, source: null })
+    vi.mocked(createSession).mockResolvedValue({
+      sessionId: 'test-session',
+      keyPair: {} as any,
+      passphrase: 'test',
+      relayUrl: 'https://test.com/setup'
+    })
+    vi.mocked(pollForResult).mockResolvedValue({ NOTION_TOKEN: 'test-token' })
+
+    const result = await ensureConfig()
+
+    expect(result).toBe('test-token')
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Setup URL written to test-setup.txt'))
+
+    // Cleanup env
+    vi.unstubAllEnvs()
   })
 })
