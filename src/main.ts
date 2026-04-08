@@ -17,7 +17,16 @@ export function isMain(importMetaUrl: string): boolean {
   if (!entrypoint) return false
 
   try {
-    return realpathSync(fileURLToPath(importMetaUrl)) === realpathSync(entrypoint)
+    const mainPath = realpathSync(fileURLToPath(importMetaUrl))
+    const entryPath = realpathSync(entrypoint)
+
+    if (process.platform === 'win32') {
+      // Normalize slashes and casing for Windows
+      const normalize = (p: string) => p.replace(/\\/g, '/').toLowerCase()
+      return normalize(mainPath) === normalize(entryPath)
+    }
+
+    return mainPath === entryPath
   } catch {
     return false
   }
@@ -58,7 +67,7 @@ export async function bootstrap(selectedMode: string = mode) {
   }
 }
 
-// Only execute bootstrap if we're the main module.
-if (isMain(import.meta.url)) {
+// Only execute bootstrap if we're the main module and not in a test environment.
+if (isMain(import.meta.url) && process.env.NODE_ENV !== 'test') {
   bootstrap()
 }
