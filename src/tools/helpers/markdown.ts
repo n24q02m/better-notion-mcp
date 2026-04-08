@@ -482,8 +482,8 @@ export function parseRichText(text: string): RichText[] {
     const char = text[i]
     const next = text[i + 1]
 
-    // Page mention @[Title](page-id-or-url) — must come before link handling
-    // ⚡ Bolt: Added algorithmic short-circuiting to prevent O(N^2) lookaheads on pathological inputs
+    // Page mention @[Title](page-id-or-url) - must come before link handling
+    // [BOLT] Bolt: Added algorithmic short-circuiting to prevent O(N^2) lookaheads on pathological inputs
     // with many `@[` but no `]`.
     if (char === '@' && next === '[' && !noMoreMentionCloseBrackets) {
       const closeBracket = text.indexOf(']', i + 2)
@@ -509,7 +509,7 @@ export function parseRichText(text: string): RichText[] {
       }
     }
 
-    // Link [text](url) — optimized to avoid O(N²) on pathological inputs
+    // Link [text](url) - optimized to avoid O(N^2) on pathological inputs
     if (char === '[' && !noMoreCloseBrackets) {
       const closeBracket = text.indexOf(']', i + 1)
       if (closeBracket === -1) {

@@ -491,7 +491,7 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
   }
 
   // Phase 1: Fetch all source pages and their blocks in parallel
-  // We can be more aggressive here since these are READ operations
+  // We use a moderate concurrency here for READ operations
   const pagesToDuplicate = await processBatches(
     pageIds,
     async (pageId) => {
@@ -507,7 +507,7 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
       ])
       return { pageId, originalPage, originalBlocks }
     },
-    { batchSize: 1, concurrency: 8 }
+    { batchSize: 1, concurrency: 4 }
   )
 
   // Phase 2: Create duplicates and append content
@@ -537,7 +537,7 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
         cover: originalPage.cover
       })
 
-      // Copy content — strip read-only fields that the create endpoint rejects
+      // Copy content - strip read-only fields that the create endpoint rejects
       if (originalBlocks.length > 0) {
         const sanitizedBlocks = originalBlocks.map((block: any) => {
           const {
