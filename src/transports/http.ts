@@ -26,7 +26,7 @@ interface HttpConfig {
 }
 
 function parseTrustProxy(value?: string): boolean | number | string {
-  if (!value) return 2
+  if (!value) return false
   if (value === 'true') return true
   if (value === 'false') return false
   if (/^\d+$/.test(value)) return parseInt(value, 10)
