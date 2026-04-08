@@ -54,13 +54,13 @@ export async function ensureConfig(): Promise<string | null> {
   // Log URL to stderr (visible to user in MCP client)
   console.error(`\nSetup required. Open this URL to configure:\n${session.relayUrl}\n`)
   console.error(
-    'This URL contains temporary setup secrets and will expire in 5 minutes. Do NOT share this link or log it in shared systems.\n'
+    'This URL contains temporary setup secrets and will expire in 3 minutes. Do NOT share this link or log it in shared systems.\n'
   )
 
   // Poll for result
   let config: Record<string, string>
   try {
-    config = await pollForResult(relayUrl, session, 2000, 300_000)
+    config = await pollForResult(relayUrl, session, 2000, 180_000)
   } catch (err: any) {
     // Cleanup session on failure (except skipped which is handled by pollForResult)
     if (err?.message !== 'RELAY_SKIPPED') {
