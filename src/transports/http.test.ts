@@ -675,7 +675,6 @@ describe('startHttp', () => {
       )
 
       expect(transportInstance.sessionId).toBeDefined()
-      const sessionId = transportInstance.sessionId
 
       // Exercise onclose for coverage
       transportInstance.onclose()
