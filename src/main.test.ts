@@ -129,6 +129,10 @@ describe('main.ts', () => {
     })
 
     it('should automatically execute bootstrap on module load if not in test environment', async () => {
+      // Mock global side effects to prevent test crash/exit
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any)
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
       vi.stubEnv('NODE_ENV', 'production')
       vi.stubEnv('TRANSPORT_MODE', 'http')
       vi.resetModules()
@@ -136,9 +140,13 @@ describe('main.ts', () => {
       await import('./main.js')
 
       // Wait for the un-awaited bootstrap() call to complete
-      await new Promise((resolve) => setTimeout(resolve, 10))
+      // Increased timeout to 100ms for more stable execution in slow environments
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
       expect(startHttpMock).toHaveBeenCalled()
+
+      exitSpy.mockRestore()
+      errorSpy.mockRestore()
     })
   })
 })

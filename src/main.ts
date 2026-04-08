@@ -44,5 +44,7 @@ export async function bootstrap(selectedMode: string = mode, isTest = process.en
   }
 }
 
-// Only execute bootstrap if we're the main module.
-bootstrap()
+// Only execute bootstrap if we're NOT in a test environment.
+if (process.env.NODE_ENV !== 'test') {
+  bootstrap()
+}
