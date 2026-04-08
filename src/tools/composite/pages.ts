@@ -507,7 +507,7 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
       ])
       return { pageId, originalPage, originalBlocks }
     },
-    { batchSize: 1, concurrency: 4 }
+    { batchSize: 1, concurrency: 10 }
   )
 
   // Phase 2: Parallel page creation and content appending
@@ -578,7 +578,7 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
         url: duplicatedPage.url
       }
     },
-    { batchSize: 1, concurrency: 2 }
+    { batchSize: 1, concurrency: 4 }
   )
 
   return {
