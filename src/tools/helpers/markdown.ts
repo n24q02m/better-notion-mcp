@@ -291,13 +291,11 @@ function tableToMarkdown(block: NotionBlock, lines: string[]): void {
     if (rawCells.length === 0) {
       if (tableWidth > 0) {
         let emptyRow = '|'
-        let emptySep = '|'
-        for (let i = 0; i < tableWidth; i++) {
-          emptyRow += '  |'
-          emptySep += ' --- |'
-        }
+        for (let i = 0; i < tableWidth; i++) emptyRow += '  |'
         lines.push(emptyRow)
         if (rowIdx === 0 && hasColumnHeader) {
+          let emptySep = '|'
+          for (let i = 0; i < tableWidth; i++) emptySep += ' --- |'
           lines.push(emptySep)
         }
       } else {
