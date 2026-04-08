@@ -2,7 +2,7 @@
 
 mcp-name: io.github.n24q02m/better-notion-mcp
 
-**Markdown-first Notion API server for AI agents -- 9 composite tools replacing 28+ endpoint calls**
+**Markdown-first Notion API server for AI agents -- 10 composite tools replacing 28+ endpoint calls**
 
 <!-- Badge Row 1: Status -->
 [![CI](https://github.com/n24q02m/better-notion-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/n24q02m/better-notion-mcp/actions/workflows/ci.yml)
@@ -25,7 +25,7 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 ## Features
 
 - **Markdown in, Markdown out** -- human-readable content instead of raw JSON blocks
-- **9 composite tools** with 39 actions -- one call instead of chaining 2+ atomic endpoints
+- **10 composite tools** with 44 actions -- one call instead of chaining 2+ atomic endpoints
 - **Auto-pagination and bulk operations** -- no manual cursor handling or looping
 - **Tiered token optimization** -- ~77% reduction via compressed descriptions + on-demand `help` tool
 - **Dual transport** -- local stdio (token) or remote HTTP (OAuth 2.1, no token needed)
@@ -51,6 +51,7 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 | `comments` | `list`, `get`, `create` | Page and block comments |
 | `content_convert` | `markdown-to-blocks`, `blocks-to-markdown` | Convert between Markdown and Notion blocks |
 | `file_uploads` | `create`, `send`, `complete`, `retrieve`, `list` | Upload files to Notion |
+| `setup` | `status`, `start`, `reset`, `complete` | Credential setup via browser relay, status check, reset, re-resolve |
 | `help` | - | Get full documentation for any tool |
 
 ### MCP Resources
