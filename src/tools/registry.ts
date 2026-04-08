@@ -14,7 +14,7 @@ import {
   ReadResourceRequestSchema
 } from '@modelcontextprotocol/sdk/types.js'
 import type { Client } from '@notionhq/client'
-
+import { getSetupUrl, getState, triggerRelaySetup } from '../credential-state.js'
 // Import mega tools
 import { blocks } from './composite/blocks.js'
 import { commentsManage } from './composite/comments.js'
@@ -26,6 +26,9 @@ import { users } from './composite/users.js'
 import { workspace } from './composite/workspace.js'
 import { aiReadableMessage, findClosestMatch, NotionMCPError } from './helpers/errors.js'
 import { wrapToolResult } from './helpers/security.js'
+
+// Tools that work without a Notion token
+const TOKEN_FREE_TOOLS = new Set(['help', 'content_convert'])
 
 // Get docs directory path - works for both bundled CLI and unbundled code
 const __filename = fileURLToPath(import.meta.url)
@@ -427,6 +430,25 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
           }
         ],
         isError: true
+      }
+    }
+
+    // Credential guard: trigger relay and show URL in tool response (not just stderr).
+    // help and content_convert work without a token.
+    if (!TOKEN_FREE_TOOLS.has(name)) {
+      const credState = getState()
+      if (credState !== 'configured') {
+        if (credState === 'awaiting_setup') {
+          await triggerRelaySetup()
+        }
+        const url = getSetupUrl()
+        const setupInstructions = url
+          ? `Notion token is not configured yet.\n\nTo set up, open this URL in your browser:\n${url}\n\nAfter submitting your token on the relay page, retry this tool call.`
+          : 'NOTION_TOKEN environment variable is not set.\nGet your integration token from https://www.notion.so/my-integrations\nand set it as NOTION_TOKEN in your MCP server config.'
+        return {
+          content: [{ type: 'text', text: setupInstructions }],
+          isError: true
+        }
       }
     }
 

@@ -10,6 +10,13 @@ vi.mock('./composite/users.js', () => ({ users: vi.fn() }))
 vi.mock('./composite/workspace.js', () => ({ workspace: vi.fn() }))
 vi.mock('./composite/file-uploads.js', () => ({ fileUploads: vi.fn() }))
 
+// Mock credential state (tests run with credentials already configured)
+vi.mock('../credential-state.js', () => ({
+  getState: vi.fn(() => 'configured'),
+  getSetupUrl: vi.fn(() => null),
+  triggerRelaySetup: vi.fn()
+}))
+
 // Mock node:fs
 vi.mock('node:fs/promises', () => ({
   readFile: vi.fn().mockResolvedValue('# Mock documentation content')
