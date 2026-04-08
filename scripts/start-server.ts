@@ -3,4 +3,6 @@
  * Delegates to main.ts which selects transport based on TRANSPORT_MODE
  */
 
-import '../src/main.js'
+import { bootstrap } from '../src/main.js'
+
+bootstrap()
