@@ -492,7 +492,7 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
 
   // Phase 1: Fetch all source pages and their blocks in parallel
   // We can be more aggressive here since these are READ operations
-  const sourceData = await processBatches(
+  const pagesToDuplicate = await processBatches(
     pageIds,
     async (pageId) => {
       const [originalPage, originalBlocks] = await Promise.all([
@@ -507,13 +507,13 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
       ])
       return { pageId, originalPage, originalBlocks }
     },
-    { batchSize: 1, concurrency: 4 }
+    { batchSize: 1, concurrency: 8 }
   )
 
   // Phase 2: Create duplicates and append content
   // We use a more conservative concurrency here for WRITE operations to avoid rate limits
   const results = await processBatches(
-    sourceData,
+    pagesToDuplicate,
     async ({ pageId, originalPage, originalBlocks }) => {
       // Sanitize parent - API response may include extra fields that
       // the create endpoint rejects (e.g. database_id in data_source parent)
