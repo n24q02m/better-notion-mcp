@@ -122,9 +122,9 @@ describe('startHttp', () => {
   }
 
   describe('parseTrustProxy', () => {
-    it('should return 2 for undefined value', async () => {
+    it('should return false for undefined value', async () => {
       const { parseTrustProxy } = await import('./http.js')
-      expect(parseTrustProxy(undefined)).toBe(2)
+      expect(parseTrustProxy(undefined)).toBe(false)
     })
 
     it('should return true for "true"', async () => {
@@ -177,7 +177,7 @@ describe('startHttp', () => {
       await startHttp()
       const app = (express as any).mock.results[0].value
 
-      expect(app.set).toHaveBeenCalledWith('trust proxy', 2)
+      expect(app.set).toHaveBeenCalledWith('trust proxy', false)
       expect(app.disable).toHaveBeenCalledWith('x-powered-by')
       expect(app.listen).toHaveBeenCalledWith(3000, '0.0.0.0', expect.any(Function))
     })

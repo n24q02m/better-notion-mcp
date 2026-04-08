@@ -26,6 +26,7 @@ export type CredentialState = 'awaiting_setup' | 'setup_in_progress' | 'configur
 let _state: CredentialState = 'awaiting_setup'
 let _setupUrl: string | null = null
 let _notionToken: string | null = null
+let _activeSession: { relayBaseUrl: string; sessionId: string } | null = null
 
 export function getState(): CredentialState {
   return _state
@@ -106,13 +107,14 @@ export async function triggerRelaySetup(): Promise<string | null> {
     }
 
     _setupUrl = session.relayUrl
+    _activeSession = { relayBaseUrl: relayUrl, sessionId: session.sessionId }
 
     // Try to open browser (best-effort, non-blocking)
     tryOpenBrowser(session.relayUrl)
 
     console.error(`\nSetup required. Open this URL to configure:\n${session.relayUrl}\n`)
     console.error(
-      'This URL contains temporary setup secrets and will expire in 5 minutes. Do NOT share this link or log it in shared systems.\n'
+      'This URL contains temporary setup secrets and will expire in 3 minutes. Do NOT share this link or log it in shared systems.\n'
     )
 
     // Start background poll (non-blocking)
@@ -133,7 +135,7 @@ export async function triggerRelaySetup(): Promise<string | null> {
  */
 async function pollRelayBackground(relayBaseUrl: string, session: RelaySession): Promise<void> {
   try {
-    const config = await pollForResult(relayBaseUrl, session, 2000, 300_000)
+    const config = await pollForResult(relayBaseUrl, session, 2000, 180_000)
 
     // Save to config file for future use
     await writeConfig(SERVER_NAME, config)
@@ -165,6 +167,10 @@ async function pollRelayBackground(relayBaseUrl: string, session: RelaySession):
       console.error('Relay setup timed out or session expired')
     }
     _state = 'awaiting_setup'
+  } finally {
+    if (_activeSession?.sessionId === session.sessionId) {
+      _activeSession = null
+    }
   }
 }
 
@@ -194,3 +200,20 @@ export function resetState(): void {
   _notionToken = null
   deleteConfig(SERVER_NAME).catch(() => {})
 }
+
+// Cleanup active session on process exit
+const handleExit = async () => {
+  if (_activeSession) {
+    const { relayBaseUrl, sessionId } = _activeSession
+    _activeSession = null
+    try {
+      await fetch(`${relayBaseUrl}/api/sessions/${sessionId}`, { method: 'DELETE' })
+    } catch {
+      // Ignore cleanup errors
+    }
+  }
+  process.exit()
+}
+
+process.on('SIGINT', handleExit)
+process.on('SIGTERM', handleExit)

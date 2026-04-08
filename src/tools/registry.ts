@@ -1,5 +1,5 @@
 /**
- * Tool Registry - 9 Composite Tools
+ * Tool Registry - 10 Composite Tools
  * Consolidated registration for maximum coverage with minimal tools
  */
 
@@ -14,7 +14,7 @@ import {
   ReadResourceRequestSchema
 } from '@modelcontextprotocol/sdk/types.js'
 import type { Client } from '@notionhq/client'
-
+import { getSetupUrl, getState, triggerRelaySetup } from '../credential-state.js'
 // Import mega tools
 import { blocks } from './composite/blocks.js'
 import { commentsManage } from './composite/comments.js'
@@ -22,10 +22,14 @@ import { contentConvert } from './composite/content.js'
 import { databases } from './composite/databases.js'
 import { fileUploads } from './composite/file-uploads.js'
 import { pages } from './composite/pages.js'
+import { setup } from './composite/setup.js'
 import { users } from './composite/users.js'
 import { workspace } from './composite/workspace.js'
 import { aiReadableMessage, findClosestMatch, NotionMCPError } from './helpers/errors.js'
 import { wrapToolResult } from './helpers/security.js'
+
+// Tools that work without a Notion token
+const TOKEN_FREE_TOOLS = new Set(['help', 'content_convert', 'setup'])
 
 // Get docs directory path - works for both bundled CLI and unbundled code
 const __filename = fileURLToPath(import.meta.url)
@@ -51,7 +55,7 @@ const RESOURCES = [
 ]
 
 /**
- * 9 Tools covering ~95% of Official Notion API
+ * 10 Tools covering ~95% of Official Notion API
  * Compressed descriptions for token optimization (~77% reduction)
  *
  * Decision tree for LLMs:
@@ -371,6 +375,33 @@ const TOOLS = [
       },
       required: ['tool_name']
     }
+  },
+  {
+    name: 'setup',
+    description:
+      'Manage server credential setup and configuration.\n\nActions:\n- status: current credential state, token source, setup URL\n- start (-> force): trigger relay setup to configure Notion token via browser\n- reset: clear credentials and config, return to awaiting_setup\n- complete: re-check credentials after external config changes',
+    annotations: {
+      title: 'Setup',
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false
+    },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['status', 'start', 'reset', 'complete'],
+          description: 'Action to perform'
+        },
+        force: {
+          type: 'boolean',
+          description: 'Force start even if already configured (for start action)'
+        }
+      },
+      required: ['action']
+    }
   }
 ]
 
@@ -430,6 +461,25 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
       }
     }
 
+    // Credential guard: trigger relay and show URL in tool response (not just stderr).
+    // help and content_convert work without a token.
+    if (!TOKEN_FREE_TOOLS.has(name)) {
+      const credState = getState()
+      if (credState !== 'configured') {
+        if (credState === 'awaiting_setup') {
+          await triggerRelaySetup()
+        }
+        const url = getSetupUrl()
+        const setupInstructions = url
+          ? `Notion token is not configured yet.\n\nTo set up, open this URL in your browser:\n${url}\n\nAfter submitting your token on the relay page, retry this tool call.`
+          : 'NOTION_TOKEN environment variable is not set.\nGet your integration token from https://www.notion.so/my-integrations\nand set it as NOTION_TOKEN in your MCP server config.'
+        return {
+          content: [{ type: 'text', text: setupInstructions }],
+          isError: true
+        }
+      }
+    }
+
     try {
       let result
       const notion = notionClientFactory()
@@ -455,6 +505,9 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
           break
         case 'content_convert':
           result = await contentConvert(args as any)
+          break
+        case 'setup':
+          result = await setup(args as any)
           break
         case 'file_uploads':
           result = await fileUploads(notion, args as any)

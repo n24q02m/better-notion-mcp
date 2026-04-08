@@ -9,6 +9,14 @@ vi.mock('./composite/content.js', () => ({ contentConvert: vi.fn() }))
 vi.mock('./composite/users.js', () => ({ users: vi.fn() }))
 vi.mock('./composite/workspace.js', () => ({ workspace: vi.fn() }))
 vi.mock('./composite/file-uploads.js', () => ({ fileUploads: vi.fn() }))
+vi.mock('./composite/setup.js', () => ({ setup: vi.fn() }))
+
+// Mock credential state (tests run with credentials already configured)
+vi.mock('../credential-state.js', () => ({
+  getState: vi.fn(() => 'configured'),
+  getSetupUrl: vi.fn(() => null),
+  triggerRelaySetup: vi.fn()
+}))
 
 // Mock node:fs
 vi.mock('node:fs/promises', () => ({
@@ -22,6 +30,7 @@ import { contentConvert } from './composite/content.js'
 import { databases } from './composite/databases.js'
 import { fileUploads } from './composite/file-uploads.js'
 import { pages } from './composite/pages.js'
+import { setup } from './composite/setup.js'
 import { users } from './composite/users.js'
 import { workspace } from './composite/workspace.js'
 import { NotionMCPError } from './helpers/errors.js'
@@ -36,7 +45,8 @@ const EXPECTED_TOOL_NAMES = [
   'comments',
   'content_convert',
   'file_uploads',
-  'help'
+  'help',
+  'setup'
 ]
 
 const EXPECTED_RESOURCE_URIS = [
@@ -91,11 +101,11 @@ describe('registerTools', () => {
   })
 
   describe('ListTools handler', () => {
-    it('should return exactly 9 tools', async () => {
+    it('should return exactly 10 tools', async () => {
       const handler = server.getHandler(0)
       const result = await handler()
 
-      expect(result.tools).toHaveLength(9)
+      expect(result.tools).toHaveLength(10)
     })
 
     it('should return all expected tool names', async () => {
@@ -391,6 +401,23 @@ describe('registerTools', () => {
         direction: 'markdown-to-blocks',
         content: '# Hello'
       })
+      expect(result.content[0].text).toBe(JSON.stringify(mockResult, null, 2))
+    })
+
+    it('should route setup tool without notion client', async () => {
+      const handler = server.getHandler(3)
+      const mockResult = { action: 'status', state: 'configured', has_token: true }
+      vi.mocked(setup).mockResolvedValue(mockResult)
+
+      const result = await handler({
+        params: {
+          name: 'setup',
+          arguments: { action: 'status' }
+        }
+      })
+
+      // setup is called without notion client
+      expect(setup).toHaveBeenCalledWith({ action: 'status' })
       expect(result.content[0].text).toBe(JSON.stringify(mockResult, null, 2))
     })
 
