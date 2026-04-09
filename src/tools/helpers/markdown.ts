@@ -744,13 +744,23 @@ function parseTable(lines: string[], startIndex: number): TableParseResult | nul
 
   if (tableLines.length < 1) return null
 
-  const parsedRows = tableLines.map((line) => {
-    const cells = line
-      .split('|')
-      .map((cell) => cell.trim())
-      .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1) // Remove empty first/last
-    return cells
-  })
+  // Optimization: use a single-pass manual loop instead of chained .map().filter().
+  // This reduces array allocations and closure creation in a hot path when parsing markdown tables.
+  const parsedRows = new Array(tableLines.length)
+  for (let r = 0; r < tableLines.length; r++) {
+    const line = tableLines[r]
+    const split = line.split('|')
+    const len = split.length
+    if (len < 3) {
+      parsedRows[r] = []
+      continue
+    }
+    const cells = new Array(len - 2)
+    for (let c = 1; c < len - 1; c++) {
+      cells[c - 1] = split[c].trim()
+    }
+    parsedRows[r] = cells
+  }
 
   // Check for separator row (contains ---)
   let hasHeader = false
