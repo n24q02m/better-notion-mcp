@@ -769,7 +769,7 @@ function parseTable(lines: string[], startIndex: number): TableParseResult | nul
 
   if (parsedRows.length >= 2) {
     const possibleSeparator = parsedRows[1]
-    const isSeparator = possibleSeparator.every((cell) => /^[-:]+$/.test(cell.trim()))
+    const isSeparator = possibleSeparator.every((cell: string) => /^[-:]+$/.test(cell.trim()))
 
     if (isSeparator) {
       hasHeader = true
