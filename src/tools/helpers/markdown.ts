@@ -255,8 +255,7 @@ function indentChildren(children: NotionBlock[]): string {
   return blocksToMarkdown(children).replace(/^/gm, '  ')
 }
 
-function calloutToMarkdown(block: NotionBlock): string[] {
-  const lines: string[] = []
+function calloutToMarkdown(block: NotionBlock, lines: string[]): void {
   const calloutText = richTextToMarkdown(block.callout.rich_text)
   const calloutIcon = block.callout.icon?.emoji || ''
   const calloutType = getCalloutTypeFromIcon(calloutIcon)
@@ -265,11 +264,9 @@ function calloutToMarkdown(block: NotionBlock): string[] {
     const childMd = blocksToMarkdown(block.callout.children)
     lines.push(childMd.replace(/^/gm, '> '))
   }
-  return lines
 }
 
-function toggleToMarkdown(block: NotionBlock): string[] {
-  const lines: string[] = []
+function toggleToMarkdown(block: NotionBlock, lines: string[]): void {
   const toggleText = richTextToMarkdown(block.toggle.rich_text)
   lines.push('<details>')
   lines.push(`<summary>${toggleText}</summary>`)
@@ -278,11 +275,9 @@ function toggleToMarkdown(block: NotionBlock): string[] {
     lines.push(blocksToMarkdown(block.toggle.children))
   }
   lines.push('</details>')
-  return lines
 }
 
-function tableToMarkdown(block: NotionBlock): string[] {
-  const lines: string[] = []
+function tableToMarkdown(block: NotionBlock, lines: string[]): void {
   const tableRows = block.table?.children || []
   if (tableRows.length > 0) {
     for (let rowIdx = 0; rowIdx < tableRows.length; rowIdx++) {
@@ -316,11 +311,9 @@ function tableToMarkdown(block: NotionBlock): string[] {
       }
     }
   }
-  return lines
 }
 
-function columnListToMarkdown(block: NotionBlock): string[] {
-  const lines: string[] = []
+function columnListToMarkdown(block: NotionBlock, lines: string[]): void {
   lines.push(':::columns')
   const columns = block.column_list?.children || []
   for (let colIdx = 0; colIdx < columns.length; colIdx++) {
@@ -336,7 +329,6 @@ function columnListToMarkdown(block: NotionBlock): string[] {
     }
   }
   lines.push(':::end')
-  return lines
 }
 
 export function blocksToMarkdown(blocks: NotionBlock[]): string {
@@ -399,10 +391,10 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         lines.push('---')
         break
       case 'callout':
-        lines.push(...calloutToMarkdown(block))
+        calloutToMarkdown(block, lines)
         break
       case 'toggle':
-        lines.push(...toggleToMarkdown(block))
+        toggleToMarkdown(block, lines)
         break
       case 'image': {
         const imageUrl = block.image?.file?.url || block.image?.external?.url || ''
@@ -420,10 +412,10 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         lines.push(`$$${block.equation.expression}$$`)
         break
       case 'table':
-        lines.push(...tableToMarkdown(block))
+        tableToMarkdown(block, lines)
         break
       case 'column_list':
-        lines.push(...columnListToMarkdown(block))
+        columnListToMarkdown(block, lines)
         break
       case 'table_of_contents':
         lines.push('[toc]')
