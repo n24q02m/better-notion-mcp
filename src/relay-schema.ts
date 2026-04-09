@@ -18,7 +18,8 @@ export const RELAY_SCHEMA: RelayConfigSchema = {
       placeholder: 'ntn_...',
       helpUrl: 'https://www.notion.so/my-integrations',
       helpText: 'Create an integration and copy the Internal Integration Secret',
-      required: true
+      required: true,
+      validation: '^(secret_|ntn_).+'
     }
   ]
 }

@@ -24,7 +24,8 @@ describe('RELAY_SCHEMA', () => {
       type: 'password',
       placeholder: 'ntn_...',
       required: true,
-      helpUrl: 'https://www.notion.so/my-integrations'
+      helpUrl: 'https://www.notion.so/my-integrations',
+      validation: '^(secret_|ntn_).+'
     })
 
     expect(field.helpText).toContain('Internal Integration Secret')
