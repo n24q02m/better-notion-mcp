@@ -746,7 +746,7 @@ function parseTable(lines: string[], startIndex: number): TableParseResult | nul
 
   // Optimization: use a single-pass manual loop instead of chained .map().filter().
   // This reduces array allocations and closure creation in a hot path when parsing markdown tables.
-  const parsedRows = new Array(tableLines.length)
+  const parsedRows: string[][] = new Array(tableLines.length)
   for (let r = 0; r < tableLines.length; r++) {
     const line = tableLines[r]
     const split = line.split('|')
@@ -755,7 +755,7 @@ function parseTable(lines: string[], startIndex: number): TableParseResult | nul
       parsedRows[r] = []
       continue
     }
-    const cells = new Array(len - 2)
+    const cells: string[] = new Array(len - 2)
     for (let c = 1; c < len - 1; c++) {
       cells[c - 1] = split[c].trim()
     }
