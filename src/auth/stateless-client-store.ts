@@ -37,7 +37,7 @@ export class StatelessClientStore implements OAuthRegisteredClientsStore {
     const cached = this.cache.get(clientId)
     if (cached) return cached
 
-    // Fallback: derive secret only (redirect_uris unknown — client must re-register)
+    // Fallback: derive secret only (redirect_uris unknown -- client must re-register)
     const clientSecret = this.deriveClientSecret(clientId)
     return {
       client_id: clientId,
