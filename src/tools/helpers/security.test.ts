@@ -1,5 +1,9 @@
+/**
+ * Tests for security utilities.
+ */
+
 import { describe, expect, it } from 'vitest'
-import { isSafeUrl, wrapToolResult } from './security'
+import { isSafeUrl, isSafeWebUrl, wrapToolResult } from './security.js'
 
 describe('Security Utilities', () => {
   describe('isSafeUrl', () => {
@@ -81,6 +85,36 @@ describe('Security Utilities', () => {
       // http://[ is a malformed absolute URL that will fail the first new URL() call
       // and also fail the relative URL check new URL(lowerUrl, 'http://relative-check.internal')
       expect(isSafeUrl('http://[')).toBe(false)
+    })
+  })
+
+  describe('isSafeWebUrl', () => {
+    it('should allow valid http and https URLs', () => {
+      expect(isSafeWebUrl('https://example.com')).toBe(true)
+      expect(isSafeWebUrl('http://example.com/path?query=1')).toBe(true)
+    })
+
+    it('should reject non-web protocols', () => {
+      expect(isSafeWebUrl('mailto:user@example.com')).toBe(false)
+      expect(isSafeWebUrl('tel:+1234567890')).toBe(false)
+      expect(isSafeWebUrl('file:///etc/passwd')).toBe(false)
+      expect(isSafeWebUrl('javascript:alert(1)')).toBe(false)
+    })
+
+    it('should reject URLs with whitespace or control characters', () => {
+      expect(isSafeWebUrl('https://example.com ')).toBe(false)
+      expect(isSafeWebUrl('https://example.com/ path')).toBe(false)
+      expect(isSafeWebUrl('https://example.com\n')).toBe(false)
+    })
+
+    it('should reject URLs starting with a hyphen', () => {
+      expect(isSafeWebUrl('-flag')).toBe(false)
+      expect(isSafeWebUrl('--help')).toBe(false)
+    })
+
+    it('should reject relative URLs', () => {
+      expect(isSafeWebUrl('/path')).toBe(false)
+      expect(isSafeWebUrl('path')).toBe(false)
     })
   })
 
