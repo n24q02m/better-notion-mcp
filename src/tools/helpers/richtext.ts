@@ -138,8 +138,17 @@ export function formatText(
 export function extractPlainText(richText: RichTextItem[] | undefined | null): string {
   if (!richText || !Array.isArray(richText)) return ''
   let result = ''
-  for (let i = 0; i < richText.length; i++) {
-    result += richText[i].plain_text ?? richText[i].text?.content ?? ''
+  const len = richText.length
+  for (let i = 0; i < len; i++) {
+    const item = richText[i]
+    if (item.plain_text !== undefined && item.plain_text !== null) {
+      result += item.plain_text
+    } else {
+      const text = item.text
+      if (text) {
+        result += text.content || ''
+      }
+    }
   }
   return result
 }
