@@ -16,6 +16,30 @@ import * as RichText from '../helpers/richtext.js'
 export const schemaCache = new Map<string, { properties: any; expiresAt: number }>()
 const SCHEMA_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
+// Cache for database metadata
+export const databaseCache = new Map<string, { database: any; expiresAt: number }>()
+const DATABASE_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+/**
+ * Get database metadata with caching
+ */
+async function getDatabaseMetadata(notion: Client, databaseId: string): Promise<any> {
+  const normalized = normalizeId(databaseId)
+  const cached = databaseCache.get(normalized)
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.database
+  }
+
+  const database: any = await notion.databases.retrieve({ database_id: normalized })
+
+  databaseCache.set(normalized, {
+    database,
+    expiresAt: Date.now() + DATABASE_CACHE_TTL
+  })
+
+  return database
+}
+
 /**
  * Get data source properties with caching
  */
@@ -249,7 +273,7 @@ async function resolveDataSourceId(notion: Client, id: string): Promise<{ databa
 
   // Try as database container first
   try {
-    const database: any = await notion.databases.retrieve({ database_id: normalized })
+    const database: any = await getDatabaseMetadata(notion, normalized)
     if (database.data_sources?.length > 0) {
       return { databaseId: database.id, dataSourceId: database.data_sources[0].id }
     }
@@ -386,9 +410,7 @@ async function getDatabase(notion: Client, input: DatabasesInput): Promise<GetDa
   }
 
   // Get database (contains list of data_sources)
-  const database: any = await notion.databases.retrieve({
-    database_id: normalizeId(input.database_id)
-  })
+  const database: any = await getDatabaseMetadata(notion, input.database_id)
 
   // Get detailed schema from first data source
   const schema: any = {}
@@ -679,6 +701,8 @@ async function createDataSource(notion: Client, input: DatabasesInput): Promise<
 
   const dataSource: any = await (notion as any).dataSources.create(dataSourceData)
 
+  // Invalidate cache
+  databaseCache.delete(normalizeId(input.database_id))
   return {
     action: 'create_data_source',
     data_source_id: dataSource.id,
@@ -775,6 +799,9 @@ async function updateDatabaseContainer(notion: Client, input: DatabasesInput): P
     database_id: normalizeId(input.database_id),
     ...updates
   })
+
+  // Invalidate cache
+  databaseCache.delete(normalizeId(input.database_id))
 
   return {
     action: 'update_database',
