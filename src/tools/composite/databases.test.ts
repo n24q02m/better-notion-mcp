@@ -6,6 +6,7 @@ import {
   type DeleteDatabasePageResponse,
   databases,
   type GetDatabaseResponse,
+  idResolutionCache,
   type ListDataSourceTemplatesResponse,
   type QueryDatabaseResponse,
   schemaCache,
@@ -69,6 +70,7 @@ function makeDataSourceResponse(overrides: Record<string, any> = {}) {
 describe('databases', () => {
   beforeEach(() => {
     schemaCache.clear()
+    idResolutionCache.clear()
     vi.resetAllMocks()
   })
 
@@ -423,6 +425,7 @@ describe('databases', () => {
   describe('create_page', () => {
     beforeEach(() => {
       schemaCache.clear()
+      idResolutionCache.clear()
       mockNotion.databases.retrieve.mockResolvedValue(makeDbRetrieveResponse())
       mockNotion.dataSources.retrieve.mockResolvedValue(makeDataSourceResponse())
     })
@@ -910,6 +913,26 @@ describe('databases', () => {
       expect(result.action).toBe('list_templates')
       expect(mockNotion.databases.retrieve).toHaveBeenCalled()
       expect(mockNotion.dataSources.retrieve).toHaveBeenCalledWith({ data_source_id: 'ds123' })
+    })
+    it('should use idResolutionCache on subsequent calls', async () => {
+      mockNotion.databases.retrieve.mockResolvedValueOnce(makeDbRetrieveResponse())
+      mockNotion.dataSources.listTemplates.mockResolvedValue({ templates: [], next_cursor: null, has_more: false })
+
+      // First call populates cache
+      await databases(notion, {
+        action: 'list_templates',
+        database_id: 'db-1'
+      })
+
+      expect(mockNotion.databases.retrieve).toHaveBeenCalledTimes(1)
+
+      // Second call should use cache
+      await databases(notion, {
+        action: 'list_templates',
+        database_id: 'db-1'
+      })
+
+      expect(mockNotion.databases.retrieve).toHaveBeenCalledTimes(1)
     })
 
     it('should throw NOT_FOUND when both database and data source are not found', async () => {
