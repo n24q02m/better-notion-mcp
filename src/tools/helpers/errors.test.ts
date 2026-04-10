@@ -1,9 +1,13 @@
+/**
+ * Unit tests for error handling utilities
+ */
 import { describe, expect, it, vi } from 'vitest'
 import {
   aiReadableMessage,
   enhanceError,
   findClosestMatch,
   NotionMCPError,
+  retryBatch,
   retryWithBackoff,
   suggestFixes,
   withErrorHandling
@@ -458,5 +462,51 @@ describe('findClosestMatch', () => {
 
   it('should return the match with the highest score', () => {
     expect(findClosestMatch('test', ['testing', 'tent'])).toBe('testing')
+  })
+})
+
+describe('retryBatch', () => {
+  it('should process items in parallel', async () => {
+    const items = [1, 2, 3, 4, 5]
+    const fn = vi.fn().mockImplementation((x) => Promise.resolve(x * 2))
+
+    const results = await retryBatch(items, fn, { concurrency: 2, initialDelay: 1 })
+
+    expect(results).toEqual([2, 4, 6, 8, 10])
+    expect(fn).toHaveBeenCalledTimes(5)
+  })
+
+  it('should retry individual items on failure', async () => {
+    const items = [1, 2]
+    const fn = vi
+      .fn()
+      .mockImplementationOnce(() => Promise.reject({ message: 'fail 1' }))
+      .mockImplementationOnce((x) => Promise.resolve(x * 2))
+      .mockImplementationOnce((x) => Promise.resolve(x * 2))
+
+    const results = await retryBatch(items, fn, { concurrency: 1, initialDelay: 1 })
+
+    expect(results).toEqual([2, 4])
+    expect(fn).toHaveBeenCalledTimes(3)
+  })
+})
+
+describe('retryWithBackoff jitter', () => {
+  it('should wait for a jittered amount of time', async () => {
+    const fn = vi
+      .fn()
+      .mockImplementationOnce(() => Promise.reject({ message: 'fail' }))
+      .mockResolvedValue('ok')
+
+    const spy = vi.spyOn(globalThis, 'setTimeout')
+
+    await retryWithBackoff(fn, { initialDelay: 100, maxRetries: 1 })
+
+    const delay = spy.mock.calls[0][1]
+    expect(delay).not.toBe(100)
+    expect(delay).toBeGreaterThanOrEqual(80)
+    expect(delay).toBeLessThanOrEqual(120)
+
+    spy.mockRestore()
   })
 })
