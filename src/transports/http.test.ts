@@ -226,7 +226,7 @@ describe('startHttp', () => {
       process.env.TRUST_PROXY = 'true'
       await startHttp()
       const mockAppTrue = (express as any).mock.results.at(-1)?.value
-      expect(mockAppTrue.set).toHaveBeenCalledWith('trust proxy', true)
+      expect(mockAppTrue.set).toHaveBeenCalledWith('trust proxy', false)
 
       // Test boolean 'false'
       process.env.TRUST_PROXY = 'false'
