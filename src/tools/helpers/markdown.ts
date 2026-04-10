@@ -627,10 +627,12 @@ function richTextToMarkdown(richText: RichText[]): string {
     const rt = richText[i]
     if (!rt) continue
 
+    const mention = rt.mention
+    const rtText = rt.text
     // Handle mention elements
-    if (rt.type === 'mention' && rt.mention) {
-      const title = rt.plain_text || rt.text?.content || 'Untitled'
-      const id = rt.mention.page?.id || rt.mention.database?.id || ''
+    if (rt.type === 'mention' && mention) {
+      const title = rt.plain_text || rtText?.content || 'Untitled'
+      const id = mention.page?.id || mention.database?.id || ''
       if (id) {
         result += `@[${title}](${id})`
         continue
@@ -640,16 +642,22 @@ function richTextToMarkdown(richText: RichText[]): string {
       continue
     }
 
-    if (!rt.text) continue
+    if (!rtText) continue
 
-    let text = rt.text.content || ''
-    const annotations = rt.annotations || ({} as any)
+    let text = rtText.content || ''
+    const ann = rt.annotations
 
-    if (annotations.bold) text = `**${text}**`
-    if (annotations.italic) text = `*${text}*`
-    if (annotations.code) text = `\`${text}\``
-    if (annotations.strikethrough) text = `~~${text}~~`
-    if (rt.text.link) text = `[${text}](${rt.text.link.url})`
+    if (ann) {
+      if (ann.bold) text = `**${text}**`
+      if (ann.italic) text = `*${text}*`
+      if (ann.code) text = `\`${text}\``
+      if (ann.strikethrough) text = `~~${text}~~`
+    }
+
+    const link = rtText.link
+    if (link) {
+      text = `[${text}](${link.url})`
+    }
     result += text
   }
 
