@@ -1,4 +1,5 @@
 import type { Client } from '@notionhq/client'
+import { retryWithBackoff } from './errors.js'
 
 /**
  * Pagination Helper
@@ -163,7 +164,8 @@ export async function processBatches<T, R>(
   const promises = new Array(items.length)
   for (let i = 0; i < items.length; i++) {
     const item = items[i]
-    promises[i] = queue.run(() => processFn(item))
+    // Wrap processFn with retryWithBackoff
+    promises[i] = queue.run(() => retryWithBackoff(() => processFn(item), { maxRetries: 2, initialDelay: 500 }))
   }
   return Promise.all(promises)
 }

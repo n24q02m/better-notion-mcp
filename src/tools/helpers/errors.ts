@@ -1,4 +1,7 @@
 /**
+ * Error handling utilities for Notion MCP
+ */
+/**
  * Custom error class for Notion MCP operations
  */
 export class NotionMCPError extends Error {
@@ -244,47 +247,42 @@ export function aiReadableMessage(error: NotionMCPError): string {
 /**
  * Suggest fixes based on error
  */
+const ERROR_SUGGESTIONS_MAP: Record<string, string[]> = {
+  UNAUTHORIZED: [
+    'Check that NOTION_TOKEN is set in your environment',
+    'Verify token at https://www.notion.so/my-integrations',
+    'Create a new integration token if needed'
+  ],
+  RESTRICTED_RESOURCE: [
+    'Open the page/database in Notion',
+    'Click "..." menu → Add connections → Select your integration',
+    'Grant access to parent pages if needed'
+  ],
+  NOT_FOUND: [
+    'Verify the page/database ID is correct',
+    'Check that the resource was not deleted',
+    'Ensure you have access permissions'
+  ],
+  VALIDATION_ERROR: [
+    'Check parameter types and formats',
+    'Review required vs optional parameters',
+    'Verify property names match database schema'
+  ],
+  RATE_LIMITED: [
+    'Reduce request frequency',
+    'Implement exponential backoff retry logic',
+    'Batch multiple operations together'
+  ]
+}
+
+const DEFAULT_SUGGESTIONS = [
+  'Check Notion API status at https://status.notion.so',
+  'Review request parameters',
+  'Try again in a few moments'
+]
+
 export function suggestFixes(error: NotionMCPError): string[] {
-  const suggestions: string[] = []
-
-  switch (error.code) {
-    case 'UNAUTHORIZED':
-      suggestions.push('Check that NOTION_TOKEN is set in your environment')
-      suggestions.push('Verify token at https://www.notion.so/my-integrations')
-      suggestions.push('Create a new integration token if needed')
-      break
-
-    case 'RESTRICTED_RESOURCE':
-      suggestions.push('Open the page/database in Notion')
-      suggestions.push('Click "..." menu → Add connections → Select your integration')
-      suggestions.push('Grant access to parent pages if needed')
-      break
-
-    case 'NOT_FOUND':
-      suggestions.push('Verify the page/database ID is correct')
-      suggestions.push('Check that the resource was not deleted')
-      suggestions.push('Ensure you have access permissions')
-      break
-
-    case 'VALIDATION_ERROR':
-      suggestions.push('Check parameter types and formats')
-      suggestions.push('Review required vs optional parameters')
-      suggestions.push('Verify property names match database schema')
-      break
-
-    case 'RATE_LIMITED':
-      suggestions.push('Reduce request frequency')
-      suggestions.push('Implement exponential backoff retry logic')
-      suggestions.push('Batch multiple operations together')
-      break
-
-    default:
-      suggestions.push('Check Notion API status at https://status.notion.so')
-      suggestions.push('Review request parameters')
-      suggestions.push('Try again in a few moments')
-  }
-
-  return suggestions
+  return ERROR_SUGGESTIONS_MAP[error.code] || DEFAULT_SUGGESTIONS
 }
 
 /**
@@ -336,10 +334,44 @@ export async function retryWithBackoff<T>(
       }
 
       // Wait with exponential backoff
-      await new Promise((resolve) => globalThis.setTimeout(resolve, delay))
+      const jitter = delay * 0.2 * (Math.random() * 2 - 1) // +/- 20% jitter
+      await new Promise((resolve) => globalThis.setTimeout(resolve, Math.max(0, delay + jitter)))
       delay = Math.min(delay * backoffMultiplier, maxDelay)
     }
   }
 
   throw enhanceError(lastError)
+}
+
+/**
+ * Process an array of items in parallel with a concurrency limit and retries.
+ * Each item is processed by the provided function.
+ */
+export async function retryBatch<T, R>(
+  items: T[],
+  processFn: (item: T) => Promise<R>,
+  options: {
+    concurrency?: number
+    maxRetries?: number
+    initialDelay?: number
+  } = {}
+): Promise<R[]> {
+  const { concurrency = 5, ...retryOptions } = options
+
+  // Use a simple worker pool pattern for concurrency
+  const results: R[] = new Array(items.length)
+  let nextIndex = 0
+
+  const worker = async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex++
+      const item = items[index]
+      results[index] = await retryWithBackoff(() => processFn(item), retryOptions)
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, worker)
+  await Promise.all(workers)
+
+  return results
 }
