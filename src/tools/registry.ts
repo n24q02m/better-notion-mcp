@@ -405,6 +405,11 @@ const TOOLS = [
   }
 ]
 
+// Pre-computed lists and sets for tool validation to avoid O(N) operations in hot paths
+const TOOL_NAMES = TOOLS.map((t) => t.name)
+const HELP_TOOL_NAMES = TOOL_NAMES.filter((name) => name !== 'help')
+const HELP_TOOL_NAMES_SET = new Set(HELP_TOOL_NAMES)
+
 /**
  * Register all tools with MCP server
  * @param notionClientFactory - Returns a Notion Client.
@@ -515,12 +520,11 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
         case 'help': {
           const toolName = (args as { tool_name: string }).tool_name
           // Security: validate tool_name against allowlist to prevent path traversal
-          const validToolNames = TOOLS.filter((t) => t.name !== 'help').map((t) => t.name)
-          if (!validToolNames.includes(toolName)) {
+          if (!HELP_TOOL_NAMES_SET.has(toolName)) {
             throw new NotionMCPError(
               `Invalid tool name: ${toolName}`,
               'VALIDATION_ERROR',
-              `Valid tools: ${validToolNames.join(', ')}`
+              `Valid tools: ${HELP_TOOL_NAMES.join(', ')}`
             )
           }
           const docFile = `${toolName}.md`
@@ -533,13 +537,12 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
           break
         }
         default: {
-          const validTools = TOOLS.map((t) => t.name)
-          const closest = findClosestMatch(name, validTools)
+          const closest = findClosestMatch(name, TOOL_NAMES)
           const suggestion = closest ? ` Did you mean '${closest}'?` : ''
           throw new NotionMCPError(
             `Unknown tool: ${name}.${suggestion}`,
             'UNKNOWN_TOOL',
-            `Available tools: ${validTools.join(', ')}`
+            `Available tools: ${TOOL_NAMES.join(', ')}`
           )
         }
       }
