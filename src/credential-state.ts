@@ -193,7 +193,8 @@ export function tryOpenBrowser(url: string): void {
     // Note: 'start' is a cmd internal command.
     // When executing 'cmd /c start', the first double-quoted string is treated as the window title.
     // Thus we provide an empty title ('""') followed by the URL wrapped in double quotes.
-    execFile('cmd', ['/c', 'start', '""', `"${url}"`], { windowsVerbatimArguments: true }, () => {})
+    // Ensure we do not use windowsVerbatimArguments to prevent command injection from bypassing node's parsing logic.
+    execFile('cmd', ['/c', 'start', '""', url], () => {})
   } else {
     execFile('xdg-open', [url], () => {})
   }
