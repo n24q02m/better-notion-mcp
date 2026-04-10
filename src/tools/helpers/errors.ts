@@ -228,7 +228,7 @@ export function findClosestMatch(input: string, validOptions: string[]): string 
  * Create AI-readable error message
  */
 export function aiReadableMessage(error: NotionMCPError): string {
-  let message = `Error: ${error.message}`
+  let message = `Error [${error.code}]: ${error.message}`
 
   if (error.suggestion) {
     message += `\n\nSuggestion: ${error.suggestion}`
