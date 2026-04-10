@@ -1,16 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { type WorkspaceResult, workspace } from './workspace.js'
 
-const mockNotion = {
+const createMockNotion = () => ({
   users: {
     retrieve: vi.fn()
   },
   search: vi.fn()
-}
+})
 
 describe('workspace', () => {
+  let mockNotion: ReturnType<typeof createMockNotion>
+
   beforeEach(() => {
-    vi.clearAllMocks()
+    mockNotion = createMockNotion()
   })
 
   describe('info', () => {
@@ -50,6 +52,34 @@ describe('workspace', () => {
       >
 
       expect(result.bot.name).toBe('Bot')
+    })
+
+    it('should cache info results per client instance', async () => {
+      mockNotion.users.retrieve.mockResolvedValue({
+        id: 'bot-1',
+        type: 'bot',
+        name: 'My Integration',
+        bot: {}
+      })
+
+      // First call - should trigger API
+      await workspace(mockNotion as any, { action: 'info' })
+      expect(mockNotion.users.retrieve).toHaveBeenCalledTimes(1)
+
+      // Second call - should use cache
+      await workspace(mockNotion as any, { action: 'info' })
+      expect(mockNotion.users.retrieve).toHaveBeenCalledTimes(1)
+
+      // Different client - should trigger API
+      const otherClient = createMockNotion()
+      otherClient.users.retrieve.mockResolvedValue({
+        id: 'bot-1',
+        type: 'bot',
+        name: 'My Integration',
+        bot: {}
+      })
+      await workspace(otherClient as any, { action: 'info' })
+      expect(otherClient.users.retrieve).toHaveBeenCalledTimes(1)
     })
   })
 

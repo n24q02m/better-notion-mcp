@@ -242,7 +242,8 @@ export async function startHttp() {
       }
 
       // Per-session MCP server with the user's Notion token
-      const server = createMCPServer(() => new Client({ auth: notionToken, notionVersion: '2025-09-03' }))
+      const notionClient = new Client({ auth: notionToken, notionVersion: '2025-09-03' })
+      const server = createMCPServer(() => notionClient)
       await server.connect(transport)
       await transport.handleRequest(req, res, req.body)
       return

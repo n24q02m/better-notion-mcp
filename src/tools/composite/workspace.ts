@@ -52,6 +52,10 @@ export interface WorkspaceInput {
   limit?: number
 }
 
+// Cache for bot info per client instance
+const infoCache = new WeakMap<Client, { result: WorkspaceInfoResult; expiresAt: number }>()
+const INFO_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
 /**
  * Unified workspace tool
  * Maps to: GET /v1/users/me and POST /v1/search
@@ -60,9 +64,15 @@ export async function workspace(notion: Client, input: WorkspaceInput): Promise<
   return withErrorHandling(async () => {
     switch (input.action) {
       case 'info': {
+        // Check cache first
+        const cached = infoCache.get(notion)
+        if (cached && Date.now() < cached.expiresAt) {
+          return cached.result
+        }
+
         const botUser = await notion.users.retrieve({ user_id: 'me' })
 
-        return {
+        const result: WorkspaceInfoResult = {
           action: 'info' as const,
           bot: {
             id: (botUser as any).id,
@@ -71,6 +81,14 @@ export async function workspace(notion: Client, input: WorkspaceInput): Promise<
             owner: (botUser as any).bot?.owner
           }
         }
+
+        // Update cache
+        infoCache.set(notion, {
+          result,
+          expiresAt: Date.now() + INFO_CACHE_TTL
+        })
+
+        return result
       }
 
       case 'search': {
