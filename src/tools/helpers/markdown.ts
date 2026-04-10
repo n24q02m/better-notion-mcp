@@ -664,8 +664,10 @@ function richTextToMarkdown(richText: RichText[]): string {
 export function extractPlainText(richText: RichText[]): string {
   if (!richText || !Array.isArray(richText)) return ''
   let result = ''
-  for (let i = 0; i < richText.length; i++) {
-    result += richText[i].plain_text || richText[i].text?.content || ''
+  const len = richText.length
+  for (let i = 0; i < len; i++) {
+    const rt = richText[i]
+    result += rt.plain_text || (rt.text && rt.text.content) || ''
   }
   return result
 }
