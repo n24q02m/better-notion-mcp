@@ -64,14 +64,14 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.10",
+    "@biomejs/biome": "^2.4.11",
     "@types/express": "^5.0.6",
     "@types/node": "^24.12.2",
-    "@vitest/coverage-v8": "^4.1.3",
+    "@vitest/coverage-v8": "^4.1.4",
     "esbuild": "^0.28.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.3"
+    "vitest": "^4.1.4"
   },
   "description": "Better MCP server for Notion API with composite tools optimized for AI agents",
   "main": "build/src/init-server.js",
