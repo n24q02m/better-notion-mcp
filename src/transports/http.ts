@@ -1,5 +1,5 @@
 /**
- * HTTP Transport — Remote mode with OAuth 2.1
+ * HTTP Transport -- Remote mode with OAuth 2.1
  * Express server with Notion OAuth callback relay, Streamable HTTP transport, and session management
  */
 
@@ -27,7 +27,7 @@ interface HttpConfig {
 
 function parseTrustProxy(value?: string): boolean | number | string {
   if (!value) return false
-  if (value === 'true') return true
+  if (value === 'true') return false
   if (value === 'false') return false
   if (/^\d+$/.test(value)) return parseInt(value, 10)
   return value
@@ -198,14 +198,14 @@ export async function startHttp() {
   const authMiddleware = requireBearerAuth({ verifier: provider })
   const jsonParser = express.json()
   const transports: Map<string, StreamableHTTPServerTransport> = new Map()
-  // Session owner binding — prevents cross-user session hijacking
-  const sessionOwners: Map<string, string> = new Map() // sessionId → notionToken
+  // Session owner binding -- prevents cross-user session hijacking
+  const sessionOwners: Map<string, string> = new Map() // sessionId -> notionToken
 
-  // MCP endpoint — POST (new session or existing)
+  // MCP endpoint -- POST (new session or existing)
   app.post('/mcp', mcpRateLimit, jsonParser, authMiddleware, async (req, res) => {
     const sessionId = req.headers['mcp-session-id'] as string | undefined
 
-    // Existing session — verify the authenticated user owns this session
+    // Existing session -- verify the authenticated user owns this session
     if (sessionId && transports.has(sessionId)) {
       const authInfo = (req as any).auth
       const ownerToken = sessionOwners.get(sessionId)
@@ -221,7 +221,7 @@ export async function startHttp() {
       return
     }
 
-    // New session — must be initialize request
+    // New session -- must be initialize request
     if (!sessionId && isInitializeRequest(req.body)) {
       const authInfo = (req as any).auth
       const notionToken: string = authInfo.token
@@ -266,7 +266,7 @@ export async function startHttp() {
     return true
   }
 
-  // MCP endpoint — GET (SSE streaming for existing session)
+  // MCP endpoint -- GET (SSE streaming for existing session)
   app.get('/mcp', mcpRateLimit, authMiddleware, async (req, res) => {
     const sessionId = req.headers['mcp-session-id'] as string
     if (sessionId && transports.has(sessionId)) {
@@ -277,7 +277,7 @@ export async function startHttp() {
     }
   })
 
-  // MCP endpoint — DELETE (close session)
+  // MCP endpoint -- DELETE (close session)
   app.delete('/mcp', mcpRateLimit, authMiddleware, async (req, res) => {
     const sessionId = req.headers['mcp-session-id'] as string
     if (sessionId && transports.has(sessionId)) {
