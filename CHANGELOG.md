@@ -214,7 +214,7 @@
 ## [3.0.0](https://github.com/n24q02m/better-notion-mcp/compare/better-notion-mcp-v2.4.0...better-notion-mcp-v3.0.0) (2026-02-06)
 
 
-### ⚠ BREAKING CHANGES
+### [warning] BREAKING CHANGES
 
 * Tool descriptions are now compressed by default. Use 'help' tool or MCP resources to access full documentation.
 
@@ -789,4 +789,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `users` - User management (4 actions)
 - `workspace` - Workspace operations (2 actions)
 - `comments` - Comment operations (2 actions)
-- `content_convert` - Markdown ↔ Notion blocks utility (2 directions)
+- `content_convert` - Markdown <-> Notion blocks utility (2 directions)

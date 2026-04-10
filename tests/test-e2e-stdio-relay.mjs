@@ -503,7 +503,7 @@ console.log('--- databases ---')
 
 let dbId = null
 try {
-  // Search for databases (data_sources) — the results may contain database_id in different locations
+  // Search for databases (data_sources) \u2014 the results may contain database_id in different locations
   const r = await callTool(client, 'workspace', { action: 'search', filter: { object: 'data_source' } })
   const parsed = safeParse(r.text)
   if (parsed.results && parsed.results.length > 0) {

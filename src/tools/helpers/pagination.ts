@@ -14,9 +14,10 @@ export interface PaginatedResponse<T> {
   has_more: boolean
 }
 
-export interface PaginationOptions {
+export interface PaginationOptions<T = any> {
   maxPages?: number // Max pages to fetch (0 = unlimited, capped by MAX_PAGES_SAFETY)
   pageSize?: number // Items per page (default: 100)
+  onPage?: (results: T[]) => Promise<void> | void // Callback for each page (enables streaming)
 }
 
 /**
@@ -24,9 +25,9 @@ export interface PaginationOptions {
  */
 export async function autoPaginate<T>(
   fetchFn: (cursor?: string, pageSize?: number) => Promise<PaginatedResponse<T>>,
-  options: PaginationOptions = {}
+  options: PaginationOptions<T> = {}
 ): Promise<T[]> {
-  const { maxPages = 0, pageSize = 100 } = options
+  const { maxPages = 0, pageSize = 100, onPage } = options
   const effectiveMax = maxPages > 0 ? Math.min(maxPages, MAX_PAGES_SAFETY) : MAX_PAGES_SAFETY
   const allResults: T[] = []
   let cursor: string | null = null
@@ -35,6 +36,11 @@ export async function autoPaginate<T>(
   do {
     const response = await fetchFn(cursor || undefined, pageSize)
     allResults.push(...response.results)
+
+    if (onPage) {
+      await onPage(response.results)
+    }
+
     cursor = response.next_cursor
     pageCount++
 
@@ -116,23 +122,39 @@ export class ConcurrencyQueue {
  * Mutates blocks in-place by attaching children arrays.
  */
 export async function fetchChildrenRecursive(
+  notion: Client,
   blocks: any[],
-  fetchChildren: (blockId: string) => Promise<any[]>,
   depth = 0,
   queue?: ConcurrencyQueue
 ): Promise<void> {
   if (depth >= MAX_DEPTH) return
 
   const fetchAndRecurse = async (block: any) => {
-    const children = queue ? await queue.run(() => fetchChildren(block.id)) : await fetchChildren(block.id)
+    const children: any[] = []
 
-    // Attach children to the correct property based on block type
+    await autoPaginate(
+      (cursor) => {
+        const task = () =>
+          notion.blocks.children.list({
+            block_id: block.id,
+            start_cursor: cursor,
+            page_size: 100
+          })
+        return (queue ? queue.run(task) : task()) as Promise<PaginatedResponse<any>>
+      },
+      {
+        onPage: async (pageResults) => {
+          children.push(...pageResults)
+          // Recurse into this page's children immediately! (Streaming Recursion)
+          await fetchChildrenRecursive(notion, pageResults, depth + 1, queue)
+        }
+      }
+    )
+
+    // Attach all collected children to the correct property based on block type
     if (block[block.type]) {
       block[block.type].children = children
     }
-
-    // Recurse into children
-    await fetchChildrenRecursive(children, fetchChildren, depth + 1, queue)
   }
 
   const promises: Promise<void>[] = []
@@ -174,15 +196,5 @@ export async function processBatches<T, R>(
 export async function populateDeepChildren(notion: Client, blocks: any[]): Promise<void> {
   // Use a shared queue to cap total concurrent Notion API calls at 5 across the whole tree
   const queue = new ConcurrencyQueue(5)
-
-  await fetchChildrenRecursive(
-    blocks,
-    async (blockId) => {
-      return autoPaginate((cursor) =>
-        notion.blocks.children.list({ block_id: blockId, start_cursor: cursor, page_size: 100 })
-      ) as any
-    },
-    0,
-    queue
-  )
+  await fetchChildrenRecursive(notion, blocks, 0, queue)
 }
