@@ -190,7 +190,8 @@ export function tryOpenBrowser(url: string): void {
   if (platform === 'darwin') {
     execFile('open', [url], () => {})
   } else if (platform === 'win32') {
-    execFile('cmd', ['/c', 'start', '', url], () => {})
+    // Note: 'start' is a cmd internal command. We escape the URL with double quotes.
+    execFile('cmd', ['/c', 'start', '', `"${url}"`], { windowsVerbatimArguments: true }, () => {})
   } else {
     execFile('xdg-open', [url], () => {})
   }
