@@ -81,6 +81,16 @@ describe('Security Utilities', () => {
       // http://[ is a malformed absolute URL that will fail the first new URL() call
       // and also fail the relative URL check new URL(lowerUrl, 'http://relative-check.internal')
       expect(isSafeUrl('http://[')).toBe(false)
+      expect(isSafeUrl('http://example.com:80:80')).toBe(false)
+      expect(isSafeUrl('://')).toBe(false)
+    })
+
+    it('should handle more relative URL edge cases', () => {
+      expect(isSafeUrl('?query')).toBe(true)
+      expect(isSafeUrl('#fragment')).toBe(true)
+      expect(isSafeUrl('.:foo')).toBe(false)
+      expect(isSafeUrl('.&bar')).toBe(false)
+      expect(isSafeUrl('.%3aabc')).toBe(false)
     })
   })
 
