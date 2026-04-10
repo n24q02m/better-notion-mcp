@@ -4,7 +4,7 @@
  */
 
 import { readFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import {
@@ -437,7 +437,7 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
     }
 
     try {
-      const content = await readFile(join(DOCS_DIR, resource.file), 'utf-8')
+      const content = await readFile(join(DOCS_DIR, basename(resource.file)), 'utf-8')
       return {
         contents: [{ uri, mimeType: 'text/markdown', text: content }]
       }
@@ -523,7 +523,7 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
               `Valid tools: ${validToolNames.join(', ')}`
             )
           }
-          const docFile = `${toolName}.md`
+          const docFile = `${basename(toolName)}.md`
           try {
             const content = await readFile(join(DOCS_DIR, docFile), 'utf-8')
             result = { tool: toolName, documentation: content }
