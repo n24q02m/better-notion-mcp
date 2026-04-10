@@ -31,7 +31,7 @@ function isNotionIconShorthand(value: string): boolean {
 /**
  * Format an icon value for the Notion API.
  * Accepts:
- * - Emoji: "\u{1f680}" -> { type: "emoji", emoji: "\u{1f680}" }
+ * - Emoji: "\ud83d\ude80" -> { type: "emoji", emoji: "\ud83d\ude80" }
  * - External URL: "https://..." -> { type: "external", external: { url } }
  * - Notion built-in shorthand: "document:gray" -> { type: "external", external: { url: "https://www.notion.so/icons/document_gray.svg" } }
  */

@@ -99,7 +99,7 @@ const TOOLS = [
         icon: {
           type: 'string',
           description:
-            'Icon: emoji (e.g. "\u{1f4cb}"), external URL (https://...), or built-in shorthand (name:color, e.g. "document:gray")'
+            'Icon: emoji (e.g. "\ud83d\udccb"), external URL (https://...), or built-in shorthand (name:color, e.g. "document:gray")'
         },
         cover: {
           type: 'string',
@@ -155,7 +155,7 @@ const TOOLS = [
         icon: {
           type: 'string',
           description:
-            'Icon (for update_database): emoji (e.g. "\u{1f4cb}"), external URL (https://...), or built-in shorthand (name:color, e.g. "document:gray")'
+            'Icon (for update_database): emoji (e.g. "\ud83d\udccb"), external URL (https://...), or built-in shorthand (name:color, e.g. "document:gray")'
         },
         cover: {
           type: 'string',

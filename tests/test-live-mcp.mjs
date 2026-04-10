@@ -264,7 +264,7 @@ console.log('\n--- Per-action validation ---')
 /**
  * Accept both validation errors AND API auth errors as passing.
  * With a fake token, some actions pass validation but fail at the Notion API
- * with 401 unauthorized — that still proves MCP communication works correctly.
+ * with 401 unauthorized \u2014 that still proves MCP communication works correctly.
  */
 async function expectErrorOrAuthFail(label, name, args) {
   try {
