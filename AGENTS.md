@@ -100,7 +100,7 @@ import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 
 ```
 src/
-  main.ts                     # Entry point — selects transport by TRANSPORT_MODE
+  main.ts                     # Entry point - selects transport by TRANSPORT_MODE
   init-server.ts              # Deprecated re-export of transports/stdio
   create-server.ts            # Shared MCP Server factory
   auth/                       # OAuth 2.1 + PKCE, DCR, session management

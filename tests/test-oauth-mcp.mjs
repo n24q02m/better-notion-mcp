@@ -64,7 +64,7 @@ function _openBrowser(url) {
   }
 }
 
-// ─── Step 1: DCR Registration ───────────────────────────────────────────
+// --- Step 1: DCR Registration -------------------------------------------
 console.log('--- OAuth Setup ---')
 
 const dcrResp = await fetch(`${MCP_URL}/register`, {
@@ -90,11 +90,11 @@ ok('DCR registration', `client_id=${dcrData.client_id.slice(0, 12)}...`)
 const clientId = dcrData.client_id
 const clientSecret = dcrData.client_secret
 
-// ─── Step 2: PKCE ───────────────────────────────────────────────────────
+// --- Step 2: PKCE -------------------------------------------------------
 const { verifier, challenge } = generatePKCE()
 const state = base64url(randomBytes(16))
 
-// ─── Step 3: Start callback server + open browser ───────────────────────
+// --- Step 3: Start callback server + open browser -----------------------
 console.log('\n--- OAuth Authorization ---')
 
 const authCode = await new Promise((resolve, reject) => {
@@ -159,7 +159,7 @@ const authCode = await new Promise((resolve, reject) => {
 
 ok('OAuth authorization', `code=${authCode.slice(0, 12)}...`)
 
-// ─── Step 4: Token Exchange ─────────────────────────────────────────────
+// --- Step 4: Token Exchange ---------------------------------------------
 console.log('\n--- Token Exchange ---')
 
 const tokenResp = await fetch(`${MCP_URL}/token`, {
@@ -191,7 +191,7 @@ if (!accessToken) {
 
 ok('Token exchange', `token_type=${tokenData.token_type}, has_token=${!!accessToken}`)
 
-// ─── Step 5: MCP Tests via HTTP with Bearer token ───────────────────────
+// --- Step 5: MCP Tests via HTTP with Bearer token -----------------------
 console.log('\n--- MCP over HTTP (OAuth) ---')
 
 let msgId = 0
@@ -388,7 +388,7 @@ try {
   fail('pages.create via OAuth', e.message)
 }
 
-// ─── Summary ────────────────────────────────────────────────────────────
+// --- Summary ------------------------------------------------------------
 const total = passed + failed
 console.log(`\n${'='.repeat(60)}`)
 console.log(`RESULT: ${passed}/${total} PASS (${((100 * passed) / total).toFixed(1)}%)`)
