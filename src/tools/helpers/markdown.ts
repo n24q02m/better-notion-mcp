@@ -685,10 +685,14 @@ function parseCalloutBlock(lines: string[], startIndex: number, match: RegExpMat
   let i = startIndex
 
   // Collect continuation lines (lines starting with >)
+  const continuationLines: string[] = []
+  if (calloutContent) continuationLines.push(calloutContent)
+
   while (i + 1 < lines.length && lines[i + 1].startsWith('> ')) {
     i++
-    calloutContent += (calloutContent ? '\n' : '') + lines[i].slice(2)
+    continuationLines.push(lines[i].slice(2))
   }
+  calloutContent = continuationLines.join('\n')
 
   const icon = getCalloutIcon(calloutType)
   const color = getCalloutColor(calloutType)
