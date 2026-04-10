@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isSafeUrl, wrapToolResult } from './security'
+import { isSafeUrl, isSafeWebUrl, wrapToolResult } from './security'
 
 describe('Security Utilities', () => {
   describe('isSafeUrl', () => {
@@ -81,6 +81,40 @@ describe('Security Utilities', () => {
       // http://[ is a malformed absolute URL that will fail the first new URL() call
       // and also fail the relative URL check new URL(lowerUrl, 'http://relative-check.internal')
       expect(isSafeUrl('http://[')).toBe(false)
+    })
+  })
+
+  describe('isSafeWebUrl', () => {
+    it('should allow valid http and https URLs', () => {
+      expect(isSafeWebUrl('https://example.com')).toBe(true)
+      expect(isSafeWebUrl('http://example.com')).toBe(true)
+    })
+
+    it('should reject non-web protocols like mailto, tel, javascript, etc.', () => {
+      expect(isSafeWebUrl('mailto:user@example.com')).toBe(false)
+      expect(isSafeWebUrl('tel:+1234567890')).toBe(false)
+      expect(isSafeWebUrl('javascript:alert(1)')).toBe(false)
+      expect(isSafeWebUrl('data:text/html,<script>alert(1)</script>')).toBe(false)
+      expect(isSafeWebUrl('file:///etc/passwd')).toBe(false)
+    })
+
+    it('should reject URLs with control characters and whitespace obfuscation', () => {
+      expect(isSafeWebUrl(' https://example.com')).toBe(false)
+      expect(isSafeWebUrl('https://example.com\n')).toBe(false)
+      expect(isSafeWebUrl('https://example.com\r\n')).toBe(false)
+      expect(isSafeWebUrl('\x00https://example.com')).toBe(false)
+      expect(isSafeWebUrl('https://example.com\x00')).toBe(false)
+    })
+
+    it('should reject URLs starting with hyphens to prevent shell flag injection', () => {
+      expect(isSafeWebUrl('-https://example.com')).toBe(false)
+      expect(isSafeWebUrl('--no-sandbox')).toBe(false)
+    })
+
+    it('should reject malformed or relative URLs', () => {
+      expect(isSafeWebUrl('/relative/path')).toBe(false)
+      expect(isSafeWebUrl('just-a-string')).toBe(false)
+      expect(isSafeWebUrl('http://[')).toBe(false)
     })
   })
 
