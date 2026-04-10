@@ -106,12 +106,26 @@ describe('fetchChildrenRecursive', () => {
       { id: 'row-1', type: 'table_row', has_children: false, table_row: { cells: [] } },
       { id: 'row-2', type: 'table_row', has_children: false, table_row: { cells: [] } }
     ]
-    const fetchChildren = vi.fn().mockResolvedValue(tableRows)
+    const mockNotion = {
+      blocks: {
+        children: {
+          list: vi.fn().mockResolvedValue({
+            results: tableRows,
+            next_cursor: null,
+            has_more: false
+          })
+        }
+      }
+    }
 
-    await fetchChildrenRecursive(blocks, fetchChildren)
+    await fetchChildrenRecursive(mockNotion as any, blocks)
 
-    expect(fetchChildren).toHaveBeenCalledTimes(1)
-    expect(fetchChildren).toHaveBeenCalledWith('table-1')
+    expect(mockNotion.blocks.children.list).toHaveBeenCalledTimes(1)
+    expect(mockNotion.blocks.children.list).toHaveBeenCalledWith({
+      block_id: 'table-1',
+      start_cursor: undefined,
+      page_size: 100
+    })
     expect(blocks[0].table.children).toEqual(tableRows)
   })
 
@@ -131,14 +145,21 @@ describe('fetchChildrenRecursive', () => {
       { id: 'col-2', type: 'column', has_children: true, column: {} }
     ]
     const colContent = [{ id: 'p-2', type: 'paragraph', has_children: false, paragraph: {} }]
-    const fetchChildren = vi
-      .fn()
-      .mockResolvedValueOnce(toggleChildren)
-      .mockResolvedValueOnce(columns)
-      .mockResolvedValueOnce(colContent)
-      .mockResolvedValueOnce(colContent)
 
-    await fetchChildrenRecursive(blocks, fetchChildren)
+    const mockNotion = {
+      blocks: {
+        children: {
+          list: vi
+            .fn()
+            .mockResolvedValueOnce({ results: toggleChildren, next_cursor: null, has_more: false })
+            .mockResolvedValueOnce({ results: columns, next_cursor: null, has_more: false })
+            .mockResolvedValueOnce({ results: colContent, next_cursor: null, has_more: false })
+            .mockResolvedValueOnce({ results: colContent, next_cursor: null, has_more: false })
+        }
+      }
+    }
+
+    await fetchChildrenRecursive(mockNotion as any, blocks)
 
     expect(blocks[0].toggle.children).toEqual(toggleChildren)
     expect(blocks[1].column_list.children).toEqual(columns)
@@ -149,36 +170,60 @@ describe('fetchChildrenRecursive', () => {
 
   it('should skip blocks without has_children', async () => {
     const blocks: any[] = [{ id: 'para-1', type: 'paragraph', has_children: false, paragraph: {} }]
-    const fetchChildren = vi.fn()
+    const mockNotion = {
+      blocks: {
+        children: {
+          list: vi.fn()
+        }
+      }
+    }
 
-    await fetchChildrenRecursive(blocks, fetchChildren)
+    await fetchChildrenRecursive(mockNotion as any, blocks)
 
-    expect(fetchChildren).not.toHaveBeenCalled()
+    expect(mockNotion.blocks.children.list).not.toHaveBeenCalled()
   })
 
   it('should skip unsupported block types', async () => {
     const blocks: any[] = [{ id: 'img-1', type: 'image', has_children: true, image: {} }]
-    const fetchChildren = vi.fn()
+    const mockNotion = {
+      blocks: {
+        children: {
+          list: vi.fn()
+        }
+      }
+    }
 
-    await fetchChildrenRecursive(blocks, fetchChildren)
+    await fetchChildrenRecursive(mockNotion as any, blocks)
 
-    expect(fetchChildren).not.toHaveBeenCalled()
+    expect(mockNotion.blocks.children.list).not.toHaveBeenCalled()
   })
 
   it('should respect max depth limit', async () => {
     const blocks: any[] = [{ id: 'toggle-1', type: 'toggle', has_children: true, toggle: {} }]
-    const fetchChildren = vi.fn().mockResolvedValue([])
+    const mockNotion = {
+      blocks: {
+        children: {
+          list: vi.fn().mockResolvedValue({ results: [], next_cursor: null, has_more: false })
+        }
+      }
+    }
 
     // depth=5 should be at MAX_DEPTH and return immediately
-    await fetchChildrenRecursive(blocks, fetchChildren, 5)
+    await fetchChildrenRecursive(mockNotion as any, blocks, 5)
 
-    expect(fetchChildren).not.toHaveBeenCalled()
+    expect(mockNotion.blocks.children.list).not.toHaveBeenCalled()
   })
 
   it('should handle empty blocks array', async () => {
-    const fetchChildren = vi.fn()
-    await fetchChildrenRecursive([], fetchChildren)
-    expect(fetchChildren).not.toHaveBeenCalled()
+    const mockNotion = {
+      blocks: {
+        children: {
+          list: vi.fn()
+        }
+      }
+    }
+    await fetchChildrenRecursive(mockNotion as any, [])
+    expect(mockNotion.blocks.children.list).not.toHaveBeenCalled()
   })
 })
 
