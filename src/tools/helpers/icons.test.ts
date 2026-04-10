@@ -5,15 +5,15 @@ import { formatIcon } from './icons'
 describe('formatIcon', () => {
   describe('emoji icons', () => {
     it('wraps a single emoji as emoji type', () => {
-      expect(formatIcon('🚀')).toEqual({ type: 'emoji', emoji: '🚀' })
+      expect(formatIcon('\u{1F680}')).toEqual({ type: 'emoji', emoji: '\u{1F680}' })
     })
 
     it('wraps a flag emoji as emoji type', () => {
-      expect(formatIcon('🇩🇪')).toEqual({ type: 'emoji', emoji: '🇩🇪' })
+      expect(formatIcon('\u{1F1E9}\u{1F1EA}')).toEqual({ type: 'emoji', emoji: '\u{1F1E9}\u{1F1EA}' })
     })
 
     it('wraps a simple text emoji', () => {
-      expect(formatIcon('📋')).toEqual({ type: 'emoji', emoji: '📋' })
+      expect(formatIcon('\u{1F4CB}')).toEqual({ type: 'emoji', emoji: '\u{1F4CB}' })
     })
   })
 

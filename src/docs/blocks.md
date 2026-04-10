@@ -24,7 +24,7 @@ The markdown converter supports these Notion block types:
 | Callout | `> [!NOTE] text`, `> [!TIP]`, `> [!WARNING]`, `> [!IMPORTANT]`, `> [!INFO]`, `> [!SUCCESS]`, `> [!ERROR]`. Multi-line: each line must start with `> `. Avoid CAUTION (emoji rejected by Notion). |
 | Toggle | `<details><summary>Title</summary>content</details>`. No nesting (toggle inside toggle fails). |
 | Table | Pipe-delimited `\| col1 \| col2 \|` with optional header separator |
-| Image | `![alt text](url)` — signed S3 URL (1h expiry), fetch to view content |
+| Image | `![alt text](url)` - signed S3 URL (1h expiry), fetch to view content |
 | Bookmark | `[bookmark](url)` |
 | Embed | `[embed](url)` |
 | Equation | `$$expression$$` (inline) or `$$\n...\n$$` (multi-line) |
@@ -114,7 +114,7 @@ When `children` or `get` returns image/file blocks:
 ### Images
 - Rendered as `![caption](signed-url)` in markdown output
 - The `signed-url` is a direct HTTPS link to the image (no additional auth required)
-- **To view image content**: Fetch/read the URL directly — it returns the raw image bytes
+- **To view image content**: Fetch/read the URL directly - it returns the raw image bytes
 - URL format: `https://prod-files-secure.s3.us-west-2.amazonaws.com/...` with embedded AWS signature
 - **Expiry**: ~1 hour. Call `blocks/get` again to get a fresh URL if expired
 
@@ -125,7 +125,7 @@ When `children` or `get` returns image/file blocks:
 - Same 1-hour expiry applies for Notion-hosted files
 
 ### Example: Reading an image from a page
-1. `blocks/children` with page_id → find image blocks in response
+1. `blocks/children` with page_id -> find image blocks in response
 2. Get URL from `![](url)` in markdown or `block.image.file.url` in raw blocks
 3. Fetch the URL to view/analyze the image
 

@@ -26,7 +26,7 @@ describe('normalizeId', () => {
     expect(normalizeId('g-h-i--j')).toBe('ghij')
     expect(normalizeId('!@#- %^-&*')).toBe('!@# %^&*')
     expect(normalizeId('---')).toBe('')
-    expect(normalizeId('🔥-id')).toBe('🔥id')
+    expect(normalizeId('\u{1F525}-id')).toBe('\u{1F525}id')
     expect(normalizeId('-abc-')).toBe('abc')
     expect(normalizeId(' a - b ')).toBe(' a  b ')
   })

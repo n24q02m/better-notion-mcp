@@ -82,7 +82,7 @@ function stripSensitiveFields(obj: any, seen = new WeakSet()): void {
  * Enhance Notion API error with helpful context
  */
 export function enhanceError(error: any): NotionMCPError {
-  // Already a NotionMCPError — pass through unchanged
+  // Already a NotionMCPError - pass through unchanged
   if (error instanceof NotionMCPError) return error
 
   // Explicitly strip sensitive fields recursively
@@ -256,7 +256,7 @@ export function suggestFixes(error: NotionMCPError): string[] {
 
     case 'RESTRICTED_RESOURCE':
       suggestions.push('Open the page/database in Notion')
-      suggestions.push('Click "..." menu → Add connections → Select your integration')
+      suggestions.push('Click "..." menu -> Add connections -> Select your integration')
       suggestions.push('Grant access to parent pages if needed')
       break
 
