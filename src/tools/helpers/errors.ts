@@ -153,6 +153,8 @@ const NOTION_ERROR_MAP: Record<string, { message: string; code: string; suggesti
 /**
  * Handle specific Notion API errors
  */
+const PROPERTY_FORMAT_KEYWORDS = new Set(['rich_text', 'title'])
+
 function handleNotionError(error: any): NotionMCPError {
   const code = error.code
   const message = error.message || 'Unknown Notion API error'
@@ -163,7 +165,15 @@ function handleNotionError(error: any): NotionMCPError {
     let suggestion = 'Check the API documentation for valid parameter formats'
 
     // Detect common property format mistakes and provide specific guidance
-    if (bodyMessage.includes('rich_text') || bodyMessage.includes('title')) {
+    let isPropertyFormatError = false
+    for (const kw of PROPERTY_FORMAT_KEYWORDS) {
+      if (bodyMessage.includes(kw)) {
+        isPropertyFormatError = true
+        break
+      }
+    }
+
+    if (isPropertyFormatError) {
       suggestion =
         'Property format error. For database page properties, use simple values: {"Name": "text", "Status": "value", "Tags": ["a","b"], "Count": 42, "Done": true, "Due": "2025-01-15"}. The server auto-converts to Notion format.'
     } else if (bodyMessage.includes('property')) {
@@ -198,6 +208,12 @@ export function findClosestMatch(input: string, validOptions: string[]): string 
   let bestMatch: string | null = null
   let bestScore = 0
 
+  // Pre-calculate input bigrams for similarity check
+  const inputBigrams = new Set<string>()
+  for (let i = 0; i < lower.length - 1; i++) {
+    inputBigrams.add(lower.slice(i, i + 2))
+  }
+
   for (const option of validOptions) {
     const optionLower = option.toLowerCase()
     // Check prefix match first
@@ -205,8 +221,6 @@ export function findClosestMatch(input: string, validOptions: string[]): string 
       return option
     }
     // Simple bigram similarity
-    const inputBigrams = new Set<string>()
-    for (let i = 0; i < lower.length - 1; i++) inputBigrams.add(lower.slice(i, i + 2))
     const optionBigrams = new Set<string>()
     for (let i = 0; i < optionLower.length - 1; i++) optionBigrams.add(optionLower.slice(i, i + 2))
 
@@ -244,47 +258,46 @@ export function aiReadableMessage(error: NotionMCPError): string {
 /**
  * Suggest fixes based on error
  */
+
+/**
+ * Suggestions for different error types
+ */
+const ERROR_SUGGESTIONS_MAP: Record<string, string[]> = {
+  UNAUTHORIZED: [
+    'Check that NOTION_TOKEN is set in your environment',
+    'Verify token at https://www.notion.so/my-integrations',
+    'Create a new integration token if needed'
+  ],
+  RESTRICTED_RESOURCE: [
+    'Open the page/database in Notion',
+    'Click "..." menu → Add connections → Select your integration',
+    'Grant access to parent pages if needed'
+  ],
+  NOT_FOUND: [
+    'Verify the page/database ID is correct',
+    'Check that the resource was not deleted',
+    'Ensure you have access permissions'
+  ],
+  VALIDATION_ERROR: [
+    'Check parameter types and formats',
+    'Review required vs optional parameters',
+    'Verify property names match database schema'
+  ],
+  RATE_LIMITED: [
+    'Reduce request frequency',
+    'Implement exponential backoff retry logic',
+    'Batch multiple operations together'
+  ]
+}
+
+const DEFAULT_SUGGESTIONS = [
+  'Check Notion API status at https://status.notion.so',
+  'Review request parameters',
+  'Try again in a few moments'
+]
+
 export function suggestFixes(error: NotionMCPError): string[] {
-  const suggestions: string[] = []
-
-  switch (error.code) {
-    case 'UNAUTHORIZED':
-      suggestions.push('Check that NOTION_TOKEN is set in your environment')
-      suggestions.push('Verify token at https://www.notion.so/my-integrations')
-      suggestions.push('Create a new integration token if needed')
-      break
-
-    case 'RESTRICTED_RESOURCE':
-      suggestions.push('Open the page/database in Notion')
-      suggestions.push('Click "..." menu → Add connections → Select your integration')
-      suggestions.push('Grant access to parent pages if needed')
-      break
-
-    case 'NOT_FOUND':
-      suggestions.push('Verify the page/database ID is correct')
-      suggestions.push('Check that the resource was not deleted')
-      suggestions.push('Ensure you have access permissions')
-      break
-
-    case 'VALIDATION_ERROR':
-      suggestions.push('Check parameter types and formats')
-      suggestions.push('Review required vs optional parameters')
-      suggestions.push('Verify property names match database schema')
-      break
-
-    case 'RATE_LIMITED':
-      suggestions.push('Reduce request frequency')
-      suggestions.push('Implement exponential backoff retry logic')
-      suggestions.push('Batch multiple operations together')
-      break
-
-    default:
-      suggestions.push('Check Notion API status at https://status.notion.so')
-      suggestions.push('Review request parameters')
-      suggestions.push('Try again in a few moments')
-  }
-
-  return suggestions
+  return ERROR_SUGGESTIONS_MAP[error.code] || DEFAULT_SUGGESTIONS
 }
 
 /**
