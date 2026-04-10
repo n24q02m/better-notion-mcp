@@ -2,18 +2,18 @@
  * Tests for credential state management.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { execFile } from 'node:child_process'
 import { createSession, deleteConfig, pollForResult, sendMessage, writeConfig } from '@n24q02m/mcp-relay-core'
 import { resolveConfig } from '@n24q02m/mcp-relay-core/storage'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  getState,
-  getSetupUrl,
   getNotionToken,
-  resolveCredentialState,
-  triggerRelaySetup,
+  getSetupUrl,
+  getState,
   resetState,
-  setState
+  resolveCredentialState,
+  setState,
+  triggerRelaySetup
 } from './credential-state.js'
 
 vi.mock('node:child_process', () => ({
@@ -210,8 +210,12 @@ describe('credential-state', () => {
 
       expect(execFile).toHaveBeenCalledWith('open', ['url'], expect.any(Function))
       // Trigger callback for coverage
-      const callback = vi.mocked(execFile).mock.calls[0][2] as Function
-      callback()
+      const callback = vi.mocked(execFile).mock.calls[0][2] as (
+        error: Error | null,
+        stdout: string,
+        stderr: string
+      ) => void
+      callback(null, '', '')
 
       Object.defineProperty(process, 'platform', { value: originalPlatform })
     })
@@ -225,8 +229,12 @@ describe('credential-state', () => {
 
       expect(execFile).toHaveBeenCalledWith('cmd', ['/c', 'start', '', 'url'], expect.any(Function))
       // Trigger callback for coverage
-      const callback = vi.mocked(execFile).mock.calls[0][2] as Function
-      callback()
+      const callback = vi.mocked(execFile).mock.calls[0][2] as (
+        error: Error | null,
+        stdout: string,
+        stderr: string
+      ) => void
+      callback(null, '', '')
 
       Object.defineProperty(process, 'platform', { value: originalPlatform })
     })
@@ -240,8 +248,12 @@ describe('credential-state', () => {
 
       expect(execFile).toHaveBeenCalledWith('xdg-open', ['url'], expect.any(Function))
       // Trigger callback for coverage
-      const callback = vi.mocked(execFile).mock.calls[0][2] as Function
-      callback()
+      const callback = vi.mocked(execFile).mock.calls[0][2] as (
+        error: Error | null,
+        stdout: string,
+        stderr: string
+      ) => void
+      callback(null, '', '')
 
       Object.defineProperty(process, 'platform', { value: originalPlatform })
     })
@@ -252,7 +264,9 @@ describe('credential-state', () => {
       vi.useRealTimers()
       const fetchMock = vi.fn().mockResolvedValue({ ok: true })
       vi.stubGlobal('fetch', fetchMock)
-      const exitMock = vi.spyOn(process, 'exit').mockImplementation(() => { return undefined as never })
+      const exitMock = vi.spyOn(process, 'exit').mockImplementation(() => {
+        return undefined as never
+      })
 
       vi.mocked(createSession).mockResolvedValue({
         sessionId: 'exit-session-int',
@@ -261,7 +275,7 @@ describe('credential-state', () => {
       await triggerRelaySetup()
 
       process.emit('SIGINT' as any)
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await new Promise((resolve) => setTimeout(resolve, 50))
 
       expect(fetchMock).toHaveBeenCalledWith(
         expect.stringContaining('exit-session-int'),
@@ -274,7 +288,9 @@ describe('credential-state', () => {
       vi.useRealTimers()
       const fetchMock = vi.fn().mockResolvedValue({ ok: true })
       vi.stubGlobal('fetch', fetchMock)
-      const exitMock = vi.spyOn(process, 'exit').mockImplementation(() => { return undefined as never })
+      const exitMock = vi.spyOn(process, 'exit').mockImplementation(() => {
+        return undefined as never
+      })
 
       vi.mocked(createSession).mockResolvedValue({
         sessionId: 'exit-session-term',
@@ -283,7 +299,7 @@ describe('credential-state', () => {
       await triggerRelaySetup()
 
       process.emit('SIGTERM' as any)
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await new Promise((resolve) => setTimeout(resolve, 50))
 
       expect(fetchMock).toHaveBeenCalledWith(
         expect.stringContaining('exit-session-term'),
@@ -296,7 +312,9 @@ describe('credential-state', () => {
       vi.useRealTimers()
       const fetchMock = vi.fn().mockRejectedValue(new Error('network error'))
       vi.stubGlobal('fetch', fetchMock)
-      const exitMock = vi.spyOn(process, 'exit').mockImplementation(() => { return undefined as never })
+      const exitMock = vi.spyOn(process, 'exit').mockImplementation(() => {
+        return undefined as never
+      })
 
       vi.mocked(createSession).mockResolvedValue({
         sessionId: 'error-session',
@@ -305,7 +323,7 @@ describe('credential-state', () => {
       await triggerRelaySetup()
 
       process.emit('SIGINT' as any)
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await new Promise((resolve) => setTimeout(resolve, 50))
 
       expect(fetchMock).toHaveBeenCalled()
       expect(exitMock).toHaveBeenCalled()
