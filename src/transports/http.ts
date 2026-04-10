@@ -53,44 +53,51 @@ function loadConfig(): HttpConfig {
   }
 }
 
-export async function startHttp() {
-  const config = loadConfig()
-  const serverUrl = new URL(config.publicUrl)
-
-  const { provider, pendingAuths, authCodes, callbackUrl, notionBasicAuth } = createNotionOAuthProvider({
-    notionClientId: config.notionClientId,
-    notionClientSecret: config.notionClientSecret,
-    dcrSecret: config.dcrSecret,
-    publicUrl: config.publicUrl
-  })
-
-  const app = express()
-
-  // Trust proxies for correct req.ip based on environment configuration
+/**
+ * Configure Express middleware and rate limiting
+ */
+function setupMiddleware(app: express.Express, config: HttpConfig) {
   app.set('trust proxy', config.trustProxy)
   app.disable('x-powered-by')
-
-  // Rate limit MCP endpoints per IP
-  const mcpRateLimit = rateLimit({
-    windowMs: 60 * 1000,
-    limit: 120,
-    standardHeaders: 'draft-7',
-    legacyHeaders: false
-  })
-
-  // Rate limit OAuth endpoints per IP to prevent abuse/brute-force
-  const authRateLimit = rateLimit({
-    windowMs: 60 * 1000,
-    limit: 20, // Strict limit for auth endpoints
-    standardHeaders: 'draft-7',
-    legacyHeaders: false
-  })
 
   // Propagate request IP via AsyncLocalStorage for IP-scoped pending binds
   app.use((req, _res, next) => {
     const ip = req.ip || req.socket.remoteAddress || undefined
     requestContext.run({ ip }, next)
   })
+
+  return {
+    mcpRateLimit: rateLimit({
+      windowMs: 60 * 1000,
+      limit: 120,
+      standardHeaders: 'draft-7',
+      legacyHeaders: false
+    }),
+    authRateLimit: rateLimit({
+      windowMs: 60 * 1000,
+      limit: 20,
+      standardHeaders: 'draft-7',
+      legacyHeaders: false
+    })
+  }
+}
+
+/**
+ * Setup OAuth routes including MCP auth router and Notion callback relay
+ */
+function setupOAuthRoutes(
+  app: express.Express,
+  options: {
+    provider: any
+    serverUrl: URL
+    authRateLimit: express.RequestHandler
+    pendingAuths: Map<string, any>
+    authCodes: Map<string, any>
+    callbackUrl: string
+    notionBasicAuth: string
+  }
+) {
+  const { provider, serverUrl, authRateLimit, pendingAuths, authCodes, callbackUrl, notionBasicAuth } = options
 
   // OAuth endpoints (/.well-known/*, /authorize, /token, /register)
   app.use(
@@ -105,8 +112,6 @@ export async function startHttp() {
   )
 
   // Notion OAuth callback relay
-  // Notion redirects here after user authorizes. We exchange the code,
-  // store the token, issue our own auth code, and redirect to MCP client.
   app.get('/callback', authRateLimit, async (req, res) => {
     const { code, state, error } = req.query as Record<string, string>
 
@@ -120,7 +125,6 @@ export async function startHttp() {
       return
     }
 
-    // Look up the pending auth
     const pending = pendingAuths.get(state)
     if (!pending) {
       res.status(400).json({ error: 'invalid_state', error_description: 'Unknown or expired state' })
@@ -129,7 +133,6 @@ export async function startHttp() {
     pendingAuths.delete(state)
 
     try {
-      // Exchange Notion's auth code for a Notion token
       const tokenParams = new URLSearchParams({
         grant_type: 'authorization_code',
         code,
@@ -161,7 +164,6 @@ export async function startHttp() {
         refresh_token?: string
       }
 
-      // Issue our own auth code and store the Notion token + PKCE challenge for verification
       const ourAuthCode = randomBytes(32).toString('hex')
       authCodes.set(ourAuthCode, {
         notionAccessToken: tokenData.access_token,
@@ -173,10 +175,7 @@ export async function startHttp() {
         createdAt: Date.now()
       })
 
-      // Redirect back to the MCP client's original redirect_uri
       const clientRedirect = new URL(pending.clientRedirectUri)
-
-      // Prevent XSS and Open Redirect vulnerabilities via unsafe protocols
       const protocol = clientRedirect.protocol.toLowerCase()
       if (['javascript:', 'data:', 'vbscript:', 'file:'].includes(protocol)) {
         res.status(400).json({ error: 'invalid_request', error_description: 'Unsafe redirect URI' })
@@ -194,34 +193,56 @@ export async function startHttp() {
       res.status(500).json({ error: 'server_error', error_description: 'Internal server error' })
     }
   })
+}
 
-  const authMiddleware = requireBearerAuth({ verifier: provider })
+/**
+ * Setup MCP endpoints and session management
+ */
+function setupMcpRoutes(
+  app: express.Express,
+  options: {
+    mcpRateLimit: express.RequestHandler
+    authMiddleware: express.RequestHandler
+    provider: any
+  }
+) {
+  const { mcpRateLimit, authMiddleware } = options
   const jsonParser = express.json()
   const transports: Map<string, StreamableHTTPServerTransport> = new Map()
-  // Session owner binding — prevents cross-user session hijacking
   const sessionOwners: Map<string, string> = new Map() // sessionId → notionToken
 
-  // MCP endpoint — POST (new session or existing)
-  app.post('/mcp', mcpRateLimit, jsonParser, authMiddleware, async (req, res) => {
-    const sessionId = req.headers['mcp-session-id'] as string | undefined
-
-    // Existing session — verify the authenticated user owns this session
-    if (sessionId && transports.has(sessionId)) {
-      const authInfo = (req as any).auth
-      const ownerToken = sessionOwners.get(sessionId)
-      if (ownerToken && authInfo?.token !== ownerToken) {
+  function verifySessionOwner(
+    req: express.Request,
+    res: express.Response,
+    sessionId: string,
+    isJsonRpc = false
+  ): boolean {
+    const authInfo = (req as any).auth
+    const ownerToken = sessionOwners.get(sessionId)
+    if (ownerToken && authInfo?.token !== ownerToken) {
+      if (isJsonRpc) {
         res.status(403).json({
           jsonrpc: '2.0',
           error: { code: -32000, message: 'Session belongs to a different user' },
           id: null
         })
-        return
+      } else {
+        res.status(403).json({ error: 'Session belongs to a different user' })
       }
+      return false
+    }
+    return true
+  }
+
+  app.post('/mcp', mcpRateLimit, jsonParser, authMiddleware, async (req, res) => {
+    const sessionId = req.headers['mcp-session-id'] as string | undefined
+
+    if (sessionId && transports.has(sessionId)) {
+      if (!verifySessionOwner(req, res, sessionId, true)) return
       await transports.get(sessionId)!.handleRequest(req, res, req.body)
       return
     }
 
-    // New session — must be initialize request
     if (!sessionId && isInitializeRequest(req.body)) {
       const authInfo = (req as any).auth
       const notionToken: string = authInfo.token
@@ -241,7 +262,6 @@ export async function startHttp() {
         }
       }
 
-      // Per-session MCP server with the user's Notion token
       const server = createMCPServer(() => new Client({ auth: notionToken, notionVersion: '2025-09-03' }))
       await server.connect(transport)
       await transport.handleRequest(req, res, req.body)
@@ -255,18 +275,6 @@ export async function startHttp() {
     })
   })
 
-  // Verify session ownership for GET/DELETE endpoints
-  function verifySessionOwner(req: express.Request, res: express.Response, sessionId: string): boolean {
-    const authInfo = (req as any).auth
-    const ownerToken = sessionOwners.get(sessionId)
-    if (ownerToken && authInfo?.token !== ownerToken) {
-      res.status(403).json({ error: 'Session belongs to a different user' })
-      return false
-    }
-    return true
-  }
-
-  // MCP endpoint — GET (SSE streaming for existing session)
   app.get('/mcp', mcpRateLimit, authMiddleware, async (req, res) => {
     const sessionId = req.headers['mcp-session-id'] as string
     if (sessionId && transports.has(sessionId)) {
@@ -277,7 +285,6 @@ export async function startHttp() {
     }
   })
 
-  // MCP endpoint — DELETE (close session)
   app.delete('/mcp', mcpRateLimit, authMiddleware, async (req, res) => {
     const sessionId = req.headers['mcp-session-id'] as string
     if (sessionId && transports.has(sessionId)) {
@@ -286,6 +293,38 @@ export async function startHttp() {
     } else {
       res.status(400).json({ error: 'Invalid or missing session' })
     }
+  })
+}
+
+export async function startHttp() {
+  const config = loadConfig()
+  const serverUrl = new URL(config.publicUrl)
+
+  const { provider, pendingAuths, authCodes, callbackUrl, notionBasicAuth } = createNotionOAuthProvider({
+    notionClientId: config.notionClientId,
+    notionClientSecret: config.notionClientSecret,
+    dcrSecret: config.dcrSecret,
+    publicUrl: config.publicUrl
+  })
+
+  const app = express()
+  const { mcpRateLimit, authRateLimit } = setupMiddleware(app, config)
+
+  setupOAuthRoutes(app, {
+    provider,
+    serverUrl,
+    authRateLimit,
+    pendingAuths,
+    authCodes,
+    callbackUrl,
+    notionBasicAuth
+  })
+
+  const authMiddleware = requireBearerAuth({ verifier: provider })
+  setupMcpRoutes(app, {
+    mcpRateLimit,
+    authMiddleware,
+    provider
   })
 
   // Health check (no auth required)
