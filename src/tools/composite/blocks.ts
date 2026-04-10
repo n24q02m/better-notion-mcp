@@ -16,6 +16,27 @@ export interface BlocksInput {
   after_block_id?: string
 }
 
+// Cache for blocks
+export const blockCache = new Map<string, { block: any; expiresAt: number }>()
+const BLOCK_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+/**
+ * Get block with caching
+ */
+async function getCachedBlock(notion: Client, blockId: string): Promise<any> {
+  const cached = blockCache.get(blockId)
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.block
+  }
+
+  const block = await notion.blocks.retrieve({ block_id: blockId })
+  blockCache.set(blockId, {
+    block,
+    expiresAt: Date.now() + BLOCK_CACHE_TTL
+  })
+  return block
+}
+
 /**
  * Unified blocks tool
  * Maps to: GET/PATCH/DELETE /v1/blocks/{id} and GET/PATCH /v1/blocks/{id}/children
@@ -28,7 +49,7 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
 
     switch (input.action) {
       case 'get': {
-        const block: any = await notion.blocks.retrieve({ block_id: input.block_id })
+        const block: any = await getCachedBlock(notion, input.block_id)
         return {
           action: 'get',
           block_id: block.id,
@@ -94,7 +115,7 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
         if (!input.content) {
           throw new NotionMCPError('content required for update', 'VALIDATION_ERROR', 'Provide markdown content')
         }
-        const block: any = await notion.blocks.retrieve({ block_id: input.block_id })
+        const block: any = await getCachedBlock(notion, input.block_id)
         const blockType = block.type
         const newBlocks = markdownToBlocks(input.content)
 
@@ -157,6 +178,9 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
           ...updatePayload
         } as any)
 
+        // Invalidate cache
+        blockCache.delete(input.block_id)
+
         return {
           action: 'update',
           block_id: input.block_id,
@@ -167,6 +191,10 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
 
       case 'delete': {
         await notion.blocks.delete({ block_id: input.block_id })
+
+        // Invalidate cache
+        blockCache.delete(input.block_id)
+
         return {
           action: 'delete',
           block_id: input.block_id,
