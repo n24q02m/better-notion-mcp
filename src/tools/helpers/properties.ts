@@ -132,18 +132,30 @@ export function extractPageProperties(pageProperties: any): any {
     const p = pageProperties[key] as any
 
     if (p.type === 'title' && p.title) {
+      const arr = p.title
+      const len = arr.length
       let str = ''
-      for (let j = 0; j < p.title.length; j++) str += p.title[j].plain_text || ''
+      for (let j = 0; j < len; j++) {
+        const pt = arr[j].plain_text
+        if (pt) str += pt
+      }
       properties[key] = str
     } else if (p.type === 'rich_text' && p.rich_text) {
+      const arr = p.rich_text
+      const len = arr.length
       let str = ''
-      for (let j = 0; j < p.rich_text.length; j++) str += p.rich_text[j].plain_text || ''
+      for (let j = 0; j < len; j++) {
+        const pt = arr[j].plain_text
+        if (pt) str += pt
+      }
       properties[key] = str
     } else if (p.type === 'select' && p.select) {
       properties[key] = p.select.name
     } else if (p.type === 'multi_select' && p.multi_select) {
-      const arr = new Array(p.multi_select.length)
-      for (let j = 0; j < p.multi_select.length; j++) arr[j] = p.multi_select[j].name
+      const raw = p.multi_select
+      const len = raw.length
+      const arr = new Array(len)
+      for (let j = 0; j < len; j++) arr[j] = raw[j].name
       properties[key] = arr
     } else if (p.type === 'number') {
       properties[key] = p.number
@@ -158,19 +170,30 @@ export function extractPageProperties(pageProperties: any): any {
     } else if (p.type === 'date' && p.date) {
       properties[key] = p.date.start + (p.date.end ? ` to ${p.date.end}` : '')
     } else if (p.type === 'relation' && p.relation) {
-      const arr = new Array(p.relation.length)
-      for (let j = 0; j < p.relation.length; j++) arr[j] = p.relation[j].id
+      const raw = p.relation
+      const len = raw.length
+      const arr = new Array(len)
+      for (let j = 0; j < len; j++) arr[j] = raw[j].id
       properties[key] = arr
     } else if (p.type === 'rollup' && p.rollup) {
       properties[key] = p.rollup
     } else if (p.type === 'people' && p.people) {
-      const arr = new Array(p.people.length)
-      for (let j = 0; j < p.people.length; j++) arr[j] = p.people[j].name || p.people[j].id
+      const raw = p.people
+      const len = raw.length
+      const arr = new Array(len)
+      for (let j = 0; j < len; j++) {
+        const person = raw[j]
+        arr[j] = person.name || person.id
+      }
       properties[key] = arr
     } else if (p.type === 'files' && p.files) {
-      const arr = new Array(p.files.length)
-      for (let j = 0; j < p.files.length; j++)
-        arr[j] = p.files[j].file?.url || p.files[j].external?.url || p.files[j].name
+      const raw = p.files
+      const len = raw.length
+      const arr = new Array(len)
+      for (let j = 0; j < len; j++) {
+        const f = raw[j]
+        arr[j] = f.file?.url || f.external?.url || f.name
+      }
       properties[key] = arr
     } else if (p.type === 'formula' && p.formula) {
       properties[key] = p.formula.type ? (p.formula[p.formula.type] ?? null) : null
