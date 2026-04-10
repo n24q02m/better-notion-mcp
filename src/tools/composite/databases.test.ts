@@ -788,12 +788,12 @@ describe('databases', () => {
       await databases(notion, {
         action: 'update_database',
         database_id: 'db-1',
-        icon: '📋',
+        icon: '\uD83D\uDCCB',
         cover: 'https://example.com/cover.jpg'
       })
 
       const call = mockNotion.databases.update.mock.calls[0][0]
-      expect(call.icon).toEqual({ type: 'emoji', emoji: '📋' })
+      expect(call.icon).toEqual({ type: 'emoji', emoji: '\uD83D\uDCCB' })
       expect(call.cover).toEqual({
         type: 'external',
         external: { url: 'https://example.com/cover.jpg' }
