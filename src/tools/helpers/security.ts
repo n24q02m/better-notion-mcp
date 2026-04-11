@@ -56,6 +56,33 @@ export function isSafeUrl(url: string): boolean {
   }
 }
 
+/**
+ * Validates a URL destined to be opened via shell commands (e.g., in a browser).
+ * Stricter than isSafeUrl, allowing only http: and https: protocols,
+ * and rejecting potential shell flag injections.
+ */
+export function isSafeWebUrl(url: string): boolean {
+  // Reject URLs with whitespace or control characters
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: Intentionally matching control characters
+  if (/[\s\x00-\x1F\x7F]/.test(url)) {
+    return false
+  }
+
+  // Prevent shell flag injection (e.g., passing "--no-sandbox" to open)
+  if (url.startsWith('-')) {
+    return false
+  }
+
+  const lowerUrl = url.toLowerCase()
+
+  try {
+    const parsed = new URL(lowerUrl)
+    return ['http:', 'https:'].includes(parsed.protocol)
+  } catch {
+    return false
+  }
+}
+
 /** Wrap tool result with safety markers if it contains external content */
 export function wrapToolResult(toolName: string, jsonText: string): string {
   if (!EXTERNAL_CONTENT_TOOLS.has(toolName)) {

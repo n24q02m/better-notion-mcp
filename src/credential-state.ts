@@ -14,6 +14,7 @@ import type { RelaySession } from '@n24q02m/mcp-relay-core'
 import { createSession, deleteConfig, pollForResult, sendMessage, writeConfig } from '@n24q02m/mcp-relay-core'
 import { resolveConfig } from '@n24q02m/mcp-relay-core/storage'
 import { RELAY_SCHEMA } from './relay-schema.js'
+import { isSafeWebUrl } from './tools/helpers/security.js'
 
 const SERVER_NAME = 'better-notion-mcp'
 const CREDENTIAL_KEY = 'NOTION_TOKEN'
@@ -178,13 +179,22 @@ async function pollRelayBackground(relayBaseUrl: string, session: RelaySession):
  * Try to open URL in default browser (best-effort).
  * Uses execFile (not exec) to avoid shell injection.
  */
-function tryOpenBrowser(url: string): void {
+export function tryOpenBrowser(url: string): void {
+  if (!isSafeWebUrl(url)) {
+    console.error('Blocked attempt to open unsafe URL in browser')
+    return
+  }
+
   const platform = process.platform
 
   if (platform === 'darwin') {
     execFile('open', [url], () => {})
   } else if (platform === 'win32') {
-    execFile('cmd', ['/c', 'start', '', url], () => {})
+    // Note: 'start' is a cmd internal command.
+    // When executing 'cmd /c start', the first double-quoted string is treated as the window title.
+    // Thus we provide an empty title ('""') followed by the URL wrapped in double quotes.
+    // Ensure we do not use windowsVerbatimArguments to prevent command injection from bypassing node's parsing logic.
+    execFile('cmd', ['/c', 'start', '""', url], () => {})
   } else {
     execFile('xdg-open', [url], () => {})
   }
