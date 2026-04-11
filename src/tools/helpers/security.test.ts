@@ -1,7 +1,38 @@
 import { describe, expect, it } from 'vitest'
-import { isSafeUrl, wrapToolResult } from './security'
+import { isSafeUrl, isSafeWebUrl, wrapToolResult } from './security'
 
 describe('Security Utilities', () => {
+  describe('isSafeWebUrl', () => {
+    it('should allow valid http and https URLs', () => {
+      expect(isSafeWebUrl('https://example.com')).toBe(true)
+      expect(isSafeWebUrl('http://example.com')).toBe(true)
+    })
+
+    it('should reject non-http/https protocols', () => {
+      expect(isSafeWebUrl('mailto:user@example.com')).toBe(false)
+      expect(isSafeWebUrl('tel:+1234567890')).toBe(false)
+      expect(isSafeWebUrl('javascript:alert(1)')).toBe(false)
+      expect(isSafeWebUrl('file:///etc/passwd')).toBe(false)
+    })
+
+    it('should reject URLs starting with a hyphen (shell injection)', () => {
+      expect(isSafeWebUrl('-https://example.com')).toBe(false)
+      expect(isSafeWebUrl('--remote-debugging-port=1337')).toBe(false)
+    })
+
+    it('should reject URLs with control characters and whitespace', () => {
+      expect(isSafeWebUrl(' https://example.com')).toBe(false)
+      expect(isSafeWebUrl('https://example.com\n')).toBe(false)
+      expect(isSafeWebUrl('https://example.com\r\n/unsafe')).toBe(false)
+      expect(isSafeWebUrl('https://example.com/path\0withnull')).toBe(false)
+    })
+
+    it('should reject relative or non-absolute URLs', () => {
+      expect(isSafeWebUrl('/relative/path')).toBe(false)
+      expect(isSafeWebUrl('just-a-string')).toBe(false)
+    })
+  })
+
   describe('isSafeUrl', () => {
     it('should allow valid http and https URLs', () => {
       expect(isSafeUrl('https://example.com')).toBe(true)

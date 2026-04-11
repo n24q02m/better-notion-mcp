@@ -16,6 +16,29 @@ const SAFETY_WARNING =
  * Validates a URL to ensure it uses a safe protocol.
  * Prevents XSS attacks via javascript:, data:, vbscript:, etc.
  */
+/**
+ * Strict validation for URLs destined for the browser (via execFile/open).
+ * Only allows http: and https: protocols.
+ * Prevents shell flag injection by rejecting leading hyphens.
+ */
+export function isSafeWebUrl(url: string): boolean {
+  if (!url || typeof url !== 'string') return false
+
+  // Reject URLs containing whitespace or control characters
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: Security sanitization
+  if (/[\s\x00-\x1F\x7F]/.test(url)) return false
+
+  // Prevent shell flag injection (e.g. "--remote-debugging-port")
+  if (url.startsWith('-')) return false
+
+  try {
+    const parsed = new URL(url)
+    return ['http:', 'https:'].includes(parsed.protocol)
+  } catch {
+    return false
+  }
+}
+
 export function isSafeUrl(url: string): boolean {
   // Reject URLs containing whitespace or control characters which could bypass checks
   // biome-ignore lint/suspicious/noControlCharactersInRegex: Intentionally matching control characters for security sanitization
