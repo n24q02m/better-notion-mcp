@@ -1,5 +1,5 @@
 /**
- * Better Notion MCP Server — Entry point
+ * Better Notion MCP Server - Entry point
  * Defaults to HTTP mode, --stdio for backward compat
  */
 
