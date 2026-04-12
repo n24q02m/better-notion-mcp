@@ -10,9 +10,9 @@
  */
 
 import { execFile } from 'node:child_process'
-import type { RelaySession } from '@n24q02m/mcp-relay-core'
-import { createSession, deleteConfig, pollForResult, sendMessage, writeConfig } from '@n24q02m/mcp-relay-core'
-import { resolveConfig } from '@n24q02m/mcp-relay-core/storage'
+import type { RelaySession } from '@n24q02m/mcp-core'
+import { createSession, deleteConfig, pollForResult, sendMessage, writeConfig } from '@n24q02m/mcp-core'
+import { resolveConfig } from '@n24q02m/mcp-core/storage'
 import { RELAY_SCHEMA } from './relay-schema.js'
 
 const SERVER_NAME = 'better-notion-mcp'

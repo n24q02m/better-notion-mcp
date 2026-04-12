@@ -5,7 +5,7 @@
  * Used by the relay page to render the credential collection form.
  */
 
-import type { RelayConfigSchema } from '@n24q02m/mcp-relay-core/schema'
+import type { RelayConfigSchema } from '@n24q02m/mcp-core/schema'
 
 export const RELAY_SCHEMA: RelayConfigSchema = {
   server: 'better-notion-mcp',
