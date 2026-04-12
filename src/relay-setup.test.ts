@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ensureConfig } from './relay-setup.js'
 
-// Mock mcp-relay-core modules
+// Mock mcp-core modules
 vi.mock('@n24q02m/mcp-core/storage', () => ({
   resolveConfig: vi.fn()
 }))
