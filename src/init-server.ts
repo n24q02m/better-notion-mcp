@@ -1,9 +1,19 @@
 /**
- * Better Notion MCP Server — Stdio entry point
- * Delegates to transports/stdio for the actual implementation
+ * Better Notion MCP Server — Entry point
+ * Defaults to HTTP mode, --stdio for backward compat
  */
 
-import { startStdio } from './transports/stdio.js'
+export async function initServer() {
+  const isStdio =
+    process.argv.includes('--stdio') || process.env.MCP_TRANSPORT === 'stdio' || process.env.TRANSPORT_MODE === 'stdio'
 
-/** @deprecated Use startStdio() from './transports/stdio.js' directly */
-export const initServer = startStdio
+  if (isStdio) {
+    const { startStdio } = await import('./transports/stdio.js')
+    await startStdio()
+    return
+  }
+
+  // Default: HTTP mode with OAuth 2.1
+  const { startHttp } = await import('./transports/http.js')
+  await startHttp()
+}
