@@ -3,7 +3,7 @@
  * Centralized ID normalization, validation, and format detection
  */
 
-/** UUID regex — accepts both hyphenated and compact formats */
+/** UUID regex - accepts both hyphenated and compact formats */
 const UUID_REGEX = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i
 
 /**
