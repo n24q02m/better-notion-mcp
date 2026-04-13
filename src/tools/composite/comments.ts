@@ -53,27 +53,31 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
           if (error.code === 'object_not_found') {
             // Distinguish between a real 404 and the known Notion API bug (OAuth 404)
             // by checking if the block/page actually exists.
+            let blockExists = false
             try {
               await notion.blocks.retrieve({ block_id: input.page_id })
+              blockExists = true
+            } catch (innerError: any) {
+              // If we get any error other than 404, we should probably know about it
+              if (innerError.code !== 'object_not_found') {
+                throw innerError
+              }
+            }
+
+            if (blockExists) {
               // If retrieve succeeds, it's the known API bug
               throw new NotionMCPError(
                 'Cannot list comments for this page',
                 'COMMENTS_LIST_UNAVAILABLE',
-                'This is a known Notion API limitation with OAuth integrations (API version 2025-09-03). The comments.list endpoint may return 404 even when the page exists and has comments. Workaround: use comments/get with a specific comment_id, or use comments/create which works normally.'
+                'This is a known Notion API limitation with OAuth integrations (API version 2025-09-03). The comments.list endpoint may return 404 even when the page exists and has comments. Workaround: use action="get" with a specific comment_id, or use action="create" which works normally.'
               )
-            } catch (innerError: any) {
-              // If the block itself is not found, it's a real 404
-              if (innerError.code === 'object_not_found') {
-                throw error
-              }
-              // Other error (unauthorized, rate limited, etc.) or NotionMCPError from above
-              throw innerError
             }
+            // If it's a real 404 (block retrieve also failed with object_not_found),
+            // re-throw the original error which will be wrapped as NOT_FOUND by withErrorHandling.
           }
           throw error
         }
       }
-
       case 'get': {
         if (!input.comment_id) {
           throw new NotionMCPError('comment_id required for get action', 'VALIDATION_ERROR', 'Provide comment_id')
