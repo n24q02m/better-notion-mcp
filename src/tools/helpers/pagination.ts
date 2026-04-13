@@ -196,5 +196,6 @@ export async function processBatches<T, R>(
 export async function populateDeepChildren(notion: Client, blocks: any[]): Promise<void> {
   // Use a shared queue to cap total concurrent Notion API calls at 5 across the whole tree
   const queue = new ConcurrencyQueue(5)
+
   await fetchChildrenRecursive(notion, blocks, 0, queue)
 }

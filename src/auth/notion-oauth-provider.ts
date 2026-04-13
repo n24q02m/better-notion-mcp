@@ -57,11 +57,11 @@ interface StoredNotionToken {
  * 1. MCP client registers via DCR (stateless HMAC)
  * 2. MCP client calls /authorize with their redirect_uri
  * 3. We redirect to Notion OAuth with OUR callback URL (not the client's)
- * 4. User authorizes on Notion -> Notion redirects to our /callback
+ * 4. User authorizes on Notion → Notion redirects to our /callback
  * 5. We exchange Notion's code for a Notion token
  * 6. We issue our own auth code and redirect to the MCP client's redirect_uri
- * 7. MCP client calls /token with our auth code -> we issue an opaque access token
- * 8. MCP client calls /mcp with Bearer token -> we resolve to stored Notion token
+ * 7. MCP client calls /token with our auth code → we issue an opaque access token
+ * 8. MCP client calls /mcp with Bearer token → we resolve to stored Notion token
  *
  * Notion tokens are stored server-side. The client never sees them directly.
  * This handles MCP clients (like Claude Code) that use their own identity tokens.
@@ -77,13 +77,13 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
   const pendingAuths = new Map<string, PendingAuth>()
   const authCodes = new Map<string, StoredAuthCode>()
 
-  // Server-side Notion token store -- keyed by our opaque access token
+  // Server-side Notion token store — keyed by our opaque access token
   const notionTokens = new Map<string, StoredNotionToken>()
-  // Bound external tokens -- maps bearer token -> Notion token (one-shot bind per OAuth)
+  // Bound external tokens — maps bearer token → Notion token (one-shot bind per OAuth)
   const boundTokens = new Map<string, StoredNotionToken>()
-  // Verification cache -- avoids calling Notion API on every request
+  // Verification cache — avoids calling Notion API on every request
   const verifyCache = new Map<string, { expiresAt: number; userId: string; userName: string | null }>()
-  // Pending bind slots -- one-shot: consumed on first use, keyed by client_id.
+  // Pending bind slots — one-shot: consumed on first use, keyed by client_id.
   // When a client completes OAuth, a pending bind is created. The first unknown bearer token
   // that claims it gets bound. This prevents cross-user token leaks on shared instances.
   const pendingBinds = new Map<string, { notionToken: StoredNotionToken; expiresAt: number; sourceIp?: string }>()
@@ -98,7 +98,7 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
     const bound = boundTokens.get(bearerToken)
     if (bound) return bound.notionAccessToken
 
-    // 3. One-shot pending bind -- claim the first available unexpired slot.
+    // 3. One-shot pending bind — claim the first available unexpired slot.
     // This is consumed immediately (one token per OAuth flow) to prevent
     // cross-user leaks. Only the first unknown token to arrive claims the bind.
     // IP-scoped: both IPs must be known and must match.
@@ -114,7 +114,7 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
       if (!pending.sourceIp || !claimIp || pending.sourceIp !== claimIp) {
         continue
       }
-      // Consume the pending bind -- one-shot, no other token can claim this
+      // Consume the pending bind — one-shot, no other token can claim this
       pendingBinds.delete(clientId)
       boundTokens.set(bearerToken, pending.notionToken)
       return pending.notionToken.notionAccessToken
@@ -224,12 +224,12 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
       throw new InvalidTokenError('Invalid or expired authorization code')
     }
 
-    // Verify client binding -- auth code must be exchanged by the same client that initiated the flow
+    // Verify client binding — auth code must be exchanged by the same client that initiated the flow
     if (stored.clientId && stored.clientId !== client.client_id) {
       throw new InvalidTokenError('Auth code was not issued to this client')
     }
 
-    // Verify PKCE S256 -- prevents auth code interception attacks
+    // Verify PKCE S256 — prevents auth code interception attacks
     if (!stored.codeChallenge || stored.codeChallengeMethod !== 'S256') {
       throw new InvalidTokenError('PKCE code_challenge is required and method must be S256')
     }
@@ -248,7 +248,7 @@ export function createNotionOAuthProvider(config: NotionOAuthConfig) {
 
     authCodes.delete(authorizationCode)
 
-    // Issue our own opaque access token -- never expose the Notion token to the client
+    // Issue our own opaque access token — never expose the Notion token to the client
     const opaqueToken = randomBytes(48).toString('hex')
     const entry: StoredNotionToken = {
       notionAccessToken: stored.notionAccessToken,

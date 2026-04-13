@@ -255,10 +255,10 @@ describe('markdownToBlocks', () => {
     it('should use correct Unicode emoji for each callout type', () => {
       const cases: [string, string][] = [
         ['NOTE', '\u2139\ufe0f'],
-        ['TIP', '\ud83d\udca1'],
+        ['TIP', '\u{1f4a1}'],
         ['IMPORTANT', '\u2757'],
         ['WARNING', '\u26a0\ufe0f'],
-        ['CAUTION', '\ud83d\uded1'],
+        ['CAUTION', '\u{1f6d1}'],
         ['INFO', '\u2139\ufe0f'],
         ['SUCCESS', '\u2705'],
         ['ERROR', '\u274c']
@@ -854,7 +854,7 @@ describe('blocksToMarkdown', () => {
           type: 'callout',
           callout: {
             rich_text: [plainRichText('Some text')],
-            icon: { type: 'emoji', emoji: '\ud83d\ude00' },
+            icon: { type: 'emoji', emoji: '\u{1F600}' },
             color: 'gray_background'
           }
         }

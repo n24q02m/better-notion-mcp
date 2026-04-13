@@ -550,7 +550,7 @@ describe('startHttp', () => {
       const res = mockRes()
       await handler(req, res)
 
-      // Should NOT return 403 -- handleRequest should have been called
+      // Should NOT return 403 — handleRequest should have been called
       expect(res.status).not.toHaveBeenCalledWith(403)
     })
   })
@@ -735,7 +735,7 @@ describe('startHttp', () => {
     })
   })
 
-  describe('callback route -- success flow', () => {
+  describe('callback route — success flow', () => {
     it('should exchange token and redirect with clientState', async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
@@ -909,7 +909,7 @@ describe('startHttp', () => {
       await startHttp()
 
       const app = (express as any).mock.results[0]?.value
-      // The middleware is the first app.use() call -- find it
+      // The middleware is the first app.use() call — find it
       const useCalls = app.use.mock.calls
       // The IP middleware is passed as a function to app.use()
       // It's the one that calls requestContext.run

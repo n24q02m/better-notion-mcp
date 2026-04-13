@@ -205,14 +205,14 @@ bun run test:coverage
 
 ```text
 better-notion-mcp/
-+-- src/                    # Source code
-|   +-- init-server.ts     # Server initialization
-|   +-- tools/             # Tool implementations
-|       +-- registry.ts    # Tool registry
-|       +-- composite/     # Composite tools
-|       +-- helpers/       # Helper utilities
-+-- scripts/               # Build scripts
-+-- build/                # Built output
+├── src/                    # Source code
+│   ├── init-server.ts     # Server initialization
+│   └── tools/             # Tool implementations
+│       ├── registry.ts    # Tool registry
+│       ├── composite/     # Composite tools
+│       └── helpers/       # Helper utilities
+├── scripts/               # Build scripts
+└── build/                # Built output
 ```
 
 Feel free to open an issue for:

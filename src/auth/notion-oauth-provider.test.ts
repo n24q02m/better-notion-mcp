@@ -105,7 +105,7 @@ describe('createNotionOAuthProvider', () => {
       )
       expect(result.token).toBe('valid-token')
 
-      // Same token works again (now bound -- no IP check needed)
+      // Same token works again (now bound — no IP check needed)
       const result2 = await provider.verifyAccessToken('sk-ant-oat01-legit-client')
       expect(result2.token).toBe('valid-token')
     })
@@ -126,7 +126,7 @@ describe('createNotionOAuthProvider', () => {
       // First token claims the bind (same IP)
       await requestContext.run({ ip: '10.0.0.1' }, () => provider.verifyAccessToken('sk-ant-oat01-legit-client'))
 
-      // Second DIFFERENT token should be rejected -- bind is consumed
+      // Second DIFFERENT token should be rejected — bind is consumed
       await requestContext.run({ ip: '10.0.0.1' }, () =>
         expect(provider.verifyAccessToken('sk-ant-attacker-token')).rejects.toThrow('No Notion token found')
       )
@@ -148,7 +148,7 @@ describe('createNotionOAuthProvider', () => {
       // Advance past the 30-second pending bind TTL
       vi.advanceTimersByTime(45 * 1000)
 
-      // Unknown token should be rejected -- pending bind expired
+      // Unknown token should be rejected — pending bind expired
       await requestContext.run({ ip: '10.0.0.1' }, () =>
         expect(provider.verifyAccessToken('sk-ant-late-token')).rejects.toThrow('No Notion token found')
       )
@@ -337,7 +337,7 @@ describe('createNotionOAuthProvider', () => {
         codeChallengeMethod: 'S256'
       })
 
-      // Exchange WITHOUT requestContext -- no IP stored
+      // Exchange WITHOUT requestContext — no IP stored
       await provider.exchangeAuthorizationCode(
         { client_id: 'c1', client_secret: 's1' } as any,
         'code-1',
@@ -365,7 +365,7 @@ describe('createNotionOAuthProvider', () => {
         provider.exchangeAuthorizationCode({ client_id: 'c1', client_secret: 's1' } as any, 'code-1', 'dummy-verifier')
       )
 
-      // Claim WITHOUT requestContext -- claimIp is undefined, strict check rejects
+      // Claim WITHOUT requestContext — claimIp is undefined, strict check rejects
       await expect(provider.verifyAccessToken('sk-ant-no-ip')).rejects.toThrow('No Notion token found')
     })
   })
@@ -526,7 +526,7 @@ describe('createNotionOAuthProvider', () => {
         codeChallengeMethod: 'S256'
       })
 
-      // Exchange within requestContext -- pending bind should have sourceIp
+      // Exchange within requestContext — pending bind should have sourceIp
       await requestContext.run({ ip: '192.168.1.1' }, () =>
         provider.exchangeAuthorizationCode(
           { client_id: 'ip-client', client_secret: 's1' } as any,
@@ -550,7 +550,7 @@ describe('createNotionOAuthProvider', () => {
         createdAt: Date.now(),
         codeChallenge: 'GtSJbMT37cqR-58aHsbbZc3oI08k5VDyJSpq1iwbvHY',
         codeChallengeMethod: 'S256'
-        // no clientId -- any client can exchange
+        // no clientId — any client can exchange
       })
 
       const result = await provider.exchangeAuthorizationCode(

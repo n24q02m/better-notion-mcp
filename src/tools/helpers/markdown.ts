@@ -484,8 +484,8 @@ class InlineParser {
     const char = this.text[this.i]
     const next = this.text[this.i + 1]
 
-    // Page mention @[Title](page-id-or-url) -- must come before link handling
-    // \u26a1 Bolt: Added algorithmic short-circuiting to prevent O(N^2) lookaheads on pathological inputs
+    // Page mention @[Title](page-id-or-url) — must come before link handling
+    // ⚡ Bolt: Added algorithmic short-circuiting to prevent O(N^2) lookaheads on pathological inputs
     // with many `@[` but no `]`.
     if (char === '@' && next === '[' && !this.noMoreMentionCloseBrackets) {
       const closeBracket = this.text.indexOf(']', this.i + 2)
@@ -523,7 +523,7 @@ class InlineParser {
   private tryParseLink(): boolean {
     const char = this.text[this.i]
 
-    // Link [text](url) -- optimized to avoid O(N\u00b2) on pathological inputs
+    // Link [text](url) — optimized to avoid O(N²) on pathological inputs
     if (char === '[' && !this.noMoreCloseBrackets) {
       const closeBracket = this.text.indexOf(']', this.i + 1)
       if (closeBracket === -1) {
@@ -924,10 +924,10 @@ function parseColumns(lines: string[], startIndex: number): ColumnParseResult {
 function getCalloutIcon(type: string): string {
   const icons: Record<string, string> = {
     NOTE: '\u2139\ufe0f',
-    TIP: '\ud83d\udca1',
+    TIP: '\u{1f4a1}',
     IMPORTANT: '\u2757',
     WARNING: '\u26a0\ufe0f',
-    CAUTION: '\ud83d\uded1',
+    CAUTION: '\u{1f6d1}',
     INFO: '\u2139\ufe0f',
     SUCCESS: '\u2705',
     ERROR: '\u274c'
@@ -952,10 +952,10 @@ function getCalloutColor(type: string): string {
 function getCalloutTypeFromIcon(icon: string): string {
   const iconMap: Record<string, string> = {
     '\u2139\ufe0f': 'NOTE',
-    '\ud83d\udca1': 'TIP',
+    '\u{1f4a1}': 'TIP',
     '\u2757': 'IMPORTANT',
     '\u26a0\ufe0f': 'WARNING',
-    '\ud83d\uded1': 'CAUTION',
+    '\u{1f6d1}': 'CAUTION',
     '\u2705': 'SUCCESS',
     '\u274c': 'ERROR'
   }

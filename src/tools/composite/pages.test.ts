@@ -143,12 +143,12 @@ describe('pages', () => {
         action: 'create',
         title: 'Styled Page',
         parent_id: 'parent-1',
-        icon: '\ud83d\ude80',
+        icon: '🚀',
         cover: 'https://example.com/cover.jpg'
       })
 
       const callArgs = mockNotion.pages.create.mock.calls[0][0]
-      expect(callArgs.icon).toEqual({ type: 'emoji', emoji: '\ud83d\ude80' })
+      expect(callArgs.icon).toEqual({ type: 'emoji', emoji: '🚀' })
       expect(callArgs.cover).toEqual({ type: 'external', external: { url: 'https://example.com/cover.jpg' } })
     })
 
@@ -515,14 +515,14 @@ describe('pages', () => {
       const result = (await pages(mockNotion as any, {
         action: 'update',
         page_id: 'page-1',
-        icon: '\ud83d\udcdd',
+        icon: '📝',
         cover: 'https://example.com/banner.jpg'
       })) as UpdatePageResult
 
       expect(result).toEqual({ action: 'update', page_id: 'page-1', updated: true })
       expect(mockNotion.pages.update).toHaveBeenCalledWith({
         page_id: 'page-1',
-        icon: { type: 'emoji', emoji: '\ud83d\udcdd' },
+        icon: { type: 'emoji', emoji: '📝' },
         cover: { type: 'external', external: { url: 'https://example.com/banner.jpg' } }
       })
     })
@@ -772,7 +772,7 @@ describe('pages', () => {
         id: 'orig-1',
         parent: { type: 'page_id', page_id: 'parent-1' },
         properties: { title: { title: [{ plain_text: 'Original' }] } },
-        icon: { type: 'emoji', emoji: '\ud83d\udcc4' },
+        icon: { type: 'emoji', emoji: '📄' },
         cover: null
       })
       mockNotion.blocks.children.list.mockResolvedValue({
@@ -805,7 +805,7 @@ describe('pages', () => {
       expect(mockNotion.pages.create).toHaveBeenCalledWith({
         parent: { type: 'page_id', page_id: 'parent-1' },
         properties: { title: { title: [{ plain_text: 'Original' }] } },
-        icon: { type: 'emoji', emoji: '\ud83d\udcc4' },
+        icon: { type: 'emoji', emoji: '📄' },
         cover: null
       })
       expect(mockNotion.blocks.children.append).toHaveBeenCalledWith({

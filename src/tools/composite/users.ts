@@ -45,7 +45,7 @@ export async function users(notion: Client, input: UsersInput): Promise<any> {
             throw new NotionMCPError(
               'Integration does not have permission to list users',
               'RESTRICTED_RESOURCE',
-              'Use action "from_workspace" instead -- it extracts users from accessible pages without requiring admin permissions.'
+              'Use action "from_workspace" instead — it extracts users from accessible pages without requiring admin permissions.'
             )
           }
           throw error
