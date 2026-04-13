@@ -32,7 +32,6 @@ describe('main.ts', () => {
 
   describe('isMain', () => {
     it('verifies true when process.argv[1] matches the file path', () => {
-      // Get the absolute path to src/main.ts
       const currentDir = dirname(fileURLToPath(import.meta.url))
       const mainPath = join(currentDir, 'main.ts')
       const mainUrl = pathToFileURL(mainPath).href

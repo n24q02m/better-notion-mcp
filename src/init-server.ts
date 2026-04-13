@@ -1,6 +1,16 @@
 /**
  * Better Notion MCP Server — Entry point
- * Defaults to HTTP mode, --stdio for backward compat
+ *
+ * Transport selection:
+ *  - stdio (backward compat): `--stdio`, `MCP_TRANSPORT=stdio`, or `TRANSPORT_MODE=stdio`
+ *  - http (default): local mode via `@n24q02m/mcp-core` runLocalServer
+ *
+ * HTTP mode uses the local OAuth 2.1 AS from `mcp-core` which serves the
+ * credential form (user pastes Notion integration token) on /authorize and
+ * issues a local JWT for /mcp Bearer auth. Remote mode (delegated upstream
+ * Notion OAuth) is intentionally not wired here -- per L2 migration scope,
+ * remote mode is deferred and will be re-added once multi-user per-user token
+ * storage is in place.
  */
 
 export async function initServer() {
@@ -13,7 +23,6 @@ export async function initServer() {
     return
   }
 
-  // Default: HTTP mode with OAuth 2.1
   const { startHttp } = await import('./transports/http.js')
   await startHttp()
 }

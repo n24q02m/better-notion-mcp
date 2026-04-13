@@ -1,8 +1,10 @@
 /**
- * Config schema for relay page setup.
+ * Config schema for relay + local OAuth credential form.
  *
  * Defines a single field: NOTION_TOKEN (integration token).
- * Used by the relay page to render the credential collection form.
+ * Consumed by:
+ *  - `@n24q02m/mcp-core` runLocalServer -- renders the credential form at /authorize
+ *  - The hosted relay page (stdio mode) -- renders the same form remotely
  */
 
 import type { RelayConfigSchema } from '@n24q02m/mcp-core/schema'
