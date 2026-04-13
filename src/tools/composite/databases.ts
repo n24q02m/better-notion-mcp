@@ -46,9 +46,10 @@ async function getDataSourceSchema(notion: Client, dataSourceId: string): Promis
 function buildSearchFilter(properties: any, search: string): any | null {
   const textProps = []
   if (properties) {
-    for (const name of Object.keys(properties)) {
+    for (const name in properties) {
+      if (!Object.hasOwn(properties, name)) continue
       const prop = properties[name]
-      if (['title', 'rich_text'].includes(prop.type)) {
+      if (prop.type === 'title' || prop.type === 'rich_text') {
         textProps.push(name)
       }
     }
@@ -405,8 +406,9 @@ async function getDatabase(notion: Client, input: DatabasesInput): Promise<GetDa
 
     // Format properties for AI-friendly output
     if (properties) {
-      for (const [name, prop] of Object.entries(properties)) {
-        const p = prop as any
+      for (const name in properties) {
+        if (!Object.hasOwn(properties, name)) continue
+        const p = properties[name] as any
         schema[name] = {
           type: p.type,
           id: p.id
@@ -513,8 +515,9 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
   const properties = await getDataSourceSchema(notion, dataSourceId)
   const schema: Record<string, string> = {}
   if (properties) {
-    for (const [name, prop] of Object.entries(properties)) {
-      schema[name] = (prop as any).type
+    for (const name in properties) {
+      if (!Object.hasOwn(properties, name)) continue
+      schema[name] = (properties[name] as any).type
     }
   }
 
