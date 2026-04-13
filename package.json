@@ -16,7 +16,7 @@
     "codex",
     "opencode"
   ],
-  "version": "2.27.3",
+  "version": "2.27.4",
   "license": "MIT",
   "type": "module",
   "packageManager": "bun@1.2.21",
