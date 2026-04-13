@@ -3,8 +3,8 @@
  */
 
 import { execFile } from 'node:child_process'
-import { createSession, deleteConfig, pollForResult, sendMessage, writeConfig } from '@n24q02m/mcp-relay-core'
-import { resolveConfig } from '@n24q02m/mcp-relay-core/storage'
+import { createSession, deleteConfig, pollForResult, sendMessage, writeConfig } from '@n24q02m/mcp-core'
+import { resolveConfig } from '@n24q02m/mcp-core/storage'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   getNotionToken,
@@ -20,7 +20,7 @@ vi.mock('node:child_process', () => ({
   execFile: vi.fn()
 }))
 
-vi.mock('@n24q02m/mcp-relay-core', () => ({
+vi.mock('@n24q02m/mcp-core', () => ({
   createSession: vi.fn(),
   deleteConfig: vi.fn().mockResolvedValue(undefined),
   pollForResult: vi.fn(),
@@ -28,7 +28,7 @@ vi.mock('@n24q02m/mcp-relay-core', () => ({
   writeConfig: vi.fn().mockResolvedValue(undefined)
 }))
 
-vi.mock('@n24q02m/mcp-relay-core/storage', () => ({
+vi.mock('@n24q02m/mcp-core/storage', () => ({
   resolveConfig: vi.fn()
 }))
 
