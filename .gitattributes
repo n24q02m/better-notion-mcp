@@ -1,32 +1,33 @@
 # Auto detect text files and perform LF normalization
-* text=auto
+* text=auto eol=lf
 
 # TypeScript / JavaScript
-*.ts text diff=typescript
-*.tsx text diff=typescript
-*.js text
-*.jsx text
-*.mjs text
-*.cjs text
+*.ts text eol=lf diff=typescript
+*.tsx text eol=lf diff=typescript
+*.js text eol=lf
+*.jsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
 
 # Config
-*.json text
-*.toml text
-*.yaml text
-*.yml text
+*.json text eol=lf
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
 
 # Markdown
-*.md text diff=markdown
+*.md text eol=lf diff=markdown
 
 # Shell
 *.sh text eol=lf
 
 # Docker
-Dockerfile text
-docker-compose.yml text
+Dockerfile text eol=lf
+docker-compose.yml text eol=lf
 
 # Ensure lock files are not modified
-pnpm-lock.yaml text -diff linguist-generated
+pnpm-lock.yaml text eol=lf -diff linguist-generated
+bun.lock text eol=lf -diff linguist-generated
 
 # Binary
 *.png binary
