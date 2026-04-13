@@ -90,6 +90,7 @@ For CI/automation, you can still use environment variables (see below).
 | `NOTION_OAUTH_CLIENT_ID` | Yes (http) | - | Notion Public Integration client ID |
 | `NOTION_OAUTH_CLIENT_SECRET` | Yes (http) | - | Notion Public Integration client secret |
 | `DCR_SERVER_SECRET` | Yes (http) | - | HMAC secret for stateless client registration |
+| `TRUST_PROXY` | No | `false` | Express "trust proxy" setting. Use `true` only if behind a trusted reverse proxy. |
 | `PORT` | No | `8080` | Server port |
 
 ### Self-Hosting (Remote Mode)

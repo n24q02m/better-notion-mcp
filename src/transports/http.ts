@@ -27,7 +27,7 @@ interface HttpConfig {
 
 function parseTrustProxy(value?: string): boolean | number | string {
   if (!value) return false
-  if (value === 'true') return false
+  if (value === 'true') return true
   if (value === 'false') return false
   if (/^\d+$/.test(value)) return parseInt(value, 10)
   return value
@@ -67,6 +67,11 @@ export async function startHttp() {
   const app = express()
 
   // Trust proxies for correct req.ip based on environment configuration
+  if (config.trustProxy === true) {
+    console.warn(
+      'Security Warning: "trust proxy" is set to true. This trusts all proxies and should only be used in specific reverse-proxy deployments.'
+    )
+  }
   app.set('trust proxy', config.trustProxy)
   app.disable('x-powered-by')
 
