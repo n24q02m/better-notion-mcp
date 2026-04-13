@@ -484,8 +484,8 @@ class InlineParser {
     const char = this.text[this.i]
     const next = this.text[this.i + 1]
 
-    // Page mention @[Title](page-id-or-url) - must come before link handling
-    // perf Bolt: Added algorithmic short-circuiting to prevent O(N^2) lookaheads on pathological inputs
+    // Page mention @[Title](page-id-or-url) — must come before link handling
+    // ⚡ Bolt: Added algorithmic short-circuiting to prevent O(N^2) lookaheads on pathological inputs
     // with many `@[` but no `]`.
     if (char === '@' && next === '[' && !this.noMoreMentionCloseBrackets) {
       const closeBracket = this.text.indexOf(']', this.i + 2)
@@ -523,7 +523,7 @@ class InlineParser {
   private tryParseLink(): boolean {
     const char = this.text[this.i]
 
-    // Link [text](url) - optimized to avoid O(N2) on pathological inputs
+    // Link [text](url) — optimized to avoid O(N²) on pathological inputs
     if (char === '[' && !this.noMoreCloseBrackets) {
       const closeBracket = this.text.indexOf(']', this.i + 1)
       if (closeBracket === -1) {
