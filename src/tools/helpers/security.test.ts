@@ -1,7 +1,42 @@
 import { describe, expect, it } from 'vitest'
-import { isSafeUrl, wrapToolResult } from './security'
+import { isSafeUrl, isSafeWebUrl, wrapToolResult } from './security'
 
 describe('Security Utilities', () => {
+  describe('isSafeWebUrl', () => {
+    it('should allow valid http and https URLs', () => {
+      expect(isSafeWebUrl('https://example.com')).toBe(true)
+      expect(isSafeWebUrl('http://example.com/path?query=1')).toBe(true)
+    })
+
+    it('should reject non-http/https protocols', () => {
+      expect(isSafeWebUrl('javascript:alert(1)')).toBe(false)
+      expect(isSafeWebUrl('data:text/html,<script>alert(1)</script>')).toBe(false)
+      expect(isSafeWebUrl('file:///etc/passwd')).toBe(false)
+      expect(isSafeWebUrl('mailto:test@test.com')).toBe(false)
+    })
+
+    it('should reject URLs starting with hyphens to prevent shell flag injection', () => {
+      expect(isSafeWebUrl('--no-sandbox')).toBe(false)
+      expect(isSafeWebUrl('-h')).toBe(false)
+      expect(isSafeWebUrl('  --args')).toBe(false)
+      // Normal hyphens in domain are fine
+      expect(isSafeWebUrl('https://my-domain.com')).toBe(true)
+    })
+
+    it('should reject URLs with control characters or whitespace', () => {
+      expect(isSafeWebUrl('https://example.com/\npath')).toBe(false)
+      expect(isSafeWebUrl('https://example.com/\rpath')).toBe(false)
+      expect(isSafeWebUrl('https://example.com/ path')).toBe(false)
+      expect(isSafeWebUrl('https://example.com/\x00')).toBe(false)
+    })
+
+    it('should reject malformed URLs that fail parsing', () => {
+      expect(isSafeWebUrl('/relative/path')).toBe(false)
+      expect(isSafeWebUrl('just-a-string')).toBe(false)
+      expect(isSafeWebUrl('http://[')).toBe(false)
+    })
+  })
+
   describe('isSafeUrl', () => {
     it('should allow valid http and https URLs', () => {
       expect(isSafeUrl('https://example.com')).toBe(true)

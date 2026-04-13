@@ -205,10 +205,10 @@ describe('credential-state', () => {
       const originalPlatform = process.platform
       Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true })
 
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
+      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'http://url.com' } as any)
       await triggerRelaySetup()
 
-      expect(execFile).toHaveBeenCalledWith('open', ['url'], expect.any(Function))
+      expect(execFile).toHaveBeenCalledWith('open', ['http://url.com'], expect.any(Function))
       // Trigger callback for coverage
       const callback = vi.mocked(execFile).mock.calls[0][2] as (
         error: Error | null,
@@ -224,10 +224,10 @@ describe('credential-state', () => {
       const originalPlatform = process.platform
       Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
 
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
+      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'http://url.com' } as any)
       await triggerRelaySetup()
 
-      expect(execFile).toHaveBeenCalledWith('cmd', ['/c', 'start', '', 'url'], expect.any(Function))
+      expect(execFile).toHaveBeenCalledWith('cmd', ['/c', 'start', '', 'http://url.com'], expect.any(Function))
       // Trigger callback for coverage
       const callback = vi.mocked(execFile).mock.calls[0][2] as (
         error: Error | null,
@@ -243,10 +243,10 @@ describe('credential-state', () => {
       const originalPlatform = process.platform
       Object.defineProperty(process, 'platform', { value: 'linux', configurable: true })
 
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
+      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'http://url.com' } as any)
       await triggerRelaySetup()
 
-      expect(execFile).toHaveBeenCalledWith('xdg-open', ['url'], expect.any(Function))
+      expect(execFile).toHaveBeenCalledWith('xdg-open', ['http://url.com'], expect.any(Function))
       // Trigger callback for coverage
       const callback = vi.mocked(execFile).mock.calls[0][2] as (
         error: Error | null,
