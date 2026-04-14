@@ -7,6 +7,7 @@ import { createSession, deleteConfig, pollForResult, sendMessage, writeConfig } 
 import { resolveConfig } from '@n24q02m/mcp-core/storage'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  tryOpenBrowser,
   getNotionToken,
   getSetupUrl,
   getState,
@@ -201,14 +202,25 @@ describe('credential-state', () => {
   })
 
   describe('tryOpenBrowser', () => {
-    it('calls open on darwin', async () => {
-      const originalPlatform = process.platform
+    const originalPlatform = process.platform
+    afterEach(() => {
+      Object.defineProperty(process, 'platform', { value: originalPlatform })
+    })
+
+    it('blocks malicious URLs without executing', () => {
+      tryOpenBrowser('javascript:alert(1)')
+      tryOpenBrowser('--no-sandbox')
+      tryOpenBrowser('https://example.com/ \x00')
+      expect(execFile).not.toHaveBeenCalled()
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Security warning'))
+    })
+
+    it('calls open on darwin for valid URLs', () => {
       Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true })
 
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
-      await triggerRelaySetup()
+      tryOpenBrowser('https://example.com')
 
-      expect(execFile).toHaveBeenCalledWith('open', ['url'], expect.any(Function))
+      expect(execFile).toHaveBeenCalledWith('open', ['https://example.com'], expect.any(Function))
       // Trigger callback for coverage
       const callback = vi.mocked(execFile).mock.calls[0][2] as (
         error: Error | null,
@@ -216,18 +228,14 @@ describe('credential-state', () => {
         stderr: string
       ) => void
       callback(null, '', '')
-
-      Object.defineProperty(process, 'platform', { value: originalPlatform })
     })
 
-    it('calls cmd on win32', async () => {
-      const originalPlatform = process.platform
+    it('calls cmd on win32 for valid URLs', () => {
       Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
 
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
-      await triggerRelaySetup()
+      tryOpenBrowser('https://example.com')
 
-      expect(execFile).toHaveBeenCalledWith('cmd', ['/c', 'start', '', 'url'], expect.any(Function))
+      expect(execFile).toHaveBeenCalledWith('cmd', ['/c', 'start', '', 'https://example.com'], expect.any(Function))
       // Trigger callback for coverage
       const callback = vi.mocked(execFile).mock.calls[0][2] as (
         error: Error | null,
@@ -235,18 +243,14 @@ describe('credential-state', () => {
         stderr: string
       ) => void
       callback(null, '', '')
-
-      Object.defineProperty(process, 'platform', { value: originalPlatform })
     })
 
-    it('calls xdg-open on other platforms', async () => {
-      const originalPlatform = process.platform
+    it('calls xdg-open on other platforms for valid URLs', () => {
       Object.defineProperty(process, 'platform', { value: 'linux', configurable: true })
 
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
-      await triggerRelaySetup()
+      tryOpenBrowser('https://example.com')
 
-      expect(execFile).toHaveBeenCalledWith('xdg-open', ['url'], expect.any(Function))
+      expect(execFile).toHaveBeenCalledWith('xdg-open', ['https://example.com'], expect.any(Function))
       // Trigger callback for coverage
       const callback = vi.mocked(execFile).mock.calls[0][2] as (
         error: Error | null,
@@ -254,8 +258,6 @@ describe('credential-state', () => {
         stderr: string
       ) => void
       callback(null, '', '')
-
-      Object.defineProperty(process, 'platform', { value: originalPlatform })
     })
   })
 

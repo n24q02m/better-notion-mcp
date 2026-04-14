@@ -56,6 +56,32 @@ export function isSafeUrl(url: string): boolean {
   }
 }
 
+/**
+ * Stricter URL validation specifically for browser launches via execFile.
+ * Enforces http/https and blocks shell flag injection.
+ */
+const SAFE_PROTOCOLS = new Set(['http:', 'https:'])
+
+export function isSafeWebUrl(url: string): boolean {
+  // Reject URLs containing whitespace or control characters
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: Intentionally matching control characters
+  if (/[\s\x00-\x1F\x7F]/.test(url)) {
+    return false
+  }
+
+  // Prevent shell flag injection (e.g. "--no-sandbox")
+  if (url.trimStart().startsWith('-')) {
+    return false
+  }
+
+  try {
+    const parsed = new URL(url)
+    return SAFE_PROTOCOLS.has(parsed.protocol.toLowerCase())
+  } catch {
+    return false
+  }
+}
+
 /** Wrap tool result with safety markers if it contains external content */
 export function wrapToolResult(toolName: string, jsonText: string): string {
   if (!EXTERNAL_CONTENT_TOOLS.has(toolName)) {
