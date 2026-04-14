@@ -7,14 +7,14 @@ import { createSession, deleteConfig, pollForResult, sendMessage, writeConfig } 
 import { resolveConfig } from '@n24q02m/mcp-core/storage'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  tryOpenBrowser,
   getNotionToken,
   getSetupUrl,
   getState,
   resetState,
   resolveCredentialState,
   setState,
-  triggerRelaySetup
+  triggerRelaySetup,
+  tryOpenBrowser
 } from './credential-state.js'
 
 vi.mock('node:child_process', () => ({
