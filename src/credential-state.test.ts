@@ -201,14 +201,26 @@ describe('credential-state', () => {
   })
 
   describe('tryOpenBrowser', () => {
+    it('refuses to open unsafe URLs', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      vi.mocked(createSession).mockResolvedValue({ relayUrl: '-javascript:alert(1)' } as any)
+
+      await triggerRelaySetup()
+
+      expect(execFile).not.toHaveBeenCalled()
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Refusing to open unsafe URL:', '-javascript:alert(1)')
+
+      consoleErrorSpy.mockRestore()
+    })
+
     it('calls open on darwin', async () => {
       const originalPlatform = process.platform
       Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true })
 
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
+      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'https://relay.com/setup' } as any)
       await triggerRelaySetup()
 
-      expect(execFile).toHaveBeenCalledWith('open', ['url'], expect.any(Function))
+      expect(execFile).toHaveBeenCalledWith('open', ['https://relay.com/setup'], expect.any(Function))
       // Trigger callback for coverage
       const callback = vi.mocked(execFile).mock.calls[0][2] as (
         error: Error | null,
@@ -224,10 +236,10 @@ describe('credential-state', () => {
       const originalPlatform = process.platform
       Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
 
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
+      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'https://relay.com/setup' } as any)
       await triggerRelaySetup()
 
-      expect(execFile).toHaveBeenCalledWith('cmd', ['/c', 'start', '', 'url'], expect.any(Function))
+      expect(execFile).toHaveBeenCalledWith('cmd', ['/c', 'start', '', 'https://relay.com/setup'], expect.any(Function))
       // Trigger callback for coverage
       const callback = vi.mocked(execFile).mock.calls[0][2] as (
         error: Error | null,
@@ -243,10 +255,10 @@ describe('credential-state', () => {
       const originalPlatform = process.platform
       Object.defineProperty(process, 'platform', { value: 'linux', configurable: true })
 
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
+      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'https://relay.com/setup' } as any)
       await triggerRelaySetup()
 
-      expect(execFile).toHaveBeenCalledWith('xdg-open', ['url'], expect.any(Function))
+      expect(execFile).toHaveBeenCalledWith('xdg-open', ['https://relay.com/setup'], expect.any(Function))
       // Trigger callback for coverage
       const callback = vi.mocked(execFile).mock.calls[0][2] as (
         error: Error | null,
