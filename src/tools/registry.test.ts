@@ -527,7 +527,7 @@ describe('registerTools', () => {
 
       expect(result.isError).toBe(true)
       expect(result.content[0].type).toBe('text')
-      expect(result.content[0].text).toContain('Error: Page not found')
+      expect(result.content[0].text).toContain('Error [NOT_FOUND]: Page not found')
       expect(result.content[0].text).toContain('Suggestion: Check the ID')
     })
 
@@ -540,7 +540,7 @@ describe('registerTools', () => {
       })
 
       expect(result.isError).toBe(true)
-      expect(result.content[0].text).toContain('Error: Something unexpected broke')
+      expect(result.content[0].text).toContain('Error [TOOL_ERROR]: Something unexpected broke')
       expect(result.content[0].text).toContain('Suggestion: Check the error details and try again')
     })
 
