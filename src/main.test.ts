@@ -128,19 +128,30 @@ describe('main.ts', () => {
   describe('startServer', () => {
     it('verifies call to startHttp when mode is http', async () => {
       await startServer('http')
-      expect(startHttpMock).toHaveBeenCalled()
+      expect(startHttpMock).toHaveBeenCalledTimes(1)
+      expect(startHttpMock).toHaveBeenCalledWith()
       expect(startStdioMock).not.toHaveBeenCalled()
     })
 
     it('verifies call to startStdio when mode is stdio', async () => {
       await startServer('stdio')
-      expect(startStdioMock).toHaveBeenCalled()
+      expect(startStdioMock).toHaveBeenCalledTimes(1)
+      expect(startStdioMock).toHaveBeenCalledWith()
       expect(startHttpMock).not.toHaveBeenCalled()
     })
 
     it('verifies call to startStdio when mode is unknown', async () => {
       await startServer('unknown')
-      expect(startStdioMock).toHaveBeenCalled()
+      expect(startStdioMock).toHaveBeenCalledTimes(1)
+      expect(startStdioMock).toHaveBeenCalledWith()
+      expect(startHttpMock).not.toHaveBeenCalled()
+    })
+
+    it('verifies call to startStdio when mode is empty string', async () => {
+      await startServer('')
+      expect(startStdioMock).toHaveBeenCalledTimes(1)
+      expect(startStdioMock).toHaveBeenCalledWith()
+      expect(startHttpMock).not.toHaveBeenCalled()
     })
 
     it('verifies error propagation from startHttp', async () => {
