@@ -523,7 +523,7 @@ class InlineParser {
   private tryParseLink(): boolean {
     const char = this.text[this.i]
 
-    // Link [text](url) - optimized to avoid O(N²) on pathological inputs
+    // Link [text](url) - optimized to avoid O(N??) on pathological inputs
     if (char === '[' && !this.noMoreCloseBrackets) {
       const closeBracket = this.text.indexOf(']', this.i + 1)
       if (closeBracket === -1) {

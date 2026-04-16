@@ -1,4 +1,4 @@
-# Privacy Policy — Better Notion MCP
+# Privacy Policy - Better Notion MCP
 
 **Last updated:** 2026-03-08
 
