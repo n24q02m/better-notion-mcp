@@ -46,10 +46,12 @@ async function getDataSourceSchema(notion: Client, dataSourceId: string): Promis
 function buildSearchFilter(properties: any, search: string): any | null {
   const textProps = []
   if (properties) {
-    for (const name of Object.keys(properties)) {
-      const prop = properties[name]
-      if (['title', 'rich_text'].includes(prop.type)) {
-        textProps.push(name)
+    for (const name in properties) {
+      if (Object.hasOwn(properties, name)) {
+        const prop = properties[name]
+        if (prop.type === 'title' || prop.type === 'rich_text') {
+          textProps.push(name)
+        }
       }
     }
   }
@@ -405,19 +407,22 @@ async function getDatabase(notion: Client, input: DatabasesInput): Promise<GetDa
 
     // Format properties for AI-friendly output
     if (properties) {
-      for (const [name, prop] of Object.entries(properties)) {
-        const p = prop as any
-        schema[name] = {
-          type: p.type,
-          id: p.id
-        }
+      for (const name in properties) {
+        if (Object.hasOwn(properties, name)) {
+          const prop = properties[name]
+          const p = prop as any
+          schema[name] = {
+            type: p.type,
+            id: p.id
+          }
 
-        if (p.type === 'select' && p.select?.options) {
-          schema[name].options = p.select.options.map((o: any) => o.name)
-        } else if (p.type === 'multi_select' && p.multi_select?.options) {
-          schema[name].options = p.multi_select.options.map((o: any) => o.name)
-        } else if (p.type === 'formula' && p.formula) {
-          schema[name].expression = p.formula.expression
+          if (p.type === 'select' && p.select?.options) {
+            schema[name].options = p.select.options.map((o: any) => o.name)
+          } else if (p.type === 'multi_select' && p.multi_select?.options) {
+            schema[name].options = p.multi_select.options.map((o: any) => o.name)
+          } else if (p.type === 'formula' && p.formula) {
+            schema[name].expression = p.formula.expression
+          }
         }
       }
     }
@@ -513,8 +518,10 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
   const properties = await getDataSourceSchema(notion, dataSourceId)
   const schema: Record<string, string> = {}
   if (properties) {
-    for (const [name, prop] of Object.entries(properties)) {
-      schema[name] = (prop as any).type
+    for (const name in properties) {
+      if (Object.hasOwn(properties, name)) {
+        schema[name] = (properties[name] as any).type
+      }
     }
   }
 
@@ -710,7 +717,15 @@ async function updateDataSource(notion: Client, input: DatabasesInput): Promise<
     updates.properties = input.properties
   }
 
-  if (Object.keys(updates).length === 0) {
+  let hasUpdates = false
+  for (const key in updates) {
+    if (Object.hasOwn(updates, key)) {
+      hasUpdates = true
+      break
+    }
+  }
+
+  if (!hasUpdates) {
     throw new NotionMCPError(
       'No updates provided',
       'VALIDATION_ERROR',
@@ -763,7 +778,15 @@ async function updateDatabaseContainer(notion: Client, input: DatabasesInput): P
 
   if (input.cover) updates.cover = formatCover(input.cover)
 
-  if (Object.keys(updates).length === 0) {
+  let hasUpdates = false
+  for (const key in updates) {
+    if (Object.hasOwn(updates, key)) {
+      hasUpdates = true
+      break
+    }
+  }
+
+  if (!hasUpdates) {
     throw new NotionMCPError(
       'No updates provided',
       'VALIDATION_ERROR',
