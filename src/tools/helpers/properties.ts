@@ -47,7 +47,7 @@ export function convertToNotionProperties(
   const converted: Record<string, any> = {}
 
   const keys = Object.keys(properties)
-  for (let i = 0; i < keys.length; i++) {
+  for (let i = 0, len = keys.length; i < len; i++) {
     const key = keys[i]
     const value = properties[key]
 
@@ -97,8 +97,9 @@ export function convertToNotionProperties(
       // Could be multi_select, relation, people, files
       // Only assume multi_select if all elements are strings
       if (value.length > 0 && value.every((v) => typeof v === 'string')) {
-        const multiSelect = new Array(value.length)
-        for (let j = 0; j < value.length; j++) {
+        const vLen = value.length
+        const multiSelect = new Array(vLen)
+        for (let j = 0; j < vLen; j++) {
           multiSelect[j] = { name: value[j] }
         }
         converted[key] = {
@@ -127,23 +128,33 @@ export function extractPageProperties(pageProperties: any): any {
   const properties: any = {}
 
   const keys = Object.keys(pageProperties)
-  for (let i = 0; i < keys.length; i++) {
+  for (let i = 0, len = keys.length; i < len; i++) {
     const key = keys[i]
     const p = pageProperties[key] as any
 
     if (p.type === 'title' && p.title) {
       let str = ''
-      for (let j = 0; j < p.title.length; j++) str += p.title[j].plain_text || ''
+      const t = p.title
+      for (let j = 0, tLen = t.length; j < tLen; j++) {
+        const pt = t[j].plain_text
+        if (pt) str += pt
+      }
       properties[key] = str
     } else if (p.type === 'rich_text' && p.rich_text) {
       let str = ''
-      for (let j = 0; j < p.rich_text.length; j++) str += p.rich_text[j].plain_text || ''
+      const rtArr = p.rich_text
+      for (let j = 0, rtLen = rtArr.length; j < rtLen; j++) {
+        const pt = rtArr[j].plain_text
+        if (pt) str += pt
+      }
       properties[key] = str
     } else if (p.type === 'select' && p.select) {
       properties[key] = p.select.name
     } else if (p.type === 'multi_select' && p.multi_select) {
-      const arr = new Array(p.multi_select.length)
-      for (let j = 0; j < p.multi_select.length; j++) arr[j] = p.multi_select[j].name
+      const ms = p.multi_select
+      const msLen = ms.length
+      const arr = new Array(msLen)
+      for (let j = 0; j < msLen; j++) arr[j] = ms[j].name
       properties[key] = arr
     } else if (p.type === 'number') {
       properties[key] = p.number
@@ -158,19 +169,30 @@ export function extractPageProperties(pageProperties: any): any {
     } else if (p.type === 'date' && p.date) {
       properties[key] = p.date.start + (p.date.end ? ` to ${p.date.end}` : '')
     } else if (p.type === 'relation' && p.relation) {
-      const arr = new Array(p.relation.length)
-      for (let j = 0; j < p.relation.length; j++) arr[j] = p.relation[j].id
+      const rel = p.relation
+      const relLen = rel.length
+      const arr = new Array(relLen)
+      for (let j = 0; j < relLen; j++) arr[j] = rel[j].id
       properties[key] = arr
     } else if (p.type === 'rollup' && p.rollup) {
       properties[key] = p.rollup
     } else if (p.type === 'people' && p.people) {
-      const arr = new Array(p.people.length)
-      for (let j = 0; j < p.people.length; j++) arr[j] = p.people[j].name || p.people[j].id
+      const ppl = p.people
+      const pplLen = ppl.length
+      const arr = new Array(pplLen)
+      for (let j = 0; j < pplLen; j++) {
+        const person = ppl[j]
+        arr[j] = person.name || person.id
+      }
       properties[key] = arr
     } else if (p.type === 'files' && p.files) {
-      const arr = new Array(p.files.length)
-      for (let j = 0; j < p.files.length; j++)
-        arr[j] = p.files[j].file?.url || p.files[j].external?.url || p.files[j].name
+      const f = p.files
+      const fLen = f.length
+      const arr = new Array(fLen)
+      for (let j = 0; j < fLen; j++) {
+        const fileObj = f[j]
+        arr[j] = fileObj.file?.url || fileObj.external?.url || fileObj.name
+      }
       properties[key] = arr
     } else if (p.type === 'formula' && p.formula) {
       properties[key] = p.formula.type ? (p.formula[p.formula.type] ?? null) : null
@@ -179,13 +201,16 @@ export function extractPageProperties(pageProperties: any): any {
     } else if (p.type === 'last_edited_time') {
       properties[key] = p.last_edited_time
     } else if (p.type === 'created_by' && p.created_by) {
-      properties[key] = p.created_by?.name || p.created_by?.id
+      const cb = p.created_by
+      properties[key] = cb.name || cb.id
     } else if (p.type === 'last_edited_by' && p.last_edited_by) {
-      properties[key] = p.last_edited_by?.name || p.last_edited_by?.id
+      const leb = p.last_edited_by
+      properties[key] = leb.name || leb.id
     } else if (p.type === 'status' && p.status) {
-      properties[key] = p.status?.name
+      properties[key] = p.status.name
     } else if (p.type === 'unique_id' && p.unique_id) {
-      properties[key] = p.unique_id.prefix ? `${p.unique_id.prefix}-${p.unique_id.number}` : p.unique_id.number
+      const uid = p.unique_id
+      properties[key] = uid.prefix ? `${uid.prefix}-${uid.number}` : uid.number
     }
   }
   return properties
