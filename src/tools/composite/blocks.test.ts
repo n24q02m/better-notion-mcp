@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as markdown from '../helpers/markdown.js'
-import { blocks } from './blocks'
+import { blockCache, blocks } from './blocks'
 
 const mockNotion = {
   blocks: {
@@ -17,6 +17,7 @@ const mockNotion = {
 describe('blocks', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    blockCache.clear()
   })
 
   describe('validation', () => {

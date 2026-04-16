@@ -8,6 +8,10 @@ import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate, populateDeepChildren } from '../helpers/pagination.js'
 
+// Cache for block metadata
+export const blockCache = new Map<string, { data: any; expiresAt: number }>()
+const BLOCK_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
 export interface BlocksInput {
   action: 'get' | 'children' | 'append' | 'update' | 'delete'
   block_id: string
@@ -28,7 +32,24 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
 
     switch (input.action) {
       case 'get': {
+        const cached = blockCache.get(input.block_id)
+        if (cached && Date.now() < cached.expiresAt) {
+          const block = cached.data
+          return {
+            action: 'get',
+            block_id: block.id,
+            type: block.type,
+            has_children: block.has_children,
+            archived: block.archived,
+            block
+          }
+        }
+
         const block: any = await notion.blocks.retrieve({ block_id: input.block_id })
+        blockCache.set(input.block_id, {
+          data: block,
+          expiresAt: Date.now() + BLOCK_CACHE_TTL
+        })
         return {
           action: 'get',
           block_id: block.id,
@@ -157,6 +178,8 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
           ...updatePayload
         } as any)
 
+        blockCache.delete(input.block_id)
+
         return {
           action: 'update',
           block_id: input.block_id,
@@ -167,6 +190,7 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
 
       case 'delete': {
         await notion.blocks.delete({ block_id: input.block_id })
+        blockCache.delete(input.block_id)
         return {
           action: 'delete',
           block_id: input.block_id,

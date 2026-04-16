@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { blockCache } from './blocks.js'
 import { commentsManage } from './comments'
 
 const mockNotion = {
@@ -15,6 +16,7 @@ const mockNotion = {
 describe('commentsManage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    blockCache.clear()
   })
 
   describe('list', () => {
