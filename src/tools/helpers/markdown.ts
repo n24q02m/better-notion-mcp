@@ -623,14 +623,20 @@ function richTextToMarkdown(richText: RichText[]): string {
   if (!richText || !Array.isArray(richText)) return ''
 
   let result = ''
-  for (let i = 0; i < richText.length; i++) {
+  const len = richText.length
+  for (let i = 0; i < len; i++) {
     const rt = richText[i]
     if (!rt) continue
 
+    const rtType = rt.type
+    const mention = rt.mention
     // Handle mention elements
-    if (rt.type === 'mention' && rt.mention) {
-      const title = rt.plain_text || rt.text?.content || 'Untitled'
-      const id = rt.mention.page?.id || rt.mention.database?.id || ''
+    if (rtType === 'mention' && mention) {
+      const rtText = rt.text
+      const title = rt.plain_text || rtText?.content || 'Untitled'
+      const page = mention.page
+      const database = mention.database
+      const id = page?.id || database?.id || ''
       if (id) {
         result += `@[${title}](${id})`
         continue
@@ -640,16 +646,22 @@ function richTextToMarkdown(richText: RichText[]): string {
       continue
     }
 
-    if (!rt.text) continue
+    const rtText = rt.text
+    if (!rtText) continue
 
-    let text = rt.text.content || ''
-    const annotations = rt.annotations || ({} as any)
+    let text = rtText.content || ''
+    const annotations = rt.annotations
+    if (annotations) {
+      if (annotations.bold) text = `**${text}**`
+      if (annotations.italic) text = `*${text}*`
+      if (annotations.code) text = `\`${text}\``
+      if (annotations.strikethrough) text = `~~${text}~~`
+    }
 
-    if (annotations.bold) text = `**${text}**`
-    if (annotations.italic) text = `*${text}*`
-    if (annotations.code) text = `\`${text}\``
-    if (annotations.strikethrough) text = `~~${text}~~`
-    if (rt.text.link) text = `[${text}](${rt.text.link.url})`
+    const link = rtText.link
+    if (link) {
+      text = `[${text}](${link.url})`
+    }
     result += text
   }
 
@@ -667,7 +679,8 @@ export function extractPlainText(richText: RichText[]): string {
   const len = richText.length
   for (let i = 0; i < len; i++) {
     const rt = richText[i]
-    result += rt.plain_text || (rt.text && rt.text.content) || ''
+    const rtText = rt.text
+    result += rt.plain_text || rtText?.content || ''
   }
   return result
 }

@@ -1680,7 +1680,7 @@ describe('richTextToMarkdown mention handling', () => {
     expect(result).toContain('xyz789')
   })
 
-  it('should handle database mention gracefully', () => {
+  it('should serialize database mention to @[Title](id)', () => {
     const blocks: NotionBlock[] = [
       {
         object: 'block',
@@ -1691,7 +1691,6 @@ describe('richTextToMarkdown mention handling', () => {
               type: 'mention',
               mention: { database: { id: 'db123' } },
               plain_text: 'My Database',
-              href: 'https://www.notion.so/db123',
               annotations: {
                 bold: false,
                 italic: false,
@@ -1706,8 +1705,35 @@ describe('richTextToMarkdown mention handling', () => {
         }
       }
     ]
-    const result = blocksToMarkdown(blocks)
-    expect(result).toContain('My Database')
+    expect(blocksToMarkdown(blocks)).toBe('@[My Database](db123)')
+  })
+
+  it('should fallback to title for other mention types', () => {
+    const blocks: NotionBlock[] = [
+      {
+        object: 'block',
+        type: 'paragraph',
+        paragraph: {
+          rich_text: [
+            {
+              type: 'mention',
+              mention: { type: 'user', user: { id: 'user123' } },
+              plain_text: 'John Doe',
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: 'default'
+              }
+            }
+          ],
+          color: 'default'
+        }
+      }
+    ]
+    expect(blocksToMarkdown(blocks)).toBe('John Doe')
   })
 })
 
