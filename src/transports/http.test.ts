@@ -85,7 +85,7 @@ vi.mock('node:fs', () => ({
 }))
 
 describe('startHttp', () => {
-  const originalEnv = process.env
+  const originalEnv = { ...process.env }
 
   beforeEach(() => {
     vi.clearAllMocks()

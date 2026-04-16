@@ -25,7 +25,7 @@ interface HttpConfig {
   trustProxy: boolean | number | string
 }
 
-export function parseTrustProxy(value?: string): boolean | number | string {
+function parseTrustProxy(value?: string): boolean | number | string {
   if (!value) return false
   if (value === 'true') {
     console.warn(

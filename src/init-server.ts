@@ -1,5 +1,5 @@
 /**
- * Better Notion MCP Server — Stdio entry point
+ * Better Notion MCP Server - Stdio entry point
  * Delegates to transports/stdio for the actual implementation
  */
 
