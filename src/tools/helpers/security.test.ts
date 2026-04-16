@@ -91,6 +91,28 @@ describe('Security Utilities', () => {
       expect(isSafeUrl('.:foo')).toBe(false)
       expect(isSafeUrl('.&bar')).toBe(false)
       expect(isSafeUrl('.%3aabc')).toBe(false)
+      expect(isSafeUrl('/path/with:colon')).toBe(true)
+      expect(isSafeUrl('path?arg=foo:bar')).toBe(true)
+      expect(isSafeUrl('path#foo:bar')).toBe(true)
+    })
+
+    it('should handle malformed absolute but valid relative URLs (hitting inner try)', () => {
+      // These fail the first new URL() but pass the second with base URL
+      expect(isSafeUrl('[')).toBe(true)
+      expect(isSafeUrl(']')).toBe(true)
+      expect(isSafeUrl('{')).toBe(true)
+      expect(isSafeUrl('}')).toBe(true)
+      expect(isSafeUrl('|')).toBe(true)
+      expect(isSafeUrl('^')).toBe(true)
+      expect(isSafeUrl('`')).toBe(true)
+      expect(isSafeUrl('[:foo')).toBe(false)
+      expect(isSafeUrl('&:foo')).toBe(false)
+    })
+
+    it('should handle empty or near-empty strings', () => {
+      expect(isSafeUrl('')).toBe(true)
+      expect(isSafeUrl('.')).toBe(true)
+      expect(isSafeUrl('..')).toBe(true)
     })
   })
 
