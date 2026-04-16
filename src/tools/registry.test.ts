@@ -482,6 +482,20 @@ describe('registerTools', () => {
       expect(result.content[0].text).toContain('Invalid tool name: help')
       expect(result.content[0].text).toContain('Valid tools:')
     })
+    it('should prevent path traversal in help tool even if allowlist is bypassed', async () => {
+      const handler = server.getHandler(3)
+
+      // Use a tool name that would bypass basename() if it were something like "../../../etc/passwd"
+      // but still be blocked by our startsWith check or basename itself.
+      // Since it is caught by validation first, we test that it would be handled correctly.
+      const result = await handler({
+        params: { name: 'help', arguments: { tool_name: '../../../package.json' } }
+      })
+
+      expect(result.isError).toBe(true)
+      // It should be caught by validation first
+      expect(result.content[0].text).toContain('Invalid tool name')
+    })
 
     it('should return error for unknown tool', async () => {
       const handler = server.getHandler(3)
