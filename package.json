@@ -16,7 +16,7 @@
     "codex",
     "opencode"
   ],
-  "version": "2.27.3",
+  "version": "2.26.0",
   "license": "MIT",
   "type": "module",
   "packageManager": "bun@1.2.21",
@@ -57,21 +57,21 @@
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@n24q02m/mcp-core": "^1.0.0",
+    "@n24q02m/mcp-relay-core": "^1.4.0",
     "@notionhq/client": "^5.17.0",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.3.2",
     "zod": "^4.3.6"
   },
-  "trustedDependencies": [
-    "esbuild"
-  ],
   "devDependencies": {
-    "@biomejs/biome": "^2.4.11",
+    "@biomejs/biome": "^2.4.10",
+    "@types/express": "^5.0.6",
     "@types/node": "^24.12.2",
-    "@vitest/coverage-v8": "^4.1.4",
+    "@vitest/coverage-v8": "^4.1.3",
     "esbuild": "^0.28.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.3"
   },
   "description": "Better MCP server for Notion API with composite tools optimized for AI agents",
   "main": "build/src/init-server.js",

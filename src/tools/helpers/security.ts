@@ -29,9 +29,9 @@ export function isSafeUrl(url: string): boolean {
     const parsed = new URL(lowerUrl)
     return ['http:', 'https:', 'mailto:', 'tel:'].includes(parsed.protocol)
   } catch {
-    // If URL parsing fails, it might be a relative path or an invalid URL.
-    // Relative paths like "/foo" or "foo" are safe, provided they don't
-    // use protocol obfuscation to hide dangerous absolute URLs.
+    // If URL parsing fails, it might be a relative path or an invalid URL
+    // For relative paths like "/foo" or "foo", they are generally safe,
+    // but we can reject strictly for now, or check for dangerous prefixes.
 
     try {
       new URL(lowerUrl, 'http://relative-check.internal')

@@ -1,22 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ensureConfig } from './relay-setup.js'
 
-// Mock mcp-core modules
-vi.mock('@n24q02m/mcp-core/storage', () => ({
+// Mock mcp-relay-core modules
+vi.mock('@n24q02m/mcp-relay-core/storage', () => ({
   resolveConfig: vi.fn()
 }))
-vi.mock('@n24q02m/mcp-core/relay', () => ({
+vi.mock('@n24q02m/mcp-relay-core/relay', () => ({
   createSession: vi.fn(),
   pollForResult: vi.fn(),
   sendMessage: vi.fn()
 }))
-vi.mock('@n24q02m/mcp-core', () => ({
+vi.mock('@n24q02m/mcp-relay-core', () => ({
   writeConfig: vi.fn()
 }))
 
-import { writeConfig } from '@n24q02m/mcp-core'
-import { createSession, pollForResult, sendMessage } from '@n24q02m/mcp-core/relay'
-import { resolveConfig } from '@n24q02m/mcp-core/storage'
+import { writeConfig } from '@n24q02m/mcp-relay-core'
+import { createSession, pollForResult, sendMessage } from '@n24q02m/mcp-relay-core/relay'
+import { resolveConfig } from '@n24q02m/mcp-relay-core/storage'
 
 describe('ensureConfig', () => {
   let consoleSpy: ReturnType<typeof vi.spyOn>

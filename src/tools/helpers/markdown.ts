@@ -664,10 +664,8 @@ function richTextToMarkdown(richText: RichText[]): string {
 export function extractPlainText(richText: RichText[]): string {
   if (!richText || !Array.isArray(richText)) return ''
   let result = ''
-  const len = richText.length
-  for (let i = 0; i < len; i++) {
-    const rt = richText[i]
-    result += rt.plain_text || (rt.text && rt.text.content) || ''
+  for (let i = 0; i < richText.length; i++) {
+    result += richText[i].plain_text || richText[i].text?.content || ''
   }
   return result
 }
@@ -746,23 +744,13 @@ function parseTable(lines: string[], startIndex: number): TableParseResult | nul
 
   if (tableLines.length < 1) return null
 
-  // Optimization: use a single-pass manual loop instead of chained .map().filter().
-  // This reduces array allocations and closure creation in a hot path when parsing markdown tables.
-  const parsedRows: string[][] = new Array(tableLines.length)
-  for (let r = 0; r < tableLines.length; r++) {
-    const line = tableLines[r]
-    const split = line.split('|')
-    const len = split.length
-    if (len < 3) {
-      parsedRows[r] = []
-      continue
-    }
-    const cells: string[] = new Array(len - 2)
-    for (let c = 1; c < len - 1; c++) {
-      cells[c - 1] = split[c].trim()
-    }
-    parsedRows[r] = cells
-  }
+  const parsedRows = tableLines.map((line) => {
+    const cells = line
+      .split('|')
+      .map((cell) => cell.trim())
+      .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1) // Remove empty first/last
+    return cells
+  })
 
   // Check for separator row (contains ---)
   let hasHeader = false
@@ -771,7 +759,7 @@ function parseTable(lines: string[], startIndex: number): TableParseResult | nul
 
   if (parsedRows.length >= 2) {
     const possibleSeparator = parsedRows[1]
-    const isSeparator = possibleSeparator.every((cell: string) => /^[-:]+$/.test(cell.trim()))
+    const isSeparator = possibleSeparator.every((cell) => /^[-:]+$/.test(cell.trim()))
 
     if (isSeparator) {
       hasHeader = true

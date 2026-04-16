@@ -8,9 +8,9 @@
  * 4. DEGRADED MODE     -- Limited tools (help + content_convert only)
  */
 
-import { writeConfig } from '@n24q02m/mcp-core'
-import { createSession, pollForResult, sendMessage } from '@n24q02m/mcp-core/relay'
-import { resolveConfig } from '@n24q02m/mcp-core/storage'
+import { writeConfig } from '@n24q02m/mcp-relay-core'
+import { createSession, pollForResult, sendMessage } from '@n24q02m/mcp-relay-core/relay'
+import { resolveConfig } from '@n24q02m/mcp-relay-core/storage'
 import { RELAY_SCHEMA } from './relay-schema.js'
 
 const SERVER_NAME = 'better-notion-mcp'
