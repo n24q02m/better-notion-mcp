@@ -11,10 +11,11 @@ const mockNotion = {
 describe('workspace', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.useFakeTimers()
   })
 
   describe('info', () => {
-    it('should return bot info', async () => {
+    it('should return bot info and cache it', async () => {
       mockNotion.users.retrieve.mockResolvedValue({
         id: 'bot-1',
         type: 'bot',
@@ -22,19 +23,45 @@ describe('workspace', () => {
         bot: { owner: { type: 'workspace', workspace: true } }
       })
 
-      const result = (await workspace(mockNotion as any, { action: 'info' })) as Extract<
+      const client = { ...mockNotion } as any
+
+      // First call
+      const result1 = (await workspace(client, { action: 'info' })) as Extract<
         WorkspaceResult,
         { action: 'info' }
       >
 
-      expect(result.action).toBe('info')
-      expect(result.bot).toEqual({
+      expect(result1.bot.id).toBe('bot-1')
+      expect(mockNotion.users.retrieve).toHaveBeenCalledTimes(1)
+
+      // Second call (should be cached)
+      const result2 = (await workspace(client, { action: 'info' })) as Extract<
+        WorkspaceResult,
+        { action: 'info' }
+      >
+
+      expect(result2.bot.id).toBe('bot-1')
+      expect(mockNotion.users.retrieve).toHaveBeenCalledTimes(1)
+    })
+
+    it('should expire cache after TTL', async () => {
+      mockNotion.users.retrieve.mockResolvedValue({
         id: 'bot-1',
-        name: 'My Integration',
         type: 'bot',
-        owner: { type: 'workspace', workspace: true }
+        name: 'My Integration',
+        bot: { owner: { type: 'workspace', workspace: true } }
       })
-      expect(mockNotion.users.retrieve).toHaveBeenCalledWith({ user_id: 'me' })
+
+      const client = { ...mockNotion } as any
+
+      await workspace(client, { action: 'info' })
+      expect(mockNotion.users.retrieve).toHaveBeenCalledTimes(1)
+
+      // Advance time by 6 minutes (TTL is 5 minutes)
+      vi.advanceTimersByTime(6 * 60 * 1000)
+
+      await workspace(client, { action: 'info' })
+      expect(mockNotion.users.retrieve).toHaveBeenCalledTimes(2)
     })
 
     it('should default name to Bot when missing', async () => {
@@ -44,7 +71,7 @@ describe('workspace', () => {
         bot: {}
       })
 
-      const result = (await workspace(mockNotion as any, { action: 'info' })) as Extract<
+      const result = (await workspace({ ...mockNotion } as any, { action: 'info' })) as Extract<
         WorkspaceResult,
         { action: 'info' }
       >
