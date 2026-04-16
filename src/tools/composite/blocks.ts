@@ -16,6 +16,10 @@ export interface BlocksInput {
   after_block_id?: string
 }
 
+// Cache for block metadata
+export const blockCache = new Map<string, { block: any; expiresAt: number }>()
+const BLOCK_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
 /**
  * Unified blocks tool
  * Maps to: GET/PATCH/DELETE /v1/blocks/{id} and GET/PATCH /v1/blocks/{id}/children
@@ -28,7 +32,25 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
 
     switch (input.action) {
       case 'get': {
+        const cached = blockCache.get(input.block_id)
+        if (cached && Date.now() < cached.expiresAt) {
+          const block = cached.block
+          return {
+            action: 'get',
+            block_id: block.id,
+            type: block.type,
+            has_children: block.has_children,
+            archived: block.archived,
+            block
+          }
+        }
+
         const block: any = await notion.blocks.retrieve({ block_id: input.block_id })
+        blockCache.set(input.block_id, {
+          block,
+          expiresAt: Date.now() + BLOCK_CACHE_TTL
+        })
+
         return {
           action: 'get',
           block_id: block.id,
@@ -157,6 +179,9 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
           ...updatePayload
         } as any)
 
+        // Invalidate cache
+        blockCache.delete(input.block_id)
+
         return {
           action: 'update',
           block_id: input.block_id,
@@ -167,6 +192,10 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
 
       case 'delete': {
         await notion.blocks.delete({ block_id: input.block_id })
+
+        // Invalidate cache
+        blockCache.delete(input.block_id)
+
         return {
           action: 'delete',
           block_id: input.block_id,
