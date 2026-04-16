@@ -38,7 +38,7 @@ export async function startHttp() {
       throw new NotionMCPError(
         'Notion token not configured',
         'NOT_CONFIGURED',
-        `Open /authorize on this server in your browser to paste your Notion integration token. Get a token at https://www.notion.so/my-integrations`
+        `Open /authorize on this server in your browser to paste your Notion integration token. Get a token at https://www.notion.so/my-integrations. Example: NOTION_TOKEN=ntn_xxxxxxxxxxxxx`
       )
     }
     return new Client({ auth: currentToken, notionVersion: '2025-09-03' })

@@ -119,7 +119,7 @@ const NOTION_ERROR_MAP: Record<string, { message: string; code: string; suggesti
     message: 'Invalid or missing Notion API token',
     code: 'UNAUTHORIZED',
     suggestion:
-      'Set NOTION_TOKEN environment variable with a valid integration token from https://www.notion.so/my-integrations'
+      'Set NOTION_TOKEN environment variable with a valid integration token from https://www.notion.so/my-integrations. Example: NOTION_TOKEN=ntn_xxxxxxxxxxxxx'
   },
   restricted_resource: {
     message: 'Integration does not have access to this resource',
@@ -250,7 +250,7 @@ export function suggestFixes(error: NotionMCPError): string[] {
   switch (error.code) {
     case 'UNAUTHORIZED':
       suggestions.push('Check that NOTION_TOKEN is set in your environment')
-      suggestions.push('Verify token at https://www.notion.so/my-integrations')
+      suggestions.push('Verify token at https://www.notion.so/my-integrations. Example: NOTION_TOKEN=ntn_xxxxxxxxxxxxx')
       suggestions.push('Create a new integration token if needed')
       break
 

@@ -471,7 +471,7 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
         }
         const url = getSetupUrl()
         const setupInstructions = url
-          ? `Setup in progress. Open this URL to configure your Notion token:\n${url}\n\nOr set NOTION_TOKEN manually in your MCP server config.`
+          ? `Setup in progress. Open this URL to configure your Notion token:\n${url}\n\nOr set NOTION_TOKEN manually in your MCP server config. Example: NOTION_TOKEN=ntn_xxxxxxxxxxxxx`
           : 'NOTION_TOKEN environment variable is not set. Get your integration token from https://www.notion.so/my-integrations and set it as NOTION_TOKEN in your MCP server config. Example: NOTION_TOKEN=ntn_xxxxxxxxxxxxx'
         return {
           content: [{ type: 'text', text: setupInstructions }],

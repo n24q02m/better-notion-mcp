@@ -46,7 +46,7 @@ export async function ensureConfig(): Promise<string | null> {
     session = await createSession(relayUrl, SERVER_NAME, RELAY_SCHEMA)
   } catch {
     console.error(
-      `Cannot reach relay server at ${relayUrl}. Set NOTION_TOKEN manually.\nGet your token from https://www.notion.so/my-integrations`
+      `Cannot reach relay server at ${relayUrl}. Set NOTION_TOKEN manually.\nGet your token from https://www.notion.so/my-integrations. Example: NOTION_TOKEN=ntn_xxxxxxxxxxxxx`
     )
     return null
   }
