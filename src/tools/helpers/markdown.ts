@@ -667,7 +667,7 @@ export function extractPlainText(richText: RichText[]): string {
   const len = richText.length
   for (let i = 0; i < len; i++) {
     const rt = richText[i]
-    result += rt.plain_text || (rt.text && rt.text.content) || ''
+    result += rt.plain_text || rt.text?.content || ''
   }
   return result
 }
