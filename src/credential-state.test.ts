@@ -2,8 +2,7 @@
  * Tests for credential state management.
  */
 
-import { execFile } from 'node:child_process'
-import { createSession, deleteConfig, pollForResult, sendMessage, writeConfig } from '@n24q02m/mcp-core'
+import { createSession, deleteConfig, pollForResult, sendMessage, tryOpenBrowser, writeConfig } from '@n24q02m/mcp-core'
 import { resolveConfig } from '@n24q02m/mcp-core/storage'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -16,15 +15,12 @@ import {
   triggerRelaySetup
 } from './credential-state.js'
 
-vi.mock('node:child_process', () => ({
-  execFile: vi.fn()
-}))
-
 vi.mock('@n24q02m/mcp-core', () => ({
   createSession: vi.fn(),
   deleteConfig: vi.fn().mockResolvedValue(undefined),
   pollForResult: vi.fn(),
   sendMessage: vi.fn().mockResolvedValue(undefined),
+  tryOpenBrowser: vi.fn().mockResolvedValue(true),
   writeConfig: vi.fn().mockResolvedValue(undefined)
 }))
 
@@ -116,7 +112,7 @@ describe('credential-state', () => {
       expect(url).toBe(mockSession.relayUrl)
       expect(getSetupUrl()).toBe(mockSession.relayUrl)
       expect(getState()).toBe('setup_in_progress')
-      expect(execFile).toHaveBeenCalled() // tryOpenBrowser
+      expect(tryOpenBrowser).toHaveBeenCalledWith(mockSession.relayUrl)
 
       // Wait for polling and background tasks
       await vi.runAllTimersAsync()
@@ -200,62 +196,12 @@ describe('credential-state', () => {
     })
   })
 
-  describe('tryOpenBrowser', () => {
-    it('calls open on darwin', async () => {
-      const originalPlatform = process.platform
-      Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true })
-
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
+  describe('tryOpenBrowser integration', () => {
+    it('delegates to mcp-core tryOpenBrowser with relay URL', async () => {
+      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'https://relay.com/setup' } as any)
       await triggerRelaySetup()
 
-      expect(execFile).toHaveBeenCalledWith('open', ['url'], expect.any(Function))
-      // Trigger callback for coverage
-      const callback = vi.mocked(execFile).mock.calls[0][2] as (
-        error: Error | null,
-        stdout: string,
-        stderr: string
-      ) => void
-      callback(null, '', '')
-
-      Object.defineProperty(process, 'platform', { value: originalPlatform })
-    })
-
-    it('calls cmd on win32', async () => {
-      const originalPlatform = process.platform
-      Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
-
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
-      await triggerRelaySetup()
-
-      expect(execFile).toHaveBeenCalledWith('cmd', ['/c', 'start', '', 'url'], expect.any(Function))
-      // Trigger callback for coverage
-      const callback = vi.mocked(execFile).mock.calls[0][2] as (
-        error: Error | null,
-        stdout: string,
-        stderr: string
-      ) => void
-      callback(null, '', '')
-
-      Object.defineProperty(process, 'platform', { value: originalPlatform })
-    })
-
-    it('calls xdg-open on other platforms', async () => {
-      const originalPlatform = process.platform
-      Object.defineProperty(process, 'platform', { value: 'linux', configurable: true })
-
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
-      await triggerRelaySetup()
-
-      expect(execFile).toHaveBeenCalledWith('xdg-open', ['url'], expect.any(Function))
-      // Trigger callback for coverage
-      const callback = vi.mocked(execFile).mock.calls[0][2] as (
-        error: Error | null,
-        stdout: string,
-        stderr: string
-      ) => void
-      callback(null, '', '')
-
-      Object.defineProperty(process, 'platform', { value: originalPlatform })
+      expect(tryOpenBrowser).toHaveBeenCalledWith('https://relay.com/setup')
     })
   })
 

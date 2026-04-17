@@ -9,9 +9,8 @@
  * Tools that work without token (help, content_convert) always work.
  */
 
-import { execFile } from 'node:child_process'
 import type { RelaySession } from '@n24q02m/mcp-core'
-import { createSession, deleteConfig, pollForResult, sendMessage, writeConfig } from '@n24q02m/mcp-core'
+import { createSession, deleteConfig, pollForResult, sendMessage, tryOpenBrowser, writeConfig } from '@n24q02m/mcp-core'
 import { resolveConfig } from '@n24q02m/mcp-core/storage'
 import { RELAY_SCHEMA } from './relay-schema.js'
 
@@ -109,8 +108,9 @@ export async function triggerRelaySetup(): Promise<string | null> {
     _setupUrl = session.relayUrl
     _activeSession = { relayBaseUrl: relayUrl, sessionId: session.sessionId }
 
-    // Try to open browser (best-effort, non-blocking)
-    tryOpenBrowser(session.relayUrl)
+    // Try to open browser (best-effort, non-blocking). mcp-core dedupes
+    // repeat calls for the same URL within a 5-minute window.
+    void tryOpenBrowser(session.relayUrl)
 
     console.error(`\nSetup required. Open this URL to configure:\n${session.relayUrl}\n`)
     console.error(
@@ -171,22 +171,6 @@ async function pollRelayBackground(relayBaseUrl: string, session: RelaySession):
     if (_activeSession?.sessionId === session.sessionId) {
       _activeSession = null
     }
-  }
-}
-
-/**
- * Try to open URL in default browser (best-effort).
- * Uses execFile (not exec) to avoid shell injection.
- */
-function tryOpenBrowser(url: string): void {
-  const platform = process.platform
-
-  if (platform === 'darwin') {
-    execFile('open', [url], () => {})
-  } else if (platform === 'win32') {
-    execFile('cmd', ['/c', 'start', '', url], () => {})
-  } else {
-    execFile('xdg-open', [url], () => {})
   }
 }
 
