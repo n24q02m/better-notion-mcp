@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isSafeUrl, wrapToolResult } from './security'
+import { isSafeUrl, isSafeWebUrl, wrapToolResult } from './security'
 
 describe('Security Utilities', () => {
   describe('isSafeUrl', () => {
@@ -91,6 +91,37 @@ describe('Security Utilities', () => {
       expect(isSafeUrl('.:foo')).toBe(false)
       expect(isSafeUrl('.&bar')).toBe(false)
       expect(isSafeUrl('.%3aabc')).toBe(false)
+    })
+  })
+
+  describe('isSafeWebUrl', () => {
+    it('should allow valid http and https URLs', () => {
+      expect(isSafeWebUrl('https://example.com')).toBe(true)
+      expect(isSafeWebUrl('http://example.com/path?query=1')).toBe(true)
+    })
+
+    it('should reject non-web protocols', () => {
+      expect(isSafeWebUrl('mailto:user@example.com')).toBe(false)
+      expect(isSafeWebUrl('tel:+1234567890')).toBe(false)
+      expect(isSafeWebUrl('javascript:alert(1)')).toBe(false)
+      expect(isSafeWebUrl('file:///etc/passwd')).toBe(false)
+    })
+
+    it('should reject URLs starting with a hyphen (shell flag injection)', () => {
+      expect(isSafeWebUrl('-oProxyCommand=calc.exe')).toBe(false)
+      expect(isSafeWebUrl('--help')).toBe(false)
+    })
+
+    it('should reject URLs with spaces or control characters', () => {
+      expect(isSafeWebUrl('https://example.com/ path')).toBe(false)
+      expect(isSafeWebUrl('https://example.com/\npath')).toBe(false)
+      expect(isSafeWebUrl('https://example.com/\0path')).toBe(false)
+    })
+
+    it('should reject malformed URLs', () => {
+      expect(isSafeWebUrl('not-a-url')).toBe(false)
+      expect(isSafeWebUrl('/relative/path')).toBe(false)
+      expect(isSafeWebUrl('http://[')).toBe(false)
     })
   })
 

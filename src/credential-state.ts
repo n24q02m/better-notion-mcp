@@ -13,6 +13,7 @@ import type { RelaySession } from '@n24q02m/mcp-core'
 import { createSession, deleteConfig, pollForResult, sendMessage, tryOpenBrowser, writeConfig } from '@n24q02m/mcp-core'
 import { resolveConfig } from '@n24q02m/mcp-core/storage'
 import { RELAY_SCHEMA } from './relay-schema.js'
+import { isSafeWebUrl } from './tools/helpers/security.js'
 
 const SERVER_NAME = 'better-notion-mcp'
 const CREDENTIAL_KEY = 'NOTION_TOKEN'
@@ -110,7 +111,14 @@ export async function triggerRelaySetup(): Promise<string | null> {
 
     // Try to open browser (best-effort, non-blocking). mcp-core dedupes
     // repeat calls for the same URL within a 5-minute window.
-    void tryOpenBrowser(session.relayUrl)
+    // Defense-in-depth: validate with isSafeWebUrl before passing to any
+    // browser-opening helper so a malicious relay response cannot inject
+    // shell flags or control characters via the URL.
+    if (isSafeWebUrl(session.relayUrl)) {
+      void tryOpenBrowser(session.relayUrl)
+    } else {
+      console.error(`Security blocked attempt to open unsafe URL: ${session.relayUrl}`)
+    }
 
     console.error(`\nSetup required. Open this URL to configure:\n${session.relayUrl}\n`)
     console.error(
