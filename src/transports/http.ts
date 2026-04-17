@@ -45,6 +45,7 @@ export async function startHttp() {
   }
 
   const port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 0
+  const host = process.env.HOST
 
   const handle = await runLocalServer(
     // createMCPServer returns a Server; runLocalServer only calls .connect()
@@ -57,6 +58,7 @@ export async function startHttp() {
       // key/label/type/placeholder/helpText/helpUrl/required are all present.
       relaySchema: RELAY_SCHEMA as unknown as RelayConfigSchema,
       port,
+      host,
       onCredentialsSaved: (creds) => {
         const token = creds?.NOTION_TOKEN
         if (typeof token === 'string' && token.length > 0) {
