@@ -57,7 +57,7 @@
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@n24q02m/mcp-core": "^1.1.1",
+    "@n24q02m/mcp-core": "^1.2.0",
     "@notionhq/client": "^5.18.0",
     "zod": "^4.3.6"
   },
