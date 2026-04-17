@@ -198,6 +198,11 @@ export function findClosestMatch(input: string, validOptions: string[]): string 
   let bestMatch: string | null = null
   let bestScore = 0
 
+  // Pre-calculate input bigrams outside the loop to avoid redundant allocations
+  // Bolt optimization: moved from inside the validOptions loop
+  const inputBigrams = new Set<string>()
+  for (let i = 0; i < lower.length - 1; i++) inputBigrams.add(lower.slice(i, i + 2))
+
   for (const option of validOptions) {
     const optionLower = option.toLowerCase()
     // Check prefix match first
@@ -205,8 +210,6 @@ export function findClosestMatch(input: string, validOptions: string[]): string 
       return option
     }
     // Simple bigram similarity
-    const inputBigrams = new Set<string>()
-    for (let i = 0; i < lower.length - 1; i++) inputBigrams.add(lower.slice(i, i + 2))
     const optionBigrams = new Set<string>()
     for (let i = 0; i < optionLower.length - 1; i++) optionBigrams.add(optionLower.slice(i, i + 2))
 
