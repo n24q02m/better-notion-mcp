@@ -1,6 +1,6 @@
 # better-notion-mcp
 
-TypeScript MCP Server cho Notion API. 9 composite tools, dual-mode stdio/http.
+TypeScript MCP Server cho Notion API. 10 composite tools (pages, databases, blocks, users, workspace, comments, content_convert, file_uploads, setup, help), dual-mode stdio/http.
 Xem `AGENTS.md` va `README.md` de hieu architecture va OAuth flow.
 
 ## Cau truc
@@ -9,7 +9,7 @@ Xem `AGENTS.md` va `README.md` de hieu architecture va OAuth flow.
 - `src/relay-setup.ts` -- Zero-config relay: create session, poll for config
 - `src/relay-schema.ts` -- Relay form schema (Notion token field)
 - `src/tools/registry.ts` -- Tool registration + routing
-- `src/tools/composite/` -- 1 file per domain (pages, databases, blocks, comments, users, workspace, content_convert, file_uploads)
+- `src/tools/composite/` -- 1 file per domain (pages, databases, blocks, comments, users, workspace, content_convert, file_uploads, setup)
 - `src/tools/helpers/` -- errors, markdown, richtext, pagination, properties
 - `src/auth/` -- OAuth 2.1 + PKCE, DCR, session management
 - `src/transports/` -- stdio + http transport handlers
