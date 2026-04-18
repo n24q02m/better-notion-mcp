@@ -196,10 +196,6 @@ export function tryOpenBrowser(url: string): void {
   }
 }
 
-export function setState(state: CredentialState): void {
-  _state = state
-}
-
 export function resetState(): void {
   _state = 'awaiting_setup'
   _setupUrl = null

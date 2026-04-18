@@ -12,7 +12,6 @@ import {
   getState,
   resetState,
   resolveCredentialState,
-  setState,
   triggerRelaySetup
 } from './credential-state.js'
 
@@ -133,16 +132,20 @@ describe('credential-state', () => {
     })
 
     it('returns immediately if already setup_in_progress', async () => {
-      setState('setup_in_progress')
+      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
+      await triggerRelaySetup()
+      vi.mocked(createSession).mockClear()
+
       const url = await triggerRelaySetup()
       expect(createSession).not.toHaveBeenCalled()
-      expect(url).toBeNull() // _setupUrl is null initially
+      expect(url).toBe('url')
     })
   })
 
   describe('resetState', () => {
-    it('resets all state and calls deleteConfig', () => {
-      setState('configured')
+    it('resets all state and calls deleteConfig', async () => {
+      process.env.NOTION_TOKEN = 'token'
+      await resolveCredentialState()
       resetState()
       expect(getState()).toBe('awaiting_setup')
       expect(getNotionToken()).toBeNull()
