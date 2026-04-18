@@ -523,9 +523,16 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
               `Valid tools: ${validToolNames.join(', ')}`
             )
           }
+          // Security: Use basename() to ensure we only look for files directly inside DOCS_DIR,
+          // preventing path traversal even if the allowlist validation is bypassed or modified.
           const docFile = `${basename(toolName)}.md`
+          const fullPath = join(DOCS_DIR, docFile)
+          if (!fullPath.startsWith(DOCS_DIR)) {
+            throw new NotionMCPError('Path traversal attempt detected', 'SECURITY_ERROR', 'Invalid tool_name')
+          }
+
           try {
-            const content = await readFile(join(DOCS_DIR, docFile), 'utf-8')
+            const content = await readFile(fullPath, 'utf-8')
             result = { tool: toolName, documentation: content }
           } catch {
             throw new NotionMCPError(`Documentation not found for: ${toolName}`, 'DOC_NOT_FOUND', 'Check tool_name')
