@@ -18,18 +18,18 @@ import { getSetupUrl, getState, triggerRelaySetup } from '../credential-state.js
 // Import mega tools
 import { blocks } from './composite/blocks.js'
 import { commentsManage } from './composite/comments.js'
+import { config } from './composite/config.js'
 import { contentConvert } from './composite/content.js'
 import { databases } from './composite/databases.js'
 import { fileUploads } from './composite/file-uploads.js'
 import { pages } from './composite/pages.js'
-import { setup } from './composite/setup.js'
 import { users } from './composite/users.js'
 import { workspace } from './composite/workspace.js'
 import { aiReadableMessage, findClosestMatch, NotionMCPError } from './helpers/errors.js'
 import { wrapToolResult } from './helpers/security.js'
 
 // Tools that work without a Notion token
-const TOKEN_FREE_TOOLS = new Set(['help', 'content_convert', 'setup'])
+const TOKEN_FREE_TOOLS = new Set(['help', 'content_convert', 'config'])
 
 // Get docs directory path - works for both bundled CLI and unbundled code
 const __filename = fileURLToPath(import.meta.url)
@@ -377,11 +377,11 @@ const TOOLS = [
     }
   },
   {
-    name: 'setup',
+    name: 'config',
     description:
-      'Manage server credential setup and configuration.\n\nActions:\n- status: current credential state, token source, setup URL\n- start (-> force): trigger relay setup to configure Notion token via browser\n- reset: clear credentials and config, return to awaiting_setup\n- complete: re-check credentials after external config changes',
+      'Manage server configuration and credential state.\n\nActions:\n- status: current credential state, token source, setup URL\n- setup_start (-> force): trigger relay setup to configure Notion token via browser\n- setup_reset: clear credentials and config, return to awaiting_setup\n- setup_complete: re-check credentials after external config changes\n- set: update a runtime setting (notion has no mutable settings; returns info)\n- cache_clear: clear any cached state (no-op for notion)',
     annotations: {
-      title: 'Setup',
+      title: 'Config',
       readOnlyHint: false,
       destructiveHint: false,
       idempotentHint: false,
@@ -392,12 +392,20 @@ const TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['status', 'start', 'reset', 'complete'],
+          enum: ['status', 'setup_start', 'setup_reset', 'setup_complete', 'set', 'cache_clear'],
           description: 'Action to perform'
         },
         force: {
           type: 'boolean',
-          description: 'Force start even if already configured (for start action)'
+          description: 'Force setup_start even if already configured'
+        },
+        key: {
+          type: 'string',
+          description: 'Setting key (for set action)'
+        },
+        value: {
+          type: 'string',
+          description: 'Setting value (for set action)'
         }
       },
       required: ['action']
@@ -506,8 +514,8 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
         case 'content_convert':
           result = await contentConvert(args as any)
           break
-        case 'setup':
-          result = await setup(args as any)
+        case 'config':
+          result = await config(args as any)
           break
         case 'file_uploads':
           result = await fileUploads(notion, args as any)

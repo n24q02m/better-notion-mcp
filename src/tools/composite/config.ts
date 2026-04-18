@@ -1,5 +1,5 @@
 /**
- * Setup Tool
+ * Config Tool
  * Manage credential state, relay setup, and configuration lifecycle.
  * Does NOT require a Notion client -- works independently.
  */
@@ -14,15 +14,17 @@ import {
 } from '../../credential-state.js'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 
-export interface SetupInput {
-  action: 'status' | 'start' | 'reset' | 'complete'
+export interface ConfigInput {
+  action: 'status' | 'setup_start' | 'setup_reset' | 'setup_complete' | 'set' | 'cache_clear'
   force?: boolean
+  key?: string
+  value?: string
 }
 
 /**
- * Manage server setup and credential state
+ * Manage server configuration and credential state
  */
-export async function setup(input: SetupInput): Promise<any> {
+export async function config(input: ConfigInput): Promise<any> {
   return withErrorHandling(async () => {
     switch (input.action) {
       case 'status': {
@@ -38,19 +40,19 @@ export async function setup(input: SetupInput): Promise<any> {
         }
       }
 
-      case 'start': {
+      case 'setup_start': {
         const currentState = getState()
         if (currentState === 'configured' && !input.force) {
           return {
-            action: 'start',
+            action: 'setup_start',
             state: 'configured',
-            message: 'Already configured. Use force: true to trigger relay setup anyway, or reset first.'
+            message: 'Already configured. Use force: true to trigger relay setup anyway, or setup_reset first.'
           }
         }
 
         const url = await triggerRelaySetup()
         return {
-          action: 'start',
+          action: 'setup_start',
           state: getState(),
           setup_url: url,
           message: url
@@ -59,33 +61,50 @@ export async function setup(input: SetupInput): Promise<any> {
         }
       }
 
-      case 'reset': {
+      case 'setup_reset': {
         resetState()
         return {
-          action: 'reset',
+          action: 'setup_reset',
           state: getState(),
-          message: 'Credential state reset. Token cleared, config file deleted. Use start to reconfigure.'
+          message: 'Credential state reset. Token cleared, config file deleted. Use setup_start to reconfigure.'
         }
       }
 
-      case 'complete': {
+      case 'setup_complete': {
         const newState = await resolveCredentialState()
         return {
-          action: 'complete',
+          action: 'setup_complete',
           state: newState,
           has_token: getNotionToken() !== null,
           message:
             newState === 'configured'
               ? 'Credentials verified. Notion tools are ready.'
-              : 'No credentials found. Use start to begin relay setup.'
+              : 'No credentials found. Use setup_start to begin relay setup.'
+        }
+      }
+
+      case 'set': {
+        return {
+          action: 'set',
+          ok: false,
+          error: 'Notion has no mutable runtime settings. To update your token, use setup_reset then setup_start.'
+        }
+      }
+
+      case 'cache_clear': {
+        return {
+          action: 'cache_clear',
+          ok: true,
+          cleared: 0,
+          message: 'No client-side cache to clear. Notion API responses are not cached.'
         }
       }
 
       default:
         throw new NotionMCPError(
-          `Unsupported action: ${input.action}`,
+          `Unsupported action: ${(input as any).action}`,
           'VALIDATION_ERROR',
-          'Valid actions: status, start, reset, complete'
+          'Valid actions: status, setup_start, setup_reset, setup_complete, set, cache_clear'
         )
     }
   })()
