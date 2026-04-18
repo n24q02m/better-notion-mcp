@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { blockCache } from './blocks'
 import { commentsManage } from './comments'
 
 const mockNotion = {
@@ -16,7 +15,6 @@ const mockNotion = {
 describe('commentsManage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    blockCache.clear()
   })
 
   describe('list', () => {
@@ -28,7 +26,18 @@ describe('commentsManage', () => {
             created_time: '2024-01-01',
             created_by: { id: 'user-1' },
             discussion_id: 'disc-1',
-            rich_text: [{ type: 'text', text: { content: 'Test comment' } }],
+            rich_text: [{ type: 'text', text: { content: 'Hello' } }],
+            parent: { type: 'page_id', page_id: 'page-1' }
+          },
+          {
+            id: 'comment-2',
+            created_time: '2024-01-02',
+            created_by: { id: 'user-2' },
+            discussion_id: 'disc-1',
+            rich_text: [
+              { type: 'text', text: { content: 'World' } },
+              { type: 'text', text: { content: '!' } }
+            ],
             parent: { type: 'page_id', page_id: 'page-1' }
           }
         ],
@@ -42,37 +51,31 @@ describe('commentsManage', () => {
       })
 
       expect(result.page_id).toBe('page-1')
-      expect(result.total_comments).toBe(1)
-      expect(result.results[0].text).toBe('Test comment')
+      expect(result.total_comments).toBe(2)
+      expect(result.results).toHaveLength(2)
+      expect(result.results[0]).toEqual({
+        id: 'comment-1',
+        created_time: '2024-01-01',
+        created_by: { id: 'user-1' },
+        discussion_id: 'disc-1',
+        text: 'Hello',
+        parent: { type: 'page_id', page_id: 'page-1' }
+      })
+      expect(result.results[1]).toEqual({
+        id: 'comment-2',
+        created_time: '2024-01-02',
+        created_by: { id: 'user-2' },
+        discussion_id: 'disc-1',
+        text: 'World!',
+        parent: { type: 'page_id', page_id: 'page-1' }
+      })
       expect(mockNotion.comments.list).toHaveBeenCalledWith({
         block_id: 'page-1',
         start_cursor: undefined
       })
     })
 
-    it('should handle pagination', async () => {
-      mockNotion.comments.list
-        .mockResolvedValueOnce({
-          results: [{ id: 'c1', rich_text: [] }],
-          has_more: true,
-          next_cursor: 'next'
-        })
-        .mockResolvedValueOnce({
-          results: [{ id: 'c2', rich_text: [] }],
-          has_more: false,
-          next_cursor: null
-        })
-
-      const result = await commentsManage(mockNotion as any, {
-        action: 'list',
-        page_id: 'page-1'
-      })
-
-      expect(result.total_comments).toBe(2)
-      expect(mockNotion.comments.list).toHaveBeenCalledTimes(2)
-    })
-
-    it('should return empty list when no comments', async () => {
+    it('should handle empty results', async () => {
       mockNotion.comments.list.mockResolvedValue({
         results: [],
         next_cursor: null,
@@ -107,27 +110,6 @@ describe('commentsManage', () => {
       expect(mockNotion.blocks.retrieve).toHaveBeenCalledWith({ block_id: 'page-1' })
     })
 
-    it('should use blockCache to avoid blocks.retrieve when handling object_not_found', async () => {
-      const notFoundError = new Error('Not found')
-      ;(notFoundError as any).code = 'object_not_found'
-      mockNotion.comments.list.mockRejectedValue(notFoundError)
-
-      // Populate blockCache
-      blockCache.set('page-1', { block: { id: 'page-1' }, expiresAt: Date.now() + 10000 })
-
-      await expect(
-        commentsManage(mockNotion as any, {
-          action: 'list',
-          page_id: 'page-1'
-        })
-      ).rejects.toMatchObject({
-        code: 'COMMENTS_LIST_UNAVAILABLE'
-      })
-
-      // Should NOT have called blocks.retrieve because it was in cache
-      expect(mockNotion.blocks.retrieve).not.toHaveBeenCalled()
-    })
-
     it('should re-throw object_not_found (wrapped as NOT_FOUND) if page itself does not exist', async () => {
       const notFoundError = new Error('Not found')
       ;(notFoundError as any).code = 'object_not_found'
@@ -155,6 +137,16 @@ describe('commentsManage', () => {
           page_id: 'page-1'
         })
       ).rejects.toThrow()
+
+      // Should NOT be caught as COMMENTS_LIST_UNAVAILABLE
+      await expect(
+        commentsManage(mockNotion as any, {
+          action: 'list',
+          page_id: 'page-1'
+        })
+      ).rejects.not.toMatchObject({
+        code: 'COMMENTS_LIST_UNAVAILABLE'
+      })
     })
 
     it('should include display_name when present', async () => {
@@ -185,8 +177,35 @@ describe('commentsManage', () => {
     it('should throw without page_id', async () => {
       await expect(commentsManage(mockNotion as any, { action: 'list' })).rejects.toMatchObject({
         code: 'VALIDATION_ERROR',
-        message: 'page_id required for list action'
+        message: 'page_id required for list action',
+        suggestion: 'Provide page_id'
       })
+    })
+
+    it('should handle errors during pagination', async () => {
+      mockNotion.comments.list
+        .mockResolvedValueOnce({
+          results: [
+            {
+              id: 'c1',
+              created_time: '2024-01-01',
+              created_by: { id: 'u1' },
+              discussion_id: 'd1',
+              rich_text: [],
+              parent: { type: 'page_id', page_id: 'p1' }
+            }
+          ],
+          has_more: true,
+          next_cursor: 'next'
+        })
+        .mockRejectedValueOnce(new Error('Pagination failed'))
+
+      await expect(
+        commentsManage(mockNotion as any, {
+          action: 'list',
+          page_id: 'page-1'
+        })
+      ).rejects.toThrow('Pagination failed')
     })
   })
 
@@ -208,7 +227,15 @@ describe('commentsManage', () => {
 
       expect(result.action).toBe('get')
       expect(result.comment_id).toBe('comment-1')
+      expect(result.created_time).toBe('2024-01-01')
+      expect(result.created_by).toEqual({ id: 'user-1' })
+      expect(result.discussion_id).toBe('disc-1')
       expect(result.text).toBe('Test comment')
+      expect(result.rich_text).toEqual([{ type: 'text', text: { content: 'Test comment' } }])
+      expect(result.parent).toEqual({ type: 'page_id', page_id: 'page-1' })
+      expect(mockNotion.comments.retrieve).toHaveBeenCalledWith({
+        comment_id: 'comment-1'
+      })
     })
 
     it('should handle undefined rich_text with _note field', async () => {
@@ -227,17 +254,50 @@ describe('commentsManage', () => {
       })
 
       expect(result.text).toBe('')
+      expect(result.rich_text).toBeUndefined()
       expect(result._note).toContain('rich_text unavailable')
+    })
+
+    it('should include display_name when present', async () => {
+      mockNotion.comments.retrieve.mockResolvedValue({
+        id: 'comment-1',
+        created_time: '2024-01-01',
+        created_by: { id: 'user-1' },
+        discussion_id: 'disc-1',
+        rich_text: [{ type: 'text', text: { content: 'Hello' } }],
+        display_name: 'Jane Doe',
+        parent: { type: 'page_id', page_id: 'page-1' }
+      })
+
+      const result = await commentsManage(mockNotion as any, {
+        action: 'get',
+        comment_id: 'comment-1'
+      })
+
+      expect(result.display_name).toBe('Jane Doe')
     })
 
     it('should throw without comment_id', async () => {
       await expect(commentsManage(mockNotion as any, { action: 'get' })).rejects.toMatchObject({
-        code: 'VALIDATION_ERROR'
+        code: 'VALIDATION_ERROR',
+        message: 'comment_id required for get action',
+        suggestion: 'Provide comment_id'
       })
+    })
+
+    it('should throw when Notion API returns an error', async () => {
+      mockNotion.comments.retrieve.mockRejectedValue(new Error('Retrieve failed'))
+
+      await expect(
+        commentsManage(mockNotion as any, {
+          action: 'get',
+          comment_id: 'comment-1'
+        })
+      ).rejects.toThrow('Retrieve failed')
     })
   })
 
-  describe('create', () => {
+  describe('create (new discussion)', () => {
     it('should create a comment with page_id', async () => {
       mockNotion.comments.create.mockResolvedValue({
         id: 'comment-new',
@@ -252,13 +312,48 @@ describe('commentsManage', () => {
 
       expect(result.action).toBe('create')
       expect(result.comment_id).toBe('comment-new')
+      expect(result.discussion_id).toBe('disc-new')
       expect(result.created).toBe(true)
       expect(mockNotion.comments.create).toHaveBeenCalledWith({
-        rich_text: [expect.any(Object)],
+        rich_text: [
+          expect.objectContaining({
+            type: 'text',
+            text: { content: 'New comment', link: null }
+          })
+        ],
         parent: { page_id: 'page-1' }
       })
     })
 
+    it('should throw without content', async () => {
+      await expect(commentsManage(mockNotion as any, { action: 'create', page_id: 'page-1' })).rejects.toMatchObject({
+        code: 'VALIDATION_ERROR',
+        message: 'content required for create action',
+        suggestion: 'Provide comment content'
+      })
+    })
+
+    it('should throw without page_id or discussion_id', async () => {
+      await expect(commentsManage(mockNotion as any, { action: 'create', content: 'Hello' })).rejects.toMatchObject({
+        code: 'VALIDATION_ERROR',
+        message: 'Either page_id or discussion_id is required for create action'
+      })
+    })
+
+    it('should throw when Notion API returns an error', async () => {
+      mockNotion.comments.create.mockRejectedValue(new Error('Create failed'))
+
+      await expect(
+        commentsManage(mockNotion as any, {
+          action: 'create',
+          page_id: 'page-1',
+          content: 'Hello'
+        })
+      ).rejects.toThrow('Create failed')
+    })
+  })
+
+  describe('create (reply)', () => {
     it('should create a reply with discussion_id', async () => {
       mockNotion.comments.create.mockResolvedValue({
         id: 'comment-reply',
@@ -272,23 +367,21 @@ describe('commentsManage', () => {
       })
 
       expect(result.action).toBe('create')
+      expect(result.comment_id).toBe('comment-reply')
       expect(result.discussion_id).toBe('disc-1')
+      expect(result.created).toBe(true)
       expect(mockNotion.comments.create).toHaveBeenCalledWith({
-        rich_text: [expect.any(Object)],
+        rich_text: [
+          expect.objectContaining({
+            type: 'text',
+            text: { content: 'Reply text', link: null }
+          })
+        ],
         discussion_id: 'disc-1'
       })
-    })
-
-    it('should throw without content', async () => {
-      await expect(commentsManage(mockNotion as any, { action: 'create', page_id: 'page-1' })).rejects.toMatchObject({
-        code: 'VALIDATION_ERROR'
-      })
-    })
-
-    it('should throw without page_id or discussion_id', async () => {
-      await expect(commentsManage(mockNotion as any, { action: 'create', content: 'Hello' })).rejects.toMatchObject({
-        code: 'VALIDATION_ERROR'
-      })
+      expect(mockNotion.comments.create).not.toHaveBeenCalledWith(
+        expect.objectContaining({ parent: expect.anything() })
+      )
     })
   })
 

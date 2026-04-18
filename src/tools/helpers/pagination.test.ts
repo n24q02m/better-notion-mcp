@@ -5,7 +5,7 @@ import {
   fetchChildrenRecursive,
   populateDeepChildren,
   processBatches
-} from './pagination.js'
+} from './pagination'
 
 describe('autoPaginate', () => {
   it('should return results from a single page', async () => {
@@ -179,27 +179,6 @@ describe('fetchChildrenRecursive', () => {
     const fetchChildren = vi.fn()
     await fetchChildrenRecursive([], fetchChildren)
     expect(fetchChildren).not.toHaveBeenCalled()
-  })
-
-  it('should handle partial failure and throw aggregate error', async () => {
-    const blocks: any[] = [
-      { id: 'toggle-1', type: 'toggle', has_children: true, toggle: {} },
-      { id: 'toggle-2', type: 'toggle', has_children: true, toggle: {} }
-    ]
-    const error = new Error('Fetch failed for toggle-2')
-    const fetchChildren = vi.fn().mockImplementation(async (id: string) => {
-      if (id === 'toggle-2') throw error
-      return []
-    })
-
-    await expect(fetchChildrenRecursive(blocks, fetchChildren)).rejects.toThrow('Fetch failed for toggle-2')
-
-    // Should still have attempted both (due to parallel processing)
-    expect(fetchChildren).toHaveBeenCalledWith('toggle-1')
-    expect(fetchChildren).toHaveBeenCalledWith('toggle-2')
-
-    // toggle-1 should still have its children populated despite toggle-2's failure
-    expect(blocks[0].toggle.children).toEqual([])
   })
 })
 

@@ -34,13 +34,7 @@ export async function autoPaginate<T>(
 
   do {
     const response = await fetchFn(cursor || undefined, pageSize)
-    const results = response.results
-    if (results) {
-      const resultsLen = results.length
-      for (let i = 0; i < resultsLen; i++) {
-        allResults.push(results[i])
-      }
-    }
+    allResults.push(...response.results)
     cursor = response.next_cursor
     pageCount++
 
@@ -103,9 +97,8 @@ export class ConcurrencyQueue {
       // Notify all waiting tasks to wake up and see the error
       const waiters = this.queue
       this.queue = []
-      const waitersLen = waiters.length
-      for (let i = 0; i < waitersLen; i++) {
-        waiters[i]()
+      for (const resolve of waiters) {
+        resolve()
       }
       throw error
     } finally {
@@ -128,15 +121,14 @@ export async function fetchChildrenRecursive(
   depth = 0,
   queue?: ConcurrencyQueue
 ): Promise<void> {
-  if (depth >= MAX_DEPTH || !blocks || blocks.length === 0) return
+  if (depth >= MAX_DEPTH) return
 
   const fetchAndRecurse = async (block: any) => {
     const children = queue ? await queue.run(() => fetchChildren(block.id)) : await fetchChildren(block.id)
 
     // Attach children to the correct property based on block type
-    const blockType = block.type
-    if (blockType && block[blockType]) {
-      block[blockType].children = children
+    if (block[block.type]) {
+      block[block.type].children = children
     }
 
     // Recurse into children
@@ -144,28 +136,15 @@ export async function fetchChildrenRecursive(
   }
 
   const promises: Promise<void>[] = []
-  const blocksLen = blocks.length
-  for (let i = 0; i < blocksLen; i++) {
+  for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]
-    if (block?.has_children && BLOCKS_NEEDING_CHILDREN.has(block.type)) {
+    if (block.has_children && BLOCKS_NEEDING_CHILDREN.has(block.type)) {
       promises.push(fetchAndRecurse(block))
     }
   }
 
   if (promises.length > 0) {
-    const results = await Promise.allSettled(promises)
-    let firstError: any = null
-    const resultsLen = results.length
-    for (let i = 0; i < resultsLen; i++) {
-      const res = results[i]
-      if (res.status === 'rejected') {
-        firstError = firstError || res.reason
-      }
-    }
-
-    if (firstError) {
-      throw firstError
-    }
+    await Promise.all(promises)
   }
 }
 
@@ -181,9 +160,8 @@ export async function processBatches<T, R>(
   const totalConcurrency = batchSize * concurrency
 
   const queue = new ConcurrencyQueue(totalConcurrency)
-  const itemsLen = items.length
-  const promises = new Array(itemsLen)
-  for (let i = 0; i < itemsLen; i++) {
+  const promises = new Array(items.length)
+  for (let i = 0; i < items.length; i++) {
     const item = items[i]
     promises[i] = queue.run(() => processFn(item))
   }
