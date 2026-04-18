@@ -9,7 +9,7 @@ vi.mock('./composite/content.js', () => ({ contentConvert: vi.fn() }))
 vi.mock('./composite/users.js', () => ({ users: vi.fn() }))
 vi.mock('./composite/workspace.js', () => ({ workspace: vi.fn() }))
 vi.mock('./composite/file-uploads.js', () => ({ fileUploads: vi.fn() }))
-vi.mock('./composite/setup.js', () => ({ setup: vi.fn() }))
+vi.mock('./composite/config.js', () => ({ config: vi.fn() }))
 
 // Mock credential state (tests run with credentials already configured)
 vi.mock('../credential-state.js', () => ({
@@ -26,11 +26,11 @@ vi.mock('node:fs/promises', () => ({
 import { readFile } from 'node:fs/promises'
 import { blocks } from './composite/blocks.js'
 import { commentsManage } from './composite/comments.js'
+import { config } from './composite/config.js'
 import { contentConvert } from './composite/content.js'
 import { databases } from './composite/databases.js'
 import { fileUploads } from './composite/file-uploads.js'
 import { pages } from './composite/pages.js'
-import { setup } from './composite/setup.js'
 import { users } from './composite/users.js'
 import { workspace } from './composite/workspace.js'
 import { NotionMCPError } from './helpers/errors.js'
@@ -46,7 +46,7 @@ const EXPECTED_TOOL_NAMES = [
   'content_convert',
   'file_uploads',
   'help',
-  'setup'
+  'config'
 ]
 
 const EXPECTED_RESOURCE_URIS = [
@@ -404,20 +404,20 @@ describe('registerTools', () => {
       expect(result.content[0].text).toBe(JSON.stringify(mockResult, null, 2))
     })
 
-    it('should route setup tool without notion client', async () => {
+    it('should route config tool without notion client', async () => {
       const handler = server.getHandler(3)
       const mockResult = { action: 'status', state: 'configured', has_token: true }
-      vi.mocked(setup).mockResolvedValue(mockResult)
+      vi.mocked(config).mockResolvedValue(mockResult)
 
       const result = await handler({
         params: {
-          name: 'setup',
+          name: 'config',
           arguments: { action: 'status' }
         }
       })
 
-      // setup is called without notion client
-      expect(setup).toHaveBeenCalledWith({ action: 'status' })
+      // config is called without notion client
+      expect(config).toHaveBeenCalledWith({ action: 'status' })
       expect(result.content[0].text).toBe(JSON.stringify(mockResult, null, 2))
     })
 
