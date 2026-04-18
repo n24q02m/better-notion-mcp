@@ -248,14 +248,14 @@ describe('aiReadableMessage', () => {
     const error = new NotionMCPError('Page not found', 'NOT_FOUND', 'Check the ID')
     const msg = aiReadableMessage(error)
 
-    expect(msg).toBe('Error: Page not found\n\nSuggestion: Check the ID')
+    expect(msg).toBe('Error [NOT_FOUND]: Page not found\n\nSuggestion: Check the ID')
   })
 
   it('should format error without suggestion', () => {
     const error = new NotionMCPError('Something failed', 'UNKNOWN')
     const msg = aiReadableMessage(error)
 
-    expect(msg).toBe('Error: Something failed')
+    expect(msg).toBe('Error [UNKNOWN]: Something failed')
     expect(msg).not.toContain('Suggestion')
   })
 
@@ -263,7 +263,7 @@ describe('aiReadableMessage', () => {
     const error = new NotionMCPError('Bad input', 'VALIDATION_ERROR', undefined, { field: 'title' })
     const msg = aiReadableMessage(error)
 
-    expect(msg).toContain('Error: Bad input')
+    expect(msg).toContain('Error [VALIDATION_ERROR]: Bad input')
     expect(msg).not.toContain('Suggestion')
     expect(msg).toContain('Details:')
     expect(msg).toContain('"field": "title"')
@@ -273,7 +273,7 @@ describe('aiReadableMessage', () => {
     const error = new NotionMCPError('Bad input', 'VALIDATION_ERROR', 'Fix it', { field: 'title' })
     const msg = aiReadableMessage(error)
 
-    expect(msg).toContain('Error: Bad input')
+    expect(msg).toContain('Error [VALIDATION_ERROR]: Bad input')
     expect(msg).toContain('Suggestion: Fix it')
     expect(msg).toContain('Details:')
   })
