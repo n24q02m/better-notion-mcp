@@ -52,7 +52,7 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
           }
         } catch (error: any) {
           if (error.code === 'object_not_found') {
-            // Distinguish between a real 404 and the known Notion API bug (OAuth 404)
+            // Distinguish between a real 404 and the known Notion API limitation (OAuth 404)
             // by checking if the block/page actually exists.
             let blockExists = false
 
@@ -73,7 +73,7 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
             }
 
             if (blockExists) {
-              // If retrieve succeeds, it's the known API bug
+              // If retrieve succeeds, it's the known API limitation
               throw new NotionMCPError(
                 'Cannot list comments for this page',
                 'COMMENTS_LIST_UNAVAILABLE',

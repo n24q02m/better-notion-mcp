@@ -2,9 +2,9 @@
  * Full/Real Notion MCP Tests
  *
  * Two test groups:
- * 1. HTTP Transport — Tests against the production HTTP server (OAuth discovery,
+ * 1. HTTP Transport --- Tests against the production HTTP server (OAuth discovery,
  *    DCR registration, health check, MCP auth enforcement). No NOTION_TOKEN needed.
- * 2. Stdio + NOTION_TOKEN — Tests all 9 tools with real Notion API calls.
+ * 2. Stdio + NOTION_TOKEN --- Tests all 9 tools with real Notion API calls.
  *    Skipped when NOTION_TOKEN is not set.
  *
  * Run: bun run test:full
@@ -55,16 +55,16 @@ function safeParse(text: string): any {
   }
 }
 
-/** Extract ID from Notion response — handles various *_id fields */
+/** Extract ID from Notion response --- handles various *_id fields */
 function extractId(parsed: any): string | undefined {
   return parsed.page_id ?? parsed.database_id ?? parsed.block_id ?? parsed.comment_id ?? parsed.id
 }
 
 // ---------------------------------------------------------------------------
-// Group 1: HTTP Transport — Production Server Endpoints
+// Group 1: HTTP Transport --- Production Server Endpoints
 // ---------------------------------------------------------------------------
 
-describe('HTTP Transport — Production Server', () => {
+describe('HTTP Transport --- Production Server', () => {
   describe('Health endpoint', () => {
     it('should return status ok with remote mode', async () => {
       const res = await fetch(`${PUBLIC_URL}/health`)
@@ -76,7 +76,7 @@ describe('HTTP Transport — Production Server', () => {
     })
   })
 
-  describe('OAuth discovery — /.well-known/oauth-authorization-server', () => {
+  describe('OAuth discovery --- /.well-known/oauth-authorization-server', () => {
     let metadata: any
 
     beforeAll(async () => {
@@ -250,7 +250,7 @@ describe('HTTP Transport — Production Server', () => {
       const res = await fetch(`${PUBLIC_URL}/mcp`, {
         headers: { Authorization: 'Bearer fake-token' }
       })
-      // 400 (invalid session) or 401 (invalid token) — both acceptable
+      // 400 (invalid session) or 401 (invalid token) --- both acceptable
       expect([400, 401]).toContain(res.status)
     })
 
@@ -291,7 +291,7 @@ describe('HTTP Transport — Production Server', () => {
           code_verifier: 'test-verifier'
         }).toString()
       })
-      // Should fail — invalid code
+      // Should fail --- invalid code
       expect(res.status).toBeGreaterThanOrEqual(400)
     })
   })
@@ -305,10 +305,10 @@ describe('HTTP Transport — Production Server', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Group 2: Stdio + NOTION_TOKEN — Real Notion API Tests
+// Group 2: Stdio + NOTION_TOKEN --- Real Notion API Tests
 // ---------------------------------------------------------------------------
 
-describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () => {
+describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN --- Real Notion API', () => {
   let client: Client
   let transport: StdioClientTransport
 
@@ -379,7 +379,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
   // -- Users --
 
   describe('users', () => {
-    it('me — should return bot user info', async () => {
+    it('me --- should return bot user info', async () => {
       const result = await client.callTool({
         name: 'users',
         arguments: { action: 'me' }
@@ -392,13 +392,13 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       botUserId = parsed.id
     })
 
-    it('get — should return user by ID (or permission error)', async () => {
+    it('get --- should return user by ID (or permission error)', async () => {
       if (!botUserId) return // skip if users.me didn't populate this
       const result = await client.callTool({
         name: 'users',
         arguments: { action: 'get', user_id: botUserId }
       })
-      // Integration tokens may not have access to user details — both OK
+      // Integration tokens may not have access to user details --- both OK
       if (!result.isError) {
         const text = extractText(result)
         const parsed = safeParse(text)
@@ -409,13 +409,13 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       }
     })
 
-    it('list — should return workspace users (or permission error)', async () => {
+    it('list - should return workspace users (or permission error)', async () => {
       const result = await client.callTool({
         name: 'users',
         arguments: { action: 'list' }
       })
       const text = extractText(result)
-      // May fail with permission error for non-admin integrations — both OK
+      // May fail with permission error for non-admin integrations --- both OK
       if (!result.isError) {
         const parsed = safeParse(text)
         expect(parsed.users).toBeDefined()
@@ -427,7 +427,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
   // -- Workspace --
 
   describe('workspace', () => {
-    it('info — should return workspace details', async () => {
+    it('info --- should return workspace details', async () => {
       const result = await client.callTool({
         name: 'workspace',
         arguments: { action: 'info' }
@@ -438,7 +438,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       expect(parsed.bot).toBeDefined()
     })
 
-    it('search — should return results', async () => {
+    it('search --- should return results', async () => {
       const result = await client.callTool({
         name: 'workspace',
         arguments: { action: 'search', limit: 3 }
@@ -453,7 +453,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
   // -- Pages --
 
   describe('pages', () => {
-    it('create — should create a test parent page', async () => {
+    it('create --- should create a test parent page', async () => {
       // Search for a page to use as parent
       const searchResult = await client.callTool({
         name: 'workspace',
@@ -463,7 +463,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       const searchParsed = safeParse(searchText)
       const parentId = searchParsed.results?.[0]?.id
 
-      // If no accessible page, skip — integration needs at least one shared page
+      // If no accessible page, skip --- integration needs at least one shared page
       if (!parentId) {
         console.warn('No accessible page found. Skipping page tests. Share a page with the integration.')
         return
@@ -486,7 +486,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       expect(testParentPageId).toBeTruthy()
     }, 60_000)
 
-    it('get — should retrieve the created page', async () => {
+    it('get --- should retrieve the created page', async () => {
       if (!testParentPageId) return
       const result = await client.callTool({
         name: 'pages',
@@ -497,7 +497,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       expect(text).toContain('MCP Full Test Parent')
     })
 
-    it('update — should update page title', async () => {
+    it('update --- should update page title', async () => {
       if (!testParentPageId) return
       const result = await client.callTool({
         name: 'pages',
@@ -510,7 +510,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       expect(result.isError).toBeFalsy()
     })
 
-    it('create child — should create a child page', async () => {
+    it('create child --- should create a child page', async () => {
       if (!testParentPageId) return
       const result = await client.callTool({
         name: 'pages',
@@ -528,7 +528,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       createdPageIds.push(testPageId)
     }, 30_000)
 
-    it('duplicate — should duplicate the child page', async () => {
+    it('duplicate --- should duplicate the child page', async () => {
       if (!testPageId) return
       const result = await client.callTool({
         name: 'pages',
@@ -544,7 +544,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       if (parsed.id) createdPageIds.push(parsed.id)
     }, 30_000)
 
-    it('archive — should archive the child page', async () => {
+    it('archive --- should archive the child page', async () => {
       if (!testPageId) return
       const result = await client.callTool({
         name: 'pages',
@@ -553,7 +553,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       expect(result.isError).toBeFalsy()
     })
 
-    it('restore — should restore the archived page', async () => {
+    it('restore --- should restore the archived page', async () => {
       if (!testPageId) return
       const result = await client.callTool({
         name: 'pages',
@@ -562,7 +562,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       expect(result.isError).toBeFalsy()
     })
 
-    it('move — should move child page (re-parent)', async () => {
+    it('move --- should move child page (re-parent)', async () => {
       if (!testPageId || !testParentPageId) return
       const result = await client.callTool({
         name: 'pages',
@@ -579,7 +579,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
   // -- Blocks --
 
   describe('blocks', () => {
-    it('append — should append content to the child page', async () => {
+    it('append --- should append content to the child page', async () => {
       if (!testPageId) return
       const result = await client.callTool({
         name: 'blocks',
@@ -599,7 +599,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       expect(parsed.results ?? parsed.appended_count).toBeDefined()
     })
 
-    it('children — should list child blocks', async () => {
+    it('children --- should list child blocks', async () => {
       if (!testPageId) return
       const result = await client.callTool({
         name: 'blocks',
@@ -618,7 +618,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       }
     })
 
-    it('get — should retrieve a single block', async () => {
+    it('get --- should retrieve a single block', async () => {
       if (!testBlockId) return
       const result = await client.callTool({
         name: 'blocks',
@@ -630,7 +630,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       expect(extractId(parsed) ?? parsed.id).toBe(testBlockId)
     })
 
-    it('update — should update a text block', async () => {
+    it('update --- should update a text block', async () => {
       if (!testBlockId) return
       const result = await client.callTool({
         name: 'blocks',
@@ -640,14 +640,14 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
           content: 'Updated block content via test'
         }
       })
-      // May fail if the block type is not updatable — both OK
+      // May fail if the block type is not updatable --- both OK
       if (!result.isError) {
         const text = extractText(result)
         expect(text).toBeTruthy()
       }
     })
 
-    it('delete — should delete a block', async () => {
+    it('delete --- should delete a block', async () => {
       if (!testBlockId) return
       // Append a throwaway block first, then delete it
       const appendResult = await client.callTool({
@@ -676,7 +676,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
   // -- Databases --
 
   describe('databases', () => {
-    it('create — should create a test database', async () => {
+    it('create --- should create a test database', async () => {
       if (!testParentPageId) return
       const result = await client.callTool({
         name: 'databases',
@@ -716,7 +716,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       expect(testDatabaseId).toBeTruthy()
     }, 30_000)
 
-    it('get — should retrieve the database schema', async () => {
+    it('get --- should retrieve the database schema', async () => {
       if (!testDatabaseId) return
       const result = await client.callTool({
         name: 'databases',
@@ -731,7 +731,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       expect(parsed.properties ?? parsed.schema).toBeDefined()
     })
 
-    it('create_page — should add rows to the database', async () => {
+    it('create_page --- should add rows to the database', async () => {
       if (!testDatabaseId) return
       const result = await client.callTool({
         name: 'databases',
@@ -758,7 +758,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       }
     }, 30_000)
 
-    it('query — should query database rows', async () => {
+    it('query --- should query database rows', async () => {
       if (!testDatabaseId) return
       const result = await client.callTool({
         name: 'databases',
@@ -775,7 +775,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       expect(parsed.results.length).toBeGreaterThanOrEqual(1)
     })
 
-    it('query with search — should filter by text', async () => {
+    it('query with search --- should filter by text', async () => {
       if (!testDatabaseId) return
       const result = await client.callTool({
         name: 'databases',
@@ -791,7 +791,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       expect(parsed.results).toBeDefined()
     })
 
-    it('update_page — should update a database row', async () => {
+    it('update_page --- should update a database row', async () => {
       if (!testDatabaseId) return
       // Query to get a page ID
       const queryResult = await client.callTool({
@@ -815,7 +815,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       expect(result.isError).toBeFalsy()
     })
 
-    it('delete_page — should archive a database row', async () => {
+    it('delete_page --- should archive a database row', async () => {
       if (!testDatabaseId) return
       // Query to get a page ID
       const queryResult = await client.callTool({
@@ -838,7 +838,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       expect(result.isError).toBeFalsy()
     })
 
-    it('update_database — should update database title', async () => {
+    it('update_database --- should update database title', async () => {
       if (!testDatabaseId) return
       const result = await client.callTool({
         name: 'databases',
@@ -848,7 +848,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
           title: '[TEST] Full Test Database (Updated)'
         }
       })
-      // update_database may not be supported on all plans — both OK
+      // update_database may not be supported on all plans --- both OK
       if (!result.isError) {
         const text = extractText(result)
         expect(text).toBeTruthy()
@@ -859,7 +859,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
   // -- Comments --
 
   describe('comments', () => {
-    it('create — should add a comment to a page', async () => {
+    it('create --- should add a comment to a page', async () => {
       if (!testPageId) return
       const result = await client.callTool({
         name: 'comments',
@@ -879,13 +879,13 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       expect(extractId(parsed)).toBeTruthy()
     })
 
-    it('list — should list comments on the page', async () => {
+    it('list - should list comments on the page', async () => {
       if (!testPageId) return
       const result = await client.callTool({
         name: 'comments',
         arguments: { action: 'list', page_id: testPageId }
       })
-      // Known Notion API bug: comments.list returns 404 with OAuth tokens on 2025-09-03
+      // Known Notion API limitation: comments.list returns 404 with OAuth tokens on 2025-09-03
       // With integration tokens it should work, but with OAuth tokens we expect
       // the improved tool logic to catch it as COMMENTS_LIST_UNAVAILABLE.
       if (result.isError) {
@@ -902,7 +902,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
   // -- Content Convert --
 
   describe('content_convert', () => {
-    it('markdown-to-blocks — should convert markdown to Notion blocks', async () => {
+    it('markdown-to-blocks --- should convert markdown to Notion blocks', async () => {
       const result = await client.callTool({
         name: 'content_convert',
         arguments: {
@@ -919,7 +919,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       expect(Array.isArray(parsed.blocks)).toBe(true)
     })
 
-    it('blocks-to-markdown — should convert Notion blocks to markdown', async () => {
+    it('blocks-to-markdown --- should convert Notion blocks to markdown', async () => {
       const blocks = [
         {
           type: 'heading_1',
@@ -967,7 +967,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
 
   // -- Pages: get_property --
 
-  describe('pages — get_property', () => {
+  describe('pages --- get_property', () => {
     it('should retrieve a property value from a database row', async () => {
       if (!testDatabaseId) return
       // Query to get a row
@@ -998,7 +998,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
   // -- File Uploads --
 
   describe('file_uploads', () => {
-    it('list — should list file uploads (may be empty)', async () => {
+    it('list - should list file uploads (may be empty)', async () => {
       const result = await client.callTool({
         name: 'file_uploads',
         arguments: { action: 'list', limit: 5 }
@@ -1008,7 +1008,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
       expect(text).toBeTruthy() // At least some response
     })
 
-    it('create + send + complete — should upload a small text file', async () => {
+    it('create + send + complete --- should upload a small text file', async () => {
       // Create upload
       const createResult = await client.callTool({
         name: 'file_uploads',
@@ -1053,7 +1053,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN — Real Notion API', () =>
 
   // -- Workspace search with filter --
 
-  describe('workspace — advanced search', () => {
+  describe('workspace --- advanced search', () => {
     it('search with page filter', async () => {
       const result = await client.callTool({
         name: 'workspace',
