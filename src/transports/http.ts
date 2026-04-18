@@ -91,6 +91,10 @@ export async function startHttp(): Promise<void> {
           const sub = String((tokens as { owner_user_id?: string }).owner_user_id ?? 'default')
           if (accessToken) tokenStore.save(sub, accessToken)
         }
+      },
+      authScope: async (claims, next) => {
+        const sub = typeof claims.sub === 'string' ? claims.sub : 'default'
+        await subjectContext.run({ sub }, next)
       }
     })
     console.error(`[${SERVER_NAME}] remote-oauth mode on http://${handle.host}:${handle.port}/mcp`)
