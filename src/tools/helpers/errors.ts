@@ -198,6 +198,11 @@ export function findClosestMatch(input: string, validOptions: string[]): string 
   let bestMatch: string | null = null
   let bestScore = 0
 
+  // Pre-calculate input bigrams outside the loop to avoid redundant allocations
+  // Bolt optimization: moved from inside the validOptions loop
+  const inputBigrams = new Set<string>()
+  for (let i = 0; i < lower.length - 1; i++) inputBigrams.add(lower.slice(i, i + 2))
+
   for (const option of validOptions) {
     const optionLower = option.toLowerCase()
     // Check prefix match first
@@ -205,8 +210,6 @@ export function findClosestMatch(input: string, validOptions: string[]): string 
       return option
     }
     // Simple bigram similarity
-    const inputBigrams = new Set<string>()
-    for (let i = 0; i < lower.length - 1; i++) inputBigrams.add(lower.slice(i, i + 2))
     const optionBigrams = new Set<string>()
     for (let i = 0; i < optionLower.length - 1; i++) optionBigrams.add(optionLower.slice(i, i + 2))
 
@@ -240,6 +243,45 @@ export function aiReadableMessage(error: NotionMCPError): string {
 
   return message
 }
+
+/**
+ * Suggest fixes based on error
+ */
+// ⚡ Bolt: Cache suggestion arrays to avoid O(n) switch statements and
+// repeated array allocation/pushes on every error handled.
+const ERROR_SUGGESTIONS_MAP: Record<string, string[]> = {
+  UNAUTHORIZED: [
+    'Check that NOTION_TOKEN is set in your environment',
+    'Verify token at https://www.notion.so/my-integrations',
+    'Create a new integration token if needed'
+  ],
+  RESTRICTED_RESOURCE: [
+    'Open the page/database in Notion',
+    'Click "..." menu → Add connections → Select your integration',
+    'Grant access to parent pages if needed'
+  ],
+  NOT_FOUND: [
+    'Verify the page/database ID is correct',
+    'Check that the resource was not deleted',
+    'Ensure you have access permissions'
+  ],
+  VALIDATION_ERROR: [
+    'Check parameter types and formats',
+    'Review required vs optional parameters',
+    'Verify property names match database schema'
+  ],
+  RATE_LIMITED: [
+    'Reduce request frequency',
+    'Implement exponential backoff retry logic',
+    'Batch multiple operations together'
+  ]
+}
+
+const DEFAULT_SUGGESTIONS = [
+  'Check Notion API status at https://status.notion.so',
+  'Review request parameters',
+  'Try again in a few moments'
+]
 
 /**
  * Suggest fixes based on error
