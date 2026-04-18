@@ -26,19 +26,13 @@ describe('workspace', () => {
       const client = { ...mockNotion } as any
 
       // First call
-      const result1 = (await workspace(client, { action: 'info' })) as Extract<
-        WorkspaceResult,
-        { action: 'info' }
-      >
+      const result1 = (await workspace(client, { action: 'info' })) as Extract<WorkspaceResult, { action: 'info' }>
 
       expect(result1.bot.id).toBe('bot-1')
       expect(mockNotion.users.retrieve).toHaveBeenCalledTimes(1)
 
       // Second call (should be cached)
-      const result2 = (await workspace(client, { action: 'info' })) as Extract<
-        WorkspaceResult,
-        { action: 'info' }
-      >
+      const result2 = (await workspace(client, { action: 'info' })) as Extract<WorkspaceResult, { action: 'info' }>
 
       expect(result2.bot.id).toBe('bot-1')
       expect(mockNotion.users.retrieve).toHaveBeenCalledTimes(1)

@@ -7,7 +7,6 @@ import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { autoPaginate } from '../helpers/pagination.js'
 import * as RichText from '../helpers/richtext.js'
-import { blockCache } from './blocks.js'
 
 export interface CommentsManageInput {
   page_id?: string
@@ -55,20 +54,13 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
             // Distinguish between a real 404 and the known Notion API bug (OAuth 404)
             // by checking if the block/page actually exists.
             let blockExists = false
-
-            // Optimized: check blockCache before calling API
-            const cached = blockCache.get(input.page_id)
-            if (cached && Date.now() < cached.expiresAt) {
+            try {
+              await notion.blocks.retrieve({ block_id: input.page_id })
               blockExists = true
-            } else {
-              try {
-                await notion.blocks.retrieve({ block_id: input.page_id })
-                blockExists = true
-              } catch (innerError: any) {
-                // If we get any error other than 404, we should probably know about it
-                if (innerError.code !== 'object_not_found') {
-                  throw innerError
-                }
+            } catch (innerError: any) {
+              // If we get any error other than 404, we should probably know about it
+              if (innerError.code !== 'object_not_found') {
+                throw innerError
               }
             }
 

@@ -8,10 +8,6 @@ import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate, populateDeepChildren } from '../helpers/pagination.js'
 
-// Cache for block metadata
-export const blockCache = new Map<string, { block: any; expiresAt: number }>()
-const BLOCK_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
-
 export interface BlocksInput {
   action: 'get' | 'children' | 'append' | 'update' | 'delete'
   block_id: string
@@ -32,25 +28,7 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
 
     switch (input.action) {
       case 'get': {
-        const cached = blockCache.get(input.block_id)
-        if (cached && Date.now() < cached.expiresAt) {
-          const block = cached.block
-          return {
-            action: 'get',
-            block_id: block.id,
-            type: block.type,
-            has_children: block.has_children,
-            archived: block.archived,
-            block
-          }
-        }
-
         const block: any = await notion.blocks.retrieve({ block_id: input.block_id })
-        blockCache.set(input.block_id, {
-          block,
-          expiresAt: Date.now() + BLOCK_CACHE_TTL
-        })
-
         return {
           action: 'get',
           block_id: block.id,
@@ -138,17 +116,18 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
         const updatePayload: any = {}
 
         // Build update based on block type
-        // Optimized: direct comparisons avoid array allocation and .includes()
         if (
-          blockType === 'paragraph' ||
-          blockType === 'heading_1' ||
-          blockType === 'heading_2' ||
-          blockType === 'heading_3' ||
-          blockType === 'bulleted_list_item' ||
-          blockType === 'numbered_list_item' ||
-          blockType === 'quote' ||
-          blockType === 'to_do' ||
-          blockType === 'code'
+          [
+            'paragraph',
+            'heading_1',
+            'heading_2',
+            'heading_3',
+            'bulleted_list_item',
+            'numbered_list_item',
+            'quote',
+            'to_do',
+            'code'
+          ].includes(blockType)
         ) {
           if (blockType === 'to_do') {
             updatePayload.to_do = {
@@ -178,9 +157,6 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
           ...updatePayload
         } as any)
 
-        // Invalidate cache
-        blockCache.delete(input.block_id)
-
         return {
           action: 'update',
           block_id: input.block_id,
@@ -191,10 +167,6 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
 
       case 'delete': {
         await notion.blocks.delete({ block_id: input.block_id })
-
-        // Invalidate cache
-        blockCache.delete(input.block_id)
-
         return {
           action: 'delete',
           block_id: input.block_id,

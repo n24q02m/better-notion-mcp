@@ -12,6 +12,7 @@ import {
   getState,
   resetState,
   resolveCredentialState,
+  setState,
   triggerRelaySetup
 } from './credential-state.js'
 
@@ -132,20 +133,16 @@ describe('credential-state', () => {
     })
 
     it('returns immediately if already setup_in_progress', async () => {
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
-      await triggerRelaySetup()
-      vi.mocked(createSession).mockClear()
-
+      setState('setup_in_progress')
       const url = await triggerRelaySetup()
       expect(createSession).not.toHaveBeenCalled()
-      expect(url).toBe('url')
+      expect(url).toBeNull() // _setupUrl is null initially
     })
   })
 
   describe('resetState', () => {
-    it('resets all state and calls deleteConfig', async () => {
-      process.env.NOTION_TOKEN = 'token'
-      await resolveCredentialState()
+    it('resets all state and calls deleteConfig', () => {
+      setState('configured')
       resetState()
       expect(getState()).toBe('awaiting_setup')
       expect(getNotionToken()).toBeNull()
@@ -208,10 +205,10 @@ describe('credential-state', () => {
       const originalPlatform = process.platform
       Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true })
 
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'https://example.com' } as any)
+      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
       await triggerRelaySetup()
 
-      expect(execFile).toHaveBeenCalledWith('open', ['https://example.com'], expect.any(Function))
+      expect(execFile).toHaveBeenCalledWith('open', ['url'], expect.any(Function))
       // Trigger callback for coverage
       const callback = vi.mocked(execFile).mock.calls[0][2] as (
         error: Error | null,
@@ -227,10 +224,10 @@ describe('credential-state', () => {
       const originalPlatform = process.platform
       Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
 
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'https://example.com' } as any)
+      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
       await triggerRelaySetup()
 
-      expect(execFile).toHaveBeenCalledWith('cmd', ['/c', 'start', '', 'https://example.com'], expect.any(Function))
+      expect(execFile).toHaveBeenCalledWith('cmd', ['/c', 'start', '', 'url'], expect.any(Function))
       // Trigger callback for coverage
       const callback = vi.mocked(execFile).mock.calls[0][2] as (
         error: Error | null,
@@ -246,10 +243,10 @@ describe('credential-state', () => {
       const originalPlatform = process.platform
       Object.defineProperty(process, 'platform', { value: 'linux', configurable: true })
 
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'https://example.com' } as any)
+      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
       await triggerRelaySetup()
 
-      expect(execFile).toHaveBeenCalledWith('xdg-open', ['https://example.com'], expect.any(Function))
+      expect(execFile).toHaveBeenCalledWith('xdg-open', ['url'], expect.any(Function))
       // Trigger callback for coverage
       const callback = vi.mocked(execFile).mock.calls[0][2] as (
         error: Error | null,

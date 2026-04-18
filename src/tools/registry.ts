@@ -18,18 +18,18 @@ import { getSetupUrl, getState, triggerRelaySetup } from '../credential-state.js
 // Import mega tools
 import { blocks } from './composite/blocks.js'
 import { commentsManage } from './composite/comments.js'
-import { config } from './composite/config.js'
 import { contentConvert } from './composite/content.js'
 import { databases } from './composite/databases.js'
 import { fileUploads } from './composite/file-uploads.js'
 import { pages } from './composite/pages.js'
+import { setup } from './composite/setup.js'
 import { users } from './composite/users.js'
 import { workspace } from './composite/workspace.js'
 import { aiReadableMessage, findClosestMatch, NotionMCPError } from './helpers/errors.js'
 import { wrapToolResult } from './helpers/security.js'
 
 // Tools that work without a Notion token
-const TOKEN_FREE_TOOLS = new Set(['help', 'content_convert', 'config'])
+const TOKEN_FREE_TOOLS = new Set(['help', 'content_convert', 'setup'])
 
 // Get docs directory path - works for both bundled CLI and unbundled code
 const __filename = fileURLToPath(import.meta.url)
@@ -377,11 +377,11 @@ const TOOLS = [
     }
   },
   {
-    name: 'config',
+    name: 'setup',
     description:
-      'Manage server configuration and credential state.\n\nActions:\n- status: current credential state, token source, setup URL\n- setup_start (-> force): trigger relay setup to configure Notion token via browser\n- setup_reset: clear credentials and config, return to awaiting_setup\n- setup_complete: re-check credentials after external config changes\n- set: update a runtime setting (notion has no mutable settings; returns info)\n- cache_clear: clear any cached state (no-op for notion)',
+      'Manage server credential setup and configuration.\n\nActions:\n- status: current credential state, token source, setup URL\n- start (-> force): trigger relay setup to configure Notion token via browser\n- reset: clear credentials and config, return to awaiting_setup\n- complete: re-check credentials after external config changes',
     annotations: {
-      title: 'Config',
+      title: 'Setup',
       readOnlyHint: false,
       destructiveHint: false,
       idempotentHint: false,
@@ -392,20 +392,12 @@ const TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['status', 'setup_start', 'setup_reset', 'setup_complete', 'set', 'cache_clear'],
+          enum: ['status', 'start', 'reset', 'complete'],
           description: 'Action to perform'
         },
         force: {
           type: 'boolean',
-          description: 'Force setup_start even if already configured'
-        },
-        key: {
-          type: 'string',
-          description: 'Setting key (for set action)'
-        },
-        value: {
-          type: 'string',
-          description: 'Setting value (for set action)'
+          description: 'Force start even if already configured (for start action)'
         }
       },
       required: ['action']
@@ -514,8 +506,8 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
         case 'content_convert':
           result = await contentConvert(args as any)
           break
-        case 'config':
-          result = await config(args as any)
+        case 'setup':
+          result = await setup(args as any)
           break
         case 'file_uploads':
           result = await fileUploads(notion, args as any)
@@ -531,16 +523,9 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
               `Valid tools: ${validToolNames.join(', ')}`
             )
           }
-          // Security: Use basename() to ensure we only look for files directly inside DOCS_DIR,
-          // preventing path traversal even if the allowlist validation is bypassed or modified.
           const docFile = `${basename(toolName)}.md`
-          const fullPath = join(DOCS_DIR, docFile)
-          if (!fullPath.startsWith(DOCS_DIR)) {
-            throw new NotionMCPError('Path traversal attempt detected', 'SECURITY_ERROR', 'Invalid tool_name')
-          }
-
           try {
-            const content = await readFile(fullPath, 'utf-8')
+            const content = await readFile(join(DOCS_DIR, docFile), 'utf-8')
             result = { tool: toolName, documentation: content }
           } catch {
             throw new NotionMCPError(`Documentation not found for: ${toolName}`, 'DOC_NOT_FOUND', 'Check tool_name')
