@@ -77,7 +77,7 @@ function resolveNotionToken(bearerToken: string, state: ProviderState): string |
   const bound = state.boundTokens.get(bearerToken)
   if (bound) return bound.notionAccessToken
 
-  // 3. One-shot pending bind — claim the first available unexpired slot.
+  // 3. One-shot pending bind - claim the first available unexpired slot.
   const now = Date.now()
   const claimIp = requestContext.getStore()?.ip
   for (const [clientId, pending] of state.pendingBinds) {
@@ -89,7 +89,7 @@ function resolveNotionToken(bearerToken: string, state: ProviderState): string |
     if (!pending.sourceIp || !claimIp || pending.sourceIp !== claimIp) {
       continue
     }
-    // Consume the pending bind — one-shot, no other token can claim this
+    // Consume the pending bind - one-shot, no other token can claim this
     state.pendingBinds.delete(clientId)
     state.boundTokens.set(bearerToken, pending.notionToken)
     return pending.notionToken.notionAccessToken
