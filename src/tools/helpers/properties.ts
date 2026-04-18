@@ -21,20 +21,8 @@ function toRelation(value: any): { relation: { id: string }[] } {
     if (value.startsWith('[')) {
       try {
         const parsed = JSON.parse(value)
-        if (Array.isArray(parsed)) {
-          let allStrings = true
-          for (let j = 0; j < parsed.length; j++) {
-            if (typeof parsed[j] !== 'string') {
-              allStrings = false
-              break
-            }
-          }
-          if (allStrings) {
-            const len = parsed.length
-            const arr = new Array(len)
-            for (let j = 0; j < len; j++) arr[j] = { id: extractPageId(parsed[j]) }
-            return { relation: arr }
-          }
+        if (Array.isArray(parsed) && parsed.every((v) => typeof v === 'string')) {
+          return { relation: parsed.map((v: string) => ({ id: extractPageId(v) })) }
         }
       } catch {
         // Not valid JSON, treat as single value
@@ -43,10 +31,7 @@ function toRelation(value: any): { relation: { id: string }[] } {
     return { relation: [{ id: extractPageId(value) }] }
   }
   if (Array.isArray(value)) {
-    const len = value.length
-    const arr = new Array(len)
-    for (let j = 0; j < len; j++) arr[j] = { id: extractPageId(value[j]) }
-    return { relation: arr }
+    return { relation: value.map((v: string) => ({ id: extractPageId(v) })) }
   }
   return value
 }
@@ -61,8 +46,9 @@ export function convertToNotionProperties(
 ): Record<string, any> {
   const converted: Record<string, any> = {}
 
-  for (const key in properties) {
-    if (!Object.hasOwn(properties, key)) continue
+  const keys = Object.keys(properties)
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i]
     const value = properties[key]
 
     if (value === null || value === undefined) {
@@ -110,19 +96,9 @@ export function convertToNotionProperties(
       }
       // Could be multi_select, relation, people, files
       // Only assume multi_select if all elements are strings
-      let allStrings = value.length > 0
-      if (allStrings) {
+      if (value.length > 0 && value.every((v) => typeof v === 'string')) {
+        const multiSelect = new Array(value.length)
         for (let j = 0; j < value.length; j++) {
-          if (typeof value[j] !== 'string') {
-            allStrings = false
-            break
-          }
-        }
-      }
-      if (allStrings) {
-        const len = value.length
-        const multiSelect = new Array(len)
-        for (let j = 0; j < len; j++) {
           multiSelect[j] = { name: value[j] }
         }
         converted[key] = {
@@ -150,32 +126,24 @@ export function convertToNotionProperties(
 export function extractPageProperties(pageProperties: any): any {
   const properties: any = {}
 
-  for (const key in pageProperties) {
-    if (!Object.hasOwn(pageProperties, key)) continue
+  const keys = Object.keys(pageProperties)
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i]
     const p = pageProperties[key] as any
 
     if (p.type === 'title' && p.title) {
       let str = ''
-      const len = p.title.length
-      for (let j = 0; j < len; j++) {
-        const pt = p.title[j].plain_text
-        if (pt) str += pt
-      }
+      for (let j = 0; j < p.title.length; j++) str += p.title[j].plain_text || ''
       properties[key] = str
     } else if (p.type === 'rich_text' && p.rich_text) {
       let str = ''
-      const len = p.rich_text.length
-      for (let j = 0; j < len; j++) {
-        const pt = p.rich_text[j].plain_text
-        if (pt) str += pt
-      }
+      for (let j = 0; j < p.rich_text.length; j++) str += p.rich_text[j].plain_text || ''
       properties[key] = str
     } else if (p.type === 'select' && p.select) {
       properties[key] = p.select.name
     } else if (p.type === 'multi_select' && p.multi_select) {
-      const len = p.multi_select.length
-      const arr = new Array(len)
-      for (let j = 0; j < len; j++) arr[j] = p.multi_select[j].name
+      const arr = new Array(p.multi_select.length)
+      for (let j = 0; j < p.multi_select.length; j++) arr[j] = p.multi_select[j].name
       properties[key] = arr
     } else if (p.type === 'number') {
       properties[key] = p.number
@@ -190,24 +158,19 @@ export function extractPageProperties(pageProperties: any): any {
     } else if (p.type === 'date' && p.date) {
       properties[key] = p.date.start + (p.date.end ? ` to ${p.date.end}` : '')
     } else if (p.type === 'relation' && p.relation) {
-      const len = p.relation.length
-      const arr = new Array(len)
-      for (let j = 0; j < len; j++) arr[j] = p.relation[j].id
+      const arr = new Array(p.relation.length)
+      for (let j = 0; j < p.relation.length; j++) arr[j] = p.relation[j].id
       properties[key] = arr
     } else if (p.type === 'rollup' && p.rollup) {
       properties[key] = p.rollup
     } else if (p.type === 'people' && p.people) {
-      const len = p.people.length
-      const arr = new Array(len)
-      for (let j = 0; j < len; j++) arr[j] = p.people[j].name || p.people[j].id
+      const arr = new Array(p.people.length)
+      for (let j = 0; j < p.people.length; j++) arr[j] = p.people[j].name || p.people[j].id
       properties[key] = arr
     } else if (p.type === 'files' && p.files) {
-      const len = p.files.length
-      const arr = new Array(len)
-      for (let j = 0; j < len; j++) {
-        const f = p.files[j]
-        arr[j] = f.file?.url || f.external?.url || f.name
-      }
+      const arr = new Array(p.files.length)
+      for (let j = 0; j < p.files.length; j++)
+        arr[j] = p.files[j].file?.url || p.files[j].external?.url || p.files[j].name
       properties[key] = arr
     } else if (p.type === 'formula' && p.formula) {
       properties[key] = p.formula.type ? (p.formula[p.formula.type] ?? null) : null
