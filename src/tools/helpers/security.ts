@@ -64,3 +64,33 @@ export function wrapToolResult(toolName: string, jsonText: string): string {
 
   return `<untrusted_notion_content>\n${jsonText}\n</untrusted_notion_content>\n\n${SAFETY_WARNING}`
 }
+
+/**
+ * Validates a web URL for safe opening in external browsers.
+ * Stricter than isSafeUrl: requires http/https and prevents shell flag injection.
+ */
+export function isSafeWebUrl(url: string): boolean {
+  // Reject empty URLs
+  if (!url || typeof url !== 'string') {
+    return false
+  }
+
+  // Reject URLs containing whitespace or control characters
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: Intentionally matching control characters for security sanitization
+  if (/[\s\x00-\x1F\x7F]/.test(url)) {
+    return false
+  }
+
+  // Prevent shell flag injection (if URL is passed as an argument starting with -)
+  if (url.startsWith('-')) {
+    return false
+  }
+
+  try {
+    const parsed = new URL(url)
+    // Only allow standard web protocols
+    return ['http:', 'https:'].includes(parsed.protocol.toLowerCase())
+  } catch {
+    return false
+  }
+}
