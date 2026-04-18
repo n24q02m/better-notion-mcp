@@ -16,9 +16,6 @@ import * as RichText from '../helpers/richtext.js'
 export const schemaCache = new Map<string, { properties: any; expiresAt: number }>()
 const SCHEMA_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
-// Cache for ID resolution (database_id -> data_source_id mapping)
-export const idResolutionCache = new Map<string, { databaseId: string; dataSourceId: string; expiresAt: number }>()
-const ID_RESOLUTION_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 /**
  * Get data source properties with caching
  */
@@ -250,19 +247,11 @@ export type DatabasesResponse =
 async function resolveDataSourceId(notion: Client, id: string): Promise<{ databaseId: string; dataSourceId: string }> {
   const normalized = normalizeId(id)
 
-  // Check cache
-  const cached = idResolutionCache.get(normalized)
-  if (cached && Date.now() < cached.expiresAt) {
-    return { databaseId: cached.databaseId, dataSourceId: cached.dataSourceId }
-  }
-
   // Try as database container first
   try {
     const database: any = await notion.databases.retrieve({ database_id: normalized })
     if (database.data_sources?.length > 0) {
-      const result = { databaseId: database.id, dataSourceId: database.data_sources[0].id }
-      idResolutionCache.set(normalized, { ...result, expiresAt: Date.now() + ID_RESOLUTION_CACHE_TTL })
-      return result
+      return { databaseId: database.id, dataSourceId: database.data_sources[0].id }
     }
     throw new NotionMCPError(
       'Database has no data sources',
@@ -276,12 +265,10 @@ async function resolveDataSourceId(notion: Client, id: string): Promise<{ databa
     if (error.code === 'object_not_found') {
       try {
         const ds: any = await (notion as any).dataSources.retrieve({ data_source_id: normalized })
-        const result = {
+        return {
           databaseId: ds.parent?.database_id || normalized,
           dataSourceId: ds.id
         }
-        idResolutionCache.set(normalized, { ...result, expiresAt: Date.now() + ID_RESOLUTION_CACHE_TTL })
-        return result
       } catch {
         throw new NotionMCPError(
           `ID "${id}" is not a valid database or data source`,
