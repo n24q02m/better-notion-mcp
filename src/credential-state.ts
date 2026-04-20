@@ -14,6 +14,7 @@ import type { RelaySession } from '@n24q02m/mcp-core'
 import { createSession, deleteConfig, pollForResult, sendMessage, writeConfig } from '@n24q02m/mcp-core'
 import { resolveConfig } from '@n24q02m/mcp-core/storage'
 import { RELAY_SCHEMA } from './relay-schema.js'
+import { isSafeWebUrl } from './tools/helpers/security.js'
 
 const SERVER_NAME = 'better-notion-mcp'
 const CREDENTIAL_KEY = 'NOTION_TOKEN'
@@ -178,7 +179,12 @@ async function pollRelayBackground(relayBaseUrl: string, session: RelaySession):
  * Try to open URL in default browser (best-effort).
  * Uses execFile (not exec) to avoid shell injection.
  */
-function tryOpenBrowser(url: string): void {
+export function tryOpenBrowser(url: string): void {
+  if (!isSafeWebUrl(url)) {
+    console.error(`Refused to open unsafe URL in browser: ${url}`)
+    return
+  }
+
   const platform = process.platform
 
   if (platform === 'darwin') {

@@ -212,10 +212,10 @@ describe('credential-state', () => {
     it('calls open on darwin', async () => {
       Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true })
 
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
+      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'https://example.com' } as any)
       await triggerRelaySetup()
 
-      expect(execFile).toHaveBeenCalledWith('open', ['url'], expect.any(Function))
+      expect(execFile).toHaveBeenCalledWith('open', ['https://example.com'], expect.any(Function))
       // Trigger callback for coverage
       const callback = vi.mocked(execFile).mock.calls[0][2] as (
         error: Error | null,
@@ -228,10 +228,10 @@ describe('credential-state', () => {
     it('calls cmd on win32', async () => {
       Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
 
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
+      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'https://example.com' } as any)
       await triggerRelaySetup()
 
-      expect(execFile).toHaveBeenCalledWith('cmd', ['/c', 'start', '', 'url'], expect.any(Function))
+      expect(execFile).toHaveBeenCalledWith('cmd', ['/c', 'start', '', 'https://example.com'], expect.any(Function))
       // Trigger callback for coverage
       const callback = vi.mocked(execFile).mock.calls[0][2] as (
         error: Error | null,
@@ -244,10 +244,10 @@ describe('credential-state', () => {
     it('calls xdg-open on other platforms', async () => {
       Object.defineProperty(process, 'platform', { value: 'linux', configurable: true })
 
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'url' } as any)
+      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'https://example.com' } as any)
       await triggerRelaySetup()
 
-      expect(execFile).toHaveBeenCalledWith('xdg-open', ['url'], expect.any(Function))
+      expect(execFile).toHaveBeenCalledWith('xdg-open', ['https://example.com'], expect.any(Function))
       // Trigger callback for coverage
       const callback = vi.mocked(execFile).mock.calls[0][2] as (
         error: Error | null,
@@ -262,7 +262,10 @@ describe('credential-state', () => {
     it('cleans up active session on SIGINT', async () => {
       vi.useRealTimers()
       const exitMock = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any)
-      vi.mocked(createSession).mockResolvedValue({ sessionId: 'exit-session-int', relayUrl: 'url' } as any)
+      vi.mocked(createSession).mockResolvedValue({
+        sessionId: 'exit-session-int',
+        relayUrl: 'https://example.com'
+      } as any)
 
       await triggerRelaySetup()
       process.emit('SIGINT' as any)
@@ -278,7 +281,10 @@ describe('credential-state', () => {
     it('cleans up active session on SIGTERM', async () => {
       vi.useRealTimers()
       const exitMock = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any)
-      vi.mocked(createSession).mockResolvedValue({ sessionId: 'exit-session-term', relayUrl: 'url' } as any)
+      vi.mocked(createSession).mockResolvedValue({
+        sessionId: 'exit-session-term',
+        relayUrl: 'https://example.com'
+      } as any)
 
       await triggerRelaySetup()
       process.emit('SIGTERM' as any)
@@ -295,7 +301,7 @@ describe('credential-state', () => {
       vi.useRealTimers()
       vi.mocked(fetch).mockRejectedValue(new Error('network error'))
       const exitMock = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any)
-      vi.mocked(createSession).mockResolvedValue({ sessionId: 'error-session', relayUrl: 'url' } as any)
+      vi.mocked(createSession).mockResolvedValue({ sessionId: 'error-session', relayUrl: 'https://example.com' } as any)
 
       await triggerRelaySetup()
       process.emit('SIGINT' as any)
