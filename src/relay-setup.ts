@@ -9,7 +9,7 @@
  */
 
 import { writeConfig } from '@n24q02m/mcp-core'
-import { createSession, notifyComplete, pollForResult } from '@n24q02m/mcp-core/relay'
+import { createSession, pollForResult, sendMessage } from '@n24q02m/mcp-core/relay'
 import { resolveConfig } from '@n24q02m/mcp-core/storage'
 import { RELAY_SCHEMA } from './relay-schema.js'
 
@@ -80,8 +80,11 @@ export async function ensureConfig(): Promise<string | null> {
   console.error('Notion config saved successfully')
 
   // Notify the browser and schedule cleanup after the browser has had time to
-  // poll the "complete" message. See @n24q02m/mcp-core notifyComplete JSDoc.
-  await notifyComplete(relayUrl, session.sessionId, 'Notion token saved. Setup complete!')
+  // poll the "complete" message. See @n24q02m/mcp-core sendMessage JSDoc.
+  await sendMessage(relayUrl, session.sessionId, { type: 'complete', text: 'Notion token saved. Setup complete!' })
+  setTimeout(() => {
+    fetch(`${relayUrl}/api/sessions/${session.sessionId}`, { method: 'DELETE' }).catch(() => {})
+  }, 1000)
 
   return config.NOTION_TOKEN
 }

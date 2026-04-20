@@ -7,7 +7,7 @@ vi.mock('@n24q02m/mcp-core/storage', () => ({
 }))
 vi.mock('@n24q02m/mcp-core/relay', () => ({
   createSession: vi.fn(),
-  notifyComplete: vi.fn(),
+  sendMessage: vi.fn(),
   pollForResult: vi.fn()
 }))
 vi.mock('@n24q02m/mcp-core', () => ({
@@ -15,7 +15,7 @@ vi.mock('@n24q02m/mcp-core', () => ({
 }))
 
 import { writeConfig } from '@n24q02m/mcp-core'
-import { createSession, notifyComplete, pollForResult } from '@n24q02m/mcp-core/relay'
+import { createSession, pollForResult, sendMessage } from '@n24q02m/mcp-core/relay'
 import { resolveConfig } from '@n24q02m/mcp-core/storage'
 
 describe('ensureConfig', () => {
@@ -70,7 +70,7 @@ describe('ensureConfig', () => {
     vi.mocked(pollForResult).mockResolvedValue({
       NOTION_TOKEN: 'ntn_relay_token_456'
     })
-    vi.mocked(notifyComplete).mockResolvedValue(undefined)
+    vi.mocked(sendMessage).mockResolvedValue(undefined as any)
 
     const fetchMock = vi.fn().mockResolvedValue({ ok: true })
     vi.stubGlobal('fetch', fetchMock)
@@ -89,11 +89,11 @@ describe('ensureConfig', () => {
     expect(writeConfig).toHaveBeenCalledWith('better-notion-mcp', {
       NOTION_TOKEN: 'ntn_relay_token_456'
     })
-    // notifyComplete replaces the previous sendMessage + setTimeout(DELETE) pair.
-    expect(notifyComplete).toHaveBeenCalledWith(
+    // sendMessage replaces the previous sendMessage + setTimeout(DELETE) pair.
+    expect(sendMessage).toHaveBeenCalledWith(
       'https://better-notion-mcp.n24q02m.com',
       'test-session',
-      expect.stringContaining('Setup complete')
+      expect.objectContaining({ text: expect.stringContaining('Setup complete') })
     )
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('saved successfully'))
   })
