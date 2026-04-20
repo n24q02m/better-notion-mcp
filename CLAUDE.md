@@ -1,6 +1,6 @@
 # better-notion-mcp
 
-TypeScript MCP Server cho Notion API. 9 composite tools, dual-mode stdio/http.
+TypeScript MCP Server cho Notion API. 10 composite tools (pages, databases, blocks, users, workspace, comments, content_convert, file_uploads, setup, help), dual-mode stdio/http.
 Xem `AGENTS.md` va `README.md` de hieu architecture va OAuth flow.
 
 ## Cau truc
@@ -9,7 +9,7 @@ Xem `AGENTS.md` va `README.md` de hieu architecture va OAuth flow.
 - `src/relay-setup.ts` -- Zero-config relay: create session, poll for config
 - `src/relay-schema.ts` -- Relay form schema (Notion token field)
 - `src/tools/registry.ts` -- Tool registration + routing
-- `src/tools/composite/` -- 1 file per domain (pages, databases, blocks, comments, users, workspace, content_convert, file_uploads)
+- `src/tools/composite/` -- 1 file per domain (pages, databases, blocks, comments, users, workspace, content_convert, file_uploads, setup)
 - `src/tools/helpers/` -- errors, markdown, richtext, pagination, properties
 - `src/auth/` -- OAuth 2.1 + PKCE, DCR, session management
 - `src/transports/` -- stdio + http transport handlers
@@ -84,3 +84,27 @@ mise run fix                # bun run check:fix
 - Node builtins phai co `node:` prefix (`node:fs`, `node:path`)
 - SDK pin `@modelcontextprotocol/sdk` v1.x -- v2 removes server-side OAuth
 - Notion API bug: `comments.list` tra 404 voi OAuth tokens tren API version `2025-09-03`
+
+## Modes (Phase L2 restored 2026-04-18)
+
+Selected via `MCP_MODE` env var:
+
+- **`remote-oauth` (default)**: HTTP + delegated OAuth 2.1 redirect flow tới Notion OAuth app tại `https://api.notion.com/v1/oauth/authorize`. Bắt buộc env `NOTION_OAUTH_CLIENT_ID` + `NOTION_OAUTH_CLIENT_SECRET`. Per-user access token lưu in-process keyed by JWT `sub` (= Notion `owner_user_id`). Multi-user thật — khác account OAuth độc lập. Deploy tại `https://better-notion-mcp.n24q02m.com`.
+- **`local-relay`**: HTTP + `runLocalServer` với relaySchema — user paste Notion integration token vào `/authorize` form. Single-user, không external OAuth. Recommend cho local dev hoặc offline.
+- **`stdio proxy`**: `--stdio` hoặc `MCP_TRANSPORT=stdio`. Backward compat.
+
+Chuyển giữa remote-oauth ↔ local-relay qua `MCP_MODE=local-relay`/`MCP_MODE=remote-oauth`. Default = remote-oauth nếu không set.
+
+## Known bugs (phat hien 2026-04-18 E2E)
+
+1. **Browser UI stuck "Waiting for server..." (local-relay mode)**:
+   - Chỉ affect `MCP_MODE=local-relay` (paste form flow)
+   - Server save config THANH CONG (Phase 2 test hit real Notion API OK)
+   - Browser UI van hien "Credentials sent. Waiting for server to complete setup..." -- KHONG update sang "Setup complete!"
+   - Root cause: upstream bug trong `@n24q02m/mcp-core` (core-ts) `sendMessage(type:'complete')` -- `.catch(()=>{})` swallow error, session DELETE sau 1s gay browser poll 404
+   - See: `C:\Users\n24q02m-wlap\projects\mcp-core\CLAUDE.md` Known bugs #2
+   - Remote-oauth mode không ảnh hưởng (dùng delegated redirect, không qua relay `complete` message).
+   - **Workaround tam thoi cho user:** close tab sau khi submit, MCP server van hoat dong dung
+   - **Fix goc:** patch trong `packages/core-ts/src/relay/client.ts` (mcp-core monorepo)
+
+2. **Config storage path**: TS servers dung `$APPDATA\mcp\Config\config.enc` (khac Python servers `$LOCALAPPDATA\mcp\config.enc`). Khi debug, clean cả 2 paths neu need reset state.
