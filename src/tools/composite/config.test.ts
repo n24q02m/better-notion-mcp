@@ -17,9 +17,9 @@ import {
   resolveCredentialState,
   triggerRelaySetup
 } from '../../credential-state.js'
-import { setup } from './setup.js'
+import { config } from './config.js'
 
-describe('setup', () => {
+describe('config', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // Default: no token, awaiting_setup
@@ -30,7 +30,7 @@ describe('setup', () => {
 
   describe('status action', () => {
     it('should return state when no token configured', async () => {
-      const result = await setup({ action: 'status' })
+      const result = await config({ action: 'status' })
 
       expect(result.action).toBe('status')
       expect(result.state).toBe('awaiting_setup')
@@ -46,7 +46,7 @@ describe('setup', () => {
       // No env var
       delete process.env.NOTION_TOKEN
 
-      const result = await setup({ action: 'status' })
+      const result = await config({ action: 'status' })
 
       expect(result.state).toBe('configured')
       expect(result.has_token).toBe(true)
@@ -58,7 +58,7 @@ describe('setup', () => {
       vi.mocked(getNotionToken).mockReturnValue('ntn_env_token')
       process.env.NOTION_TOKEN = 'ntn_env_token'
 
-      const result = await setup({ action: 'status' })
+      const result = await config({ action: 'status' })
 
       expect(result.state).toBe('configured')
       expect(result.has_token).toBe(true)
@@ -71,22 +71,22 @@ describe('setup', () => {
       vi.mocked(getState).mockReturnValue('setup_in_progress')
       vi.mocked(getSetupUrl).mockReturnValue('https://example.com/setup/abc123')
 
-      const result = await setup({ action: 'status' })
+      const result = await config({ action: 'status' })
 
       expect(result.state).toBe('setup_in_progress')
       expect(result.setup_url).toBe('https://example.com/setup/abc123')
     })
   })
 
-  describe('start action', () => {
+  describe('setup_start action', () => {
     it('should trigger relay setup and return URL', async () => {
       vi.mocked(triggerRelaySetup).mockResolvedValue('https://example.com/setup/xyz')
       vi.mocked(getState).mockReturnValueOnce('awaiting_setup').mockReturnValue('setup_in_progress')
 
-      const result = await setup({ action: 'start' })
+      const result = await config({ action: 'setup_start' })
 
       expect(triggerRelaySetup).toHaveBeenCalled()
-      expect(result.action).toBe('start')
+      expect(result.action).toBe('setup_start')
       expect(result.setup_url).toBe('https://example.com/setup/xyz')
       expect(result.message).toContain('Relay setup started')
     })
@@ -94,7 +94,7 @@ describe('setup', () => {
     it('should return message when already configured without force', async () => {
       vi.mocked(getState).mockReturnValue('configured')
 
-      const result = await setup({ action: 'start' })
+      const result = await config({ action: 'setup_start' })
 
       expect(triggerRelaySetup).not.toHaveBeenCalled()
       expect(result.state).toBe('configured')
@@ -105,7 +105,7 @@ describe('setup', () => {
       vi.mocked(getState).mockReturnValueOnce('configured').mockReturnValue('setup_in_progress')
       vi.mocked(triggerRelaySetup).mockResolvedValue('https://example.com/setup/forced')
 
-      const result = await setup({ action: 'start', force: true })
+      const result = await config({ action: 'setup_start', force: true })
 
       expect(triggerRelaySetup).toHaveBeenCalled()
       expect(result.setup_url).toBe('https://example.com/setup/forced')
@@ -115,33 +115,33 @@ describe('setup', () => {
       vi.mocked(triggerRelaySetup).mockResolvedValue(null)
       vi.mocked(getState).mockReturnValue('awaiting_setup')
 
-      const result = await setup({ action: 'start' })
+      const result = await config({ action: 'setup_start' })
 
       expect(result.setup_url).toBeNull()
       expect(result.message).toContain('Set NOTION_TOKEN manually')
     })
   })
 
-  describe('reset action', () => {
+  describe('setup_reset action', () => {
     it('should reset state and return confirmation', async () => {
-      const result = await setup({ action: 'reset' })
+      const result = await config({ action: 'setup_reset' })
 
       expect(resetState).toHaveBeenCalled()
-      expect(result.action).toBe('reset')
+      expect(result.action).toBe('setup_reset')
       expect(result.state).toBe('awaiting_setup')
       expect(result.message).toContain('Credential state reset')
     })
   })
 
-  describe('complete action', () => {
+  describe('setup_complete action', () => {
     it('should re-check credentials and return configured state', async () => {
       vi.mocked(resolveCredentialState).mockResolvedValue('configured')
       vi.mocked(getNotionToken).mockReturnValue('ntn_resolved')
 
-      const result = await setup({ action: 'complete' })
+      const result = await config({ action: 'setup_complete' })
 
       expect(resolveCredentialState).toHaveBeenCalled()
-      expect(result.action).toBe('complete')
+      expect(result.action).toBe('setup_complete')
       expect(result.state).toBe('configured')
       expect(result.has_token).toBe(true)
       expect(result.message).toContain('Credentials verified')
@@ -151,7 +151,7 @@ describe('setup', () => {
       vi.mocked(resolveCredentialState).mockResolvedValue('awaiting_setup')
       vi.mocked(getNotionToken).mockReturnValue(null)
 
-      const result = await setup({ action: 'complete' })
+      const result = await config({ action: 'setup_complete' })
 
       expect(result.state).toBe('awaiting_setup')
       expect(result.has_token).toBe(false)
@@ -159,9 +159,29 @@ describe('setup', () => {
     })
   })
 
+  describe('set action', () => {
+    it('should return error response indicating no mutable runtime settings', async () => {
+      const result = await config({ action: 'set' })
+
+      expect(result.action).toBe('set')
+      expect(result.ok).toBe(false)
+      expect(result.error).toBeDefined()
+    })
+  })
+
+  describe('cache_clear action', () => {
+    it('should return ok with cleared count of 0', async () => {
+      const result = await config({ action: 'cache_clear' })
+
+      expect(result.action).toBe('cache_clear')
+      expect(result.ok).toBe(true)
+      expect(result.cleared).toBe(0)
+    })
+  })
+
   describe('invalid action', () => {
     it('should throw error for unsupported action', async () => {
-      await expect(setup({ action: 'invalid' as any })).rejects.toThrow('Unsupported action: invalid')
+      await expect(config({ action: 'invalid' as any })).rejects.toThrow('Unsupported action: invalid')
     })
   })
 })
