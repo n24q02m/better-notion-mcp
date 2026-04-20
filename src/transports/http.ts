@@ -13,7 +13,7 @@
 
 import { AsyncLocalStorage } from 'node:async_hooks'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { type RelayConfigSchema, runLocalServer } from '@n24q02m/mcp-core'
+import { type RelayConfigSchema, runLocalServer, writeConfig } from '@n24q02m/mcp-core'
 import { Client } from '@notionhq/client'
 import { NotionTokenStore } from '../auth/notion-token-store.js'
 import { createMCPServer } from '../create-server.js'
@@ -104,11 +104,14 @@ export async function startHttp(): Promise<void> {
       port,
       host,
       relaySchema: RELAY_SCHEMA as unknown as RelayConfigSchema,
-      onCredentialsSaved: (creds) => {
+      onCredentialsSaved: async (creds) => {
         const token = creds?.NOTION_TOKEN
         if (typeof token === 'string' && token.length > 0) {
           localToken = token
-          console.error(`[${SERVER_NAME}] Notion token received via /authorize`)
+          // Persist to encrypted config so the token survives process restarts
+          // — otherwise the user would have to re-paste after every restart.
+          await writeConfig(SERVER_NAME, { NOTION_TOKEN: token })
+          console.error(`[${SERVER_NAME}] Notion token received via /authorize and saved`)
         }
         return null
       }

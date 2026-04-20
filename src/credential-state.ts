@@ -11,7 +11,7 @@
 
 import { execFile } from 'node:child_process'
 import type { RelaySession } from '@n24q02m/mcp-core'
-import { createSession, deleteConfig, pollForResult, sendMessage, writeConfig } from '@n24q02m/mcp-core'
+import { createSession, deleteConfig, notifyComplete, pollForResult, writeConfig } from '@n24q02m/mcp-core'
 import { resolveConfig } from '@n24q02m/mcp-core/storage'
 import { RELAY_SCHEMA } from './relay-schema.js'
 import { isSafeWebUrl } from './tools/helpers/security.js'
@@ -146,16 +146,9 @@ async function pollRelayBackground(relayBaseUrl: string, session: RelaySession):
     _state = 'configured'
     console.error('Notion config saved and applied successfully')
 
-    // Notify relay page setup is complete
-    await sendMessage(relayBaseUrl, session.sessionId, {
-      type: 'complete',
-      text: 'Notion token saved. Setup complete!'
-    }).catch(() => {})
-
-    // Explicit session cleanup (one-time use)
-    setTimeout(() => {
-      fetch(`${relayBaseUrl}/api/sessions/${session.sessionId}`, { method: 'DELETE' }).catch(() => {})
-    }, 1000)
+    // Notify the browser and schedule cleanup after the browser has had time
+    // to poll the "complete" message. See @n24q02m/mcp-core notifyComplete JSDoc.
+    await notifyComplete(relayBaseUrl, session.sessionId, 'Notion token saved. Setup complete!')
   } catch (err: any) {
     // Cleanup session on failure (except skipped)
     if (err?.message !== 'RELAY_SKIPPED') {
