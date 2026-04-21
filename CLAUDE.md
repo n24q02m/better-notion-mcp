@@ -6,7 +6,7 @@ Xem `AGENTS.md` va `README.md` de hieu architecture va OAuth flow.
 ## Cau truc
 
 - `src/init-server.ts` -- Server entry point, env validation
-- `src/relay-setup.ts` -- Zero-config relay: create session, poll for config
+- `src/credential-state.ts` -- State machine (awaiting_setup/setup_in_progress/configured) + stdio fallback spawn (runLocalServer on 127.0.0.1:random)
 - `src/relay-schema.ts` -- Relay form schema (Notion token field)
 - `src/tools/registry.ts` -- Tool registration + routing
 - `src/tools/composite/` -- 1 file per domain (pages, databases, blocks, comments, users, workspace, content_convert, file_uploads, setup)
@@ -95,16 +95,15 @@ Selected via `MCP_MODE` env var:
 
 Chuyển giữa remote-oauth ↔ local-relay qua `MCP_MODE=local-relay`/`MCP_MODE=remote-oauth`. Default = remote-oauth nếu không set.
 
-## Known bugs (phat hien 2026-04-18 E2E)
+## Stdio fallback
 
-1. **Browser UI stuck "Waiting for server..." (local-relay mode)**:
-   - Chỉ affect `MCP_MODE=local-relay` (paste form flow)
-   - Server save config THANH CONG (Phase 2 test hit real Notion API OK)
-   - Browser UI van hien "Credentials sent. Waiting for server to complete setup..." -- KHONG update sang "Setup complete!"
-   - Root cause: upstream bug trong `@n24q02m/mcp-core` (core-ts) `sendMessage(type:'complete')` -- `.catch(()=>{})` swallow error, session DELETE sau 1s gay browser poll 404
-   - See: `C:\Users\n24q02m-wlap\projects\mcp-core\CLAUDE.md` Known bugs #2
-   - Remote-oauth mode không ảnh hưởng (dùng delegated redirect, không qua relay `complete` message).
-   - **Workaround tam thoi cho user:** close tab sau khi submit, MCP server van hoat dong dung
-   - **Fix goc:** patch trong `packages/core-ts/src/relay/client.ts` (mcp-core monorepo)
+Khi stdio khởi động và `config.enc` trống, `credential-state.triggerRelaySetup()` spawn `runLocalServer` tại `http://127.0.0.1:<random_port>/` với `RELAY_SCHEMA` paste-token form. URL local được in ra stderr + tool response. Sau khi user paste token và submit, `onCredentialsSaved` callback:
+1. Lưu vào `config.enc` qua `writeConfig`
+2. Set `_state = 'configured'` + cache token in-memory
+3. Schedule `handle.close()` sau 5s grace cho browser render "Connected"
 
-2. **Config storage path**: TS servers dung `$APPDATA\mcp\Config\config.enc` (khac Python servers `$LOCALAPPDATA\mcp\config.enc`). Khi debug, clean cả 2 paths neu need reset state.
+**KHÔNG hit remote URL** (`https://better-notion-mcp.n24q02m.com`) trong fallback này — remote chỉ dùng khi user explicit chọn `MCP_MODE=remote-oauth`. Xem `~/.claude/skills/mcp-dev/references/mode-matrix.md` section `stdio proxy` cho canonical rule.
+
+## Config storage path
+
+TS servers dùng `$APPDATA\mcp\Config\config.enc` (khác Python servers `$LOCALAPPDATA\mcp\config.enc`). Khi debug, clean cả 2 paths nếu need reset state.

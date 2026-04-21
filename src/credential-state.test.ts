@@ -3,7 +3,7 @@
  */
 
 import { execFile } from 'node:child_process'
-import { createSession, deleteConfig, notifyComplete, pollForResult, writeConfig } from '@n24q02m/mcp-core'
+import { deleteConfig, runLocalServer, writeConfig } from '@n24q02m/mcp-core'
 import { resolveConfig } from '@n24q02m/mcp-core/storage'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -21,16 +21,22 @@ vi.mock('node:child_process', () => ({
 }))
 
 vi.mock('@n24q02m/mcp-core', () => ({
-  createSession: vi.fn(),
   deleteConfig: vi.fn(),
-  notifyComplete: vi.fn(),
-  pollForResult: vi.fn(),
+  runLocalServer: vi.fn(),
   writeConfig: vi.fn()
 }))
 
 vi.mock('@n24q02m/mcp-core/storage', () => ({
   resolveConfig: vi.fn()
 }))
+
+function makeHandle(overrides: Partial<{ host: string; port: number; close: () => Promise<void> }> = {}) {
+  return {
+    host: overrides.host ?? '127.0.0.1',
+    port: overrides.port ?? 54321,
+    close: overrides.close ?? (() => Promise.resolve())
+  }
+}
 
 describe('credential-state', () => {
   let consoleSpy: any
@@ -40,16 +46,13 @@ describe('credential-state', () => {
     vi.useFakeTimers()
     consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    // Default mock implementations
     vi.mocked(deleteConfig).mockResolvedValue(undefined as any)
-    vi.mocked(notifyComplete).mockResolvedValue(undefined as any)
     vi.mocked(writeConfig).mockResolvedValue(undefined as any)
     vi.mocked(resolveConfig).mockResolvedValue({ config: null, source: null })
 
     resetState()
     delete process.env.NOTION_TOKEN
     delete process.env.MCP_RELAY_URL
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }))
   })
 
   afterEach(() => {
@@ -98,47 +101,57 @@ describe('credential-state', () => {
   })
 
   describe('triggerRelaySetup', () => {
-    it('returns null if relay is unreachable', async () => {
-      vi.mocked(createSession).mockRejectedValue(new Error('unreachable'))
+    it('returns null when spawning the local server fails', async () => {
+      vi.mocked(runLocalServer).mockRejectedValue(new Error('cannot bind'))
       const url = await triggerRelaySetup()
       expect(url).toBeNull()
       expect(getState()).toBe('awaiting_setup')
     })
 
-    it('returns setup URL and starts polling on success', async () => {
-      const mockSession = {
-        sessionId: 'session-123',
-        relayUrl: 'https://relay.com/setup'
-      }
-      vi.mocked(createSession).mockResolvedValue(mockSession as any)
-      vi.mocked(pollForResult).mockResolvedValue({ NOTION_TOKEN: 'relay-token' })
+    it('spawns a local HTTP server and returns its URL', async () => {
+      vi.mocked(runLocalServer).mockResolvedValue(makeHandle({ port: 55123 }) as any)
 
       const url = await triggerRelaySetup()
 
-      expect(url).toBe(mockSession.relayUrl)
-      expect(getSetupUrl()).toBe(mockSession.relayUrl)
+      expect(url).toBe('http://127.0.0.1:55123/')
+      expect(getSetupUrl()).toBe('http://127.0.0.1:55123/')
       expect(getState()).toBe('setup_in_progress')
-      expect(execFile).toHaveBeenCalled()
+      expect(execFile).toHaveBeenCalled() // tryOpenBrowser
 
-      await vi.runAllTimersAsync()
-      await vi.runAllTimersAsync()
+      const call = vi.mocked(runLocalServer).mock.calls[0]
+      const options = call[1]
+      expect(options.port).toBe(0)
+      expect(options.host).toBe('127.0.0.1')
+      expect(options.serverName).toBe('better-notion-mcp')
+      expect(options.relaySchema).toBeDefined()
+    })
+
+    it('persists the token and transitions to configured on form submit', async () => {
+      const closeMock = vi.fn().mockResolvedValue(undefined)
+      vi.mocked(runLocalServer).mockResolvedValue(makeHandle({ close: closeMock }) as any)
+
+      await triggerRelaySetup()
+
+      const onCredentialsSaved = vi.mocked(runLocalServer).mock.calls[0][1].onCredentialsSaved as (
+        creds: Record<string, string>
+      ) => Promise<unknown>
+      await onCredentialsSaved({ NOTION_TOKEN: 'relay-token' })
 
       expect(getState()).toBe('configured')
       expect(getNotionToken()).toBe('relay-token')
       expect(writeConfig).toHaveBeenCalledWith('better-notion-mcp', { NOTION_TOKEN: 'relay-token' })
-      // notifyComplete handles both the POST /messages and the deferred DELETE.
-      expect(notifyComplete).toHaveBeenCalledWith(
-        expect.any(String),
-        'session-123',
-        expect.stringContaining('Setup complete')
-      )
+
+      // Grace timer should close the spawn without blocking the caller.
+      await vi.advanceTimersByTimeAsync(5_000)
+      expect(closeMock).toHaveBeenCalled()
     })
 
-    it('returns immediately if already setup_in_progress', async () => {
-      setState('setup_in_progress')
-      const url = await triggerRelaySetup()
-      expect(createSession).not.toHaveBeenCalled()
-      expect(url).toBeNull() // _setupUrl is null initially
+    it('returns the current URL if already setup_in_progress', async () => {
+      vi.mocked(runLocalServer).mockResolvedValue(makeHandle({ port: 60000 }) as any)
+      const first = await triggerRelaySetup()
+      const second = await triggerRelaySetup()
+      expect(second).toBe(first)
+      expect(runLocalServer).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -157,151 +170,61 @@ describe('credential-state', () => {
       expect(getState()).toBe('awaiting_setup')
       expect(deleteConfig).toHaveBeenCalled()
     })
-  })
 
-  describe('error handling in pollRelayBackground', () => {
-    it('handles RELAY_SKIPPED', async () => {
-      vi.mocked(createSession).mockResolvedValue({ sessionId: 's1', relayUrl: 'u1' } as any)
-      vi.mocked(pollForResult).mockRejectedValue(new Error('RELAY_SKIPPED'))
-
+    it('closes any active local handle', async () => {
+      const closeMock = vi.fn().mockResolvedValue(undefined)
+      vi.mocked(runLocalServer).mockResolvedValue(makeHandle({ close: closeMock }) as any)
       await triggerRelaySetup()
-      await vi.runAllTimersAsync()
-
-      expect(getState()).toBe('awaiting_setup')
-      expect(fetch).not.toHaveBeenCalled()
-    })
-
-    it('handles timeout/other errors and cleans up', async () => {
-      vi.mocked(createSession).mockResolvedValue({ sessionId: 's1', relayUrl: 'u1' } as any)
-      vi.mocked(pollForResult).mockRejectedValue(new Error('timeout'))
-
-      await triggerRelaySetup()
-      await vi.runAllTimersAsync()
-
-      expect(getState()).toBe('awaiting_setup')
-      expect(fetch).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ method: 'DELETE' }))
-    })
-
-    it('still reaches configured state when notifyComplete rejects', async () => {
-      vi.mocked(createSession).mockResolvedValue({ sessionId: 's1', relayUrl: 'u1' } as any)
-      vi.mocked(pollForResult).mockResolvedValue({ NOTION_TOKEN: 'token' })
-      vi.mocked(notifyComplete).mockRejectedValue(new Error('send failed'))
-
-      await triggerRelaySetup()
-      await vi.runAllTimersAsync()
-      await vi.runAllTimersAsync()
-
-      // notifyComplete swallows errors internally; even when we simulate it
-      // rejecting, the state must reach configured because credentials were
-      // already persisted via writeConfig before the call.
-      expect(notifyComplete).toHaveBeenCalled()
+      resetState()
+      expect(closeMock).toHaveBeenCalled()
     })
   })
 
   describe('tryOpenBrowser', () => {
     it('calls open on darwin', async () => {
       Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true })
+      vi.mocked(runLocalServer).mockResolvedValue(makeHandle({ port: 7001 }) as any)
 
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'https://example.com' } as any)
       await triggerRelaySetup()
 
-      expect(execFile).toHaveBeenCalledWith('open', ['https://example.com'], expect.any(Function))
-      // Trigger callback for coverage
-      const callback = vi.mocked(execFile).mock.calls[0][2] as (
-        error: Error | null,
-        stdout: string,
-        stderr: string
-      ) => void
-      callback(null, '', '')
+      expect(execFile).toHaveBeenCalledWith('open', ['http://127.0.0.1:7001/'], expect.any(Function))
     })
 
     it('calls cmd on win32', async () => {
       Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
+      vi.mocked(runLocalServer).mockResolvedValue(makeHandle({ port: 7002 }) as any)
 
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'https://example.com' } as any)
       await triggerRelaySetup()
 
-      expect(execFile).toHaveBeenCalledWith('cmd', ['/c', 'start', '', 'https://example.com'], expect.any(Function))
-      // Trigger callback for coverage
-      const callback = vi.mocked(execFile).mock.calls[0][2] as (
-        error: Error | null,
-        stdout: string,
-        stderr: string
-      ) => void
-      callback(null, '', '')
+      expect(execFile).toHaveBeenCalledWith('cmd', ['/c', 'start', '', 'http://127.0.0.1:7002/'], expect.any(Function))
     })
 
     it('calls xdg-open on other platforms', async () => {
       Object.defineProperty(process, 'platform', { value: 'linux', configurable: true })
+      vi.mocked(runLocalServer).mockResolvedValue(makeHandle({ port: 7003 }) as any)
 
-      vi.mocked(createSession).mockResolvedValue({ relayUrl: 'https://example.com' } as any)
       await triggerRelaySetup()
 
-      expect(execFile).toHaveBeenCalledWith('xdg-open', ['https://example.com'], expect.any(Function))
-      // Trigger callback for coverage
-      const callback = vi.mocked(execFile).mock.calls[0][2] as (
-        error: Error | null,
-        stdout: string,
-        stderr: string
-      ) => void
-      callback(null, '', '')
+      expect(execFile).toHaveBeenCalledWith('xdg-open', ['http://127.0.0.1:7003/'], expect.any(Function))
     })
   })
 
   describe('signal handlers', () => {
-    it('cleans up active session on SIGINT', async () => {
+    it('closes the active spawn on SIGINT', async () => {
       vi.useRealTimers()
+      const closeMock = vi.fn().mockResolvedValue(undefined)
       const exitMock = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any)
-      vi.mocked(createSession).mockResolvedValue({
-        sessionId: 'exit-session-int',
-        relayUrl: 'https://example.com'
-      } as any)
+      vi.mocked(runLocalServer).mockResolvedValue(makeHandle({ close: closeMock }) as any)
 
       await triggerRelaySetup()
       process.emit('SIGINT' as any)
       await new Promise((resolve) => setTimeout(resolve, 50))
 
-      expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining('exit-session-int'),
-        expect.objectContaining({ method: 'DELETE' })
-      )
+      expect(closeMock).toHaveBeenCalled()
       expect(exitMock).toHaveBeenCalled()
     })
 
-    it('cleans up active session on SIGTERM', async () => {
-      vi.useRealTimers()
-      const exitMock = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any)
-      vi.mocked(createSession).mockResolvedValue({
-        sessionId: 'exit-session-term',
-        relayUrl: 'https://example.com'
-      } as any)
-
-      await triggerRelaySetup()
-      process.emit('SIGTERM' as any)
-      await new Promise((resolve) => setTimeout(resolve, 50))
-
-      expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining('exit-session-term'),
-        expect.objectContaining({ method: 'DELETE' })
-      )
-      expect(exitMock).toHaveBeenCalled()
-    })
-
-    it('handles fetch failure during signal cleanup', async () => {
-      vi.useRealTimers()
-      vi.mocked(fetch).mockRejectedValue(new Error('network error'))
-      const exitMock = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any)
-      vi.mocked(createSession).mockResolvedValue({ sessionId: 'error-session', relayUrl: 'https://example.com' } as any)
-
-      await triggerRelaySetup()
-      process.emit('SIGINT' as any)
-      await new Promise((resolve) => setTimeout(resolve, 50))
-
-      expect(fetch).toHaveBeenCalled()
-      expect(exitMock).toHaveBeenCalled()
-    })
-
-    it('handles SIGINT when no active session', async () => {
+    it('handles SIGINT when no active spawn', async () => {
       vi.useRealTimers()
       const exitMock = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any)
       process.emit('SIGINT' as any)

@@ -4,22 +4,32 @@
  * State machine: awaiting_setup -> setup_in_progress -> configured
  * Reset: configured -> awaiting_setup (via reset)
  *
- * Unlike telegram (which needs relay OTP), Notion has a single token.
- * When state is AWAITING_SETUP, token-requiring tools return setup instructions with relay URL.
- * Tools that work without token (help, content_convert) always work.
+ * When no credentials are present, triggerRelaySetup() spawns a LOCAL HTTP
+ * server (via mcp-core runLocalServer with the notion relaySchema) on a
+ * random 127.0.0.1 port and returns its /authorize URL. The user pastes
+ * their Notion integration token into that local form; onCredentialsSaved
+ * persists it to config.enc. The stdio/HTTP server that called us then
+ * reads the saved config on its next state resolve and transitions to
+ * `configured`. The spawn is LOCAL-ONLY — we never hit a remote relay URL
+ * and never follow the server's default mode for the stdio fallback.
+ * See `~/.claude/skills/mcp-dev/references/mode-matrix.md` section
+ * `stdio proxy` for the canonical rule.
  */
 
 import { execFile } from 'node:child_process'
-import type { RelaySession } from '@n24q02m/mcp-core'
-import { createSession, deleteConfig, notifyComplete, pollForResult, writeConfig } from '@n24q02m/mcp-core'
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { LocalServerHandle, RelayConfigSchema } from '@n24q02m/mcp-core'
+import { deleteConfig, runLocalServer, writeConfig } from '@n24q02m/mcp-core'
 import { resolveConfig } from '@n24q02m/mcp-core/storage'
 import { RELAY_SCHEMA } from './relay-schema.js'
 import { isSafeWebUrl } from './tools/helpers/security.js'
 
 const SERVER_NAME = 'better-notion-mcp'
 const CREDENTIAL_KEY = 'NOTION_TOKEN'
-const DEFAULT_RELAY_URL = 'https://better-notion-mcp.n24q02m.com'
 const REQUIRED_FIELDS = [CREDENTIAL_KEY]
+
+/** Grace window so the browser renders "Connected" before the spawn closes. */
+const SPAWN_CLEANUP_MS = 5_000
 
 export type CredentialState = 'awaiting_setup' | 'setup_in_progress' | 'configured'
 
@@ -27,7 +37,7 @@ export type CredentialState = 'awaiting_setup' | 'setup_in_progress' | 'configur
 let _state: CredentialState = 'awaiting_setup'
 let _setupUrl: string | null = null
 let _notionToken: string | null = null
-let _activeSession: { relayBaseUrl: string; sessionId: string } | null = null
+let _activeHandle: LocalServerHandle | null = null
 
 export function getState(): CredentialState {
   return _state
@@ -81,10 +91,10 @@ export async function resolveCredentialState(): Promise<CredentialState> {
 }
 
 /**
- * Start relay session (lazy trigger). Returns setup URL or null.
- *
- * Does NOT block -- returns URL immediately for the tool to include in response.
- * Background poll task applies config when user submits.
+ * Lazy setup trigger. Spawns a local HTTP credential form on a random port
+ * and returns its URL. Caller surfaces the URL to the user (stderr or tool
+ * response). Non-blocking — the user submits the form in their browser and
+ * onCredentialsSaved persists to config.enc in the background.
  */
 export async function triggerRelaySetup(): Promise<string | null> {
   if (_state !== 'awaiting_setup') {
@@ -94,34 +104,36 @@ export async function triggerRelaySetup(): Promise<string | null> {
   _state = 'setup_in_progress'
 
   try {
-    const relayUrl = process.env.MCP_RELAY_URL ?? DEFAULT_RELAY_URL
-    let session: RelaySession
+    const handle = await runLocalServer(stubMcpFactory, {
+      serverName: SERVER_NAME,
+      port: 0,
+      host: '127.0.0.1',
+      relaySchema: RELAY_SCHEMA as unknown as RelayConfigSchema,
+      onCredentialsSaved: async (creds) => {
+        const token = creds?.[CREDENTIAL_KEY]
+        if (typeof token === 'string' && token.length > 0) {
+          _notionToken = token
+          await writeConfig(SERVER_NAME, { [CREDENTIAL_KEY]: token })
+          _state = 'configured'
+          console.error('Notion config saved via local relay')
+          // Close the spawn after a short grace so the browser renders the
+          // "Connected" response before the server goes away.
+          setTimeout(() => {
+            closeActiveHandle().catch(() => {})
+          }, SPAWN_CLEANUP_MS)
+        }
+        return null
+      }
+    })
 
-    try {
-      session = await createSession(relayUrl, SERVER_NAME, RELAY_SCHEMA)
-    } catch {
-      console.error(
-        `Cannot reach relay server at ${relayUrl}. Set NOTION_TOKEN manually.\nGet your token from https://www.notion.so/my-integrations`
-      )
-      _state = 'awaiting_setup'
-      return null
-    }
-
-    _setupUrl = session.relayUrl
-    _activeSession = { relayBaseUrl: relayUrl, sessionId: session.sessionId }
+    _activeHandle = handle
+    _setupUrl = `http://${handle.host}:${handle.port}/`
 
     // Try to open browser (best-effort, non-blocking)
-    tryOpenBrowser(session.relayUrl)
+    tryOpenBrowser(_setupUrl)
 
-    console.error(`\nSetup required. Open this URL to configure:\n${session.relayUrl}\n`)
-    console.error(
-      'This URL contains temporary setup secrets and will expire in 3 minutes. Do NOT share this link or log it in shared systems.\n'
-    )
-
-    // Start background poll (non-blocking)
-    pollRelayBackground(relayUrl, session).catch(() => {
-      // Background poll failure is logged inside the function
-    })
+    console.error(`\nSetup required. Open this URL to configure:\n${_setupUrl}\n`)
+    console.error('Paste your Notion integration token (https://www.notion.so/my-integrations) in the form.\n')
 
     return _setupUrl
   } catch (err) {
@@ -131,41 +143,22 @@ export async function triggerRelaySetup(): Promise<string | null> {
   }
 }
 
+async function closeActiveHandle(): Promise<void> {
+  const handle = _activeHandle
+  if (!handle) return
+  _activeHandle = null
+  await handle.close().catch(() => {})
+}
+
 /**
- * Background task that polls relay and applies config when user submits.
+ * Minimal MCP server factory for the setup-only spawn. The spawned server
+ * exists solely to render the /authorize paste form; /mcp should never be
+ * called against it (clients use the primary stdio or http transport).
+ * Returning an empty McpServer keeps the types happy without wiring any
+ * tools, which would require a credentialed Notion client we don't yet have.
  */
-async function pollRelayBackground(relayBaseUrl: string, session: RelaySession): Promise<void> {
-  try {
-    const config = await pollForResult(relayBaseUrl, session, 2000, 180_000)
-
-    // Save to config file for future use
-    await writeConfig(SERVER_NAME, config)
-
-    // Apply token
-    _notionToken = config[CREDENTIAL_KEY]
-    _state = 'configured'
-    console.error('Notion config saved and applied successfully')
-
-    // Notify the browser and schedule cleanup after the browser has had time
-    // to poll the "complete" message. See @n24q02m/mcp-core notifyComplete JSDoc.
-    await notifyComplete(relayBaseUrl, session.sessionId, 'Notion token saved. Setup complete!')
-  } catch (err: any) {
-    // Cleanup session on failure (except skipped)
-    if (err?.message !== 'RELAY_SKIPPED') {
-      await fetch(`${relayBaseUrl}/api/sessions/${session.sessionId}`, { method: 'DELETE' }).catch(() => {})
-    }
-
-    if (err?.message === 'RELAY_SKIPPED') {
-      console.error('Relay setup skipped by user. Notion tools will be limited.')
-    } else {
-      console.error('Relay setup timed out or session expired')
-    }
-    _state = 'awaiting_setup'
-  } finally {
-    if (_activeSession?.sessionId === session.sessionId) {
-      _activeSession = null
-    }
-  }
+function stubMcpFactory(): McpServer {
+  return new McpServer({ name: `${SERVER_NAME}-setup`, version: '0.0.0' })
 }
 
 /**
@@ -197,20 +190,13 @@ export function resetState(): void {
   _state = 'awaiting_setup'
   _setupUrl = null
   _notionToken = null
+  closeActiveHandle().catch(() => {})
   deleteConfig(SERVER_NAME).catch(() => {})
 }
 
-// Cleanup active session on process exit
+// Cleanup active local spawn on process exit
 const handleExit = async () => {
-  if (_activeSession) {
-    const { relayBaseUrl, sessionId } = _activeSession
-    _activeSession = null
-    try {
-      await fetch(`${relayBaseUrl}/api/sessions/${sessionId}`, { method: 'DELETE' })
-    } catch {
-      // Ignore cleanup errors
-    }
-  }
+  await closeActiveHandle()
   process.exit()
 }
 
