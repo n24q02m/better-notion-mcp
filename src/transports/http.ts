@@ -90,6 +90,11 @@ export async function startHttp(): Promise<void> {
           const accessToken = String(tokens.access_token ?? '')
           const sub = String((tokens as { owner_user_id?: string }).owner_user_id ?? 'default')
           if (accessToken) tokenStore.save(sub, accessToken)
+          // Return sub so mcp-core (>=1.6.2) propagates it into the bearer
+          // JWT's `sub` claim, which `authScope` below then matches back
+          // to the stored Notion token. Without this, bearer JWT sub is
+          // hardcoded 'local-user' -> tokenStore.get() returns undefined.
+          return sub
         }
       },
       authScope: async (claims, next) => {
