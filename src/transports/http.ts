@@ -122,6 +122,11 @@ export async function startHttp(): Promise<void> {
           // Persist to encrypted config so the token survives process restarts
           // — otherwise the user would have to re-paste after every restart.
           await writeConfig(SERVER_NAME, { NOTION_TOKEN: token })
+          // Sync credential-state module so config(action=status) reports the
+          // up-to-date state (state=configured, has_token=true) without
+          // waiting for a process restart. Without this, `getState()` stays
+          // at its 'awaiting_setup' default even though the token is active.
+          await resolveCredentialState()
           console.error(`[${SERVER_NAME}] Notion token received via /authorize and saved`)
         }
         return null
