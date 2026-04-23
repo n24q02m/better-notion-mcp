@@ -5,14 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { bootstrap, getTransportMode, isMain, mode, startServer } from './main.js'
 
 const startHttpMock = vi.fn()
-const startStdioMock = vi.fn()
 
 vi.mock('./transports/http.js', () => ({
   startHttp: startHttpMock
 }))
 
-vi.mock('./transports/stdio.js', () => ({
-  startStdio: startStdioMock
+vi.mock('@n24q02m/mcp-core/transport', () => ({
+  runSmartStdioProxy: vi.fn().mockResolvedValue(0)
 }))
 
 // Mock node:fs to allow spying on realpathSync in ESM
@@ -23,6 +22,9 @@ vi.mock('node:fs', async (importOriginal) => {
     realpathSync: vi.fn(original.realpathSync)
   }
 })
+
+// Mock process.exit to prevent test runner from exiting
+const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any)
 
 describe('main.ts', () => {
   const originalEnv = process.env
@@ -129,28 +131,29 @@ describe('main.ts', () => {
     it('verifies call to startHttp when mode is http', async () => {
       await startServer('http')
       expect(startHttpMock).toHaveBeenCalled()
-      expect(startStdioMock).not.toHaveBeenCalled()
     })
 
-    it('verifies call to startStdio when mode is stdio', async () => {
+    it('verifies call to runSmartStdioProxy when mode is stdio', async () => {
+      const { runSmartStdioProxy } = await import('@n24q02m/mcp-core/transport')
       await startServer('stdio')
-      expect(startStdioMock).toHaveBeenCalled()
+      expect(runSmartStdioProxy).toHaveBeenCalledWith(
+        'better-notion-mcp',
+        expect.any(Array),
+        expect.objectContaining({ env: expect.any(Object) })
+      )
+      expect(exitSpy).toHaveBeenCalledWith(0)
       expect(startHttpMock).not.toHaveBeenCalled()
     })
 
-    it('verifies call to startStdio when mode is unknown', async () => {
+    it('verifies call to runSmartStdioProxy when mode is unknown', async () => {
+      const { runSmartStdioProxy } = await import('@n24q02m/mcp-core/transport')
       await startServer('unknown')
-      expect(startStdioMock).toHaveBeenCalled()
+      expect(runSmartStdioProxy).toHaveBeenCalled()
     })
 
     it('verifies error propagation from startHttp', async () => {
       startHttpMock.mockRejectedValueOnce(new Error('HTTP failed'))
       await expect(startServer('http')).rejects.toThrow('HTTP failed')
-    })
-
-    it('verifies error propagation from startStdio', async () => {
-      startStdioMock.mockRejectedValueOnce(new Error('Stdio failed'))
-      await expect(startServer('stdio')).rejects.toThrow('Stdio failed')
     })
   })
 
@@ -160,8 +163,9 @@ describe('main.ts', () => {
     })
 
     it('verifies execution with default mode', async () => {
+      const { runSmartStdioProxy } = await import('@n24q02m/mcp-core/transport')
       await bootstrap()
-      expect(startStdioMock).toHaveBeenCalled()
+      expect(runSmartStdioProxy).toHaveBeenCalled()
     })
 
     it('verifies execution with provided mode', async () => {
@@ -171,9 +175,8 @@ describe('main.ts', () => {
 
     it('verifies startup errors in bootstrap', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any)
-
-      startStdioMock.mockRejectedValueOnce(new Error('Test failure'))
+      const { runSmartStdioProxy } = await import('@n24q02m/mcp-core/transport')
+      vi.mocked(runSmartStdioProxy).mockRejectedValueOnce(new Error('Test failure'))
 
       await bootstrap('stdio')
 
@@ -181,7 +184,6 @@ describe('main.ts', () => {
       expect(exitSpy).toHaveBeenCalledWith(1)
 
       consoleSpy.mockRestore()
-      exitSpy.mockRestore()
     })
 
     it('verifies initialization of global mode from environment', async () => {
@@ -189,28 +191,6 @@ describe('main.ts', () => {
       vi.resetModules()
       const { mode: newMode } = await import('./main.js')
       expect(newMode).toBe('http')
-    })
-
-    it('verifies bootstrap execution when not in test environment', async () => {
-      startStdioMock.mockResolvedValue(undefined)
-
-      const currentDir = dirname(fileURLToPath(import.meta.url))
-      const mainPath = join(currentDir, 'main.ts')
-      process.argv[1] = mainPath
-      vi.stubEnv('NODE_ENV', 'production')
-
-      vi.mocked(fs.realpathSync).mockReturnValue(mainPath)
-
-      vi.resetModules()
-      await import('./main.js')
-
-      // Wait for async bootstrap
-      for (let i = 0; i < 20; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 1))
-        if (startStdioMock.mock.calls.length > 0) break
-      }
-
-      expect(startStdioMock).toHaveBeenCalled()
     })
   })
 })

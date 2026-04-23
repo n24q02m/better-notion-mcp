@@ -1,14 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const startStdioMock = vi.fn()
-const startHttpMock = vi.fn()
+const startServerMock = vi.fn()
 
-vi.mock('./transports/stdio.js', () => ({
-  startStdio: startStdioMock
-}))
-
-vi.mock('./transports/http.js', () => ({
-  startHttp: startHttpMock
+vi.mock('./main.js', () => ({
+  startServer: startServerMock
 }))
 
 describe('initServer', () => {
@@ -32,30 +27,26 @@ describe('initServer', () => {
     process.argv = [process.argv[0], 'main.js', '--stdio']
     const { initServer } = await import('./init-server.js')
     await initServer()
-    expect(startStdioMock).toHaveBeenCalled()
-    expect(startHttpMock).not.toHaveBeenCalled()
+    expect(startServerMock).toHaveBeenCalledWith('stdio')
   })
 
   it('dispatches stdio when MCP_TRANSPORT=stdio', async () => {
     process.env.MCP_TRANSPORT = 'stdio'
     const { initServer } = await import('./init-server.js')
     await initServer()
-    expect(startStdioMock).toHaveBeenCalled()
-    expect(startHttpMock).not.toHaveBeenCalled()
+    expect(startServerMock).toHaveBeenCalledWith('stdio')
   })
 
   it('dispatches stdio when TRANSPORT_MODE=stdio', async () => {
     process.env.TRANSPORT_MODE = 'stdio'
     const { initServer } = await import('./init-server.js')
     await initServer()
-    expect(startStdioMock).toHaveBeenCalled()
-    expect(startHttpMock).not.toHaveBeenCalled()
+    expect(startServerMock).toHaveBeenCalledWith('stdio')
   })
 
   it('dispatches http by default', async () => {
     const { initServer } = await import('./init-server.js')
     await initServer()
-    expect(startHttpMock).toHaveBeenCalled()
-    expect(startStdioMock).not.toHaveBeenCalled()
+    expect(startServerMock).toHaveBeenCalledWith('http')
   })
 })

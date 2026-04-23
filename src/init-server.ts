@@ -18,11 +18,11 @@ export async function initServer() {
     process.argv.includes('--stdio') || process.env.MCP_TRANSPORT === 'stdio' || process.env.TRANSPORT_MODE === 'stdio'
 
   if (isStdio) {
-    const { startStdio } = await import('./transports/stdio.js')
-    await startStdio()
+    const { startServer } = await import('./main.js')
+    await startServer('stdio')
     return
   }
 
-  const { startHttp } = await import('./transports/http.js')
-  await startHttp()
+  const { startServer } = await import('./main.js')
+  await startServer('http')
 }

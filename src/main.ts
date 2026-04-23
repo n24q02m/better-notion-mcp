@@ -8,6 +8,7 @@
 
 import { realpathSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { runSmartStdioProxy } from '@n24q02m/mcp-core/transport'
 
 /**
  * Checks if the current module is the main entry point.
@@ -47,8 +48,11 @@ export async function startServer(mode: string): Promise<void> {
     const { startHttp } = await import('./transports/http.js')
     await startHttp()
   } else {
-    const { startStdio } = await import('./transports/stdio.js')
-    await startStdio()
+    const daemonCmd = [process.execPath, process.argv[1]!]
+    const exitCode = await runSmartStdioProxy('better-notion-mcp', daemonCmd, {
+      env: { TRANSPORT_MODE: 'http', MCP_MODE: 'local-relay' }
+    })
+    process.exit(exitCode)
   }
 }
 
