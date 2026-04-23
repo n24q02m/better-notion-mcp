@@ -683,17 +683,18 @@ interface ParseResult {
 
 function parseCalloutBlock(lines: string[], startIndex: number, match: RegExpMatchArray): ParseResult {
   const calloutType = match[1].toUpperCase()
-  let calloutContent = match[2] || ''
+  const contentLines: string[] = match[2] ? [match[2]] : []
   let i = startIndex
 
   // Collect continuation lines (lines starting with >)
   while (i + 1 < lines.length && lines[i + 1].startsWith('> ')) {
     i++
-    calloutContent += (calloutContent ? '\n' : '') + lines[i].slice(2)
+    contentLines.push(lines[i].slice(2))
   }
 
   const icon = getCalloutIcon(calloutType)
   const color = getCalloutColor(calloutType)
+  const calloutContent = contentLines.join('\n')
   return { block: createCallout(calloutContent || calloutType, icon, color), endIndex: i }
 }
 
