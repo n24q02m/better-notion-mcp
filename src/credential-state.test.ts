@@ -10,9 +10,11 @@ import {
   getNotionToken,
   getSetupUrl,
   getState,
+  getSubjectToken,
   resetState,
   resolveCredentialState,
   setState,
+  setSubjectTokenResolver,
   triggerRelaySetup
 } from './credential-state.js'
 
@@ -230,6 +232,34 @@ describe('credential-state', () => {
       process.emit('SIGINT' as any)
       await new Promise((resolve) => setTimeout(resolve, 50))
       expect(exitMock).toHaveBeenCalled()
+    })
+  })
+
+  describe('subject token resolver', () => {
+    beforeEach(() => {
+      // Reset to default (module-global single-user fallback)
+      setSubjectTokenResolver(() => getNotionToken())
+    })
+
+    it('defaults to single-user module global when no resolver injected', () => {
+      setState('awaiting_setup')
+      expect(getSubjectToken()).toBeNull()
+    })
+
+    it('returns injected per-subject token for remote-oauth mode', () => {
+      let currentSub = 'alice'
+      const storeByAlice = 'ntn_alice_token'
+      const storeByBob = 'ntn_bob_token'
+      setSubjectTokenResolver(() => {
+        if (currentSub === 'alice') return storeByAlice
+        if (currentSub === 'bob') return storeByBob
+        return null
+      })
+      expect(getSubjectToken()).toBe(storeByAlice)
+      currentSub = 'bob'
+      expect(getSubjectToken()).toBe(storeByBob)
+      currentSub = 'unknown'
+      expect(getSubjectToken()).toBeNull()
     })
   })
 })

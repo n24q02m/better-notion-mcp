@@ -5,9 +5,9 @@
  */
 
 import {
-  getNotionToken,
   getSetupUrl,
   getState,
+  getSubjectToken,
   resetState,
   resolveCredentialState,
   triggerRelaySetup
@@ -30,7 +30,7 @@ export async function config(input: ConfigInput): Promise<any> {
       case 'status': {
         const state = getState()
         const setupUrl = getSetupUrl()
-        const token = getNotionToken()
+        const token = getSubjectToken()
         return {
           action: 'status',
           state,
@@ -75,7 +75,7 @@ export async function config(input: ConfigInput): Promise<any> {
         return {
           action: 'setup_complete',
           state: newState,
-          has_token: getNotionToken() !== null,
+          has_token: getSubjectToken() !== null,
           message:
             newState === 'configured'
               ? 'Credentials verified. Notion tools are ready.'
