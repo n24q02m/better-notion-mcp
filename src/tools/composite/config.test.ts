@@ -4,6 +4,8 @@ vi.mock('../../credential-state.js', () => ({
   getState: vi.fn(() => 'awaiting_setup'),
   getSetupUrl: vi.fn(() => null),
   getNotionToken: vi.fn(() => null),
+  getSubjectToken: vi.fn(() => null),
+  setSubjectTokenResolver: vi.fn(),
   triggerRelaySetup: vi.fn(),
   resetState: vi.fn(),
   resolveCredentialState: vi.fn()
@@ -13,6 +15,7 @@ import {
   getNotionToken,
   getSetupUrl,
   getState,
+  getSubjectToken,
   resetState,
   resolveCredentialState,
   triggerRelaySetup
@@ -26,6 +29,7 @@ describe('config', () => {
     vi.mocked(getState).mockReturnValue('awaiting_setup')
     vi.mocked(getSetupUrl).mockReturnValue(null)
     vi.mocked(getNotionToken).mockReturnValue(null)
+    vi.mocked(getSubjectToken).mockReturnValue(null)
   })
 
   describe('status action', () => {
@@ -42,6 +46,7 @@ describe('config', () => {
     it('should return configured state with relay token', async () => {
       vi.mocked(getState).mockReturnValue('configured')
       vi.mocked(getNotionToken).mockReturnValue('ntn_test123')
+      vi.mocked(getSubjectToken).mockReturnValue('ntn_test123')
       vi.mocked(getSetupUrl).mockReturnValue(null)
       // No env var
       delete process.env.NOTION_TOKEN
@@ -56,6 +61,7 @@ describe('config', () => {
     it('should return configured state with environment token', async () => {
       vi.mocked(getState).mockReturnValue('configured')
       vi.mocked(getNotionToken).mockReturnValue('ntn_env_token')
+      vi.mocked(getSubjectToken).mockReturnValue('ntn_env_token')
       process.env.NOTION_TOKEN = 'ntn_env_token'
 
       const result = await config({ action: 'status' })
@@ -137,6 +143,7 @@ describe('config', () => {
     it('should re-check credentials and return configured state', async () => {
       vi.mocked(resolveCredentialState).mockResolvedValue('configured')
       vi.mocked(getNotionToken).mockReturnValue('ntn_resolved')
+      vi.mocked(getSubjectToken).mockReturnValue('ntn_resolved')
 
       const result = await config({ action: 'setup_complete' })
 
@@ -150,6 +157,7 @@ describe('config', () => {
     it('should return awaiting_setup when no credentials found', async () => {
       vi.mocked(resolveCredentialState).mockResolvedValue('awaiting_setup')
       vi.mocked(getNotionToken).mockReturnValue(null)
+      vi.mocked(getSubjectToken).mockReturnValue(null)
 
       const result = await config({ action: 'setup_complete' })
 

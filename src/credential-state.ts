@@ -52,6 +52,24 @@ export function getNotionToken(): string | null {
 }
 
 /**
+ * Per-request token resolver. `local-relay` mode leaves the default resolver,
+ * which reads the single-user module global. `remote-oauth` mode injects a
+ * resolver that reads the per-JWT-sub `NotionTokenStore` so that
+ * `config(action=status)` reflects whether the CURRENT caller has a Notion
+ * access token — not whether the server process has any global token, which
+ * is always null in multi-user remote-oauth mode.
+ */
+let _subjectTokenResolver: () => string | null = () => _notionToken
+
+export function setSubjectTokenResolver(fn: () => string | null): void {
+  _subjectTokenResolver = fn
+}
+
+export function getSubjectToken(): string | null {
+  return _subjectTokenResolver()
+}
+
+/**
  * Fast, synchronous-ish credential check. Called during startup.
  *
  * Checks (in order):

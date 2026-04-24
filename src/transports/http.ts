@@ -17,7 +17,7 @@ import { type RelayConfigSchema, runLocalServer, writeConfig } from '@n24q02m/mc
 import { Client } from '@notionhq/client'
 import { NotionTokenStore } from '../auth/notion-token-store.js'
 import { createMCPServer } from '../create-server.js'
-import { getNotionToken, resolveCredentialState, setState } from '../credential-state.js'
+import { getNotionToken, resolveCredentialState, setState, setSubjectTokenResolver } from '../credential-state.js'
 import { RELAY_SCHEMA } from '../relay-schema.js'
 import { NotionMCPError } from '../tools/helpers/errors.js'
 
@@ -108,6 +108,13 @@ export async function startHttp(): Promise<void> {
     // module. Mark state=configured so `config(action=status)` reflects
     // server readiness (matrix step [7]).
     setState('configured')
+    // Route `getSubjectToken()` to the per-user store so
+    // `config(action=status).has_token` reflects whether THIS caller has
+    // authorized, instead of always-null single-user global.
+    setSubjectTokenResolver(() => {
+      const ctx = subjectContext.getStore()
+      return ctx ? (tokenStore.get(ctx.sub) ?? null) : null
+    })
     console.error(`[${SERVER_NAME}] remote-oauth mode on http://${handle.host}:${handle.port}/mcp`)
   } else {
     handle = await runLocalServer(() => createMCPServer(notionClientFactory) as unknown as McpServer, {
