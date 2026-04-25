@@ -55,7 +55,7 @@ mise run fix                # bun run check:fix
 - **stdio mode** (default): `NOTION_TOKEN` (bat buoc)
 - **http mode**: `TRANSPORT_MODE=http`, `PUBLIC_URL`, `NOTION_OAUTH_CLIENT_ID`, `NOTION_OAUTH_CLIENT_SECRET`, `DCR_SERVER_SECRET`
 - `PORT` (default 8080)
-- Infisical: project `eb2a1274-f333-4f5f-b3b9-42c525cec134`
+- Secrets: skret SSM namespace `/better-notion-mcp/prod` (region `ap-southeast-1`)
 
 ## Release & Deploy
 
