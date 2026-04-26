@@ -71,6 +71,13 @@ function stripSensitiveFields(obj: any, seen = new WeakSet()): void {
   delete obj.internal_config
   delete obj.user_email
 
+  // Also strip authorization headers to prevent leaking tokens
+  if (obj.headers?.Authorization) delete obj.headers.Authorization
+  if (obj.headers?.authorization) delete obj.headers.authorization
+  if (obj.request?._headers?.authorization) delete obj.request._headers.authorization
+  if (obj.config?.headers?.Authorization) delete obj.config.headers.Authorization
+  if (obj.config?.headers?.authorization) delete obj.config.headers.authorization
+
   for (const key of Object.keys(obj)) {
     if (typeof obj[key] === 'object' && obj[key] !== null) {
       stripSensitiveFields(obj[key], seen)
@@ -249,7 +256,7 @@ export function aiReadableMessage(error: NotionMCPError): string {
  */
 // ⚡ Bolt: Cache suggestion arrays to avoid O(n) switch statements and
 // repeated array allocation/pushes on every error handled.
-const ERROR_SUGGESTIONS_MAP: Record<string, string[]> = {
+const _ERROR_SUGGESTIONS_MAP: Record<string, string[]> = {
   UNAUTHORIZED: [
     'Check that NOTION_TOKEN is set in your environment',
     'Verify token at https://www.notion.so/my-integrations',
@@ -277,7 +284,7 @@ const ERROR_SUGGESTIONS_MAP: Record<string, string[]> = {
   ]
 }
 
-const DEFAULT_SUGGESTIONS = [
+const _DEFAULT_SUGGESTIONS = [
   'Check Notion API status at https://status.notion.so',
   'Review request parameters',
   'Try again in a few moments'

@@ -1,0 +1,4 @@
+## 2024-05-18 - Fix Authorization Header Leak
+**Vulnerability:** Authorization headers (like `Authorization` and `authorization`) were leaking within the HTTP error payload objects inside `config.headers`, `request._headers` and `headers` objects when `enhanceError` was called on network errors, as these nested properties were not cleaned by the `stripSensitiveFields` logic.
+**Learning:** Generic error serialization can unintentionally capture standard HTTP metadata which usually contains tokens or credentials, leading to unintended leakage when errors are output to clients or logs.
+**Prevention:** Always perform an explicit redaction of common auth-related header locations inside error response payloads that come from HTTP client instances before relaying error details outside of their execution context.

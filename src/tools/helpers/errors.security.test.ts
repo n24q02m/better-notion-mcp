@@ -36,4 +36,37 @@ describe('Security: Error Handling', () => {
     expect(enhanced.details).not.toHaveProperty('internal_config')
     expect(enhanced.details).not.toHaveProperty('user_email')
   })
+
+  it('should not leak Authorization headers in error objects', () => {
+    const errorWithAuth = {
+      message: 'Failed to fetch',
+      headers: {
+        Authorization: 'Bearer ntn_1234567890',
+        'Content-Type': 'application/json'
+      },
+      config: {
+        headers: {
+          authorization: 'Bearer ntn_0987654321'
+        }
+      },
+      request: {
+        _headers: {
+          authorization: 'Bearer ntn_abcdef'
+        }
+      }
+    }
+
+    const enhanced = enhanceError(errorWithAuth)
+    expect(enhanced.details).toBeDefined()
+    if (enhanced.details?.headers) {
+      expect(enhanced.details.headers).not.toHaveProperty('Authorization')
+      expect(enhanced.details.headers).toHaveProperty('Content-Type')
+    }
+    if (enhanced.details?.config?.headers) {
+      expect(enhanced.details.config.headers).not.toHaveProperty('authorization')
+    }
+    if (enhanced.details?.request?._headers) {
+      expect(enhanced.details.request._headers).not.toHaveProperty('authorization')
+    }
+  })
 })
