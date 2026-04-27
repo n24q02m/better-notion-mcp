@@ -596,11 +596,16 @@ class InlineParser {
 
   public parse(): RichText[] {
     for (this.i = 0; this.i < this.text.length; this.i++) {
-      if (this.tryParseMention()) continue
-      if (this.tryParseLink()) continue
-      if (this.tryParseFormatting()) continue
+      const char = this.text[this.i]
 
-      this.current += this.text[this.i]
+      // Fast path: skip parsing functions if character isn't a potential formatting trigger
+      if (char === '@' || char === '[' || char === '*' || char === '`' || char === '~') {
+        if (this.tryParseMention()) continue
+        if (this.tryParseLink()) continue
+        if (this.tryParseFormatting()) continue
+      }
+
+      this.current += char
     }
 
     this.flushCurrent()
