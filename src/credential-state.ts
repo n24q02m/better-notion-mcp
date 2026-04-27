@@ -194,7 +194,7 @@ export function tryOpenBrowser(url: string): void {
   if (platform === 'darwin') {
     execFile('open', [url], () => {})
   } else if (platform === 'win32') {
-    execFile('cmd', ['/c', 'start', '', url], () => {})
+    execFile('rundll32', ['url.dll,FileProtocolHandler', url], () => {})
   } else {
     execFile('xdg-open', [url], () => {})
   }

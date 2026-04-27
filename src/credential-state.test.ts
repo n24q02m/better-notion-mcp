@@ -192,13 +192,17 @@ describe('credential-state', () => {
       expect(execFile).toHaveBeenCalledWith('open', ['http://127.0.0.1:7001/'], expect.any(Function))
     })
 
-    it('calls cmd on win32', async () => {
+    it('calls rundll32 on win32', async () => {
       Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
       vi.mocked(runLocalServer).mockResolvedValue(makeHandle({ port: 7002 }) as any)
 
       await triggerRelaySetup()
 
-      expect(execFile).toHaveBeenCalledWith('cmd', ['/c', 'start', '', 'http://127.0.0.1:7002/'], expect.any(Function))
+      expect(execFile).toHaveBeenCalledWith(
+        'rundll32',
+        ['url.dll,FileProtocolHandler', 'http://127.0.0.1:7002/'],
+        expect.any(Function)
+      )
     })
 
     it('calls xdg-open on other platforms', async () => {
