@@ -226,10 +226,11 @@ If `NOTION_TOKEN` is not set in stdio mode, the server opens a relay setup page:
 | Variable | Required | Default | Description |
 |:---------|:---------|:--------|:------------|
 | `NOTION_TOKEN` | Yes (stdio) | -- | Notion internal integration token (`ntn_...`). |
-| `TRANSPORT_MODE` | No | `stdio` | Set to `http` for remote OAuth mode. |
+| `MCP_MODE` | No | `remote-oauth` (when `TRANSPORT_MODE=http`) | Selects the HTTP relay flavour: `remote-oauth` (delegated OAuth 2.1 to `api.notion.com`; multi-user with per-JWT-sub tokens; deployed at `better-notion-mcp.n24q02m.com`) or `local-relay` (paste-form for the integration token; single-user). |
+| `TRANSPORT_MODE` | No | `stdio` | Legacy alias still honoured — set to `http` to enable HTTP transport (then pick `MCP_MODE`). `MCP_TRANSPORT=stdio` forces the stdio fallback. |
 | `PUBLIC_URL` | Yes (http) | -- | Server's public URL for OAuth redirects. |
-| `NOTION_OAUTH_CLIENT_ID` | Yes (http) | -- | Notion Public Integration client ID. |
-| `NOTION_OAUTH_CLIENT_SECRET` | Yes (http) | -- | Notion Public Integration client secret. |
+| `NOTION_OAUTH_CLIENT_ID` | Yes (`MCP_MODE=remote-oauth`) | -- | Notion Public Integration client ID. |
+| `NOTION_OAUTH_CLIENT_SECRET` | Yes (`MCP_MODE=remote-oauth`) | -- | Notion Public Integration client secret. |
 | `DCR_SERVER_SECRET` | Yes (http) | -- | HMAC secret for stateless Dynamic Client Registration. |
 | `PORT` | No | `8080` | Server port. |
 
