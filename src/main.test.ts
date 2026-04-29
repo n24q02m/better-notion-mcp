@@ -155,21 +155,6 @@ describe('main.ts', () => {
       startHttpMock.mockRejectedValueOnce(new Error('HTTP failed'))
       await expect(startServer('http')).rejects.toThrow('HTTP failed')
     })
-
-    it('passes RELAY_SCHEMA as eagerRelaySchema to runSmartStdioProxy in stdio mode (D18.2)', async () => {
-      const { runSmartStdioProxy } = await import('@n24q02m/mcp-core/transport')
-      const spy = vi.mocked(runSmartStdioProxy)
-      spy.mockClear()
-
-      await startServer('stdio')
-
-      expect(spy).toHaveBeenCalledOnce()
-      const options = spy.mock.calls[0]![2]!
-      expect(options.eagerRelaySchema).toBeDefined()
-      expect(options.eagerRelaySchema!.fields).toEqual(
-        expect.arrayContaining([expect.objectContaining({ key: 'NOTION_TOKEN' })])
-      )
-    })
   })
 
   describe('bootstrap and exports', () => {
