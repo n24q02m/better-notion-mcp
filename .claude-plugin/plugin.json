@@ -10,7 +10,7 @@
   "mcpServers": {
     "better-notion-mcp": {
       "command": "npx",
-      "args": ["-y", "@n24q02m/better-notion-mcp"],
+      "args": ["--yes", "@n24q02m/better-notion-mcp@latest"],
       "env": { "MCP_TRANSPORT": "stdio" }
     }
   }
