@@ -75,3 +75,4 @@ export async function bootstrap(selectedMode: string = mode) {
 if (isMain(import.meta.url) && process.env.NODE_ENV !== 'test') {
   bootstrap()
 }
+// Rebuild target: mcp-core 1.11.5 (P0 fork-bomb fix)
