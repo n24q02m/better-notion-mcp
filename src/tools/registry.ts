@@ -13,8 +13,10 @@ import {
   ListToolsRequestSchema,
   ReadResourceRequestSchema
 } from '@modelcontextprotocol/sdk/types.js'
+import { buildOpenRelayHandler } from '@n24q02m/mcp-core'
 import type { Client } from '@notionhq/client'
 import { getSetupUrl, getState, triggerRelaySetup } from '../credential-state.js'
+import { RELAY_SCHEMA } from '../relay-schema.js'
 // Import mega tools
 import { blocks } from './composite/blocks.js'
 import { commentsManage } from './composite/comments.js'
@@ -29,7 +31,9 @@ import { aiReadableMessage, findClosestMatch, NotionMCPError } from './helpers/e
 import { wrapToolResult } from './helpers/security.js'
 
 // Tools that work without a Notion token
-const TOKEN_FREE_TOOLS = new Set(['help', 'content_convert', 'config'])
+const TOKEN_FREE_TOOLS = new Set(['help', 'content_convert', 'config', 'config__open_relay'])
+
+const openRelayHandler = buildOpenRelayHandler('better-notion-mcp', RELAY_SCHEMA)
 
 // Get docs directory path - works for both bundled CLI and unbundled code
 const __filename = fileURLToPath(import.meta.url)
@@ -410,6 +414,24 @@ const TOOLS = [
       },
       required: ['action']
     }
+  },
+  {
+    name: 'config__open_relay',
+    description:
+      'Open the relay configuration form for better-notion-mcp in the user browser. Returns the relay URL, whether the browser launched, and the current credential state. Auto-respawns the daemon if it has died.',
+    annotations: {
+      title: 'Open Relay',
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true
+    },
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+      required: []
+    }
   }
 ]
 
@@ -516,6 +538,9 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
           break
         case 'config':
           result = await config(args as any)
+          break
+        case 'config__open_relay':
+          result = await openRelayHandler()
           break
         case 'file_uploads':
           result = await fileUploads(notion, args as any)
