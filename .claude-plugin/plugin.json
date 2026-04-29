@@ -9,8 +9,9 @@
   "homepage": "https://github.com/n24q02m/better-notion-mcp",
   "mcpServers": {
     "better-notion-mcp": {
-      "type": "http",
-      "url": "https://better-notion-mcp.n24q02m.com/mcp"
+      "command": "npx",
+      "args": ["-y", "@n24q02m/better-notion-mcp"],
+      "env": { "MCP_TRANSPORT": "stdio" }
     }
   }
 }
