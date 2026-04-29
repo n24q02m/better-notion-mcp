@@ -48,12 +48,9 @@ export async function startServer(mode: string): Promise<void> {
     const { startHttp } = await import('./transports/http.js')
     await startHttp()
   } else {
-    const { RELAY_SCHEMA } = await import('./relay-schema.js')
     const daemonCmd = [process.execPath, process.argv[1]!]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const exitCode = await runSmartStdioProxy('better-notion-mcp', daemonCmd, {
-      env: { TRANSPORT_MODE: 'http', MCP_MODE: 'local-relay' },
-      eagerRelaySchema: RELAY_SCHEMA as any
+      env: { TRANSPORT_MODE: 'http', MCP_MODE: 'local-relay' }
     })
     process.exit(exitCode)
   }
