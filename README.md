@@ -127,6 +127,16 @@ bun install
 bun run dev
 ```
 
+## Trust Model
+
+This plugin implements **TC-NearZK** (in-memory, ephemeral). See [mcp-core/docs/TRUST-MODEL.md](https://github.com/n24q02m/mcp-core/blob/main/docs/TRUST-MODEL.md) for full classification.
+
+| Mode | Storage | Encryption | Who can read your data? |
+|---|---|---|---|
+| HTTP n24q02m-hosted (default) | In-memory `Map<sub, OAuthToken>` | In-process only | Server process (cleared on restart) |
+| HTTP self-host | Same as hosted | Same | Only you (admin = user) |
+| stdio proxy | `~/.better-notion-mcp/config.json` | AES-GCM, machine-bound key | Only your OS user (file perm 0600) |
+
 ## License
 
 MIT -- See [LICENSE](LICENSE).
