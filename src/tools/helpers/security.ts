@@ -36,10 +36,8 @@ export function isSafeUrl(url: string): boolean {
     try {
       new URL(lowerUrl, 'http://relative-check.internal')
 
-      const delimiters = [lowerUrl.indexOf('/'), lowerUrl.indexOf('?'), lowerUrl.indexOf('#')].filter(
-        (idx) => idx !== -1
-      )
-      const firstDelimiter = delimiters.length > 0 ? Math.min(...delimiters) : -1
+      // ⚡ Bolt: Optimized delimiter detection by using a single regex search instead of multiple indexOf calls and array allocations
+      const firstDelimiter = lowerUrl.search(/[/?#]/)
 
       const prefix = firstDelimiter === -1 ? lowerUrl : lowerUrl.substring(0, firstDelimiter)
 
