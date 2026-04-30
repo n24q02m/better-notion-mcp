@@ -6,12 +6,12 @@
     "url": "https://github.com/n24q02m/better-notion-mcp.git",
     "source": "github"
   },
-  "version": "2.31.0-beta.1",
+  "version": "2.31.0-beta.2",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@n24q02m/better-notion-mcp",
-      "version": "2.31.0-beta.1",
+      "version": "2.31.0-beta.2",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"
