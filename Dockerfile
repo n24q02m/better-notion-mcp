@@ -1,4 +1,6 @@
 # Better Notion MCP - Optimized for AI Agents
+# Multi-target Dockerfile: `:stdio` (default for clients) + `:http` (self-hosted daemon).
+# See spec 2026-04-30-multi-mode-stdio-http-architecture.md.
 # syntax=docker/dockerfile:1
 
 # Use bun for dependency installation
@@ -26,8 +28,8 @@ COPY . .
 # Build the package
 RUN npx tsc -build && node scripts/build-cli.js
 
-# Minimal image for runtime
-FROM node:24.15.0-alpine@sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40a06dbdfc94f
+# Base runtime stage (shared by both targets)
+FROM node:24.15.0-alpine@sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40a06dbdfc94f AS base
 
 LABEL org.opencontainers.image.source="https://github.com/n24q02m/better-notion-mcp"
 LABEL io.modelcontextprotocol.server.name="io.github.n24q02m/better-notion-mcp"
@@ -41,15 +43,22 @@ COPY --from=builder /app/LICENSE /usr/local/lib/node_modules/@n24q02m/better-not
 COPY --from=builder /app/node_modules /usr/local/lib/node_modules/@n24q02m/better-notion-mcp/node_modules
 
 # Create symlink for CLI
-RUN ln -s /usr/local/lib/node_modules/@n24q02m/better-notion-mcp/bin/cli.mjs /usr/local/bin/better-notion-mcp
+RUN ln -s /usr/local/lib/node_modules/@n24q02m/better-notion-mcp/bin/cli.mjs /usr/local/bin/better-notion-mcp \
+    && chmod +x /usr/local/lib/node_modules/@n24q02m/better-notion-mcp/bin/cli.mjs
 
-# Set default environment variables
 ENV NODE_ENV=production
-# TRANSPORT_MODE: "stdio" (default) or "http" (remote + OAuth)
-EXPOSE 8080
 
-# Run as non-root user for security
 USER node
 
-# Set entrypoint
-ENTRYPOINT ["better-notion-mcp"]
+# stdio target: direct MCP SDK StdioServerTransport (no daemon hop).
+# Intended for `docker run --rm -i n24q02m/better-notion-mcp:stdio` from MCP clients.
+FROM base AS stdio
+ENV MCP_TRANSPORT=stdio
+ENTRYPOINT ["node", "/usr/local/lib/node_modules/@n24q02m/better-notion-mcp/bin/cli.mjs"]
+
+# http target: HTTP daemon (runLocalServer). Self-hosted deployment.
+FROM base AS http
+ENV MCP_TRANSPORT=http
+ENV PORT=8080
+EXPOSE 8080
+ENTRYPOINT ["node", "/usr/local/lib/node_modules/@n24q02m/better-notion-mcp/bin/cli.mjs"]
