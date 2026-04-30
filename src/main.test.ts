@@ -5,13 +5,45 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { bootstrap, getTransportMode, isMain, mode, startServer } from './main.js'
 
 const startHttpMock = vi.fn()
+const stdioConnectMock = vi.fn().mockResolvedValue(undefined)
+const stdioServerCtor = vi.fn()
+const stdioTransportCtor = vi.fn()
+const registerToolsMock = vi.fn()
 
 vi.mock('./transports/http.js', () => ({
   startHttp: startHttpMock
 }))
 
-vi.mock('@n24q02m/mcp-core/transport', () => ({
-  runSmartStdioProxy: vi.fn().mockResolvedValue(0)
+vi.mock('@modelcontextprotocol/sdk/server/index.js', () => {
+  class MockServer {
+    constructor(...args: unknown[]) {
+      stdioServerCtor(...args)
+    }
+    connect = stdioConnectMock
+  }
+  return { Server: MockServer }
+})
+
+vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => {
+  class MockStdioServerTransport {
+    constructor(...args: unknown[]) {
+      stdioTransportCtor(...args)
+    }
+  }
+  return { StdioServerTransport: MockStdioServerTransport }
+})
+
+vi.mock('@notionhq/client', () => ({
+  Client: vi.fn().mockImplementation(() => ({}))
+}))
+
+vi.mock('./tools/registry.js', () => ({
+  registerTools: (...args: unknown[]) => registerToolsMock(...args)
+}))
+
+vi.mock('./credential-state.js', () => ({
+  resolveCredentialState: vi.fn().mockResolvedValue('configured'),
+  getNotionToken: vi.fn().mockReturnValue('ntn_test_token')
 }))
 
 // Mock node:fs to allow spying on realpathSync in ESM
@@ -133,22 +165,22 @@ describe('main.ts', () => {
       expect(startHttpMock).toHaveBeenCalled()
     })
 
-    it('verifies call to runSmartStdioProxy when mode is stdio', async () => {
-      const { runSmartStdioProxy } = await import('@n24q02m/mcp-core/transport')
+    it('verifies direct stdio transport when mode is stdio', async () => {
       await startServer('stdio')
-      expect(runSmartStdioProxy).toHaveBeenCalledWith(
-        'better-notion-mcp',
-        expect.any(Array),
-        expect.objectContaining({ env: expect.any(Object) })
+      expect(stdioServerCtor).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'better-notion-mcp' }),
+        expect.objectContaining({ capabilities: expect.any(Object) })
       )
-      expect(exitSpy).toHaveBeenCalledWith(0)
+      expect(stdioTransportCtor).toHaveBeenCalledOnce()
+      expect(stdioConnectMock).toHaveBeenCalledOnce()
+      expect(registerToolsMock).toHaveBeenCalledOnce()
       expect(startHttpMock).not.toHaveBeenCalled()
     })
 
-    it('verifies call to runSmartStdioProxy when mode is unknown', async () => {
-      const { runSmartStdioProxy } = await import('@n24q02m/mcp-core/transport')
+    it('verifies direct stdio transport when mode is unknown', async () => {
       await startServer('unknown')
-      expect(runSmartStdioProxy).toHaveBeenCalled()
+      expect(stdioServerCtor).toHaveBeenCalled()
+      expect(stdioConnectMock).toHaveBeenCalled()
     })
 
     it('verifies error propagation from startHttp', async () => {
@@ -163,9 +195,8 @@ describe('main.ts', () => {
     })
 
     it('verifies execution with default mode', async () => {
-      const { runSmartStdioProxy } = await import('@n24q02m/mcp-core/transport')
       await bootstrap()
-      expect(runSmartStdioProxy).toHaveBeenCalled()
+      expect(stdioConnectMock).toHaveBeenCalled()
     })
 
     it('verifies execution with provided mode', async () => {
@@ -175,8 +206,7 @@ describe('main.ts', () => {
 
     it('verifies startup errors in bootstrap', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-      const { runSmartStdioProxy } = await import('@n24q02m/mcp-core/transport')
-      vi.mocked(runSmartStdioProxy).mockRejectedValueOnce(new Error('Test failure'))
+      stdioConnectMock.mockRejectedValueOnce(new Error('Test failure'))
 
       await bootstrap('stdio')
 
