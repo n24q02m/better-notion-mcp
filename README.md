@@ -30,7 +30,29 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 - **Tiered token optimization** -- ~77% reduction via compressed descriptions + on-demand `help` tool
 - **Dual transport** -- local stdio (token) or remote HTTP (OAuth 2.1, no token needed)
 
+## Status
+
+> **2026-05-02 -- Architecture stabilization update**
+>
+> Past months saw significant churn around credential handling and the daemon-bridge auto-spawn pattern. This caused multi-process races, browser tab spam, and inconsistent setup UX across plugins. **As of v<auto>, the architecture is stable**: 2 clean modes (stdio + HTTP), no daemon-bridge layer, no auto-spawn from stdio.
+>
+> Apologies for the instability period. If you encountered issues with prior versions, please update to v<auto>+ and follow the current `docs/setup-manual.md` -- most prior workarounds are no longer needed.
+>
+> **Related plugins from the same author**:
+> - [wet-mcp](https://github.com/n24q02m/wet-mcp) -- Web search + content extraction
+> - [mnemo-mcp](https://github.com/n24q02m/mnemo-mcp) -- Persistent AI memory
+> - [imagine-mcp](https://github.com/n24q02m/imagine-mcp) -- Image/video understanding + generation
+> - [better-email-mcp](https://github.com/n24q02m/better-email-mcp) -- Email management
+> - [better-telegram-mcp](https://github.com/n24q02m/better-telegram-mcp) -- Telegram
+> - [better-godot-mcp](https://github.com/n24q02m/better-godot-mcp) -- Godot Engine
+> - [better-code-review-graph](https://github.com/n24q02m/better-code-review-graph) -- Code review knowledge graph
+>
+> All plugins share the same architecture -- install once, learn pattern transfers.
+
 ## Setup
+
+- **Stdio mode** (default) -- env var creds (`NOTION_TOKEN`), single-user local. See [setup-manual.md](docs/setup-manual.md).
+- **HTTP mode** (optional, encouraged) -- multi-user, OAuth 2.1, browser-based setup. See [setup-manual.md](docs/setup-manual.md) "Method 5: Self-Hosting HTTP Mode".
 
 **With AI Agent** -- copy and send this to your AI agent:
 
@@ -66,19 +88,6 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 | `notion://docs/comments` | Comment operations reference |
 | `notion://docs/content_convert` | Content conversion reference |
 | `notion://docs/file_uploads` | File upload reference |
-
-## Zero-Config Setup
-
-No environment variables needed. On first start, the server opens a setup page in your browser:
-
-1. Start the server (via plugin, `npx`, or Docker)
-2. A setup URL appears -- open it in any browser
-3. Fill in your credentials on the guided form
-4. Credentials are encrypted and stored locally
-
-Your credentials never leave your machine. The relay server only sees encrypted data.
-
-For CI/automation, you can still use environment variables (see below).
 
 ## Configuration
 
