@@ -1,3 +1,6 @@
 ## 2025-02-12 - URL Delimiter Parsing Optimization
 **Learning:** In JavaScript, using an unescaped `/` within a regex literal `/[/?#]/` causes a `SyntaxError` (Invalid regular expression: missing /), even within character classes. Also, placing regex literals inside functions on hot paths like URL validation causes slight overhead from repeated regex object creation.
 **Action:** When finding the first occurrence of multiple characters, consolidate multiple `.indexOf` calls into a single regex `.search()` pass (e.g. `URL_DELIMITER_REGEX.search(str)`), but always ensure slashes are properly escaped (or avoided via instantiation constraints) and ALWAYS declare regexes at the module level outside functions.
+## 2025-02-12 - Safe Regex Hoisting
+**Learning:** Python scripts using `string.replace()` provide a safer and more maintainable alternative to `sed` for precise, multi-line string replacements in source code files. Avoid `re.sub()` when the replacement string contains literal backslashes (e.g., regex constants) to prevent 'bad escape' sequence errors from the regex engine evaluating the replacement.
+**Action:** When extracting multiple inline regexes to module-level constants to prevent object recreation overhead on hot paths, use Python with `string.replace()` for the modifications.
