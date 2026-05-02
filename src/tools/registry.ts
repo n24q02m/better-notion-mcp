@@ -15,8 +15,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js'
 import { buildOpenRelayHandler } from '@n24q02m/mcp-core'
 import type { Client } from '@notionhq/client'
-import { getSetupUrl, getState, triggerRelaySetup } from '../credential-state.js'
-import { RELAY_SCHEMA } from '../relay-schema.js'
+import { getState } from '../credential-state.js'
 // Import mega tools
 import { blocks } from './composite/blocks.js'
 import { commentsManage } from './composite/comments.js'
@@ -33,7 +32,12 @@ import { wrapToolResult } from './helpers/security.js'
 // Tools that work without a Notion token
 const TOKEN_FREE_TOOLS = new Set(['help', 'content_convert', 'config', 'config__open_relay'])
 
-const openRelayHandler = buildOpenRelayHandler('better-notion-mcp', RELAY_SCHEMA)
+// publicUrl is null in stdio mode (no relay form to open). HTTP mode
+// substitutes it with PUBLIC_URL so the tool returns a valid /authorize URL.
+const openRelayHandler = buildOpenRelayHandler({
+  serverName: 'better-notion-mcp',
+  publicUrl: process.env.PUBLIC_URL ?? null
+})
 
 // Get docs directory path - works for both bundled CLI and unbundled code
 const __filename = fileURLToPath(import.meta.url)
@@ -491,18 +495,18 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
       }
     }
 
-    // Credential guard: trigger relay and show URL in tool response (not just stderr).
-    // help and content_convert work without a token.
+    // Credential guard. In stdio mode the server exits at startup if
+    // NOTION_TOKEN is missing (see main.ts startServer('stdio')); reaching
+    // this branch means HTTP mode where the per-subject token store is
+    // empty for the current caller. help and content_convert work without
+    // a token.
     if (!TOKEN_FREE_TOOLS.has(name)) {
       const credState = getState()
       if (credState !== 'configured') {
-        if (credState === 'awaiting_setup') {
-          await triggerRelaySetup()
-        }
-        const url = getSetupUrl()
-        const setupInstructions = url
-          ? `Setup in progress. Open this URL to configure your Notion token:\n${url}\n\nOr set NOTION_TOKEN manually in your MCP server config.`
-          : 'NOTION_TOKEN environment variable is not set. Get your integration token from https://www.notion.so/my-integrations and set it as NOTION_TOKEN in your MCP server config. Example: NOTION_TOKEN=ntn_xxxxxxxxxxxxx'
+        const publicUrl = process.env.PUBLIC_URL
+        const setupInstructions = publicUrl
+          ? `Notion access token is not present for this session. Open ${publicUrl}/authorize in your browser to complete the Notion OAuth flow, then retry the tool.`
+          : 'Notion access token is not present. In stdio mode set NOTION_TOKEN env var (https://www.notion.so/my-integrations). In HTTP mode complete the OAuth flow at <PUBLIC_URL>/authorize.'
         return {
           content: [{ type: 'text', text: setupInstructions }],
           isError: true

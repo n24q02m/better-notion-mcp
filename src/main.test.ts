@@ -166,6 +166,7 @@ describe('main.ts', () => {
     })
 
     it('verifies direct stdio transport when mode is stdio', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
       await startServer('stdio')
       expect(stdioServerCtor).toHaveBeenCalledWith(
         expect.objectContaining({ name: 'better-notion-mcp' }),
@@ -178,9 +179,20 @@ describe('main.ts', () => {
     })
 
     it('verifies direct stdio transport when mode is unknown', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
       await startServer('unknown')
       expect(stdioServerCtor).toHaveBeenCalled()
       expect(stdioConnectMock).toHaveBeenCalled()
+    })
+
+    it('exits 1 with stderr message when stdio mode is selected without NOTION_TOKEN', async () => {
+      delete process.env.NOTION_TOKEN
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+      await startServer('stdio')
+      expect(exitSpy).toHaveBeenCalledWith(1)
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('NOTION_TOKEN'))
+      expect(stdioServerCtor).not.toHaveBeenCalled()
+      stderrSpy.mockRestore()
     })
 
     it('verifies error propagation from startHttp', async () => {
@@ -195,6 +207,7 @@ describe('main.ts', () => {
     })
 
     it('verifies execution with default mode', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
       await bootstrap()
       expect(stdioConnectMock).toHaveBeenCalled()
     })
@@ -205,6 +218,7 @@ describe('main.ts', () => {
     })
 
     it('verifies startup errors in bootstrap', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       stdioConnectMock.mockRejectedValueOnce(new Error('Test failure'))
 

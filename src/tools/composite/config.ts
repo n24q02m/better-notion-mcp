@@ -4,14 +4,7 @@
  * Does NOT require a Notion client -- works independently.
  */
 
-import {
-  getSetupUrl,
-  getState,
-  getSubjectToken,
-  resetState,
-  resolveCredentialState,
-  triggerRelaySetup
-} from '../../credential-state.js'
+import { getState, getSubjectToken, resetState, resolveCredentialState } from '../../credential-state.js'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 
 export interface ConfigInput {
@@ -29,35 +22,38 @@ export async function config(input: ConfigInput): Promise<any> {
     switch (input.action) {
       case 'status': {
         const state = getState()
-        const setupUrl = getSetupUrl()
         const token = getSubjectToken()
+        const publicUrl = process.env.PUBLIC_URL ?? null
         return {
           action: 'status',
           state,
           has_token: token !== null,
-          setup_url: setupUrl,
-          token_source: token ? (process.env.NOTION_TOKEN ? 'environment' : 'relay') : null
+          setup_url: publicUrl ? `${publicUrl}/authorize` : null,
+          token_source: token ? (process.env.NOTION_TOKEN ? 'environment' : publicUrl ? 'oauth' : 'relay') : null
         }
       }
 
       case 'setup_start': {
-        const currentState = getState()
-        if (currentState === 'configured' && !input.force) {
+        // Post stdio-pure + http-multi-user split (2026-05-01): the
+        // daemon-bridge relay setup spawn is gone. In stdio mode the
+        // server requires NOTION_TOKEN env at startup. In HTTP mode the
+        // OAuth flow lives at <PUBLIC_URL>/authorize served by the same
+        // process -- no separate trigger needed.
+        const publicUrl = process.env.PUBLIC_URL
+        if (publicUrl) {
           return {
             action: 'setup_start',
-            state: 'configured',
-            message: 'Already configured. Use force: true to trigger relay setup anyway, or setup_reset first.'
+            state: getState(),
+            setup_url: `${publicUrl}/authorize`,
+            message: `Open ${publicUrl}/authorize in your browser to complete the Notion OAuth flow.`
           }
         }
-
-        const url = await triggerRelaySetup()
         return {
           action: 'setup_start',
           state: getState(),
-          setup_url: url,
-          message: url
-            ? 'Relay setup started. Open the URL in your browser to configure your Notion token.'
-            : 'Could not start relay setup. Set NOTION_TOKEN manually.'
+          setup_url: null,
+          message:
+            'In stdio mode set NOTION_TOKEN env var in your MCP plugin config (get token from https://www.notion.so/my-integrations). To use HTTP/OAuth flow run with TRANSPORT_MODE=http and PUBLIC_URL set.'
         }
       }
 
