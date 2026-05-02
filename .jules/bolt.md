@@ -1,3 +1,3 @@
-## 2024-05-18 - Markdown Inline Parser Optimization
-**Learning:** Checking character types before invoking complex string matching methods (`tryParseMention`, `tryParseLink`, `tryParseFormatting`) in tight loops significantly improves parsing performance by avoiding unnecessary function calls on regular text characters.
-**Action:** When parsing formats character-by-character, always include a fast-path that quickly skips non-trigger characters before executing complex parsing logic.
+## 2025-02-12 - URL Delimiter Parsing Optimization
+**Learning:** In JavaScript, using an unescaped `/` within a regex literal `/[/?#]/` causes a `SyntaxError` (Invalid regular expression: missing /), even within character classes. Also, placing regex literals inside functions on hot paths like URL validation causes slight overhead from repeated regex object creation.
+**Action:** When finding the first occurrence of multiple characters, consolidate multiple `.indexOf` calls into a single regex `.search()` pass (e.g. `URL_DELIMITER_REGEX.search(str)`), but always ensure slashes are properly escaped (or avoided via instantiation constraints) and ALWAYS declare regexes at the module level outside functions.
