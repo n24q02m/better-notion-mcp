@@ -2,18 +2,31 @@
 
 > Give this file to your AI agent to automatically set up better-notion-mcp.
 
+> **2026-05-02 Update (v<auto>+)**: Plugin install (Option 1) now uses pure stdio mode with `NOTION_TOKEN` env var.
+> The previous "Zero-Config Relay" auto-spawn pattern has been removed.
+> If you relied on the relay form to enter your token, please:
+> 1. Set `NOTION_TOKEN` directly in plugin config (Option 1), OR
+> 2. Switch to HTTP mode (Option 4 hosted / self-host) for browser-based OAuth.
+
 ## Option 1: Claude Code Plugin (Recommended)
 
-```bash
-/plugin marketplace add n24q02m/claude-plugins
-/plugin install better-notion-mcp@n24q02m-plugins
-```
+Plugin marketplace install runs the server in **pure stdio mode** with `NOTION_TOKEN` env var. No daemon-bridge, no auto-spawn, no relay form.
+
+1. Create a Notion integration token:
+   - Go to https://www.notion.so/my-integrations
+   - Click "New integration", name it, select your workspace
+   - Copy the "Internal Integration Secret" (starts with `ntn_`)
+   - Share pages/databases with the integration: open page > "..." > Connections > select your integration
+2. Install the plugin:
+   ```bash
+   /plugin marketplace add n24q02m/claude-plugins
+   /plugin install better-notion-mcp@n24q02m-plugins
+   ```
+3. Set `NOTION_TOKEN` in the plugin config (or your Claude Code settings).
 
 This installs the server with skills: `/organize-database`, `/bulk-update`.
 
-The plugin uses remote HTTP mode with OAuth -- no `NOTION_TOKEN` needed. A browser window opens for Notion authorization on first use.
-
-## Option 2: MCP Direct
+## Option 2: MCP Direct (Stdio + npx)
 
 ### Claude Code (settings.json)
 
@@ -64,7 +77,7 @@ Add to `opencode.json` in your project root:
 }
 ```
 
-## Option 3: Docker
+## Option 3: Docker (Stdio)
 
 ```json
 {
@@ -83,7 +96,18 @@ Add to `opencode.json` in your project root:
 
 Set `NOTION_TOKEN` in your shell profile or pass it inline.
 
-## Option 4: HTTP Remote
+## Why upgrade to HTTP mode?
+
+Stdio is the default and works fine for single-user local setups. You may want to switch to HTTP mode (Option 4) when you need any of the following:
+
+- **claude.ai web compatibility** -- claude.ai (the web UI) supports HTTP MCP servers but cannot spawn local stdio processes.
+- **One server shared across N Claude Code sessions** -- a single HTTP instance serves multiple terminals/IDEs without re-spawning per session.
+- **OAuth flow delegated to `api.notion.com`** -- no manual token paste; users grant access through Notion's standard authorization page.
+- **Multi-device credential sync** -- sign in once on your laptop, the same OAuth grant works from your desktop / tablet without copying tokens.
+- **Multi-user team sharing** -- a self-hosted server can serve multiple Notion accounts, each with isolated per-user tokens (per-JWT-sub).
+- **Always-on persistent process for webhooks/agents** -- HTTP servers stay alive between sessions, enabling background work, scheduled agents, or webhook listeners.
+
+## Option 4: HTTP Remote (Hosted)
 
 For OAuth 2.1 mode (no local token needed -- Notion authorizes via browser):
 
@@ -123,16 +147,17 @@ url = "https://better-notion-mcp.n24q02m.com/mcp"
 
 Your MCP client handles the OAuth flow automatically. A browser window opens for Notion authorization.
 
+For self-hosting HTTP mode (your own Notion public integration, multi-user OAuth), see [setup-manual.md](setup-manual.md) "Method 5: Self-Hosting HTTP Mode".
+
 ## Environment Variables
 
 | Variable | Required | Default | Description |
 |:---------|:---------|:--------|:------------|
 | `NOTION_TOKEN` | Yes (stdio) | -- | Notion internal integration token (`ntn_...`). Not needed for HTTP/OAuth mode. |
-| `MCP_MODE` | No | `remote-oauth` (when `TRANSPORT_MODE=http`) | Selects the HTTP relay flavour: `remote-oauth` (delegated OAuth 2.1 to `api.notion.com`; multi-user) or `local-relay` (paste-form for the integration token; single-user). |
-| `TRANSPORT_MODE` | No | `stdio` | Legacy alias still honoured — set to `http` to enable HTTP transport (then pick `MCP_MODE`). |
+| `TRANSPORT_MODE` | No | `stdio` | Set to `http` to enable HTTP transport (multi-user OAuth). |
 | `PUBLIC_URL` | Yes (http) | -- | Server's public URL for OAuth redirects. |
-| `NOTION_OAUTH_CLIENT_ID` | Yes (`MCP_MODE=remote-oauth`) | -- | Notion Public Integration client ID. |
-| `NOTION_OAUTH_CLIENT_SECRET` | Yes (`MCP_MODE=remote-oauth`) | -- | Notion Public Integration client secret. |
+| `NOTION_OAUTH_CLIENT_ID` | Yes (http) | -- | Notion Public Integration client ID. |
+| `NOTION_OAUTH_CLIENT_SECRET` | Yes (http) | -- | Notion Public Integration client secret. |
 | `DCR_SERVER_SECRET` | Yes (http) | -- | HMAC secret for stateless client registration. |
 | `PORT` | No | `8080` | Server port (http mode only). |
 
@@ -149,16 +174,6 @@ Your MCP client handles the OAuth flow automatically. A browser window opens for
 ### HTTP Mode (OAuth 2.1)
 
 No manual token setup. The OAuth flow opens a browser for Notion authorization. Users grant access to specific pages/databases during the flow.
-
-### Zero-Config Relay
-
-> **Recommended.** The relay is the primary setup method. Credentials are encrypted end-to-end and stored locally. Environment variables are supported for backward compatibility.
-
-If `NOTION_TOKEN` is not set, the server opens a relay setup page:
-1. A setup URL appears in the terminal
-2. Open it in a browser
-3. Enter your integration token in the form
-4. The token is encrypted and stored locally
 
 ## Verification
 
