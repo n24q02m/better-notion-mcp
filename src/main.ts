@@ -70,8 +70,27 @@ export async function startServer(mode: string): Promise<void> {
     return
   }
 
+  // Stdio mode is single-user and requires NOTION_TOKEN env. Fail fast
+  // with a clear stderr message instead of starting a server that can't
+  // serve any tools. Spec 2026-05-01-stdio-pure-http-multiuser.md §5.2.1.
+  if (!process.env.NOTION_TOKEN) {
+    const msg = `[better-notion-mcp] NOTION_TOKEN required for stdio mode but not set.
+
+Options:
+  1. Set env in plugin config:
+     {"command": "npx", "args": [...], "env": {"NOTION_TOKEN": "ntn_..."}}
+
+  2. Switch to HTTP mode (browser-based setup):
+     See docs/setup-manual.md "Method 5: Self-Hosting HTTP Mode"
+
+Documentation: https://github.com/n24q02m/better-notion-mcp#setup
+`
+    process.stderr.write(msg)
+    process.exit(1)
+    return
+  }
+
   // Direct MCP SDK stdio transport (no daemon proxy hop).
-  // See spec 2026-04-30-multi-mode-stdio-http-architecture.md Task 3.1.
   await resolveCredentialState()
 
   const server = new Server(

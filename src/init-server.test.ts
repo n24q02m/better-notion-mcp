@@ -23,30 +23,30 @@ describe('initServer', () => {
     process.argv = originalArgv
   })
 
-  it('dispatches stdio when --stdio flag is set', async () => {
-    process.argv = [process.argv[0], 'main.js', '--stdio']
-    const { initServer } = await import('./init-server.js')
-    await initServer()
-    expect(startServerMock).toHaveBeenCalledWith('stdio')
-  })
-
-  it('dispatches stdio when MCP_TRANSPORT=stdio', async () => {
-    process.env.MCP_TRANSPORT = 'stdio'
-    const { initServer } = await import('./init-server.js')
-    await initServer()
-    expect(startServerMock).toHaveBeenCalledWith('stdio')
-  })
-
-  it('dispatches stdio when TRANSPORT_MODE=stdio', async () => {
-    process.env.TRANSPORT_MODE = 'stdio'
-    const { initServer } = await import('./init-server.js')
-    await initServer()
-    expect(startServerMock).toHaveBeenCalledWith('stdio')
-  })
-
-  it('dispatches http by default', async () => {
+  it('dispatches http when --http flag is set', async () => {
+    process.argv = [process.argv[0], 'main.js', '--http']
     const { initServer } = await import('./init-server.js')
     await initServer()
     expect(startServerMock).toHaveBeenCalledWith('http')
+  })
+
+  it('dispatches http when MCP_TRANSPORT=http', async () => {
+    process.env.MCP_TRANSPORT = 'http'
+    const { initServer } = await import('./init-server.js')
+    await initServer()
+    expect(startServerMock).toHaveBeenCalledWith('http')
+  })
+
+  it('dispatches http when TRANSPORT_MODE=http', async () => {
+    process.env.TRANSPORT_MODE = 'http'
+    const { initServer } = await import('./init-server.js')
+    await initServer()
+    expect(startServerMock).toHaveBeenCalledWith('http')
+  })
+
+  it('dispatches stdio by default (post stdio-pure migration)', async () => {
+    const { initServer } = await import('./init-server.js')
+    await initServer()
+    expect(startServerMock).toHaveBeenCalledWith('stdio')
   })
 })

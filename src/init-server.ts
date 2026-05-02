@@ -1,28 +1,19 @@
 /**
  * Better Notion MCP Server — Entry point
  *
- * Transport selection:
- *  - stdio (backward compat): `--stdio`, `MCP_TRANSPORT=stdio`, or `TRANSPORT_MODE=stdio`
- *  - http (default): local mode via `@n24q02m/mcp-core` runLocalServer
+ * Transport selection (post stdio-pure + http-multi-user split, 2026-05-01):
+ *  - stdio (default): NOTION_TOKEN env required, MCP SDK StdioServerTransport
+ *    directly (no daemon proxy hop). Single-user.
+ *  - http (opt-in): `--http`, `MCP_TRANSPORT=http`, or `TRANSPORT_MODE=http`.
+ *    Always remote-oauth, always multi-user (per-JWT-sub Notion token store).
  *
- * HTTP mode uses the local OAuth 2.1 AS from `mcp-core` which serves the
- * credential form (user pastes Notion integration token) on /authorize and
- * issues a local JWT for /mcp Bearer auth. Remote mode (delegated upstream
- * Notion OAuth) is intentionally not wired here -- per L2 migration scope,
- * remote mode is deferred and will be re-added once multi-user per-user token
- * storage is in place.
+ * Spec: 2026-05-01-stdio-pure-http-multiuser.md §5.2.1.
  */
 
 export async function initServer() {
-  const isStdio =
-    process.argv.includes('--stdio') || process.env.MCP_TRANSPORT === 'stdio' || process.env.TRANSPORT_MODE === 'stdio'
-
-  if (isStdio) {
-    const { startServer } = await import('./main.js')
-    await startServer('stdio')
-    return
-  }
+  const isHttp =
+    process.argv.includes('--http') || process.env.MCP_TRANSPORT === 'http' || process.env.TRANSPORT_MODE === 'http'
 
   const { startServer } = await import('./main.js')
-  await startServer('http')
+  await startServer(isHttp ? 'http' : 'stdio')
 }
