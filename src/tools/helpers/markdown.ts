@@ -67,6 +67,12 @@ const BULLETED_LIST_REGEX = /^[-*]\s/
 const NUMBERED_LIST_REGEX = /^\d+\.\s/
 const DIVIDER_REGEX = /^[-*]{3,}$/
 
+const PAGE_ID_REGEX = /([a-f0-9]{32})/
+const TABLE_SEPARATOR_REGEX = /^[-:]+$/
+const INLINE_SUMMARY_REGEX = /^<details>\s*<summary>(.*?)<\/summary>(.*?)(<\/details>)?$/
+const SUMMARY_REGEX = /<summary>(.*?)<\/summary>/
+const COLUMN_REGEX = /^:::column(?:\{width=([\d.]+)\})?$/
+
 /**
  * Convert markdown string to Notion blocks
  */
@@ -500,7 +506,7 @@ class InlineParser {
           const mentionTarget = this.text.slice(closeBracket + 2, closeParen)
 
           // Extract 32-char hex page ID from Notion URL or use as-is
-          const idMatch = mentionTarget.match(/([a-f0-9]{32})/)
+          const idMatch = mentionTarget.match(PAGE_ID_REGEX)
           const pageId = idMatch ? idMatch[1] : mentionTarget
 
           this.richText.push(
@@ -777,7 +783,7 @@ function parseTable(lines: string[], startIndex: number): TableParseResult | nul
 
   if (parsedRows.length >= 2) {
     const possibleSeparator = parsedRows[1]
-    const isSeparator = possibleSeparator.every((cell: string) => /^[-:]+$/.test(cell.trim()))
+    const isSeparator = possibleSeparator.every((cell: string) => TABLE_SEPARATOR_REGEX.test(cell.trim()))
 
     if (isSeparator) {
       hasHeader = true
@@ -817,7 +823,7 @@ function parseToggle(lines: string[], startIndex: number): ToggleParseResult {
   const detailsLine = lines[i].trim()
 
   // Try to extract <summary>...</summary> from the <details> line itself
-  const inlineSummaryMatch = detailsLine.match(/^<details>\s*<summary>(.*?)<\/summary>(.*?)(<\/details>)?$/)
+  const inlineSummaryMatch = detailsLine.match(INLINE_SUMMARY_REGEX)
 
   if (inlineSummaryMatch) {
     // All-on-one-line or inline summary: <details><summary>Title</summary>[Content][</details>]
@@ -846,7 +852,7 @@ function parseToggle(lines: string[], startIndex: number): ToggleParseResult {
 
     // Look for <summary>...</summary> on the next line
     if (i < lines.length) {
-      const summaryMatch = lines[i].match(/<summary>(.*?)<\/summary>/)
+      const summaryMatch = lines[i].match(SUMMARY_REGEX)
       if (summaryMatch) {
         title = summaryMatch[1]
         i++
@@ -910,7 +916,7 @@ function parseColumns(lines: string[], startIndex: number): ColumnParseResult {
       break
     }
 
-    const columnMatch = line.match(/^:::column(?:\{width=([\d.]+)\})?$/)
+    const columnMatch = line.match(COLUMN_REGEX)
     if (columnMatch) {
       // Flush previous column (even if empty)
       if (inColumn) {
