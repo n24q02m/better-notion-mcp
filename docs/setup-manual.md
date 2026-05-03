@@ -185,6 +185,20 @@ Host your own multi-user OAuth server. Always-OAuth, single multi-user mode (per
 | `NOTION_OAUTH_CLIENT_ID` | Your Notion Public Integration client ID. |
 | `NOTION_OAUTH_CLIENT_SECRET` | Your Notion Public Integration client secret. |
 
+### Edge auth: relay password
+
+Public HTTP deployments expose `<your-domain>/authorize` to URL discovery. To prevent random Internet users from accessing the relay form, mint a relay password:
+
+```bash
+openssl rand -hex 32
+# Save in your skret / .env as:
+MCP_RELAY_PASSWORD=<generated-32-byte-hex>
+```
+
+Share this password out-of-band (Signal/email/SMS) with anyone you invite to use your server. They will see a login form when first opening `/authorize`; once logged in, the cookie persists 24 hours.
+
+**Single-user dev exception**: If `PUBLIC_URL=http://localhost:8080`, you can leave `MCP_RELAY_PASSWORD` empty to disable the gate. The server logs a warning if you skip the password with a non-localhost `PUBLIC_URL`.
+
 ### Run the Server
 
 ```bash
