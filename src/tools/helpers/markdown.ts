@@ -939,45 +939,48 @@ function parseColumns(lines: string[], startIndex: number): ColumnParseResult {
 // Callout helpers
 // ============================================================
 
+const CALLOUT_ICONS: Record<string, string> = {
+  NOTE: '\u2139\ufe0f',
+  TIP: '\u{1f4a1}',
+  IMPORTANT: '\u2757',
+  WARNING: '\u26a0\ufe0f',
+  CAUTION: '\u{1f6d1}',
+  INFO: '\u2139\ufe0f',
+  SUCCESS: '\u2705',
+  ERROR: '\u274c'
+}
+
 function getCalloutIcon(type: string): string {
-  const icons: Record<string, string> = {
-    NOTE: '\u2139\ufe0f',
-    TIP: '\u{1f4a1}',
-    IMPORTANT: '\u2757',
-    WARNING: '\u26a0\ufe0f',
-    CAUTION: '\u{1f6d1}',
-    INFO: '\u2139\ufe0f',
-    SUCCESS: '\u2705',
-    ERROR: '\u274c'
-  }
-  return icons[type] || '\u2139\ufe0f'
+  return CALLOUT_ICONS[type] || '\u2139\ufe0f'
+}
+
+const CALLOUT_COLORS: Record<string, string> = {
+  NOTE: 'blue_background',
+  TIP: 'green_background',
+  IMPORTANT: 'purple_background',
+  WARNING: 'yellow_background',
+  CAUTION: 'red_background',
+  INFO: 'blue_background',
+  SUCCESS: 'green_background',
+  ERROR: 'red_background'
 }
 
 function getCalloutColor(type: string): string {
-  const colors: Record<string, string> = {
-    NOTE: 'blue_background',
-    TIP: 'green_background',
-    IMPORTANT: 'purple_background',
-    WARNING: 'yellow_background',
-    CAUTION: 'red_background',
-    INFO: 'blue_background',
-    SUCCESS: 'green_background',
-    ERROR: 'red_background'
-  }
-  return colors[type] || 'gray_background'
+  return CALLOUT_COLORS[type] || 'gray_background'
+}
+
+const CALLOUT_TYPES: Record<string, string> = {
+  '\u2139\ufe0f': 'NOTE',
+  '\u{1f4a1}': 'TIP',
+  '\u2757': 'IMPORTANT',
+  '\u26a0\ufe0f': 'WARNING',
+  '\u{1f6d1}': 'CAUTION',
+  '\u2705': 'SUCCESS',
+  '\u274c': 'ERROR'
 }
 
 function getCalloutTypeFromIcon(icon: string): string {
-  const iconMap: Record<string, string> = {
-    '\u2139\ufe0f': 'NOTE',
-    '\u{1f4a1}': 'TIP',
-    '\u2757': 'IMPORTANT',
-    '\u26a0\ufe0f': 'WARNING',
-    '\u{1f6d1}': 'CAUTION',
-    '\u2705': 'SUCCESS',
-    '\u274c': 'ERROR'
-  }
-  return iconMap[icon] || 'NOTE'
+  return CALLOUT_TYPES[icon] || 'NOTE'
 }
 
 // ============================================================
