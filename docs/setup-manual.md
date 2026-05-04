@@ -4,7 +4,7 @@
 > The previous "Zero-Config Relay" auto-spawn pattern has been removed.
 > If you relied on the relay form to enter your token, please:
 > 1. Set `NOTION_TOKEN` directly in plugin config (Method 1), OR
-> 2. Switch to HTTP mode (Method 4 hosted / Method 5 self-host) for browser-based OAuth.
+> 2. Switch to HTTP mode (Method 3 (Docker HTTP — Hosted or Self-host)) for browser-based OAuth.
 
 ## Method overview
 
@@ -40,66 +40,7 @@ Plugin marketplace install runs the server in **pure stdio mode** with `NOTION_T
    ```
 4. Set `NOTION_TOKEN` in the plugin config when prompted (or in your Claude Code settings).
 
-## Method 2: npx (Local Stdio with Token)
-
-### Create a Notion Integration Token
-
-1. Go to https://www.notion.so/my-integrations
-2. Click "New integration"
-3. Name it (e.g., "Better Notion MCP") and select your workspace
-4. Copy the "Internal Integration Secret" (starts with `ntn_`)
-5. **Share pages with the integration**: Open a Notion page, click "..." > Connections > select your integration. Repeat for each page or database you want accessible.
-
-### Configure the MCP Client
-
-1. Add to your MCP client configuration file:
-
-   **Claude Code** -- `.claude/settings.json` or `~/.claude/settings.json`:
-   ```json
-   {
-     "mcpServers": {
-       "better-notion-mcp": {
-         "command": "npx",
-         "args": ["-y", "@n24q02m/better-notion-mcp"],
-         "env": {
-           "NOTION_TOKEN": "ntn_..."
-         }
-       }
-     }
-   }
-   ```
-
-   **Codex CLI** -- `~/.codex/config.toml`:
-   ```toml
-   [mcp_servers.better-notion-mcp]
-   command = "npx"
-   args = ["-y", "@n24q02m/better-notion-mcp"]
-
-   [mcp_servers.better-notion-mcp.env]
-   NOTION_TOKEN = "ntn_..."
-   ```
-
-   **OpenCode** -- `opencode.json`:
-   ```json
-   {
-     "mcpServers": {
-       "better-notion-mcp": {
-         "command": "npx",
-         "args": ["-y", "@n24q02m/better-notion-mcp"],
-         "env": {
-           "NOTION_TOKEN": "ntn_..."
-         }
-       }
-     }
-   }
-   ```
-
-2. Replace `ntn_...` with your actual integration token.
-3. Restart your MCP client.
-
-Other package runners (`bun x`, `pnpm dlx`, `yarn dlx`) also work in place of `npx -y`.
-
-## Method 3: Docker (Local Stdio)
+## Method 2: Docker stdio (fallback)
 
 1. Pull the image:
    ```bash
@@ -129,7 +70,7 @@ Other package runners (`bun x`, `pnpm dlx`, `yarn dlx`) also work in place of `n
 
 ## Why upgrade to HTTP mode?
 
-Stdio is the default and works fine for single-user local setups. You may want to switch to HTTP mode (Method 4 hosted, Method 5 self-host) when you need any of the following:
+Stdio is the default and works fine for single-user local setups. You may want to switch to HTTP mode (Method 3 Docker HTTP (Hosted or Self-host)) when you need any of the following:
 
 - **claude.ai web compatibility** -- claude.ai (the web UI) supports HTTP MCP servers but cannot spawn local stdio processes.
 - **One server shared across N Claude Code sessions** -- a single HTTP instance serves multiple terminals/IDEs without re-spawning per session.
@@ -138,7 +79,9 @@ Stdio is the default and works fine for single-user local setups. You may want t
 - **Multi-user team sharing** -- a self-hosted server can serve multiple Notion accounts, each with isolated per-user tokens (per-JWT-sub).
 - **Always-on persistent process for webhooks/agents** -- HTTP servers stay alive between sessions, enabling background work, scheduled agents, or webhook listeners.
 
-## Method 4: HTTP Remote (Hosted)
+## Method 3: Docker HTTP (recommended)
+
+### 3.1. Hosted (n24q02m.com)
 
 Connect via URL with OAuth 2.1 authentication. Your MCP client handles the OAuth flow automatically.
 
@@ -177,7 +120,7 @@ Connect via URL with OAuth 2.1 authentication. Your MCP client handles the OAuth
 
 2. On first use, a browser window opens for Notion authorization. Grant access to the pages and databases you want the agent to work with.
 
-## Method 5: Self-Hosting HTTP Mode
+### 3.2. Self-host with docker-compose
 
 Host your own multi-user OAuth server. Always-OAuth, single multi-user mode (per-JWT-sub token isolation). Requires you to register your own Notion public integration -- the previous n24q02m-hosted SaaS instance is no longer offered as a self-host shortcut.
 
@@ -234,28 +177,6 @@ Point clients to your server:
   }
 }
 ```
-
-## Method 6: Build from Source
-
-1. Clone and build:
-   ```bash
-   git clone https://github.com/n24q02m/better-notion-mcp.git
-   cd better-notion-mcp
-   bun install
-   bun run build
-   ```
-
-2. Run the dev server:
-   ```bash
-   NOTION_TOKEN="ntn_..." bun run dev
-   ```
-
-3. For HTTP mode:
-   ```bash
-   TRANSPORT_MODE=http PUBLIC_URL=http://localhost:8080 \
-   NOTION_OAUTH_CLIENT_ID=... NOTION_OAUTH_CLIENT_SECRET=... \
-   DCR_SERVER_SECRET=... bun run dev:http
-   ```
 
 ## Credential Setup
 
