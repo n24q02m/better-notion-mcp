@@ -27,18 +27,32 @@ All MCP servers across this stack share this priority hierarchy. Note: 2 plugins
 
 Plugin marketplace install runs the server in **pure stdio mode** with `NOTION_TOKEN` env var. No daemon-bridge, no auto-spawn, no relay form.
 
+### Step 0: Credential prompt
+
+When you run `/plugin install better-notion-mcp@n24q02m-plugins`, Claude Code prompts for the credentials declared in the plugin's `userConfig` schema:
+
+| Field | Required | Sensitive | Notes |
+|:------|:---------|:----------|:------|
+| `NOTION_TOKEN` | Yes | Yes | Notion integration token (`ntn_...`) |
+
+Sensitive values are stored in the system keychain (or `~/.claude/.credentials.json` fallback) and persist across `/plugin update`. You do **not** need to manually edit the `env` block in `settings.json` -- Claude Code substitutes the value via `${user_config.NOTION_TOKEN}` declared in `plugin.json`.
+
+### Steps
+
 1. Create a Notion integration token:
    - Go to https://www.notion.so/my-integrations
    - Click "New integration", name it (e.g. "Better Notion MCP"), select your workspace
    - Copy the "Internal Integration Secret" (starts with `ntn_`)
    - **Share pages with the integration**: open a Notion page > "..." > Connections > select your integration. Repeat for each page or database you want accessible.
 2. Open Claude Code in your terminal
-3. Install the plugin:
+3. Install the plugin (Claude Code prompts for `NOTION_TOKEN` -- paste the secret you copied above):
    ```bash
    /plugin marketplace add n24q02m/claude-plugins
    /plugin install better-notion-mcp@n24q02m-plugins
    ```
-4. Set `NOTION_TOKEN` in the plugin config when prompted (or in your Claude Code settings).
+4. Restart Claude Code. The plugin auto-loads with your token injected via `${user_config.NOTION_TOKEN}`.
+
+> **HTTP transport (Method 3)** is a separate install path. The `userConfig` prompt only covers stdio Method 1; HTTP self-host still requires manual `mcpServers` config per Method 3 below.
 
 ## Method 2: Docker stdio (fallback)
 
