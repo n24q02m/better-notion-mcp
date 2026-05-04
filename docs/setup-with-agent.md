@@ -6,7 +6,7 @@
 > The previous "Zero-Config Relay" auto-spawn pattern has been removed.
 > If you relied on the relay form to enter your token, please:
 > 1. Set `NOTION_TOKEN` directly in plugin config (Option 1), OR
-> 2. Switch to HTTP mode (Option 4 hosted / self-host) for browser-based OAuth.
+> 2. Switch to HTTP mode (Option 3 (Docker HTTP — Hosted or Self-host)) for browser-based OAuth.
 
 ## Method overview
 
@@ -38,58 +38,7 @@ Plugin marketplace install runs the server in **pure stdio mode** with `NOTION_T
 
 This installs the server with skills: `/organize-database`, `/bulk-update`.
 
-## Option 2: MCP Direct (Stdio + npx)
-
-### Claude Code (settings.json)
-
-Add to `.claude/settings.json` or `~/.claude/settings.json`:
-
-```json
-{
-  "mcpServers": {
-    "better-notion-mcp": {
-      "command": "npx",
-      "args": ["-y", "@n24q02m/better-notion-mcp"],
-      "env": {
-        "NOTION_TOKEN": "ntn_..."
-      }
-    }
-  }
-}
-```
-
-### Codex CLI (config.toml)
-
-Add to `~/.codex/config.toml`:
-
-```toml
-[mcp_servers.better-notion-mcp]
-command = "npx"
-args = ["-y", "@n24q02m/better-notion-mcp"]
-
-[mcp_servers.better-notion-mcp.env]
-NOTION_TOKEN = "ntn_..."
-```
-
-### OpenCode (opencode.json)
-
-Add to `opencode.json` in your project root:
-
-```json
-{
-  "mcpServers": {
-    "better-notion-mcp": {
-      "command": "npx",
-      "args": ["-y", "@n24q02m/better-notion-mcp"],
-      "env": {
-        "NOTION_TOKEN": "ntn_..."
-      }
-    }
-  }
-}
-```
-
-## Option 3: Docker (Stdio)
+## Option 2: Docker stdio (fallback)
 
 ```json
 {
@@ -110,7 +59,7 @@ Set `NOTION_TOKEN` in your shell profile or pass it inline.
 
 ## Why upgrade to HTTP mode?
 
-Stdio is the default and works fine for single-user local setups. You may want to switch to HTTP mode (Option 4) when you need any of the following:
+Stdio is the default and works fine for single-user local setups. You may want to switch to HTTP mode (Option 3) when you need any of the following:
 
 - **claude.ai web compatibility** -- claude.ai (the web UI) supports HTTP MCP servers but cannot spawn local stdio processes.
 - **One server shared across N Claude Code sessions** -- a single HTTP instance serves multiple terminals/IDEs without re-spawning per session.
@@ -119,7 +68,9 @@ Stdio is the default and works fine for single-user local setups. You may want t
 - **Multi-user team sharing** -- a self-hosted server can serve multiple Notion accounts, each with isolated per-user tokens (per-JWT-sub).
 - **Always-on persistent process for webhooks/agents** -- HTTP servers stay alive between sessions, enabling background work, scheduled agents, or webhook listeners.
 
-## Option 4: HTTP Remote (Hosted)
+## Option 3: Docker HTTP (recommended)
+
+### 3.1. Hosted (n24q02m.com)
 
 For OAuth 2.1 mode (no local token needed -- Notion authorizes via browser):
 
@@ -159,7 +110,7 @@ url = "https://better-notion-mcp.n24q02m.com/mcp"
 
 Your MCP client handles the OAuth flow automatically. A browser window opens for Notion authorization.
 
-For self-hosting HTTP mode (your own Notion public integration, multi-user OAuth), see [setup-manual.md](setup-manual.md) "Method 5: Self-Hosting HTTP Mode".
+For self-hosting HTTP mode (your own Notion public integration, multi-user OAuth), see [setup-manual.md](setup-manual.md) "Method 3 (Docker HTTP — Self-host)".
 
 ### Edge auth: relay password
 
