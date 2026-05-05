@@ -24,15 +24,13 @@ All MCP servers across this stack share this priority hierarchy. Note: 2 plugins
 
 Plugin marketplace install runs the server in **pure stdio mode** with `NOTION_TOKEN` env var. No daemon-bridge, no auto-spawn, no relay form.
 
-### Step 0: Credential prompt
+### Credential prompts at install
 
-When you run `/plugin install better-notion-mcp@n24q02m-plugins`, Claude Code prompts for the values declared in `plugin.json` `userConfig`:
+When you run `/plugin install`, Claude Code prompts you for the following credentials (declared in `userConfig` per CC docs). Sensitive values are stored in your system keychain and persist across `/plugin update`:
 
-| Field | Required | Sensitive |
-|:------|:---------|:----------|
-| `NOTION_TOKEN` | Yes | Yes (stored in keychain) |
-
-The plugin manifest substitutes the value into the `mcpServers` env block via `${user_config.NOTION_TOKEN}` -- you do not edit `env` manually. The value persists across `/plugin update`.
+| Field | Required | Where to obtain |
+|---|---|---|
+| `NOTION_TOKEN` | Required | https://www.notion.so/my-integrations (starts with `ntn_`) |
 
 ### Steps
 
@@ -49,8 +47,6 @@ The plugin manifest substitutes the value into the `mcpServers` env block via `$
 3. Restart Claude Code -- the plugin auto-loads with your token.
 
 This installs the server with skills: `/organize-database`, `/bulk-update`.
-
-> **HTTP transport (Option 3)** is a separate install path; the `userConfig` prompt does not apply, and you manually configure `mcpServers` for HTTP per Option 3 below.
 
 ## Option 2: Docker stdio (fallback)
 
@@ -83,6 +79,8 @@ Stdio is the default and works fine for single-user local setups. You may want t
 - **Always-on persistent process for webhooks/agents** -- HTTP servers stay alive between sessions, enabling background work, scheduled agents, or webhook listeners.
 
 ## Option 3: Docker HTTP (recommended)
+
+> **Switching transport vs. setting credentials**: The `userConfig` prompt only configures credentials for stdio mode (Method 1 / Option 1). To switch transport to HTTP, override `mcpServers` in your client settings per the snippets below -- this is a separate path from `userConfig` and is not driven by the install prompt.
 
 ### 3.1. Hosted (n24q02m.com)
 
