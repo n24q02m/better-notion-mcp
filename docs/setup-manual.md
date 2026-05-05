@@ -27,15 +27,13 @@ All MCP servers across this stack share this priority hierarchy. Note: 2 plugins
 
 Plugin marketplace install runs the server in **pure stdio mode** with `NOTION_TOKEN` env var. No daemon-bridge, no auto-spawn, no relay form.
 
-### Step 0: Credential prompt
+### Credential prompts at install
 
-When you run `/plugin install better-notion-mcp@n24q02m-plugins`, Claude Code prompts for the credentials declared in the plugin's `userConfig` schema:
+When you run `/plugin install`, Claude Code prompts you for the following credentials (declared in `userConfig` per CC docs). Sensitive values are stored in your system keychain and persist across `/plugin update`:
 
-| Field | Required | Sensitive | Notes |
-|:------|:---------|:----------|:------|
-| `NOTION_TOKEN` | Yes | Yes | Notion integration token (`ntn_...`) |
-
-Sensitive values are stored in the system keychain (or `~/.claude/.credentials.json` fallback) and persist across `/plugin update`. You do **not** need to manually edit the `env` block in `settings.json` -- Claude Code substitutes the value via `${user_config.NOTION_TOKEN}` declared in `plugin.json`.
+| Field | Required | Where to obtain |
+|---|---|---|
+| `NOTION_TOKEN` | Required | https://www.notion.so/my-integrations (starts with `ntn_`) |
 
 ### Steps
 
@@ -51,8 +49,6 @@ Sensitive values are stored in the system keychain (or `~/.claude/.credentials.j
    /plugin install better-notion-mcp@n24q02m-plugins
    ```
 4. Restart Claude Code. The plugin auto-loads with your token injected via `${user_config.NOTION_TOKEN}`.
-
-> **HTTP transport (Method 3)** is a separate install path. The `userConfig` prompt only covers stdio Method 1; HTTP self-host still requires manual `mcpServers` config per Method 3 below.
 
 ## Method 2: Docker stdio (fallback)
 
@@ -94,6 +90,8 @@ Stdio is the default and works fine for single-user local setups. You may want t
 - **Always-on persistent process for webhooks/agents** -- HTTP servers stay alive between sessions, enabling background work, scheduled agents, or webhook listeners.
 
 ## Method 3: Docker HTTP (recommended)
+
+> **Switching transport vs. setting credentials**: The `userConfig` prompt only configures credentials for stdio mode (Method 1 / Option 1). To switch transport to HTTP, override `mcpServers` in your client settings per the snippets below -- this is a separate path from `userConfig` and is not driven by the install prompt.
 
 ### 3.1. Hosted (n24q02m.com)
 
