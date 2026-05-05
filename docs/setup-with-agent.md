@@ -20,6 +20,8 @@ This plugin supports 3 install methods. Pick the one that matches your use case:
 
 All MCP servers across this stack share this priority hierarchy. Note: 2 plugins (`better-godot-mcp` and `better-code-review-graph`) only support Method 1 (stdio) -- they need direct host access to project files / repo paths and don't ship Docker / HTTP variants.
 
+> **⚠️ Mutually exclusive — pick ONE per plugin**: If you choose Method 3 (HTTP), do NOT also `/plugin install` this plugin via marketplace — both would load and create duplicate entries (plugin's stdio + your HTTP override). Plugin matching is by **endpoint** (URL or command) per CC docs, not by name, so name-collision does NOT suppress the duplicate. Trade-off: choosing Method 3 (HTTP) means you lose this plugin's skills/agents/hooks/commands (those only ship with the plugin install). For full plugin features, use Method 1 (stdio) with `userConfig` credentials prompted at install time.
+
 ## Option 1: Claude Code Plugin (Recommended)
 
 Plugin marketplace install runs the server in **pure stdio mode** with `NOTION_TOKEN` env var. No daemon-bridge, no auto-spawn, no relay form.
@@ -47,6 +49,8 @@ When you run `/plugin install`, Claude Code prompts you for the following creden
 3. Restart Claude Code -- the plugin auto-loads with your token.
 
 This installs the server with skills: `/organize-database`, `/bulk-update`.
+
+> **Note**: This installs the full plugin (skills + agents + hooks + commands + stdio MCP server). If you'd rather use HTTP transport (Option 3 below), DO NOT `/plugin install` this plugin — pick Option 3 instead. The two methods are mutually exclusive (see Method overview).
 
 ## Option 2: Docker stdio (fallback)
 
@@ -79,6 +83,10 @@ Stdio is the default and works fine for single-user local setups. You may want t
 - **Always-on persistent process for webhooks/agents** -- HTTP servers stay alive between sessions, enabling background work, scheduled agents, or webhook listeners.
 
 ## Option 3: Docker HTTP (recommended)
+
+> **⚠️ Before adding the HTTP override below, ensure this plugin is NOT installed via marketplace**: Run `/plugin uninstall better-notion-mcp@n24q02m-plugins` first if you previously ran `/plugin install`. Otherwise both entries (plugin's stdio + your HTTP override) will load simultaneously since plugin matches by endpoint, not name.
+>
+> **Trade-off accepted**: Choosing this method means you lose this plugin's skills/agents/hooks/commands. For example, the `better-notion-mcp:organize-database` skill will no longer be available. Use Option 1 instead if you want full plugin features.
 
 > **Switching transport vs. setting credentials**: The `userConfig` prompt only configures credentials for stdio mode (Method 1 / Option 1). To switch transport to HTTP, override `mcpServers` in your client settings per the snippets below -- this is a separate path from `userConfig` and is not driven by the install prompt.
 
