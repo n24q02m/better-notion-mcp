@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { formatId, isValidBase64, isValidNotionId, normalizeId } from './id'
 
 describe('normalizeId', () => {
@@ -78,6 +78,22 @@ describe('formatId', () => {
   it('should handle uppercase hex', () => {
     expect(formatId('A380296736214B04B6AFBFEF1B7687B3')).toBe('A3802967-3621-4B04-B6AF-BFEF1B7687B3')
   })
+
+  it('should return 32-character non-hex strings unchanged', () => {
+    expect(formatId('g380296736214b04b6afbfef1b7687b3')).toBe('g380296736214b04b6afbfef1b7687b3')
+  })
+
+  it('should return 31-character hex strings unchanged', () => {
+    expect(formatId('a380296736214b04b6afbfef1b7687b')).toBe('a380296736214b04b6afbfef1b7687b')
+  })
+
+  it('should return 33-character hex strings unchanged', () => {
+    expect(formatId('a380296736214b04b6afbfef1b7687b3a')).toBe('a380296736214b04b6afbfef1b7687b3a')
+  })
+
+  it('should format UUIDs with misplaced hyphens correctly', () => {
+    expect(formatId('a3802967-3621-4b04-b6af-bfef-1b76-87b3')).toBe('a3802967-3621-4b04-b6af-bfef1b7687b3')
+  })
 })
 
 describe('isValidBase64', () => {
@@ -125,5 +141,13 @@ describe('isValidBase64', () => {
 
   it('should reject too many padding characters', () => {
     expect(isValidBase64('a===')).toBe(false)
+  })
+
+  it('should return false if Buffer.from fails', () => {
+    const spy = vi.spyOn(Buffer, 'from').mockImplementation(() => {
+      throw new Error('Buffer failure')
+    })
+    expect(isValidBase64('aGVsbG8=')).toBe(false)
+    spy.mockRestore()
   })
 })
