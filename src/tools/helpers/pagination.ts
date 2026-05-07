@@ -1,9 +1,5 @@
 import type { Client } from '@notionhq/client'
-import type {
-  BlockObjectResponse,
-  PartialBlockObjectResponse
-} from '@notionhq/client/build/src/api-endpoints.js'
-
+import type { BlockObjectResponse, PartialBlockObjectResponse } from '@notionhq/client/build/src/api-endpoints.js'
 
 /**
  * Pagination Helper
@@ -135,7 +131,7 @@ export async function fetchChildrenRecursive(
 
     // Attach children to the correct property based on block type
     if ('type' in block && (block as any)[block.type]) {
-      (block as any)[block.type].children = children
+      ;(block as any)[block.type].children = children
     }
 
     // Recurse into children
