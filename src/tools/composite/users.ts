@@ -54,7 +54,7 @@ export async function users(notion: Client, input: UsersInput): Promise<any> {
 
       case 'get': {
         if (!input.user_id) {
-          throw new NotionMCPError('user_id required for get action', 'VALIDATION_ERROR', 'Provide user_id')
+          throw NotionMCPError.validation('user_id required for get action', 'Provide user_id')
         }
 
         const user = await notion.users.retrieve({ user_id: input.user_id })
@@ -126,9 +126,8 @@ export async function users(notion: Client, input: UsersInput): Promise<any> {
       }
 
       default:
-        throw new NotionMCPError(
+        throw NotionMCPError.validation(
           `Unknown action: ${input.action}`,
-          'VALIDATION_ERROR',
           'Supported actions: list, get, me, from_workspace'
         )
     }

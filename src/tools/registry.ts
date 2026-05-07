@@ -554,9 +554,8 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
           // Security: validate tool_name against allowlist to prevent path traversal
           const validToolNames = TOOLS.filter((t) => t.name !== 'help').map((t) => t.name)
           if (!validToolNames.includes(toolName)) {
-            throw new NotionMCPError(
+            throw NotionMCPError.validation(
               `Invalid tool name: ${toolName}`,
-              'VALIDATION_ERROR',
               `Valid tools: ${validToolNames.join(', ')}`
             )
           }

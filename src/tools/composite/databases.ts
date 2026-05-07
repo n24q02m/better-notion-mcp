@@ -253,9 +253,8 @@ async function resolveDataSourceId(notion: Client, id: string): Promise<{ databa
     if (database.data_sources?.length > 0) {
       return { databaseId: database.id, dataSourceId: database.data_sources[0].id }
     }
-    throw new NotionMCPError(
+    throw NotionMCPError.validation(
       'Database has no data sources',
-      'VALIDATION_ERROR',
       'This database container has no data sources yet. Use create_data_source to add one.'
     )
   } catch (error: any) {
@@ -270,9 +269,8 @@ async function resolveDataSourceId(notion: Client, id: string): Promise<{ databa
           dataSourceId: ds.id
         }
       } catch {
-        throw new NotionMCPError(
+        throw NotionMCPError.notFound(
           `ID "${id}" is not a valid database or data source`,
-          'NOT_FOUND',
           'Use the database ID from the Notion URL (e.g., notion.so/<database_id>?...), or a data_source_id from workspace search. Try workspace/search with filter.object="data_source" to find available databases.'
         )
       }
@@ -318,9 +316,8 @@ export async function databases(notion: Client, input: DatabasesInput): Promise<
         return await listDataSourceTemplates(notion, input)
 
       default:
-        throw new NotionMCPError(
+        throw NotionMCPError.validation(
           `Unknown action: ${input.action}`,
-          'VALIDATION_ERROR',
           'Supported actions: create, get, query, create_page, update_page, delete_page, create_data_source, update_data_source, update_database, list_templates'
         )
     }
@@ -335,7 +332,6 @@ async function createDatabase(notion: Client, input: DatabasesInput): Promise<Cr
   if (!input.parent_id || !input.title || !input.properties) {
     throw new NotionMCPError(
       'parent_id, title, and properties required for create action',
-      'VALIDATION_ERROR',
       'Provide parent_id, title, and properties'
     )
   }
@@ -382,7 +378,7 @@ async function createDatabase(notion: Client, input: DatabasesInput): Promise<Cr
  */
 async function getDatabase(notion: Client, input: DatabasesInput): Promise<GetDatabaseResponse> {
   if (!input.database_id) {
-    throw new NotionMCPError('database_id required for get action', 'VALIDATION_ERROR', 'Provide database_id')
+    throw NotionMCPError.validation('database_id required for get action', 'Provide database_id')
   }
 
   // Get database (contains list of data_sources)
@@ -443,9 +439,8 @@ async function getDatabase(notion: Client, input: DatabasesInput): Promise<GetDa
  */
 async function queryDatabase(notion: Client, input: DatabasesInput): Promise<QueryDatabaseResponse> {
   if (!input.database_id) {
-    throw new NotionMCPError(
+    throw NotionMCPError.validation(
       'database_id required for query action',
-      'VALIDATION_ERROR',
       'Provide database_id (from Notion URL) or data_source_id (from workspace search). Both formats are accepted.'
     )
   }
@@ -499,9 +494,8 @@ async function queryDatabase(notion: Client, input: DatabasesInput): Promise<Que
  */
 async function createDatabasePages(notion: Client, input: DatabasesInput): Promise<CreateDatabasePageResponse> {
   if (!input.database_id) {
-    throw new NotionMCPError(
+    throw NotionMCPError.validation(
       'database_id required',
-      'VALIDATION_ERROR',
       'Provide database_id (from Notion URL) or data_source_id (from workspace search). Both formats are accepted.'
     )
   }
@@ -521,15 +515,14 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
   const items = input.pages || (input.page_properties ? [{ properties: input.page_properties }] : [])
 
   if (items.length === 0) {
-    throw new NotionMCPError('pages or page_properties required', 'VALIDATION_ERROR', 'Provide items to create')
+    throw NotionMCPError.validation('pages or page_properties required', 'Provide items to create')
   }
 
   // Validate all items before processing to avoid partial writes on malformed input
   for (let i = 0; i < items.length; i++) {
     if (!items[i] || items[i].properties === undefined || items[i].properties === null) {
-      throw new NotionMCPError(
+      throw NotionMCPError.validation(
         `Item at index ${i} in the pages array is missing the "properties" key`,
-        'VALIDATION_ERROR',
         'Use format: pages: [{ "properties": { "FieldName": "value" } }] - not flat objects like [{ "FieldName": "value" }]'
       )
     }
@@ -569,15 +562,14 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
     (input.page_id && input.page_properties ? [{ page_id: input.page_id, properties: input.page_properties }] : [])
 
   if (items.length === 0) {
-    throw new NotionMCPError('pages or page_id+page_properties required', 'VALIDATION_ERROR', 'Provide items to update')
+    throw NotionMCPError.validation('pages or page_id+page_properties required', 'Provide items to update')
   }
 
   // Validate all items before processing to avoid partial writes on malformed input
   for (let i = 0; i < items.length; i++) {
     if (!items[i] || items[i].properties === undefined || items[i].properties === null) {
-      throw new NotionMCPError(
+      throw NotionMCPError.validation(
         `Item at index ${i} in the pages array is missing the "properties" key`,
-        'VALIDATION_ERROR',
         'Use format: pages: [{ "page_id": "...", "properties": { "FieldName": "value" } }]'
       )
     }
@@ -585,7 +577,7 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
 
   const results = await processBatches(items, async (item) => {
     if (!item.page_id) {
-      throw new NotionMCPError('page_id required for each item', 'VALIDATION_ERROR', 'Provide page_id')
+      throw NotionMCPError.validation('page_id required for each item', 'Provide page_id')
     }
 
     const properties = convertToNotionProperties(item.properties)
@@ -628,7 +620,7 @@ async function deleteDatabasePages(notion: Client, input: DatabasesInput): Promi
   }
 
   if (pageIds.length === 0) {
-    throw new NotionMCPError('page_id or page_ids required', 'VALIDATION_ERROR', 'Provide page IDs to delete')
+    throw NotionMCPError.validation('page_id or page_ids required', 'Provide page IDs to delete')
   }
 
   const results = await processBatches(
@@ -660,9 +652,8 @@ async function deleteDatabasePages(notion: Client, input: DatabasesInput): Promi
  */
 async function createDataSource(notion: Client, input: DatabasesInput): Promise<CreateDataSourceResponse> {
   if (!input.database_id || !input.title || !input.properties) {
-    throw new NotionMCPError(
+    throw NotionMCPError.validation(
       'database_id, title, and properties required',
-      'VALIDATION_ERROR',
       'Provide database_id, title, and properties for new data source'
     )
   }
@@ -693,7 +684,7 @@ async function createDataSource(notion: Client, input: DatabasesInput): Promise<
  */
 async function updateDataSource(notion: Client, input: DatabasesInput): Promise<UpdateDataSourceResponse> {
   if (!input.data_source_id) {
-    throw new NotionMCPError('data_source_id required', 'VALIDATION_ERROR', 'Provide data_source_id')
+    throw NotionMCPError.validation('data_source_id required', 'Provide data_source_id')
   }
 
   const updates: any = {}
@@ -711,11 +702,7 @@ async function updateDataSource(notion: Client, input: DatabasesInput): Promise<
   }
 
   if (Object.keys(updates).length === 0) {
-    throw new NotionMCPError(
-      'No updates provided',
-      'VALIDATION_ERROR',
-      'Provide title, description, or properties to update'
-    )
+    throw NotionMCPError.validation('No updates provided', 'Provide title, description, or properties to update')
   }
 
   await (notion as any).dataSources.update({
@@ -736,7 +723,7 @@ async function updateDataSource(notion: Client, input: DatabasesInput): Promise<
  */
 async function updateDatabaseContainer(notion: Client, input: DatabasesInput): Promise<UpdateDatabaseResponse> {
   if (!input.database_id) {
-    throw new NotionMCPError('database_id required', 'VALIDATION_ERROR', 'Provide database_id')
+    throw NotionMCPError.validation('database_id required', 'Provide database_id')
   }
 
   const updates: any = {}
@@ -764,9 +751,8 @@ async function updateDatabaseContainer(notion: Client, input: DatabasesInput): P
   if (input.cover) updates.cover = formatCover(input.cover)
 
   if (Object.keys(updates).length === 0) {
-    throw new NotionMCPError(
+    throw NotionMCPError.validation(
       'No updates provided',
-      'VALIDATION_ERROR',
       'Provide parent_id, title, description, is_inline, icon, or cover'
     )
   }
@@ -792,9 +778,8 @@ async function listDataSourceTemplates(
   input: DatabasesInput
 ): Promise<ListDataSourceTemplatesResponse> {
   if (!input.database_id) {
-    throw new NotionMCPError(
+    throw NotionMCPError.validation(
       'database_id required for list_templates action',
-      'VALIDATION_ERROR',
       'Provide database_id (from Notion URL) or data_source_id. Both formats are accepted.'
     )
   }

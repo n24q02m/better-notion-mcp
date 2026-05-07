@@ -25,7 +25,7 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
     switch (input.action) {
       case 'list': {
         if (!input.page_id) {
-          throw new NotionMCPError('page_id required for list action', 'VALIDATION_ERROR', 'Provide page_id')
+          throw NotionMCPError.validation('page_id required for list action', 'Provide page_id')
         }
 
         try {
@@ -80,7 +80,7 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
       }
       case 'get': {
         if (!input.comment_id) {
-          throw new NotionMCPError('comment_id required for get action', 'VALIDATION_ERROR', 'Provide comment_id')
+          throw NotionMCPError.validation('comment_id required for get action', 'Provide comment_id')
         }
 
         const comment: any = await (notion.comments as any).retrieve({
@@ -108,14 +108,13 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
 
       case 'create': {
         if (!input.content) {
-          throw new NotionMCPError('content required for create action', 'VALIDATION_ERROR', 'Provide comment content')
+          throw NotionMCPError.validation('content required for create action', 'Provide comment content')
         }
 
         // Either page_id or discussion_id must be provided
         if (!input.page_id && !input.discussion_id) {
-          throw new NotionMCPError(
+          throw NotionMCPError.validation(
             'Either page_id or discussion_id is required for create action',
-            'VALIDATION_ERROR',
             'Use page_id for new discussion, discussion_id for replies'
           )
         }
@@ -144,11 +143,7 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
       }
 
       default:
-        throw new NotionMCPError(
-          `Unsupported action: ${input.action}`,
-          'VALIDATION_ERROR',
-          'Supported actions: list, get, create'
-        )
+        throw NotionMCPError.validation(`Unsupported action: ${input.action}`, 'Supported actions: list, get, create')
     }
   })()
 }

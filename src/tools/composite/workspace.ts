@@ -154,11 +154,7 @@ export async function workspace(notion: Client, input: WorkspaceInput): Promise<
       }
 
       default:
-        throw new NotionMCPError(
-          `Unknown action: ${input.action}`,
-          'VALIDATION_ERROR',
-          'Supported actions: info, search'
-        )
+        throw NotionMCPError.validation(`Unknown action: ${input.action}`, 'Supported actions: info, search')
     }
   })()
 }

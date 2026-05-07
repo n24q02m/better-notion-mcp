@@ -127,9 +127,8 @@ export async function pages(notion: Client, input: PagesInput): Promise<PagesRes
         return await duplicatePage(notion, input)
 
       default:
-        throw new NotionMCPError(
+        throw NotionMCPError.validation(
           `Unknown action: ${input.action}`,
-          'VALIDATION_ERROR',
           'Supported actions: create, get, get_property, update, move, archive, restore, duplicate'
         )
     }
@@ -142,13 +141,12 @@ export async function pages(notion: Client, input: PagesInput): Promise<PagesRes
  */
 async function createPage(notion: Client, input: PagesInput): Promise<CreatePageResult> {
   if (!input.title) {
-    throw new NotionMCPError('title is required for create action', 'VALIDATION_ERROR', 'Provide page title')
+    throw NotionMCPError.validation('title is required for create action', 'Provide page title')
   }
 
   if (!input.parent_id) {
-    throw new NotionMCPError(
+    throw NotionMCPError.validation(
       'parent_id is required for page creation',
-      'VALIDATION_ERROR',
       'Integration tokens cannot create workspace-level pages. Provide parent_id (database or page ID).'
     )
   }
@@ -205,7 +203,7 @@ async function createPage(notion: Client, input: PagesInput): Promise<CreatePage
  */
 async function getPage(notion: Client, input: PagesInput): Promise<GetPageResult> {
   if (!input.page_id) {
-    throw new NotionMCPError('page_id is required for get action', 'VALIDATION_ERROR', 'Provide page_id')
+    throw NotionMCPError.validation('page_id is required for get action', 'Provide page_id')
   }
 
   const page: any = await notion.pages.retrieve({ page_id: input.page_id })
@@ -248,13 +246,12 @@ async function getPage(notion: Client, input: PagesInput): Promise<GetPageResult
  */
 async function getPageProperty(notion: Client, input: PagesInput): Promise<GetPagePropertyResult> {
   if (!input.page_id) {
-    throw new NotionMCPError('page_id is required for get_property action', 'VALIDATION_ERROR', 'Provide page_id')
+    throw NotionMCPError.validation('page_id is required for get_property action', 'Provide page_id')
   }
 
   if (!input.property_id) {
-    throw new NotionMCPError(
+    throw NotionMCPError.validation(
       'property_id is required for get_property action',
-      'VALIDATION_ERROR',
       'Provide property_id (from page properties metadata)'
     )
   }
@@ -335,7 +332,7 @@ async function getPageProperty(notion: Client, input: PagesInput): Promise<GetPa
  */
 async function updatePage(notion: Client, input: PagesInput): Promise<UpdatePageResult> {
   if (!input.page_id) {
-    throw new NotionMCPError('page_id is required for update action', 'VALIDATION_ERROR', 'Provide page_id')
+    throw NotionMCPError.validation('page_id is required for update action', 'Provide page_id')
   }
 
   const updates: any = {}
@@ -421,13 +418,12 @@ async function updatePage(notion: Client, input: PagesInput): Promise<UpdatePage
  */
 async function movePage(notion: Client, input: PagesInput): Promise<MovePageResult> {
   if (!input.page_id) {
-    throw new NotionMCPError('page_id is required for move action', 'VALIDATION_ERROR', 'Provide page_id')
+    throw NotionMCPError.validation('page_id is required for move action', 'Provide page_id')
   }
 
   if (!input.parent_id) {
-    throw new NotionMCPError(
+    throw NotionMCPError.validation(
       'parent_id is required for move action',
-      'VALIDATION_ERROR',
       'Provide parent_id (target page ID to move into)'
     )
   }
@@ -456,7 +452,7 @@ async function archivePage(notion: Client, input: PagesInput): Promise<ArchivePa
   const pageIds = input.page_ids || (input.page_id ? [input.page_id] : [])
 
   if (pageIds.length === 0) {
-    throw new NotionMCPError('page_id or page_ids required', 'VALIDATION_ERROR', 'Provide at least one page ID')
+    throw NotionMCPError.validation('page_id or page_ids required', 'Provide at least one page ID')
   }
 
   const archived = input.action === 'archive'
@@ -487,7 +483,7 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
   const pageIds = input.page_ids || (input.page_id ? [input.page_id] : [])
 
   if (pageIds.length === 0) {
-    throw new NotionMCPError('page_id or page_ids required', 'VALIDATION_ERROR', 'Provide at least one page ID')
+    throw NotionMCPError.validation('page_id or page_ids required', 'Provide at least one page ID')
   }
 
   // Process duplicates in batches to improve performance while respecting rate limits

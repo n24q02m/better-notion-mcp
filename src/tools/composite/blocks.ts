@@ -23,7 +23,7 @@ export interface BlocksInput {
 export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
   return withErrorHandling(async () => {
     if (!input.block_id) {
-      throw new NotionMCPError('block_id required', 'VALIDATION_ERROR', 'Provide block_id')
+      throw NotionMCPError.validation('block_id required', 'Provide block_id')
     }
 
     switch (input.action) {
@@ -63,12 +63,11 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
 
       case 'append': {
         if (!input.content) {
-          throw new NotionMCPError('content required for append', 'VALIDATION_ERROR', 'Provide markdown content')
+          throw NotionMCPError.validation('content required for append', 'Provide markdown content')
         }
         if (input.position === 'after_block' && !input.after_block_id) {
-          throw new NotionMCPError(
+          throw NotionMCPError.validation(
             'after_block_id required when position is after_block',
-            'VALIDATION_ERROR',
             'Provide after_block_id with the block ID to insert after'
           )
         }
@@ -92,23 +91,22 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
 
       case 'update': {
         if (!input.content) {
-          throw new NotionMCPError('content required for update', 'VALIDATION_ERROR', 'Provide markdown content')
+          throw NotionMCPError.validation('content required for update', 'Provide markdown content')
         }
         const block: any = await notion.blocks.retrieve({ block_id: input.block_id })
         const blockType = block.type
         const newBlocks = markdownToBlocks(input.content)
 
         if (newBlocks.length === 0) {
-          throw new NotionMCPError('Content must produce at least one block', 'VALIDATION_ERROR', 'Invalid markdown')
+          throw NotionMCPError.validation('Content must produce at least one block', 'Invalid markdown')
         }
 
         const newContent = newBlocks[0]
 
         // Validate block type match
         if (newContent.type !== blockType) {
-          throw new NotionMCPError(
+          throw NotionMCPError.validation(
             `Block type mismatch: cannot update ${blockType} with content that parses to ${newContent.type}`,
-            'VALIDATION_ERROR',
             `Provide markdown that parses to ${blockType}`
           )
         }
@@ -145,9 +143,8 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
             }
           }
         } else {
-          throw new NotionMCPError(
+          throw NotionMCPError.validation(
             `Block type '${blockType}' cannot be updated`,
-            'VALIDATION_ERROR',
             'Only text-based blocks (paragraph, headings, lists, quote, to_do, code) can be updated'
           )
         }
@@ -175,9 +172,8 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
       }
 
       default:
-        throw new NotionMCPError(
+        throw NotionMCPError.validation(
           `Unknown action: ${input.action}`,
-          'VALIDATION_ERROR',
           'Supported actions: get, children, append, update, delete'
         )
     }

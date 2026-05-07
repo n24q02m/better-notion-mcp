@@ -56,9 +56,8 @@ export async function fileUploads(notion: Client, input: FileUploadsInput): Prom
         return await listFileUploads(notion, input)
 
       default:
-        throw new NotionMCPError(
+        throw NotionMCPError.validation(
           `Unknown action: ${input.action}`,
-          'VALIDATION_ERROR',
           'Supported actions: create, send, complete, retrieve, list'
         )
     }
@@ -71,13 +70,12 @@ export async function fileUploads(notion: Client, input: FileUploadsInput): Prom
  */
 async function createFileUpload(notion: Client, input: FileUploadsInput): Promise<any> {
   if (!input.filename) {
-    throw new NotionMCPError('filename is required for create action', 'VALIDATION_ERROR', 'Provide filename')
+    throw NotionMCPError.validation('filename is required for create action', 'Provide filename')
   }
 
   if (!input.content_type) {
-    throw new NotionMCPError(
+    throw NotionMCPError.validation(
       'content_type is required for create action',
-      'VALIDATION_ERROR',
       'Provide content_type (e.g., "image/png", "application/pdf")'
     )
   }
@@ -111,36 +109,29 @@ async function createFileUpload(notion: Client, input: FileUploadsInput): Promis
  */
 async function sendFileUpload(notion: Client, input: FileUploadsInput): Promise<any> {
   if (!input.file_upload_id) {
-    throw new NotionMCPError(
+    throw NotionMCPError.validation(
       'file_upload_id is required for send action',
-      'VALIDATION_ERROR',
       'Provide file_upload_id from create step'
     )
   }
 
   if (!input.file_content) {
-    throw new NotionMCPError(
-      'file_content is required for send action',
-      'VALIDATION_ERROR',
-      'Provide base64-encoded file content'
-    )
+    throw NotionMCPError.validation('file_content is required for send action', 'Provide base64-encoded file content')
   }
 
   // Check file size before processing to prevent OOM (cheap length check first)
   const approximateSize = (input.file_content.length * 3) / 4
   if (approximateSize > MAX_FILE_SIZE_BYTES) {
-    throw new NotionMCPError(
+    throw NotionMCPError.validation(
       `File content exceeds maximum size of ${MAX_FILE_SIZE_MB}MB per request.`,
-      'VALIDATION_ERROR',
       "Split the file into smaller parts and use the 'part_number' parameter for multi-part upload."
     )
   }
 
   // Validate base64 format after size check (regex is more expensive)
   if (!isValidBase64(input.file_content)) {
-    throw new NotionMCPError(
+    throw NotionMCPError.validation(
       'file_content is not valid base64 encoding',
-      'VALIDATION_ERROR',
       'Encode the file as base64 first. Example: Buffer.from(fileBytes).toString("base64"). The string must only contain A-Z, a-z, 0-9, +, /, and = padding.'
     )
   }
@@ -184,11 +175,7 @@ async function sendFileUpload(notion: Client, input: FileUploadsInput): Promise<
  */
 async function completeFileUpload(notion: Client, input: FileUploadsInput): Promise<any> {
   if (!input.file_upload_id) {
-    throw new NotionMCPError(
-      'file_upload_id is required for complete action',
-      'VALIDATION_ERROR',
-      'Provide file_upload_id'
-    )
+    throw NotionMCPError.validation('file_upload_id is required for complete action', 'Provide file_upload_id')
   }
 
   const response: any = await (notion as any).fileUploads.complete({
@@ -209,11 +196,7 @@ async function completeFileUpload(notion: Client, input: FileUploadsInput): Prom
  */
 async function retrieveFileUpload(notion: Client, input: FileUploadsInput): Promise<any> {
   if (!input.file_upload_id) {
-    throw new NotionMCPError(
-      'file_upload_id is required for retrieve action',
-      'VALIDATION_ERROR',
-      'Provide file_upload_id'
-    )
+    throw NotionMCPError.validation('file_upload_id is required for retrieve action', 'Provide file_upload_id')
   }
 
   const response: any = await (notion as any).fileUploads.retrieve({

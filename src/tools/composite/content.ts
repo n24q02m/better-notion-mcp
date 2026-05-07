@@ -19,11 +19,7 @@ export async function contentConvert(input: ContentConvertInput): Promise<any> {
     switch (input.direction) {
       case 'markdown-to-blocks': {
         if (typeof input.content !== 'string') {
-          throw new NotionMCPError(
-            'Content must be a string for markdown-to-blocks',
-            'VALIDATION_ERROR',
-            'Provide a string content'
-          )
+          throw NotionMCPError.validation('Content must be a string for markdown-to-blocks', 'Provide a string content')
         }
         const blocks = markdownToBlocks(input.content)
         return {
@@ -40,24 +36,18 @@ export async function contentConvert(input: ContentConvertInput): Promise<any> {
           try {
             content = JSON.parse(content)
           } catch {
-            throw new NotionMCPError(
+            throw NotionMCPError.validation(
               'Content must be a valid JSON array or array object for blocks-to-markdown',
-              'VALIDATION_ERROR',
               'Provide a valid JSON array or object'
             )
           }
         }
         if (!Array.isArray(content)) {
-          throw new NotionMCPError(
-            'Content must be an array for blocks-to-markdown',
-            'VALIDATION_ERROR',
-            'Provide an array content'
-          )
+          throw NotionMCPError.validation('Content must be an array for blocks-to-markdown', 'Provide an array content')
         }
         if (!content.every((b) => typeof b === 'object' && b !== null)) {
-          throw new NotionMCPError(
+          throw NotionMCPError.validation(
             'Content must be an array of objects for blocks-to-markdown',
-            'VALIDATION_ERROR',
             'Provide an array of block objects'
           )
         }
@@ -70,11 +60,7 @@ export async function contentConvert(input: ContentConvertInput): Promise<any> {
       }
 
       default:
-        throw new NotionMCPError(
-          `Unsupported direction: ${input.direction}`,
-          'VALIDATION_ERROR',
-          'Provide a valid direction'
-        )
+        throw NotionMCPError.validation(`Unsupported direction: ${input.direction}`, 'Provide a valid direction')
     }
   })()
 }

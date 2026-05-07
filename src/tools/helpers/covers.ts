@@ -91,9 +91,8 @@ export function formatCover(value: string): { type: 'external'; external: { url:
   // Full URL (with safety check against javascript:, data:, etc.)
   if (value.startsWith('http://') || value.startsWith('https://')) {
     if (!isSafeUrl(value)) {
-      throw new NotionMCPError(
+      throw NotionMCPError.validation(
         `Unsafe cover URL: "${value}". Use http: or https: URLs only.`,
-        'VALIDATION_ERROR',
         'Provide a valid http: or https: URL for the cover image'
       )
     }
@@ -102,9 +101,8 @@ export function formatCover(value: string): { type: 'external'; external: { url:
 
   // Reject dangerous URL schemes before shorthand lookup
   if (!isSafeUrl(value)) {
-    throw new NotionMCPError(
+    throw NotionMCPError.validation(
       `Unsafe cover URL: "${value}". Use http: or https: URLs only.`,
-      'VALIDATION_ERROR',
       'Provide a valid http: or https: URL for the cover image'
     )
   }
@@ -116,9 +114,8 @@ export function formatCover(value: string): { type: 'external'; external: { url:
   }
 
   // Unknown shorthand
-  throw new NotionMCPError(
+  throw NotionMCPError.validation(
     `Unknown cover shorthand: "${value}". Use a URL or one of: ${Object.keys(COVER_CATALOG).join(', ')}`,
-    'VALIDATION_ERROR',
     'Provide a valid URL or a recognized cover shorthand name'
   )
 }

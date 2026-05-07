@@ -97,9 +97,8 @@ export async function config(input: ConfigInput): Promise<any> {
       }
 
       default:
-        throw new NotionMCPError(
+        throw NotionMCPError.validation(
           `Unsupported action: ${(input as any).action}`,
-          'VALIDATION_ERROR',
           'Valid actions: status, setup_start, setup_reset, setup_complete, set, cache_clear'
         )
     }

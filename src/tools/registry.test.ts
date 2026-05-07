@@ -558,7 +558,7 @@ describe('registerTools', () => {
 
     it('should wrap NotionMCPError in isError response', async () => {
       const handler = server.getHandler(3)
-      vi.mocked(pages).mockRejectedValue(new NotionMCPError('Page not found', 'NOT_FOUND', 'Check the ID'))
+      vi.mocked(pages).mockRejectedValue(NotionMCPError.notFound('Page not found', 'Check the ID'))
 
       const result = await handler({
         params: { name: 'pages', arguments: { action: 'get', page_id: 'bad-id' } }

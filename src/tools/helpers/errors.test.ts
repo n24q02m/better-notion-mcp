@@ -245,7 +245,7 @@ describe('enhanceError', () => {
 
 describe('aiReadableMessage', () => {
   it('should format error with suggestion', () => {
-    const error = new NotionMCPError('Page not found', 'NOT_FOUND', 'Check the ID')
+    const error = NotionMCPError.notFound('Page not found', 'Check the ID')
     const msg = aiReadableMessage(error)
 
     expect(msg).toBe('Error: Page not found\n\nSuggestion: Check the ID')
@@ -260,7 +260,7 @@ describe('aiReadableMessage', () => {
   })
 
   it('should format error with details', () => {
-    const error = new NotionMCPError('Bad input', 'VALIDATION_ERROR', undefined, { field: 'title' })
+    const error = NotionMCPError.validation('Bad input', undefined, { field: 'title' })
     const msg = aiReadableMessage(error)
 
     expect(msg).toContain('Error: Bad input')
@@ -270,7 +270,7 @@ describe('aiReadableMessage', () => {
   })
 
   it('should format error with both suggestion and details', () => {
-    const error = new NotionMCPError('Bad input', 'VALIDATION_ERROR', 'Fix it', { field: 'title' })
+    const error = NotionMCPError.validation('Bad input', 'Fix it', { field: 'title' })
     const msg = aiReadableMessage(error)
 
     expect(msg).toContain('Error: Bad input')
@@ -281,7 +281,7 @@ describe('aiReadableMessage', () => {
 
 describe('suggestFixes', () => {
   it('should return UNAUTHORIZED suggestions', () => {
-    const fixes = suggestFixes(new NotionMCPError('', 'UNAUTHORIZED'))
+    const fixes = suggestFixes(NotionMCPError.unauthorized())
 
     expect(fixes).toHaveLength(3)
     expect(fixes[0]).toContain('NOTION_TOKEN')
@@ -296,14 +296,14 @@ describe('suggestFixes', () => {
   })
 
   it('should return NOT_FOUND suggestions', () => {
-    const fixes = suggestFixes(new NotionMCPError('', 'NOT_FOUND'))
+    const fixes = suggestFixes(NotionMCPError.notFound(''))
 
     expect(fixes).toHaveLength(3)
     expect(fixes[0]).toContain('ID')
   })
 
   it('should return VALIDATION_ERROR suggestions', () => {
-    const fixes = suggestFixes(new NotionMCPError('', 'VALIDATION_ERROR'))
+    const fixes = suggestFixes(NotionMCPError.validation(''))
 
     expect(fixes).toHaveLength(3)
     expect(fixes.some((f) => f.includes('parameter'))).toBe(true)

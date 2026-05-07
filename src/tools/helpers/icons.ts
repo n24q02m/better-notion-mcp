@@ -37,17 +37,15 @@ function isNotionIconShorthand(value: string): boolean {
  */
 export function formatIcon(value: string): { type: string; [key: string]: any } {
   if (!value) {
-    throw new NotionMCPError(
+    throw NotionMCPError.validation(
       'Icon value cannot be empty. Provide an emoji, a valid URL, or a built-in shorthand (name:color).',
-      'VALIDATION_ERROR',
       'Provide an emoji, an http/https URL, or a Notion icon shorthand like "document:gray"'
     )
   }
   if (value.startsWith('http://') || value.startsWith('https://')) {
     if (!isSafeUrl(value)) {
-      throw new NotionMCPError(
+      throw NotionMCPError.validation(
         `Unsafe icon URL: "${value}". Use http: or https: URLs only.`,
-        'VALIDATION_ERROR',
         'Provide a valid http: or https: URL for the icon'
       )
     }
@@ -61,9 +59,8 @@ export function formatIcon(value: string): { type: string; [key: string]: any } 
   }
   // Reject dangerous URL schemes before falling through to emoji
   if (!isSafeUrl(value)) {
-    throw new NotionMCPError(
+    throw NotionMCPError.validation(
       `Unsafe icon value: "${value}". Use an emoji, a valid URL, or a built-in shorthand (name:color).`,
-      'VALIDATION_ERROR',
       'Provide an emoji, an http/https URL, or a Notion icon shorthand like "document:gray"'
     )
   }
