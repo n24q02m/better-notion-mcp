@@ -123,69 +123,83 @@ export function convertToNotionProperties(
  * Uses direct string building and fixed-length arrays to avoid
  * creating thousands of intermediate arrays during large `.map()` chains.
  */
-export function extractPageProperties(pageProperties: any): any {
+export function extractPageProperties(pageProperties: any, propertyKeys?: string[]): any {
   const properties: any = {}
+  if (!pageProperties) return properties
 
-  const keys = Object.keys(pageProperties)
+  const keys = propertyKeys || Object.keys(pageProperties)
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i]
     const p = pageProperties[key] as any
+    if (!p) continue
 
-    if (p.type === 'title' && p.title) {
+    const type = p.type
+    if (type === 'title' && p.title) {
       let str = ''
       for (let j = 0; j < p.title.length; j++) str += p.title[j].plain_text || ''
       properties[key] = str
-    } else if (p.type === 'rich_text' && p.rich_text) {
+    } else if (type === 'rich_text' && p.rich_text) {
       let str = ''
       for (let j = 0; j < p.rich_text.length; j++) str += p.rich_text[j].plain_text || ''
       properties[key] = str
-    } else if (p.type === 'select' && p.select) {
+    } else if (type === 'select' && p.select) {
       properties[key] = p.select.name
-    } else if (p.type === 'multi_select' && p.multi_select) {
-      const arr = new Array(p.multi_select.length)
-      for (let j = 0; j < p.multi_select.length; j++) arr[j] = p.multi_select[j].name
+    } else if (type === 'multi_select' && p.multi_select) {
+      const multiSelect = p.multi_select
+      const arr = new Array(multiSelect.length)
+      for (let j = 0; j < multiSelect.length; j++) arr[j] = multiSelect[j].name
       properties[key] = arr
-    } else if (p.type === 'number') {
+    } else if (type === 'number') {
       properties[key] = p.number
-    } else if (p.type === 'checkbox') {
+    } else if (type === 'checkbox') {
       properties[key] = p.checkbox
-    } else if (p.type === 'url') {
+    } else if (type === 'url') {
       properties[key] = p.url
-    } else if (p.type === 'email') {
+    } else if (type === 'email') {
       properties[key] = p.email
-    } else if (p.type === 'phone_number') {
+    } else if (type === 'phone_number') {
       properties[key] = p.phone_number
-    } else if (p.type === 'date' && p.date) {
-      properties[key] = p.date.start + (p.date.end ? ` to ${p.date.end}` : '')
-    } else if (p.type === 'relation' && p.relation) {
-      const arr = new Array(p.relation.length)
-      for (let j = 0; j < p.relation.length; j++) arr[j] = p.relation[j].id
+    } else if (type === 'date' && p.date) {
+      const date = p.date
+      properties[key] = date.start + (date.end ? ` to ${date.end}` : '')
+    } else if (type === 'relation' && p.relation) {
+      const relation = p.relation
+      const arr = new Array(relation.length)
+      for (let j = 0; j < relation.length; j++) arr[j] = relation[j].id
       properties[key] = arr
-    } else if (p.type === 'rollup' && p.rollup) {
+    } else if (type === 'rollup' && p.rollup) {
       properties[key] = p.rollup
-    } else if (p.type === 'people' && p.people) {
-      const arr = new Array(p.people.length)
-      for (let j = 0; j < p.people.length; j++) arr[j] = p.people[j].name || p.people[j].id
+    } else if (type === 'people' && p.people) {
+      const people = p.people
+      const arr = new Array(people.length)
+      for (let j = 0; j < people.length; j++) arr[j] = people[j].name || people[j].id
       properties[key] = arr
-    } else if (p.type === 'files' && p.files) {
-      const arr = new Array(p.files.length)
-      for (let j = 0; j < p.files.length; j++)
-        arr[j] = p.files[j].file?.url || p.files[j].external?.url || p.files[j].name
+    } else if (type === 'files' && p.files) {
+      const files = p.files
+      const arr = new Array(files.length)
+      for (let j = 0; j < files.length; j++) {
+        const f = files[j]
+        arr[j] = f.file?.url || f.external?.url || f.name
+      }
       properties[key] = arr
-    } else if (p.type === 'formula' && p.formula) {
-      properties[key] = p.formula.type ? (p.formula[p.formula.type] ?? null) : null
-    } else if (p.type === 'created_time') {
+    } else if (type === 'formula' && p.formula) {
+      const formula = p.formula
+      properties[key] = formula.type ? (formula[formula.type] ?? null) : null
+    } else if (type === 'created_time') {
       properties[key] = p.created_time
-    } else if (p.type === 'last_edited_time') {
+    } else if (type === 'last_edited_time') {
       properties[key] = p.last_edited_time
-    } else if (p.type === 'created_by' && p.created_by) {
-      properties[key] = p.created_by?.name || p.created_by?.id
-    } else if (p.type === 'last_edited_by' && p.last_edited_by) {
-      properties[key] = p.last_edited_by?.name || p.last_edited_by?.id
-    } else if (p.type === 'status' && p.status) {
-      properties[key] = p.status?.name
-    } else if (p.type === 'unique_id' && p.unique_id) {
-      properties[key] = p.unique_id.prefix ? `${p.unique_id.prefix}-${p.unique_id.number}` : p.unique_id.number
+    } else if (type === 'created_by' && p.created_by) {
+      const cb = p.created_by
+      properties[key] = cb.name || cb.id
+    } else if (type === 'last_edited_by' && p.last_edited_by) {
+      const lb = p.last_edited_by
+      properties[key] = lb.name || lb.id
+    } else if (type === 'status' && p.status) {
+      properties[key] = p.status.name
+    } else if (type === 'unique_id' && p.unique_id) {
+      const uid = p.unique_id
+      properties[key] = uid.prefix ? `${uid.prefix}-${uid.number}` : uid.number
     }
   }
   return properties

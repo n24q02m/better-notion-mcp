@@ -78,12 +78,15 @@ async function getSmartSearchFilter(notion: Client, dataSourceId: string, search
  * Format raw Notion page results into AI-friendly property objects
  */
 function formatDatabaseResults(results: any[]): Record<string, any>[] {
-  const formattedResults = new Array(results.length)
-  for (let i = 0; i < results.length; i++) {
-    const page: any = results[i]
-    const props = extractPageProperties(page.properties)
-    props.page_id = page.id
-    props.url = page.url
+  const count = results.length
+  const formattedResults = new Array(count)
+  const propertyKeys = count > 0 ? Object.keys(results[0].properties) : []
+
+  for (let i = 0; i < count; i++) {
+    const { id, url, properties } = results[i]
+    const props = extractPageProperties(properties, propertyKeys)
+    props.page_id = id
+    props.url = url
 
     formattedResults[i] = props
   }
