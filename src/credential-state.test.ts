@@ -27,14 +27,10 @@ describe('tryOpenBrowser', () => {
     expect(execFile).toHaveBeenCalledWith('open', ['https://example.com'], expect.any(Function))
   })
 
-  it('calls rundll32 on win32', () => {
+  it('calls cmd on win32', () => {
     Object.defineProperty(process, 'platform', { value: 'win32' })
     tryOpenBrowser('https://example.com')
-    expect(execFile).toHaveBeenCalledWith(
-      'rundll32',
-      ['url.dll,FileProtocolHandler', 'https://example.com'],
-      expect.any(Function)
-    )
+    expect(execFile).toHaveBeenCalledWith('rundll32', ['url.dll,FileProtocolHandler', 'https://example.com'], expect.any(Function))
   })
 
   it('calls xdg-open on other platforms', () => {
