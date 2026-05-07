@@ -1,0 +1,14 @@
+## 💡 What
+Refactored `populateDeepChildren` and `fetchChildrenRecursive` in `src/tools/helpers/pagination.ts` to address the N+1 query issue.
+
+## 🎯 Why
+Fetching child blocks individually in a deep recursive tree leads to excessive Notion API calls. The new implementation optimizes this by using a breadth-first parallel fetching strategy and a module-level cache.
+
+## 📊 Impact
+- **Reduced Latency**: Parallelizing fetches level-by-level significantly speeds up the population of deeply nested blocks (e.g., complex toggles, tables).
+- **Resilience**: Switched to `Promise.allSettled` to ensure one block fetch failure doesn't halt the entire process.
+- **Efficiency**: Added `blockCache` (5m TTL) to avoid redundant API calls for the same block IDs during a session.
+
+## 🔬 Measurement
+- Added unit tests in `src/tools/helpers/pagination.test.ts` to verify breadth-first parallelization, cache utilization, and error resilience.
+- Verified that `ConcurrencyQueue` supports non-fail-fast behavior when needed.

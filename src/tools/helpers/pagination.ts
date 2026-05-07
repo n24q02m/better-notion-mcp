@@ -8,6 +8,15 @@ import type { Client } from '@notionhq/client'
 /** Safety limit to prevent infinite loops if API always returns has_more: true */
 const MAX_PAGES_SAFETY = 1000
 
+/** Cache TTL for block children results (5 minutes) */
+const BLOCK_CACHE_TTL = 5 * 60 * 1000
+
+/**
+ * Module-level cache for block children results.
+ * Keyed by blockId, values are { children: any[], timestamp: number }
+ */
+export const blockCache = new Map<string, { children: any[]; timestamp: number }>()
+
 export interface PaginatedResponse<T> {
   results: T[]
   next_cursor: string | null
@@ -74,10 +83,13 @@ export class ConcurrencyQueue {
   private queue: (() => void)[] = []
   private hasError = false
 
-  constructor(private readonly limit: number) {}
+  constructor(
+    private readonly limit: number,
+    private readonly failFast = true
+  ) {}
 
   async run<T>(task: () => Promise<T>): Promise<T> {
-    if (this.hasError) {
+    if (this.failFast && this.hasError) {
       throw new Error('Queue stopped due to previous error')
     }
 
@@ -85,7 +97,7 @@ export class ConcurrencyQueue {
       await new Promise<void>((resolve) => this.queue.push(resolve))
     }
 
-    if (this.hasError) {
+    if (this.failFast && this.hasError) {
       throw new Error('Queue stopped due to previous error')
     }
 
@@ -93,17 +105,19 @@ export class ConcurrencyQueue {
     try {
       return await task()
     } catch (error) {
-      this.hasError = true
-      // Notify all waiting tasks to wake up and see the error
-      const waiters = this.queue
-      this.queue = []
-      for (const resolve of waiters) {
-        resolve()
+      if (this.failFast) {
+        this.hasError = true
+        // Notify all waiting tasks to wake up and see the error
+        const waiters = this.queue
+        this.queue = []
+        for (const resolve of waiters) {
+          resolve()
+        }
       }
       throw error
     } finally {
       this.activeCount--
-      if (this.queue.length > 0 && !this.hasError) {
+      if (this.queue.length > 0 && (!this.failFast || !this.hasError)) {
         const next = this.queue.shift()
         next?.()
       }
@@ -114,6 +128,11 @@ export class ConcurrencyQueue {
 /**
  * Recursively fetch children for blocks that need them (tables, toggles, columns, etc.)
  * Mutates blocks in-place by attaching children arrays.
+ *
+ * Optimized with:
+ * 1. Breadth-first parallel fetching (minimizes N+1 impact)
+ * 2. Promise.allSettled for resilience (one sibling failing doesn't stop others)
+ * 3. Module-level blockCache to avoid redundant API calls
  */
 export async function fetchChildrenRecursive(
   blocks: any[],
@@ -121,30 +140,55 @@ export async function fetchChildrenRecursive(
   depth = 0,
   queue?: ConcurrencyQueue
 ): Promise<void> {
-  if (depth >= MAX_DEPTH) return
+  if (depth >= MAX_DEPTH || !blocks.length) return
 
-  const fetchAndRecurse = async (block: any) => {
-    const children = queue ? await queue.run(() => fetchChildren(block.id)) : await fetchChildren(block.id)
+  // 1. Identify blocks at current level that need children
+  const targetBlocks = blocks.filter((block) => block.has_children && BLOCKS_NEEDING_CHILDREN.has(block.type))
 
-    // Attach children to the correct property based on block type
-    if (block[block.type]) {
-      block[block.type].children = children
+  if (targetBlocks.length === 0) return
+
+  // 2. Fetch children in parallel for this level
+  const results = await Promise.allSettled(
+    targetBlocks.map(async (block) => {
+      const now = Date.now()
+      const cached = blockCache.get(block.id)
+
+      // Use cache if valid (5m TTL)
+      if (cached && now - cached.timestamp < BLOCK_CACHE_TTL) {
+        return cached.children
+      }
+
+      // Fetch fresh data
+      const children = queue ? await queue.run(() => fetchChildren(block.id)) : await fetchChildren(block.id)
+
+      // Update cache
+      blockCache.set(block.id, { children, timestamp: now })
+      return children
+    })
+  )
+
+  // 3. Attach results and collect all discovered children for recursion
+  const allDiscoveredChildren: any[] = []
+  for (let i = 0; i < targetBlocks.length; i++) {
+    const block = targetBlocks[i]
+    const result = results[i]
+
+    if (result.status === 'fulfilled') {
+      const children = result.value
+      // Attach children to the correct property based on block type
+      if (block[block.type]) {
+        block[block.type].children = children
+      }
+      allDiscoveredChildren.push(...children)
+    } else {
+      // Log error but continue with other blocks
+      console.error(`Failed to fetch children for block ${block.id}:`, result.reason)
     }
-
-    // Recurse into children
-    await fetchChildrenRecursive(children, fetchChildren, depth + 1, queue)
   }
 
-  const promises: Promise<void>[] = []
-  for (let i = 0; i < blocks.length; i++) {
-    const block = blocks[i]
-    if (block.has_children && BLOCKS_NEEDING_CHILDREN.has(block.type)) {
-      promises.push(fetchAndRecurse(block))
-    }
-  }
-
-  if (promises.length > 0) {
-    await Promise.all(promises)
+  // 4. Recurse into the next level (breadth-first)
+  if (allDiscoveredChildren.length > 0) {
+    await fetchChildrenRecursive(allDiscoveredChildren, fetchChildren, depth + 1, queue)
   }
 }
 
@@ -173,7 +217,8 @@ export async function processBatches<T, R>(
  */
 export async function populateDeepChildren(notion: Client, blocks: any[]): Promise<void> {
   // Use a shared queue to cap total concurrent Notion API calls at 5 across the whole tree
-  const queue = new ConcurrencyQueue(5)
+  // Set failFast to false to allow parallel sibling fetches even if one fails
+  const queue = new ConcurrencyQueue(5, false)
 
   await fetchChildrenRecursive(
     blocks,
