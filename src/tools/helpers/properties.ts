@@ -3,6 +3,7 @@
  * Convert between human-friendly and Notion API formats
  */
 
+import type { PageObjectResponse } from '@notionhq/client'
 import * as RichText from './richtext.js'
 
 /** Extract a 32-char hex page ID from a Notion URL, or return the input as-is if it's already a raw ID */
@@ -123,13 +124,13 @@ export function convertToNotionProperties(
  * Uses direct string building and fixed-length arrays to avoid
  * creating thousands of intermediate arrays during large `.map()` chains.
  */
-export function extractPageProperties(pageProperties: any): any {
-  const properties: any = {}
+export function extractPageProperties(pageProperties: PageObjectResponse['properties']): Record<string, any> {
+  const properties: Record<string, any> = {}
 
   const keys = Object.keys(pageProperties)
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i]
-    const p = pageProperties[key] as any
+    const p = pageProperties[key]
 
     if (p.type === 'title' && p.title) {
       let str = ''
@@ -163,25 +164,33 @@ export function extractPageProperties(pageProperties: any): any {
       properties[key] = arr
     } else if (p.type === 'rollup' && p.rollup) {
       properties[key] = p.rollup
-    } else if (p.type === 'people' && p.people) {
+    } else if (p.type === 'people') {
       const arr = new Array(p.people.length)
-      for (let j = 0; j < p.people.length; j++) arr[j] = p.people[j].name || p.people[j].id
+      for (let j = 0; j < p.people.length; j++) {
+        const person = p.people[j]
+        arr[j] = ('name' in person ? person.name : null) || person.id
+      }
       properties[key] = arr
-    } else if (p.type === 'files' && p.files) {
+    } else if (p.type === 'files') {
       const arr = new Array(p.files.length)
-      for (let j = 0; j < p.files.length; j++)
-        arr[j] = p.files[j].file?.url || p.files[j].external?.url || p.files[j].name
+      for (let j = 0; j < p.files.length; j++) {
+        const f = p.files[j] as any
+        arr[j] = f.file?.url || f.external?.url || f.name
+      }
       properties[key] = arr
-    } else if (p.type === 'formula' && p.formula) {
-      properties[key] = p.formula.type ? (p.formula[p.formula.type] ?? null) : null
+    } else if (p.type === 'formula') {
+      const f = p.formula as any
+      properties[key] = f[f.type] ?? null
     } else if (p.type === 'created_time') {
       properties[key] = p.created_time
     } else if (p.type === 'last_edited_time') {
       properties[key] = p.last_edited_time
-    } else if (p.type === 'created_by' && p.created_by) {
-      properties[key] = p.created_by?.name || p.created_by?.id
-    } else if (p.type === 'last_edited_by' && p.last_edited_by) {
-      properties[key] = p.last_edited_by?.name || p.last_edited_by?.id
+    } else if (p.type === 'created_by') {
+      const cb = p.created_by as any
+      properties[key] = cb.name || cb.id
+    } else if (p.type === 'last_edited_by') {
+      const leb = p.last_edited_by as any
+      properties[key] = leb.name || leb.id
     } else if (p.type === 'status' && p.status) {
       properties[key] = p.status?.name
     } else if (p.type === 'unique_id' && p.unique_id) {
