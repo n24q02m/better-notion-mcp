@@ -81,13 +81,16 @@ const COVER_CATALOG: Record<string, string> = {
   rijksmuseum_rembrandt_1642: `${NOTION_COVER_BASE}/rijksmuseum_rembrandt_1642.jpg`
 }
 
+/** Notion cover object (external image) */
+export type NotionCover = { type: 'external'; external: { url: string } }
+
 /**
  * Format a cover value into the Notion API cover object.
  * Accepts:
  * - Full URL (http/https) -> external cover
  * - Shorthand name (e.g., "gradient_8", "solid_blue") -> resolved to Notion CDN URL
  */
-export function formatCover(value: string): { type: 'external'; external: { url: string } } {
+export function formatCover(value: string): NotionCover {
   // Full URL (with safety check against javascript:, data:, etc.)
   if (value.startsWith('http://') || value.startsWith('https://')) {
     if (!isSafeUrl(value)) {

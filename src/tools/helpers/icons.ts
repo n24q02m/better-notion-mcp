@@ -28,6 +28,9 @@ function isNotionIconShorthand(value: string): boolean {
   return NOTION_ICON_COLORS.has(color)
 }
 
+/** Notion icon object (emoji or external image) */
+export type NotionIcon = { type: 'emoji'; emoji: string } | { type: 'external'; external: { url: string } }
+
 /**
  * Format an icon value for the Notion API.
  * Accepts:
@@ -35,7 +38,7 @@ function isNotionIconShorthand(value: string): boolean {
  * - External URL: "https://..." -> { type: "external", external: { url } }
  * - Notion built-in shorthand: "document:gray" -> { type: "external", external: { url: "https://www.notion.so/icons/document_gray.svg" } }
  */
-export function formatIcon(value: string): { type: string; [key: string]: any } {
+export function formatIcon(value: string): NotionIcon {
   if (!value) {
     throw new NotionMCPError(
       'Icon value cannot be empty. Provide an emoji, a valid URL, or a built-in shorthand (name:color).',

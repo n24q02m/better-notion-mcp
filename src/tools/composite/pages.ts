@@ -4,9 +4,9 @@
  */
 
 import type { Client } from '@notionhq/client'
-import { formatCover } from '../helpers/covers.js'
+import { formatCover, type NotionCover } from '../helpers/covers.js'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
-import { formatIcon } from '../helpers/icons.js'
+import { formatIcon, type NotionIcon } from '../helpers/icons.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate, populateDeepChildren, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties, extractPageProperties } from '../helpers/properties.js'
@@ -26,8 +26,8 @@ export interface GetPageResult {
   created_time: string
   last_edited_time: string
   archived: boolean
-  icon: any
-  cover: any
+  icon: NotionIcon | null
+  cover: NotionCover | null
   properties: Record<string, any>
   content: string
   block_count: number
