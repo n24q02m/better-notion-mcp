@@ -119,9 +119,35 @@ export function enhanceError(error: any): NotionMCPError {
 }
 
 /**
+ * Notion API error detail structure
+ */
+interface NotionErrorDetail {
+  message: string | ((error: any) => string)
+  code: string
+  suggestion: string | ((error: any) => string)
+  details?: (error: any) => any
+}
+
+/**
+ * Common validation error hints based on message patterns
+ */
+const VALIDATION_HINTS = [
+  {
+    pattern: /rich_text|title/,
+    suggestion:
+      'Property format error. For database page properties, use simple values: {"Name": "text", "Status": "value", "Tags": ["a","b"], "Count": 42, "Done": true, "Due": "2025-01-15"}. The server auto-converts to Notion format.'
+  },
+  {
+    pattern: /property/,
+    suggestion:
+      'Property name or type mismatch. Use databases(action="get") to check the schema, then match property names exactly (case-sensitive).'
+  }
+]
+
+/**
  * Static mapping of Notion API error codes to MCP error details
  */
-const NOTION_ERROR_MAP: Record<string, { message: string; code: string; suggestion: string }> = {
+const NOTION_ERROR_MAP: Record<string, NotionErrorDetail> = {
   unauthorized: {
     message: 'Invalid or missing Notion API token',
     code: 'UNAUTHORIZED',
@@ -154,6 +180,18 @@ const NOTION_ERROR_MAP: Record<string, { message: string; code: string; suggesti
     message: 'Notion API is temporarily unavailable',
     code: 'SERVICE_UNAVAILABLE',
     suggestion: 'Wait a moment and try again. Check https://status.notion.so for updates.'
+  },
+  validation_error: {
+    message: (error) => error.body?.message || 'Invalid request parameters',
+    code: 'VALIDATION_ERROR',
+    suggestion: (error) => {
+      const bodyMessage = error.body?.message || ''
+      for (const hint of VALIDATION_HINTS) {
+        if (hint.pattern.test(bodyMessage)) return hint.suggestion
+      }
+      return 'Check the API documentation for valid parameter formats'
+    },
+    details: (error) => sanitizeValidationBody(error.body)
   }
 }
 
@@ -162,35 +200,17 @@ const NOTION_ERROR_MAP: Record<string, { message: string; code: string; suggesti
  */
 function handleNotionError(error: any): NotionMCPError {
   const code = error.code
-  const message = error.message || 'Unknown Notion API error'
-
-  // Handle validation_error separately as it has dynamic suggestions
-  if (code === 'validation_error') {
-    const bodyMessage: string = error.body?.message || ''
-    let suggestion = 'Check the API documentation for valid parameter formats'
-
-    // Detect common property format mistakes and provide specific guidance
-    if (bodyMessage.includes('rich_text') || bodyMessage.includes('title')) {
-      suggestion =
-        'Property format error. For database page properties, use simple values: {"Name": "text", "Status": "value", "Tags": ["a","b"], "Count": 42, "Done": true, "Due": "2025-01-15"}. The server auto-converts to Notion format.'
-    } else if (bodyMessage.includes('property')) {
-      suggestion =
-        'Property name or type mismatch. Use databases(action="get") to check the schema, then match property names exactly (case-sensitive).'
-    }
-
-    return new NotionMCPError(
-      bodyMessage || 'Invalid request parameters',
-      'VALIDATION_ERROR',
-      suggestion,
-      sanitizeValidationBody(error.body)
-    )
-  }
-
   const mapping = NOTION_ERROR_MAP[code]
+
   if (mapping) {
-    return new NotionMCPError(mapping.message, mapping.code, mapping.suggestion)
+    const message = typeof mapping.message === 'function' ? mapping.message(error) : mapping.message
+    const suggestion = typeof mapping.suggestion === 'function' ? mapping.suggestion(error) : mapping.suggestion
+    const details = mapping.details ? mapping.details(error) : undefined
+    return new NotionMCPError(message, mapping.code, suggestion, details)
   }
 
+  // Fallback for unmapped errors
+  const message = error.message || 'Unknown Notion API error'
   return new NotionMCPError(message, code.toUpperCase(), 'Check the Notion API documentation for this error code')
 }
 
