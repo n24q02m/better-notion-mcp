@@ -124,6 +124,7 @@ export function convertToNotionProperties(
  * creating thousands of intermediate arrays during large `.map()` chains.
  */
 export function extractPageProperties(pageProperties: any): any {
+  if (!pageProperties) return {}
   const properties: any = {}
 
   const keys = Object.keys(pageProperties)
