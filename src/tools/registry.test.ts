@@ -35,6 +35,7 @@ vi.mock('node:fs/promises', () => ({
 }))
 
 import { readFile } from 'node:fs/promises'
+import { getState } from '../credential-state.js'
 import { blocks } from './composite/blocks.js'
 import { commentsManage } from './composite/comments.js'
 import { config } from './composite/config.js'
@@ -42,7 +43,6 @@ import { contentConvert } from './composite/content.js'
 import { databases } from './composite/databases.js'
 import { fileUploads } from './composite/file-uploads.js'
 import { pages } from './composite/pages.js'
-import { getState } from '../credential-state.js'
 import { users } from './composite/users.js'
 import { workspace } from './composite/workspace.js'
 import { NotionMCPError } from './helpers/errors.js'
@@ -598,16 +598,16 @@ describe('registerTools', () => {
     })
   })
 
-    it('should return error when Notion access token is missing', async () => {
-      const handler = server.getHandler(3)
-      vi.mocked(getState).mockReturnValue('awaiting_setup')
+  it('should return error when Notion access token is missing', async () => {
+    const handler = server.getHandler(3)
+    vi.mocked(getState).mockReturnValue('awaiting_setup')
 
-      const result = await handler({
-        params: { name: 'pages', arguments: { action: 'get', page_id: 'some-id' } }
-      })
-
-      expect(result.isError).toBe(true)
-      expect(result.content[0].text).toContain('Error: Notion access token is not present')
-      expect(result.content[0].text).toContain('Suggestion: Set NOTION_TOKEN env var')
+    const result = await handler({
+      params: { name: 'pages', arguments: { action: 'get', page_id: 'some-id' } }
     })
+
+    expect(result.isError).toBe(true)
+    expect(result.content[0].text).toContain('Error: Notion access token is not present')
+    expect(result.content[0].text).toContain('Suggestion: Set NOTION_TOKEN env var')
+  })
 })
