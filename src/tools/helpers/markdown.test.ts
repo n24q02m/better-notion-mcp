@@ -97,6 +97,14 @@ describe('markdownToBlocks', () => {
       expect(getRichTextContent(blocks[0])).toBe('First')
       expect(getRichTextContent(blocks[1])).toBe('Second')
     })
+    it('should parse indented bulleted items', () => {
+      const blocks = markdownToBlocks('  - First\n    - Second')
+      expect(blocks).toHaveLength(2)
+      expect(blocks[0].type).toBe('bulleted_list_item')
+      expect(blocks[1].type).toBe('bulleted_list_item')
+      expect(getRichTextContent(blocks[0])).toBe('First')
+      expect(getRichTextContent(blocks[1])).toBe('Second')
+    })
 
     it('should parse asterisk-prefixed items', () => {
       const blocks = markdownToBlocks('* Item A\n* Item B')
@@ -115,6 +123,12 @@ describe('markdownToBlocks', () => {
       }
       expect(getRichTextContent(blocks[0])).toBe('First')
       expect(getRichTextContent(blocks[2])).toBe('Third')
+    })
+    it('should parse indented numbered items', () => {
+      const blocks = markdownToBlocks('  1. One\n    2. Two')
+      expect(blocks).toHaveLength(2)
+      expect(blocks[0].type).toBe('numbered_list_item')
+      expect(blocks[1].type).toBe('numbered_list_item')
     })
   })
 
@@ -145,6 +159,35 @@ describe('markdownToBlocks', () => {
       expect(blocks).toHaveLength(2)
       expect(blocks[0].to_do.checked).toBe(false)
       expect(blocks[1].to_do.checked).toBe(true)
+    })
+    it('should parse todo item with plus bullet', () => {
+      const blocks = markdownToBlocks('+ [ ] Plus todo')
+      expect(blocks).toHaveLength(1)
+      expect(blocks[0].type).toBe('to_do')
+      expect(blocks[0].to_do.checked).toBe(false)
+      expect(getRichTextContent(blocks[0])).toBe('Plus todo')
+    })
+
+    it('should parse indented todo item', () => {
+      const blocks = markdownToBlocks('  - [ ] Indented')
+      expect(blocks).toHaveLength(1)
+      expect(blocks[0].type).toBe('to_do')
+      expect(getRichTextContent(blocks[0])).toBe('Indented')
+    })
+
+    it('should parse todo item without text', () => {
+      const blocks = markdownToBlocks('- [ ]')
+      expect(blocks).toHaveLength(1)
+      expect(blocks[0].type).toBe('to_do')
+      expect(getRichTextContent(blocks[0])).toBe('')
+    })
+
+    it('should parse todo item with asterisk bullet', () => {
+      const blocks = markdownToBlocks('* [x] Asterisk')
+      expect(blocks).toHaveLength(1)
+      expect(blocks[0].type).toBe('to_do')
+      expect(blocks[0].to_do.checked).toBe(true)
+      expect(getRichTextContent(blocks[0])).toBe('Asterisk')
     })
   })
 

@@ -62,9 +62,9 @@ function createMention(
 const CALLOUT_REGEX = /^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION|INFO|SUCCESS|ERROR)\]\s*(.*)/i
 const IMAGE_REGEX = /^!\[([^\]]*)\]\(([^)]+)\)$/
 const BOOKMARK_REGEX = /^\[(bookmark|embed)\]\(([^)]+)\)$/i
-const CHECKED_LIST_REGEX = /^[-*]\s\[([ xX])\]\s/
-const BULLETED_LIST_REGEX = /^[-*]\s/
-const NUMBERED_LIST_REGEX = /^\d+\.\s/
+const CHECKED_LIST_REGEX = /^\s*[-*+]\s\[([ xX])\](?:\s|$)/
+const BULLETED_LIST_REGEX = /^\s*[-*+]\s/
+const NUMBERED_LIST_REGEX = /^\s*\d+\.\s/
 const DIVIDER_REGEX = /^[-*]{3,}$/
 
 /**
@@ -208,7 +208,8 @@ class MarkdownParser {
 
     // Task list / Checkbox list - [ ] or - [x]
     else if (CHECKED_LIST_REGEX.test(line)) {
-      const checked = line[3] !== ' '
+      const match = line.match(CHECKED_LIST_REGEX)
+      const checked = match ? match[1].toLowerCase() === 'x' : false
       const text = line.replace(CHECKED_LIST_REGEX, '')
       this.currentListType = 'bulleted'
       this.currentList.push(createTodoItem(text, checked))
@@ -1230,5 +1231,5 @@ function createBreadcrumb(): NotionBlock {
 }
 
 function isListItem(line: string): boolean {
-  return BULLETED_LIST_REGEX.test(line) || NUMBERED_LIST_REGEX.test(line)
+  return CHECKED_LIST_REGEX.test(line) || BULLETED_LIST_REGEX.test(line) || NUMBERED_LIST_REGEX.test(line)
 }
