@@ -90,10 +90,31 @@ describe('users', () => {
       })
     })
 
-    it('should rethrow non-permission errors', async () => {
+    it('should handle rate_limited error', async () => {
+      mockNotion.users.list.mockRejectedValue({ code: 'rate_limited', message: 'Too many requests' })
+
+      await expect(users(mockNotion as any, { action: 'list' })).rejects.toMatchObject({
+        code: 'RATE_LIMITED',
+        message: 'Too many requests to Notion API'
+      })
+    })
+
+    it('should handle unknown Notion error code', async () => {
+      mockNotion.users.list.mockRejectedValue({ code: 'internal_server_error', message: 'Something went wrong' })
+
+      await expect(users(mockNotion as any, { action: 'list' })).rejects.toMatchObject({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Something went wrong'
+      })
+    })
+
+    it('should handle generic network errors', async () => {
       mockNotion.users.list.mockRejectedValue(new Error('network error'))
 
-      await expect(users(mockNotion as any, { action: 'list' })).rejects.toThrow('network error')
+      await expect(users(mockNotion as any, { action: 'list' })).rejects.toMatchObject({
+        code: 'UNKNOWN_ERROR',
+        message: 'network error'
+      })
     })
 
     it('should default name to Unknown when missing', async () => {
