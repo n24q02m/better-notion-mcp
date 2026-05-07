@@ -128,7 +128,7 @@ export async function fetchChildrenRecursive(
     const children = queue ? await queue.run(() => fetchChildren(block.id)) : await fetchChildren(block.id)
 
     // Attach children to the correct property based on block type
-    if (block[block.type]) {
+    if (block.type && block[block.type]) {
       block[block.type].children = children
     }
 
@@ -139,7 +139,7 @@ export async function fetchChildrenRecursive(
   const promises: Promise<void>[] = []
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]
-    if (block.has_children && BLOCKS_NEEDING_CHILDREN.has(block.type)) {
+    if (block.has_children && block.type && BLOCKS_NEEDING_CHILDREN.has(block.type)) {
       promises.push(fetchAndRecurse(block))
     }
   }

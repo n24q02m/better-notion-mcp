@@ -261,7 +261,7 @@ async function getPageProperty(notion: Client, input: PagesInput): Promise<GetPa
   }
 
   // Fetch with auto-pagination for paginated property items
-  const allResults = await autoPaginate(async (cursor) => {
+  const allResults = await autoPaginate<any>(async (cursor) => {
     const response: any = await notion.pages.properties.retrieve({
       page_id: input.page_id!,
       property_id: input.property_id!,
@@ -373,12 +373,13 @@ async function updatePage(notion: Client, input: PagesInput): Promise<UpdatePage
     if (input.content) {
       // Replace all content
       // Optimized: Fetch all blocks using autoPaginate, then delete them in batches.
-      const existingBlocks = await autoPaginate((cursor) =>
-        notion.blocks.children.list({
-          block_id: input.page_id!,
-          page_size: 100,
-          start_cursor: cursor
-        })
+      const existingBlocks = await autoPaginate<NotionBlock>(
+        (cursor) =>
+          notion.blocks.children.list({
+            block_id: input.page_id!,
+            page_size: 100,
+            start_cursor: cursor
+          }) as any
       )
 
       if (existingBlocks.length > 0) {
@@ -500,14 +501,15 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
       const [originalPage, originalBlocks] = await Promise.all([
         notion.pages.retrieve({ page_id: pageId }) as Promise<any>,
 
-        autoPaginate((cursor) =>
-          notion.blocks.children.list({
-            block_id: pageId,
+        autoPaginate<NotionBlock>(
+          (cursor) =>
+            notion.blocks.children.list({
+              block_id: pageId,
 
-            start_cursor: cursor,
+              start_cursor: cursor,
 
-            page_size: 100
-          })
+              page_size: 100
+            }) as any
         )
       ])
 

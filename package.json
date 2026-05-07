@@ -19,7 +19,7 @@
   "version": "2.32.0",
   "license": "MIT",
   "type": "module",
-  "packageManager": "bun@1.2.21",
+  "packageManager": "bun@1.2.2",
   "publishConfig": {
     "access": "public"
   },
