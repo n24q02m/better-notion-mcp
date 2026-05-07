@@ -1,4 +1,5 @@
 import type { Client } from '@notionhq/client'
+import type { NotionBlock } from './markdown.js'
 
 /**
  * Pagination Helper
@@ -116,14 +117,14 @@ export class ConcurrencyQueue {
  * Mutates blocks in-place by attaching children arrays.
  */
 export async function fetchChildrenRecursive(
-  blocks: any[],
-  fetchChildren: (blockId: string) => Promise<any[]>,
+  blocks: NotionBlock[],
+  fetchChildren: (blockId: string) => Promise<NotionBlock[]>,
   depth = 0,
   queue?: ConcurrencyQueue
 ): Promise<void> {
   if (depth >= MAX_DEPTH) return
 
-  const fetchAndRecurse = async (block: any) => {
+  const fetchAndRecurse = async (block: NotionBlock) => {
     const children = queue ? await queue.run(() => fetchChildren(block.id)) : await fetchChildren(block.id)
 
     // Attach children to the correct property based on block type
@@ -171,7 +172,7 @@ export async function processBatches<T, R>(
 /**
  * Recursively fetch and populate children for blocks using auto-pagination
  */
-export async function populateDeepChildren(notion: Client, blocks: any[]): Promise<void> {
+export async function populateDeepChildren(notion: Client, blocks: NotionBlock[]): Promise<void> {
   // Use a shared queue to cap total concurrent Notion API calls at 5 across the whole tree
   const queue = new ConcurrencyQueue(5)
 
@@ -180,7 +181,7 @@ export async function populateDeepChildren(notion: Client, blocks: any[]): Promi
     async (blockId) => {
       return autoPaginate((cursor) =>
         notion.blocks.children.list({ block_id: blockId, start_cursor: cursor, page_size: 100 })
-      ) as any
+      ) as Promise<NotionBlock[]>
     },
     0,
     queue

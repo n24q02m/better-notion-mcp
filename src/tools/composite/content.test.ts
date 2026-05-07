@@ -24,7 +24,7 @@ describe('contentConvert', () => {
       await expect(
         contentConvert({
           direction: 'markdown-to-blocks',
-          content: ['not', 'a', 'string']
+          content: ['not', 'a', 'string'] as any
         })
       ).rejects.toThrow('Content must be a string for markdown-to-blocks')
     })

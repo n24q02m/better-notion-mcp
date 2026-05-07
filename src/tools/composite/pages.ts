@@ -7,7 +7,7 @@ import type { Client } from '@notionhq/client'
 import { formatCover } from '../helpers/covers.js'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { formatIcon } from '../helpers/icons.js'
-import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
+import { blocksToMarkdown, markdownToBlocks, type NotionBlock } from '../helpers/markdown.js'
 import { autoPaginate, populateDeepChildren, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties, extractPageProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
@@ -211,18 +211,19 @@ async function getPage(notion: Client, input: PagesInput): Promise<GetPageResult
   const page: any = await notion.pages.retrieve({ page_id: input.page_id })
 
   // Get all blocks with auto-pagination
-  const blocks = await autoPaginate((cursor) =>
-    notion.blocks.children.list({
-      block_id: input.page_id!,
-      start_cursor: cursor,
-      page_size: 100
-    })
+  const blocks = await autoPaginate<NotionBlock>(
+    (cursor) =>
+      notion.blocks.children.list({
+        block_id: input.page_id!,
+        start_cursor: cursor,
+        page_size: 100
+      }) as any
   )
 
   // Recursively fetch children for blocks that need them (tables, toggles, columns)
-  await populateDeepChildren(notion, blocks as any[])
+  await populateDeepChildren(notion, blocks)
 
-  const markdown = blocksToMarkdown(blocks as any)
+  const markdown = blocksToMarkdown(blocks)
 
   // Extract properties
   const properties = extractPageProperties(page.properties)

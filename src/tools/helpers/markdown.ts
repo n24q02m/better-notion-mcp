@@ -8,9 +8,10 @@
 
 import { isSafeUrl } from './security.js'
 
-export interface NotionBlock {
-  object: 'block'
+export type NotionBlock = {
+  object?: string
   type: string
+  children?: NotionBlock[]
   [key: string]: any
 }
 

@@ -5,7 +5,7 @@
 
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
-import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
+import { blocksToMarkdown, markdownToBlocks, type NotionBlock } from '../helpers/markdown.js'
 import { autoPaginate, populateDeepChildren } from '../helpers/pagination.js'
 
 export interface BlocksInput {
@@ -40,18 +40,19 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
       }
 
       case 'children': {
-        const blocksList = await autoPaginate((cursor) =>
-          notion.blocks.children.list({
-            block_id: input.block_id,
-            start_cursor: cursor,
-            page_size: 100
-          })
+        const blocksList = await autoPaginate<NotionBlock>(
+          (cursor) =>
+            notion.blocks.children.list({
+              block_id: input.block_id,
+              start_cursor: cursor,
+              page_size: 100
+            }) as any
         )
 
         // Recursively fetch children for blocks that need them (tables, toggles, columns)
-        await populateDeepChildren(notion, blocksList as any[])
+        await populateDeepChildren(notion, blocksList)
 
-        const markdown = blocksToMarkdown(blocksList as any)
+        const markdown = blocksToMarkdown(blocksList)
         return {
           action: 'children',
           block_id: input.block_id,
@@ -72,7 +73,7 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
             'Provide after_block_id with the block ID to insert after'
           )
         }
-        const blocksList = markdownToBlocks(input.content)
+        const blocksList = markdownToBlocks(input.content) as any[]
         const appendParams: any = {
           block_id: input.block_id,
           children: blocksList as any

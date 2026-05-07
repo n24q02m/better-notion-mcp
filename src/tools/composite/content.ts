@@ -4,11 +4,11 @@
  */
 
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
-import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
+import { blocksToMarkdown, markdownToBlocks, type NotionBlock } from '../helpers/markdown.js'
 
 export interface ContentConvertInput {
   direction: 'markdown-to-blocks' | 'blocks-to-markdown'
-  content: string | any[]
+  content: string | NotionBlock[]
 }
 
 /**
@@ -61,7 +61,7 @@ export async function contentConvert(input: ContentConvertInput): Promise<any> {
             'Provide an array of block objects'
           )
         }
-        const markdown = blocksToMarkdown(content as any)
+        const markdown = blocksToMarkdown(content)
         return {
           direction: input.direction,
           char_count: markdown.length,
