@@ -49,7 +49,7 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
         )
 
         // Recursively fetch children for blocks that need them (tables, toggles, columns)
-        await populateDeepChildren(notion, blocksList as any[])
+        await populateDeepChildren(notion, blocksList as any)
 
         const markdown = blocksToMarkdown(blocksList as any)
         return {

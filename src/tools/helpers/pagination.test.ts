@@ -108,7 +108,7 @@ describe('fetchChildrenRecursive', () => {
     ]
     const fetchChildren = vi.fn().mockResolvedValue(tableRows)
 
-    await fetchChildrenRecursive(blocks, fetchChildren)
+    await fetchChildrenRecursive(blocks as any, fetchChildren)
 
     expect(fetchChildren).toHaveBeenCalledTimes(1)
     expect(fetchChildren).toHaveBeenCalledWith('table-1')
@@ -138,7 +138,7 @@ describe('fetchChildrenRecursive', () => {
       .mockResolvedValueOnce(colContent)
       .mockResolvedValueOnce(colContent)
 
-    await fetchChildrenRecursive(blocks, fetchChildren)
+    await fetchChildrenRecursive(blocks as any, fetchChildren)
 
     expect(blocks[0].toggle.children).toEqual(toggleChildren)
     expect(blocks[1].column_list.children).toEqual(columns)
@@ -151,7 +151,7 @@ describe('fetchChildrenRecursive', () => {
     const blocks: any[] = [{ id: 'para-1', type: 'paragraph', has_children: false, paragraph: {} }]
     const fetchChildren = vi.fn()
 
-    await fetchChildrenRecursive(blocks, fetchChildren)
+    await fetchChildrenRecursive(blocks as any, fetchChildren)
 
     expect(fetchChildren).not.toHaveBeenCalled()
   })
@@ -160,7 +160,7 @@ describe('fetchChildrenRecursive', () => {
     const blocks: any[] = [{ id: 'img-1', type: 'image', has_children: true, image: {} }]
     const fetchChildren = vi.fn()
 
-    await fetchChildrenRecursive(blocks, fetchChildren)
+    await fetchChildrenRecursive(blocks as any, fetchChildren)
 
     expect(fetchChildren).not.toHaveBeenCalled()
   })
@@ -170,7 +170,7 @@ describe('fetchChildrenRecursive', () => {
     const fetchChildren = vi.fn().mockResolvedValue([])
 
     // depth=5 should be at MAX_DEPTH and return immediately
-    await fetchChildrenRecursive(blocks, fetchChildren, 5)
+    await fetchChildrenRecursive(blocks as any, fetchChildren, 5)
 
     expect(fetchChildren).not.toHaveBeenCalled()
   })
@@ -264,7 +264,7 @@ describe('populateDeepChildren', () => {
     }
     const blocks = [{ id: 'parent-1', type: 'toggle', has_children: true, toggle: {} }]
 
-    await populateDeepChildren(mockNotion as any, blocks)
+    await populateDeepChildren(mockNotion as any, blocks as any)
 
     expect(mockNotion.blocks.children.list).toHaveBeenCalledWith({
       block_id: 'parent-1',

@@ -331,7 +331,7 @@ function columnListToMarkdown(block: NotionBlock, lines: string[]): void {
   lines.push(':::end')
 }
 
-export function blocksToMarkdown(blocks: NotionBlock[]): string {
+export function blocksToMarkdown(blocks: any[]): string {
   const lines: string[] = []
 
   for (const block of blocks) {

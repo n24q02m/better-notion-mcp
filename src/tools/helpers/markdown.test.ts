@@ -271,14 +271,14 @@ describe('markdownToBlocks', () => {
 
     it('should round-trip TIP callout', () => {
       const blocks = markdownToBlocks('> [!TIP] Helpful tip')
-      const md = blocksToMarkdown(blocks)
+      const md = blocksToMarkdown(blocks as any)
       expect(md).toContain('[!TIP]')
       expect(md).toContain('Helpful tip')
     })
 
     it('should round-trip CAUTION callout', () => {
       const blocks = markdownToBlocks('> [!CAUTION] Danger zone')
-      const md = blocksToMarkdown(blocks)
+      const md = blocksToMarkdown(blocks as any)
       expect(md).toContain('[!CAUTION]')
       expect(md).toContain('Danger zone')
     })
@@ -382,7 +382,7 @@ describe('markdownToBlocks', () => {
     it('should round-trip toggle blocks preserving title and children', () => {
       const md = '<details>\n<summary>Round Trip</summary>\n\nSome content\n</details>'
       const blocks = markdownToBlocks(md)
-      const output = blocksToMarkdown(blocks)
+      const output = blocksToMarkdown(blocks as any)
       const reparsed = markdownToBlocks(output)
       expect(reparsed).toHaveLength(1)
       expect(reparsed[0].type).toBe('toggle')
@@ -691,7 +691,7 @@ describe('blocksToMarkdown', () => {
           heading_1: { rich_text: [plainRichText('Title')], color: 'default' }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('# Title')
+      expect(blocksToMarkdown(blocks as any)).toBe('# Title')
     })
 
     it('should convert heading_2 to ## markdown', () => {
@@ -702,7 +702,7 @@ describe('blocksToMarkdown', () => {
           heading_2: { rich_text: [plainRichText('Sub')], color: 'default' }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('## Sub')
+      expect(blocksToMarkdown(blocks as any)).toBe('## Sub')
     })
 
     it('should convert heading_3 to ### markdown', () => {
@@ -713,7 +713,7 @@ describe('blocksToMarkdown', () => {
           heading_3: { rich_text: [plainRichText('Deep')], color: 'default' }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('### Deep')
+      expect(blocksToMarkdown(blocks as any)).toBe('### Deep')
     })
   })
 
@@ -726,7 +726,7 @@ describe('blocksToMarkdown', () => {
           paragraph: { rich_text: [plainRichText('Hello world')], color: 'default' }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('Hello world')
+      expect(blocksToMarkdown(blocks as any)).toBe('Hello world')
     })
   })
 
@@ -739,7 +739,7 @@ describe('blocksToMarkdown', () => {
           bulleted_list_item: { rich_text: [plainRichText('Item')], color: 'default' }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('- Item')
+      expect(blocksToMarkdown(blocks as any)).toBe('- Item')
     })
   })
 
@@ -752,7 +752,7 @@ describe('blocksToMarkdown', () => {
           numbered_list_item: { rich_text: [plainRichText('Step')], color: 'default' }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('1. Step')
+      expect(blocksToMarkdown(blocks as any)).toBe('1. Step')
     })
   })
 
@@ -765,7 +765,7 @@ describe('blocksToMarkdown', () => {
           to_do: { rich_text: [plainRichText('Task')], checked: false, color: 'default' }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('- [ ] Task')
+      expect(blocksToMarkdown(blocks as any)).toBe('- [ ] Task')
     })
 
     it('should convert checked to_do to - [x] format', () => {
@@ -776,7 +776,7 @@ describe('blocksToMarkdown', () => {
           to_do: { rich_text: [plainRichText('Done')], checked: true, color: 'default' }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('- [x] Done')
+      expect(blocksToMarkdown(blocks as any)).toBe('- [x] Done')
     })
   })
 
@@ -789,7 +789,7 @@ describe('blocksToMarkdown', () => {
           code: { rich_text: [plainRichText('const x = 1')], language: 'javascript' }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('```javascript\nconst x = 1\n```')
+      expect(blocksToMarkdown(blocks as any)).toBe('```javascript\nconst x = 1\n```')
     })
 
     it('should convert code block without language', () => {
@@ -800,7 +800,7 @@ describe('blocksToMarkdown', () => {
           code: { rich_text: [plainRichText('hello')], language: '' }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('```\nhello\n```')
+      expect(blocksToMarkdown(blocks as any)).toBe('```\nhello\n```')
     })
   })
 
@@ -813,7 +813,7 @@ describe('blocksToMarkdown', () => {
           quote: { rich_text: [plainRichText('Wise words')], color: 'default' }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('> Wise words')
+      expect(blocksToMarkdown(blocks as any)).toBe('> Wise words')
     })
   })
 
@@ -826,7 +826,7 @@ describe('blocksToMarkdown', () => {
           divider: {}
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('---')
+      expect(blocksToMarkdown(blocks as any)).toBe('---')
     })
   })
 
@@ -843,7 +843,7 @@ describe('blocksToMarkdown', () => {
           }
         }
       ]
-      const md = blocksToMarkdown(blocks)
+      const md = blocksToMarkdown(blocks as any)
       expect(md).toMatch(/^> \[!IMPORTANT\] Important info$/)
     })
 
@@ -859,7 +859,7 @@ describe('blocksToMarkdown', () => {
           }
         }
       ]
-      const md = blocksToMarkdown(blocks)
+      const md = blocksToMarkdown(blocks as any)
       expect(md).toContain('[!NOTE]')
     })
   })
@@ -883,7 +883,7 @@ describe('blocksToMarkdown', () => {
           }
         }
       ]
-      const md = blocksToMarkdown(blocks)
+      const md = blocksToMarkdown(blocks as any)
       expect(md).toContain('<details>')
       expect(md).toContain('<summary>Toggle title</summary>')
       expect(md).toContain('Hidden text')
@@ -902,7 +902,7 @@ describe('blocksToMarkdown', () => {
           }
         }
       ]
-      const md = blocksToMarkdown(blocks)
+      const md = blocksToMarkdown(blocks as any)
       expect(md).toBe('<details>\n<summary>Empty toggle</summary>\n</details>')
     })
   })
@@ -920,7 +920,7 @@ describe('blocksToMarkdown', () => {
           }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('![Alt text](https://example.com/img.png)')
+      expect(blocksToMarkdown(blocks as any)).toBe('![Alt text](https://example.com/img.png)')
     })
 
     it('should handle image without caption', () => {
@@ -935,7 +935,7 @@ describe('blocksToMarkdown', () => {
           }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('![](https://example.com/img.png)')
+      expect(blocksToMarkdown(blocks as any)).toBe('![](https://example.com/img.png)')
     })
   })
 
@@ -948,7 +948,7 @@ describe('blocksToMarkdown', () => {
           bookmark: { url: 'https://example.com', caption: [] }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('[bookmark](https://example.com)')
+      expect(blocksToMarkdown(blocks as any)).toBe('[bookmark](https://example.com)')
     })
   })
 
@@ -961,7 +961,7 @@ describe('blocksToMarkdown', () => {
           embed: { url: 'https://youtube.com/watch?v=abc' }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('[embed](https://youtube.com/watch?v=abc)')
+      expect(blocksToMarkdown(blocks as any)).toBe('[embed](https://youtube.com/watch?v=abc)')
     })
   })
 
@@ -974,7 +974,7 @@ describe('blocksToMarkdown', () => {
           equation: { expression: 'E = mc^2' }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('$$E = mc^2$$')
+      expect(blocksToMarkdown(blocks as any)).toBe('$$E = mc^2$$')
     })
   })
 
@@ -1003,7 +1003,7 @@ describe('blocksToMarkdown', () => {
           }
         }
       ]
-      const md = blocksToMarkdown(blocks)
+      const md = blocksToMarkdown(blocks as any)
       const lines = md.split('\n')
       expect(lines[0]).toBe('| H1 | H2 |')
       expect(lines[1]).toBe('| --- | --- |')
@@ -1034,7 +1034,7 @@ describe('blocksToMarkdown', () => {
           }
         }
       ]
-      const md = blocksToMarkdown(blocks)
+      const md = blocksToMarkdown(blocks as any)
       const lines = md.split('\n')
       expect(lines).toHaveLength(2)
       expect(lines[0]).toBe('| A | B |')
@@ -1080,7 +1080,7 @@ describe('blocksToMarkdown', () => {
           }
         }
       ]
-      const md = blocksToMarkdown(blocks)
+      const md = blocksToMarkdown(blocks as any)
       expect(md).toContain(':::columns')
       expect(md).toContain(':::column')
       expect(md).toContain('Left')
@@ -1127,7 +1127,7 @@ describe('blocksToMarkdown', () => {
           }
         }
       ]
-      const md = blocksToMarkdown(blocks)
+      const md = blocksToMarkdown(blocks as any)
       expect(md).toContain(':::column{width=0.7}')
       expect(md).toContain(':::column{width=0.3}')
     })
@@ -1135,7 +1135,7 @@ describe('blocksToMarkdown', () => {
     it('should round-trip columns with width ratios', () => {
       const md = ':::columns\n:::column{width=0.7}\nWide content\n:::column{width=0.3}\nNarrow content\n:::end'
       const blocks = markdownToBlocks(md)
-      const result = blocksToMarkdown(blocks)
+      const result = blocksToMarkdown(blocks as any)
       expect(result).toContain(':::column{width=0.7}')
       expect(result).toContain(':::column{width=0.3}')
       expect(result).toContain('Wide content')
@@ -1145,7 +1145,7 @@ describe('blocksToMarkdown', () => {
     it('should round-trip columns with callout inside', () => {
       const md = ':::columns\n:::column\n> [!NOTE]\n> Important info\n:::column\nRight side\n:::end'
       const blocks = markdownToBlocks(md)
-      const result = blocksToMarkdown(blocks)
+      const result = blocksToMarkdown(blocks as any)
       expect(result).toContain(':::columns')
       expect(result).toContain('> [!NOTE]')
       expect(result).toContain('Right side')
@@ -1162,7 +1162,7 @@ describe('blocksToMarkdown', () => {
           table_of_contents: { color: 'default' }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('[toc]')
+      expect(blocksToMarkdown(blocks as any)).toBe('[toc]')
     })
   })
 
@@ -1175,7 +1175,7 @@ describe('blocksToMarkdown', () => {
           breadcrumb: {}
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('[breadcrumb]')
+      expect(blocksToMarkdown(blocks as any)).toBe('[breadcrumb]')
     })
   })
 
@@ -1203,7 +1203,7 @@ describe('blocksToMarkdown', () => {
           }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('- Parent\n  - Child 1\n  - Child 2')
+      expect(blocksToMarkdown(blocks as any)).toBe('- Parent\n  - Child 1\n  - Child 2')
     })
 
     it('should render nested numbered list items with indentation', () => {
@@ -1224,7 +1224,7 @@ describe('blocksToMarkdown', () => {
           }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('1. Step 1\n  1. Sub-step')
+      expect(blocksToMarkdown(blocks as any)).toBe('1. Step 1\n  1. Sub-step')
     })
 
     it('should render nested to_do items with indentation', () => {
@@ -1246,7 +1246,7 @@ describe('blocksToMarkdown', () => {
           }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('- [ ] Main task\n  - [x] Sub-task')
+      expect(blocksToMarkdown(blocks as any)).toBe('- [ ] Main task\n  - [x] Sub-task')
     })
 
     it('should render quote with nested children', () => {
@@ -1267,7 +1267,7 @@ describe('blocksToMarkdown', () => {
           }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('> Quote text\n> Nested paragraph')
+      expect(blocksToMarkdown(blocks as any)).toBe('> Quote text\n> Nested paragraph')
     })
 
     it('should render callout with nested children', () => {
@@ -1289,7 +1289,7 @@ describe('blocksToMarkdown', () => {
           }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('> [!IMPORTANT] Important\n> Details here')
+      expect(blocksToMarkdown(blocks as any)).toBe('> [!IMPORTANT] Important\n> Details here')
     })
 
     it('should render heading with nested children', () => {
@@ -1310,7 +1310,7 @@ describe('blocksToMarkdown', () => {
           }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('# Section\nContent under heading')
+      expect(blocksToMarkdown(blocks as any)).toBe('# Section\nContent under heading')
     })
 
     it('should handle deeply nested bulleted lists', () => {
@@ -1341,7 +1341,7 @@ describe('blocksToMarkdown', () => {
           }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('- Level 1\n  - Level 2\n    - Level 3')
+      expect(blocksToMarkdown(blocks as any)).toBe('- Level 1\n  - Level 2\n    - Level 3')
     })
   })
 
@@ -1354,7 +1354,7 @@ describe('blocksToMarkdown', () => {
           file: { file: { url: 'https://example.com/doc.pdf' }, name: 'document.pdf', caption: [] }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('[document.pdf](https://example.com/doc.pdf)')
+      expect(blocksToMarkdown(blocks as any)).toBe('[document.pdf](https://example.com/doc.pdf)')
     })
 
     it('should render pdf block as link', () => {
@@ -1365,7 +1365,7 @@ describe('blocksToMarkdown', () => {
           pdf: { external: { url: 'https://example.com/report.pdf' }, caption: [] }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('[pdf](https://example.com/report.pdf)')
+      expect(blocksToMarkdown(blocks as any)).toBe('[pdf](https://example.com/report.pdf)')
     })
 
     it('should render video block as link', () => {
@@ -1376,7 +1376,7 @@ describe('blocksToMarkdown', () => {
           video: { external: { url: 'https://youtube.com/watch?v=123' }, caption: [] }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('[video](https://youtube.com/watch?v=123)')
+      expect(blocksToMarkdown(blocks as any)).toBe('[video](https://youtube.com/watch?v=123)')
     })
 
     it('should render audio block as link', () => {
@@ -1387,7 +1387,7 @@ describe('blocksToMarkdown', () => {
           audio: { file: { url: 'https://example.com/song.mp3' }, caption: [] }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('[audio](https://example.com/song.mp3)')
+      expect(blocksToMarkdown(blocks as any)).toBe('[audio](https://example.com/song.mp3)')
     })
 
     it('should use caption as name when name is absent', () => {
@@ -1414,7 +1414,7 @@ describe('blocksToMarkdown', () => {
           }
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('[My archive](https://example.com/f.zip)')
+      expect(blocksToMarkdown(blocks as any)).toBe('[My archive](https://example.com/f.zip)')
     })
   })
 
@@ -1423,14 +1423,14 @@ describe('blocksToMarkdown', () => {
       const blocks: NotionBlock[] = [
         { object: 'block', type: 'child_page', id: 'page-123', child_page: { title: 'My Sub Page' } }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('[My Sub Page](page-123)')
+      expect(blocksToMarkdown(blocks as any)).toBe('[My Sub Page](page-123)')
     })
 
     it('should render child_database as link', () => {
       const blocks: NotionBlock[] = [
         { object: 'block', type: 'child_database', id: 'db-456', child_database: { title: 'Tasks DB' } }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('[Tasks DB](db-456)')
+      expect(blocksToMarkdown(blocks as any)).toBe('[Tasks DB](db-456)')
     })
   })
 
@@ -1443,7 +1443,7 @@ describe('blocksToMarkdown', () => {
           unsupported: {}
         }
       ]
-      expect(blocksToMarkdown(blocks)).toBe('')
+      expect(blocksToMarkdown(blocks as any)).toBe('')
     })
   })
 })
@@ -1614,7 +1614,7 @@ describe('richTextToMarkdown mention handling', () => {
         }
       }
     ]
-    expect(blocksToMarkdown(blocks)).toBe('@[My Page](abc123)')
+    expect(blocksToMarkdown(blocks as any)).toBe('@[My Page](abc123)')
   })
 
   it('should serialize mention alongside plain text', () => {
@@ -1645,7 +1645,7 @@ describe('richTextToMarkdown mention handling', () => {
         }
       }
     ]
-    expect(blocksToMarkdown(blocks)).toBe('See @[My Page](abc123) for details')
+    expect(blocksToMarkdown(blocks as any)).toBe('See @[My Page](abc123) for details')
   })
 
   it('should not drop mention elements silently', () => {
@@ -1674,7 +1674,7 @@ describe('richTextToMarkdown mention handling', () => {
         }
       }
     ]
-    const result = blocksToMarkdown(blocks)
+    const result = blocksToMarkdown(blocks as any)
     expect(result).not.toBe('')
     expect(result).toContain('Referenced Page')
     expect(result).toContain('xyz789')
@@ -1706,7 +1706,7 @@ describe('richTextToMarkdown mention handling', () => {
         }
       }
     ]
-    const result = blocksToMarkdown(blocks)
+    const result = blocksToMarkdown(blocks as any)
     expect(result).toContain('My Database')
   })
 })
@@ -1913,7 +1913,7 @@ describe('round-trip conversion', () => {
   it('should preserve mixed content structure', () => {
     const md = '# Title\n- Item 1\n- Item 2\n---\n> Quote'
     const blocks = markdownToBlocks(md)
-    const output = blocksToMarkdown(blocks)
+    const output = blocksToMarkdown(blocks as any)
     expect(output).toContain('# Title')
     expect(output).toContain('- Item 1')
     expect(output).toContain('- Item 2')

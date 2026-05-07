@@ -1,4 +1,9 @@
 import type { Client } from '@notionhq/client'
+import type {
+  BlockObjectResponse,
+  PartialBlockObjectResponse
+} from '@notionhq/client/build/src/api-endpoints.js'
+
 
 /**
  * Pagination Helper
@@ -7,6 +12,8 @@ import type { Client } from '@notionhq/client'
 
 /** Safety limit to prevent infinite loops if API always returns has_more: true */
 const MAX_PAGES_SAFETY = 1000
+
+export type BlockResponse = BlockObjectResponse | PartialBlockObjectResponse
 
 export interface PaginatedResponse<T> {
   results: T[]
@@ -116,19 +123,19 @@ export class ConcurrencyQueue {
  * Mutates blocks in-place by attaching children arrays.
  */
 export async function fetchChildrenRecursive(
-  blocks: any[],
-  fetchChildren: (blockId: string) => Promise<any[]>,
+  blocks: BlockResponse[],
+  fetchChildren: (blockId: string) => Promise<BlockResponse[]>,
   depth = 0,
   queue?: ConcurrencyQueue
 ): Promise<void> {
   if (depth >= MAX_DEPTH) return
 
-  const fetchAndRecurse = async (block: any) => {
+  const fetchAndRecurse = async (block: BlockResponse) => {
     const children = queue ? await queue.run(() => fetchChildren(block.id)) : await fetchChildren(block.id)
 
     // Attach children to the correct property based on block type
-    if (block[block.type]) {
-      block[block.type].children = children
+    if ('type' in block && (block as any)[block.type]) {
+      (block as any)[block.type].children = children
     }
 
     // Recurse into children
@@ -138,7 +145,7 @@ export async function fetchChildrenRecursive(
   const promises: Promise<void>[] = []
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]
-    if (block.has_children && BLOCKS_NEEDING_CHILDREN.has(block.type)) {
+    if ('type' in block && block.has_children && BLOCKS_NEEDING_CHILDREN.has(block.type)) {
       promises.push(fetchAndRecurse(block))
     }
   }
@@ -171,7 +178,7 @@ export async function processBatches<T, R>(
 /**
  * Recursively fetch and populate children for blocks using auto-pagination
  */
-export async function populateDeepChildren(notion: Client, blocks: any[]): Promise<void> {
+export async function populateDeepChildren(notion: Client, blocks: BlockResponse[]): Promise<void> {
   // Use a shared queue to cap total concurrent Notion API calls at 5 across the whole tree
   const queue = new ConcurrencyQueue(5)
 
@@ -180,7 +187,7 @@ export async function populateDeepChildren(notion: Client, blocks: any[]): Promi
     async (blockId) => {
       return autoPaginate((cursor) =>
         notion.blocks.children.list({ block_id: blockId, start_cursor: cursor, page_size: 100 })
-      ) as any
+      )
     },
     0,
     queue
