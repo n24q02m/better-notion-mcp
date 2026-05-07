@@ -345,7 +345,7 @@ describe('blocks', () => {
       const result = await blocks(mockNotion as any, {
         action: 'update',
         block_id: 'block-1',
-        content: '```javascript\nconsole.log("hello")\n```'
+        content: '```javascript\nconst x = 1\n```'
       })
 
       expect(result).toEqual({
