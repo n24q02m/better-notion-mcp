@@ -105,7 +105,7 @@ describe('commentsManage', () => {
         })
       ).rejects.toMatchObject({
         code: 'COMMENTS_LIST_UNAVAILABLE',
-        message: 'Cannot list comments for this page'
+        message: 'The comments.list API is currently unavailable for this page due to a known Notion OAuth limitation.'
       })
       expect(mockNotion.blocks.retrieve).toHaveBeenCalledWith({ block_id: 'page-1' })
     })

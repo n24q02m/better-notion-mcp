@@ -240,8 +240,10 @@ export function findClosestMatch(input: string, validOptions: string[]): string 
 export function aiReadableMessage(error: NotionMCPError): string {
   let message = `Error: ${error.message}`
 
-  if (error.suggestion) {
-    message += `\n\nSuggestion: ${error.suggestion}`
+  // Use explicit suggestion if present, otherwise fallback to suggestFixes()
+  const suggestion = error.suggestion || suggestFixes(error).join('\n- ')
+  if (suggestion) {
+    message += `\n\nSuggestion: ${error.suggestion ? suggestion : `\n- ${suggestion}`}`
   }
 
   if (error.details) {
@@ -281,6 +283,11 @@ const _ERROR_SUGGESTIONS_MAP: Record<string, string[]> = {
     'Reduce request frequency',
     'Implement exponential backoff retry logic',
     'Batch multiple operations together'
+  ],
+  COMMENTS_LIST_UNAVAILABLE: [
+    'Use action="get" with a specific comment_id if known',
+    'Use action="create" to add a new comment (this endpoint is unaffected)',
+    'This is a known Notion API limitation with OAuth tokens as of 2025-09-03'
   ]
 }
 
@@ -294,46 +301,7 @@ const _DEFAULT_SUGGESTIONS = [
  * Suggest fixes based on error
  */
 export function suggestFixes(error: NotionMCPError): string[] {
-  const suggestions: string[] = []
-
-  switch (error.code) {
-    case 'UNAUTHORIZED':
-      suggestions.push('Check that NOTION_TOKEN is set in your environment')
-      suggestions.push('Verify token at https://www.notion.so/my-integrations')
-      suggestions.push('Create a new integration token if needed')
-      break
-
-    case 'RESTRICTED_RESOURCE':
-      suggestions.push('Open the page/database in Notion')
-      suggestions.push('Click "..." menu → Add connections → Select your integration')
-      suggestions.push('Grant access to parent pages if needed')
-      break
-
-    case 'NOT_FOUND':
-      suggestions.push('Verify the page/database ID is correct')
-      suggestions.push('Check that the resource was not deleted')
-      suggestions.push('Ensure you have access permissions')
-      break
-
-    case 'VALIDATION_ERROR':
-      suggestions.push('Check parameter types and formats')
-      suggestions.push('Review required vs optional parameters')
-      suggestions.push('Verify property names match database schema')
-      break
-
-    case 'RATE_LIMITED':
-      suggestions.push('Reduce request frequency')
-      suggestions.push('Implement exponential backoff retry logic')
-      suggestions.push('Batch multiple operations together')
-      break
-
-    default:
-      suggestions.push('Check Notion API status at https://status.notion.so')
-      suggestions.push('Review request parameters')
-      suggestions.push('Try again in a few moments')
-  }
-
-  return suggestions
+  return _ERROR_SUGGESTIONS_MAP[error.code] || _DEFAULT_SUGGESTIONS
 }
 
 /**
