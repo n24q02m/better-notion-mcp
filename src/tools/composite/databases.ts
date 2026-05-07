@@ -1,5 +1,5 @@
 /**
- * Databases Mega Tool - Updated for Notion API 2025-09-03
+ * Databases Mega Tool - Updated for Notion API 2026-03-11
  * Supports data_sources architecture
  */
 
@@ -329,7 +329,7 @@ export async function databases(notion: Client, input: DatabasesInput): Promise<
 
 /**
  * Create database with initial data source
- * Maps to: POST /v1/databases (API 2025-09-03)
+ * Maps to: POST /v1/databases (API 2026-03-11)
  */
 async function createDatabase(notion: Client, input: DatabasesInput): Promise<CreateDatabaseResponse> {
   if (!input.parent_id || !input.title || !input.properties) {
@@ -340,7 +340,7 @@ async function createDatabase(notion: Client, input: DatabasesInput): Promise<Cr
     )
   }
 
-  // API 2025-09-03: properties go under initial_data_source
+  // API 2026-03-11: properties go under initial_data_source
   const dbData: any = {
     parent: { type: 'page_id', page_id: input.parent_id },
     title: [RichText.text(input.title)],
@@ -378,7 +378,7 @@ async function createDatabase(notion: Client, input: DatabasesInput): Promise<Cr
 
 /**
  * Get database info including all data sources
- * Maps to: GET /v1/databases/{id} (API 2025-09-03)
+ * Maps to: GET /v1/databases/{id} (API 2026-03-11)
  */
 async function getDatabase(notion: Client, input: DatabasesInput): Promise<GetDatabaseResponse> {
   if (!input.database_id) {
@@ -439,7 +439,7 @@ async function getDatabase(notion: Client, input: DatabasesInput): Promise<GetDa
 
 /**
  * Query database (via data source)
- * Maps to: POST /v1/data_sources/{id}/query (API 2025-09-03)
+ * Maps to: POST /v1/data_sources/{id}/query (API 2026-03-11)
  */
 async function queryDatabase(notion: Client, input: DatabasesInput): Promise<QueryDatabaseResponse> {
   if (!input.database_id) {
@@ -495,7 +495,7 @@ async function queryDatabase(notion: Client, input: DatabasesInput): Promise<Que
 
 /**
  * Create pages in database (via data source)
- * Maps to: Multiple POST /v1/pages with data_source_id parent (API 2025-09-03)
+ * Maps to: Multiple POST /v1/pages with data_source_id parent (API 2026-03-11)
  */
 async function createDatabasePages(notion: Client, input: DatabasesInput): Promise<CreateDatabasePageResponse> {
   if (!input.database_id) {
@@ -656,7 +656,7 @@ async function deleteDatabasePages(notion: Client, input: DatabasesInput): Promi
 
 /**
  * Create additional data source for existing database
- * Maps to: POST /v1/data_sources (API 2025-09-03)
+ * Maps to: POST /v1/data_sources (API 2026-03-11)
  */
 async function createDataSource(notion: Client, input: DatabasesInput): Promise<CreateDataSourceResponse> {
   if (!input.database_id || !input.title || !input.properties) {
@@ -689,7 +689,7 @@ async function createDataSource(notion: Client, input: DatabasesInput): Promise<
 
 /**
  * Update data source (title, description, properties/schema)
- * Maps to: PATCH /v1/data_sources/{id} (API 2025-09-03)
+ * Maps to: PATCH /v1/data_sources/{id} (API 2026-03-11)
  */
 async function updateDataSource(notion: Client, input: DatabasesInput): Promise<UpdateDataSourceResponse> {
   if (!input.data_source_id) {
@@ -732,7 +732,7 @@ async function updateDataSource(notion: Client, input: DatabasesInput): Promise<
 
 /**
  * Update database container (parent, title, is_inline, icon, cover)
- * Maps to: PATCH /v1/databases/{id} (API 2025-09-03)
+ * Maps to: PATCH /v1/databases/{id} (API 2026-03-11)
  */
 async function updateDatabaseContainer(notion: Client, input: DatabasesInput): Promise<UpdateDatabaseResponse> {
   if (!input.database_id) {
@@ -785,7 +785,7 @@ async function updateDatabaseContainer(notion: Client, input: DatabasesInput): P
 
 /**
  * List data source templates
- * Maps to: GET /v1/data_sources/{id}/templates (API 2025-09-03)
+ * Maps to: GET /v1/data_sources/{id}/templates (API 2026-03-11)
  */
 async function listDataSourceTemplates(
   notion: Client,

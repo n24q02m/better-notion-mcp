@@ -1,7 +1,7 @@
 /**
  * File Uploads Composite Tool
  * Upload, manage, and retrieve files in Notion
- * Maps to: POST/GET /v1/file_uploads endpoints (API 2025-09-03)
+ * Maps to: POST/GET /v1/file_uploads endpoints (API 2026-03-11)
  */
 
 import type { Client } from '@notionhq/client'

@@ -106,7 +106,7 @@ Documentation: https://github.com/n24q02m/better-notion-mcp#setup
     if (!token) {
       throw new Error('Notion integration token not configured. Set NOTION_TOKEN env var or run the relay setup form.')
     }
-    return new Client({ auth: token, notionVersion: '2025-09-03' })
+    return new Client({ auth: token, notionVersion: '2026-03-11' })
   }
 
   registerTools(server, notionClientFactory)

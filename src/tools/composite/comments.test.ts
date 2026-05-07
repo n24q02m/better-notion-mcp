@@ -238,26 +238,6 @@ describe('commentsManage', () => {
       })
     })
 
-    it('should handle undefined rich_text with _note field', async () => {
-      mockNotion.comments.retrieve.mockResolvedValue({
-        id: 'comment-1',
-        created_time: '2024-01-01',
-        created_by: { id: 'user-1' },
-        discussion_id: 'disc-1',
-        rich_text: undefined,
-        parent: { type: 'page_id', page_id: 'page-1' }
-      })
-
-      const result = await commentsManage(mockNotion as any, {
-        action: 'get',
-        comment_id: 'comment-1'
-      })
-
-      expect(result.text).toBe('')
-      expect(result.rich_text).toBeUndefined()
-      expect(result._note).toContain('rich_text unavailable')
-    })
-
     it('should include display_name when present', async () => {
       mockNotion.comments.retrieve.mockResolvedValue({
         id: 'comment-1',

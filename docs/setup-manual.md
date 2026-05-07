@@ -252,4 +252,4 @@ No manual token setup. Users authorize via Notion's OAuth flow in the browser.
 
 ### comments.list returns 404
 
-- This is a known Notion API issue with OAuth tokens on API version `2025-09-03`. Use stdio mode with an integration token for full comment support.
+- This is a known Notion API issue with OAuth tokens on API version `2026-03-11`. Use stdio mode with an integration token for full comment support.

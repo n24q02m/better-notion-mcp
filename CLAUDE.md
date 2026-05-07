@@ -83,7 +83,7 @@ mise run fix                # bun run check:fix
 - `import type` dung rieng biet cho type imports
 - Node builtins phai co `node:` prefix (`node:fs`, `node:path`)
 - SDK pin `@modelcontextprotocol/sdk` v1.x -- v2 removes server-side OAuth
-- Notion API bug: `comments.list` tra 404 voi OAuth tokens tren API version `2025-09-03`
+- Notion API bug: `comments.list` tra 404 voi OAuth tokens tren API version `2026-03-11`
 
 ## Modes (Phase L2 restored 2026-04-18)
 

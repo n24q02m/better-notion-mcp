@@ -40,7 +40,7 @@ export async function startHttp(): Promise<void> {
         'Re-authorize via the Notion OAuth flow on /authorize.'
       )
     }
-    return new Client({ auth: token, notionVersion: '2025-09-03' })
+    return new Client({ auth: token, notionVersion: '2026-03-11' })
   }
 
   const port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 0

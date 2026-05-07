@@ -69,7 +69,7 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
               throw new NotionMCPError(
                 'Cannot list comments for this page',
                 'COMMENTS_LIST_UNAVAILABLE',
-                'This is a known Notion API limitation with OAuth integrations (API version 2025-09-03). The comments.list endpoint may return 404 even when the page exists and has comments. Workaround: use action="get" with a specific comment_id, or use action="create" which works normally.'
+                'This is a known Notion API limitation with OAuth integrations (API version 2026-03-11). The comments.list endpoint may return 404 even when the page exists and has comments. Workaround: use action="get" with a specific comment_id, or use action="create" which works normally.'
               )
             }
             // If it's a real 404 (block retrieve also failed with object_not_found),
@@ -98,11 +98,7 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
           text,
           ...(comment.rich_text ? { rich_text: comment.rich_text } : {}),
           ...(comment.display_name ? { display_name: comment.display_name } : {}),
-          parent: comment.parent,
-          ...(!comment.rich_text && {
-            _note:
-              'rich_text unavailable in Notion API version 2025-09-03 for comments.retrieve. Comment content was set during creation.'
-          })
+          parent: comment.parent
         }
       }
 
