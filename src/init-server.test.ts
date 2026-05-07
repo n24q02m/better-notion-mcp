@@ -1,52 +1,75 @@
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { initServer } from './init-server.js'
 
-const startServerMock = vi.fn()
+// Mock dependencies
+vi.mock('@modelcontextprotocol/sdk/server/index.js', () => {
+  return {
+    Server: class MockServer {
+      connect = vi.fn().mockResolvedValue(undefined)
+      setRequestHandler = vi.fn()
+    }
+  }
+})
 
-vi.mock('./main.js', () => ({
-  startServer: startServerMock
+vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => {
+  return {
+    StdioServerTransport: class MockStdioServerTransport {}
+  }
+})
+
+vi.mock('./tools/registry.js', () => ({
+  registerTools: vi.fn()
 }))
 
-describe('initServer', () => {
+vi.mock('node:fs', () => ({
+  readFileSync: vi.fn().mockReturnValue(JSON.stringify({ name: '@n24q02m/better-notion-mcp', version: '1.0.0' }))
+}))
+
+vi.mock('@notionhq/client', () => ({
+  Client: vi.fn()
+}))
+
+vi.mock('./credential-state.js', () => ({
+  resolveCredentialState: vi.fn().mockResolvedValue('awaiting_setup'),
+  getNotionToken: vi.fn().mockReturnValue(null),
+  getState: vi.fn().mockReturnValue('awaiting_setup'),
+  getSetupUrl: vi.fn().mockReturnValue(null),
+  triggerRelaySetup: vi.fn().mockResolvedValue(null)
+}))
+
+describe('initServer (delegates to startStdio)', () => {
   const originalEnv = process.env
-  const originalArgv = process.argv
+  const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 
   beforeEach(() => {
     vi.clearAllMocks()
     process.env = { ...originalEnv }
-    process.argv = [...originalArgv]
-    delete process.env.MCP_TRANSPORT
-    delete process.env.TRANSPORT_MODE
   })
 
   afterEach(() => {
     process.env = originalEnv
-    process.argv = originalArgv
   })
 
-  it('dispatches http when --http flag is set', async () => {
-    process.argv = [process.argv[0], 'main.js', '--http']
-    const { initServer } = await import('./init-server.js')
-    await initServer()
-    expect(startServerMock).toHaveBeenCalledWith('http')
+  it('should start server without NOTION_TOKEN and log warning', async () => {
+    delete process.env.NOTION_TOKEN
+
+    const server = await initServer()
+
+    expect(server.connect).toHaveBeenCalledWith(expect.any(StdioServerTransport))
+    expect(mockConsoleError).toHaveBeenCalledWith(expect.stringContaining('NOTION_TOKEN not set'))
   })
 
-  it('dispatches http when MCP_TRANSPORT=http', async () => {
-    process.env.MCP_TRANSPORT = 'http'
-    const { initServer } = await import('./init-server.js')
-    await initServer()
-    expect(startServerMock).toHaveBeenCalledWith('http')
-  })
+  it('should initialize server successfully with NOTION_TOKEN', async () => {
+    process.env.NOTION_TOKEN = 'secret_token'
 
-  it('dispatches http when TRANSPORT_MODE=http', async () => {
-    process.env.TRANSPORT_MODE = 'http'
-    const { initServer } = await import('./init-server.js')
-    await initServer()
-    expect(startServerMock).toHaveBeenCalledWith('http')
-  })
+    // Re-mock to return configured state for this test
+    const { resolveCredentialState, getNotionToken } = await import('./credential-state.js')
+    vi.mocked(resolveCredentialState).mockResolvedValue('configured')
+    vi.mocked(getNotionToken).mockReturnValue('secret_token')
 
-  it('dispatches stdio by default (post stdio-pure migration)', async () => {
-    const { initServer } = await import('./init-server.js')
-    await initServer()
-    expect(startServerMock).toHaveBeenCalledWith('stdio')
+    const server = await initServer()
+
+    expect(server.connect).toHaveBeenCalledWith(expect.any(StdioServerTransport))
   })
 })

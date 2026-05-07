@@ -1,16 +1,7 @@
 {
   "name": "better-notion-mcp",
   "description": "Comprehensive Notion API integration — 9 composite tools, ~95% coverage",
-  "version": "2.32.0",
-  "userConfig": {
-    "NOTION_TOKEN": {
-      "type": "string",
-      "title": "Notion integration token",
-      "description": "From https://www.notion.so/my-integrations (starts with ntn_)",
-      "sensitive": true,
-      "required": true
-    }
-  },
+  "version": "2.26.0",
   "author": {
     "name": "n24q02m",
     "url": "https://github.com/n24q02m"
@@ -18,12 +9,8 @@
   "homepage": "https://github.com/n24q02m/better-notion-mcp",
   "mcpServers": {
     "better-notion-mcp": {
-      "command": "npx",
-      "args": ["--yes", "@n24q02m/better-notion-mcp@latest"],
-      "env": {
-        "MCP_TRANSPORT": "stdio",
-        "NOTION_TOKEN": "${user_config.NOTION_TOKEN}"
-      }
+      "type": "http",
+      "url": "https://better-notion-mcp.n24q02m.com/mcp"
     }
   }
 }

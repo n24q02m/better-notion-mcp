@@ -1,61 +1,44 @@
 /**
  * Non-blocking credential state management for better-notion-mcp.
  *
- * State machine: awaiting_setup -> configured
+ * State machine: awaiting_setup -> setup_in_progress -> configured
  * Reset: configured -> awaiting_setup (via reset)
  *
- * Post stdio-pure + http-multi-user split (2026-05-01): the daemon-bridge
- * relay setup spawn is gone. In stdio mode the server fails fast with a
- * clear stderr message when NOTION_TOKEN is missing (see main.ts). In HTTP
- * mode the OAuth 2.1 AS in mcp-core serves the credential form directly at
- * /authorize on the same port as /mcp -- no separate spawn, no random port.
- *
- * This module is the single source of truth for "is the server configured?"
- * It supports two token resolution strategies:
- *  - stdio / single-user: module-global ``_notionToken`` from env or
- *    config.enc, set during ``resolveCredentialState``.
- *  - HTTP / multi-user (remote-oauth): per-JWT-sub resolver injected by the
- *    HTTP transport so ``config(action=status)`` reflects whether the
- *    CURRENT caller has a Notion access token.
+ * Unlike telegram (which needs relay OTP), Notion has a single token.
+ * When state is AWAITING_SETUP, token-requiring tools return setup instructions with relay URL.
+ * Tools that work without token (help, content_convert) always work.
  */
 
-import { deleteConfig } from '@n24q02m/mcp-core'
-import { resolveConfig } from '@n24q02m/mcp-core/storage'
+import { execFile } from 'node:child_process'
+import type { RelaySession } from '@n24q02m/mcp-relay-core'
+import { createSession, deleteConfig, pollForResult, sendMessage, writeConfig } from '@n24q02m/mcp-relay-core'
+import { resolveConfig } from '@n24q02m/mcp-relay-core/storage'
+import { RELAY_SCHEMA } from './relay-schema.js'
+import { isSafeWebUrl } from './tools/helpers/security.js'
 
 const SERVER_NAME = 'better-notion-mcp'
 const CREDENTIAL_KEY = 'NOTION_TOKEN'
+const DEFAULT_RELAY_URL = 'https://better-notion-mcp.n24q02m.com'
 const REQUIRED_FIELDS = [CREDENTIAL_KEY]
 
-export type CredentialState = 'awaiting_setup' | 'configured'
+export type CredentialState = 'awaiting_setup' | 'setup_in_progress' | 'configured'
 
 // Module-level state
 let _state: CredentialState = 'awaiting_setup'
+let _setupUrl: string | null = null
 let _notionToken: string | null = null
+let _activeSession: { relayBaseUrl: string; sessionId: string } | null = null
 
 export function getState(): CredentialState {
   return _state
 }
 
+export function getSetupUrl(): string | null {
+  return _setupUrl
+}
+
 export function getNotionToken(): string | null {
   return _notionToken
-}
-
-/**
- * Per-request token resolver. Stdio / single-user leaves the default
- * resolver, which reads the module global. ``remote-oauth`` HTTP mode
- * injects a resolver that reads the per-JWT-sub ``NotionTokenStore`` so
- * that ``config(action=status)`` reflects whether the CURRENT caller has a
- * Notion access token -- not whether the server process has any global
- * token, which is always null in multi-user remote-oauth mode.
- */
-let _subjectTokenResolver: () => string | null = () => _notionToken
-
-export function setSubjectTokenResolver(fn: () => string | null): void {
-  _subjectTokenResolver = fn
-}
-
-export function getSubjectToken(): string | null {
-  return _subjectTokenResolver()
 }
 
 /**
@@ -64,12 +47,12 @@ export function getSubjectToken(): string | null {
  * Checks (in order):
  * 1. ENV VARS -- NOTION_TOKEN present -> configured
  * 2. CONFIG FILE -- saved relay config has token -> configured
- * 3. NOTHING -- awaiting_setup
+ * 3. NOTHING -- awaiting_setup (server starts fast, relay triggered lazily)
  *
  * Returns new state. Takes <50ms (single file read).
  */
 export async function resolveCredentialState(): Promise<CredentialState> {
-  // 1. Check env var
+  // 1. Check env var (already checked by caller, but be defensive)
   const envToken = process.env.NOTION_TOKEN
   if (envToken) {
     _notionToken = envToken
@@ -78,8 +61,7 @@ export async function resolveCredentialState(): Promise<CredentialState> {
     return _state
   }
 
-  // 2. Check saved relay config file (HTTP mode only -- stdio shouldn't get
-  // here without env, see main.ts startServer('stdio') guard).
+  // 2. Check saved relay config file
   try {
     const result = await resolveConfig(SERVER_NAME, REQUIRED_FIELDS)
     if (result.config !== null) {
@@ -98,12 +80,146 @@ export async function resolveCredentialState(): Promise<CredentialState> {
   return _state
 }
 
+/**
+ * Start relay session (lazy trigger). Returns setup URL or null.
+ *
+ * Does NOT block -- returns URL immediately for the tool to include in response.
+ * Background poll task applies config when user submits.
+ */
+export async function triggerRelaySetup(): Promise<string | null> {
+  if (_state !== 'awaiting_setup') {
+    return _setupUrl
+  }
+
+  _state = 'setup_in_progress'
+
+  try {
+    const relayUrl = process.env.MCP_RELAY_URL ?? DEFAULT_RELAY_URL
+    let session: RelaySession
+
+    try {
+      session = await createSession(relayUrl, SERVER_NAME, RELAY_SCHEMA)
+    } catch {
+      console.error(
+        `Cannot reach relay server at ${relayUrl}. Set NOTION_TOKEN manually.\nGet your token from https://www.notion.so/my-integrations`
+      )
+      _state = 'awaiting_setup'
+      return null
+    }
+
+    _setupUrl = session.relayUrl
+    _activeSession = { relayBaseUrl: relayUrl, sessionId: session.sessionId }
+
+    // Try to open browser (best-effort, non-blocking)
+    tryOpenBrowser(session.relayUrl)
+
+    console.error(`\nSetup required. Open this URL to configure:\n${session.relayUrl}\n`)
+    console.error(
+      'This URL contains temporary setup secrets and will expire in 3 minutes. Do NOT share this link or log it in shared systems.\n'
+    )
+
+    // Start background poll (non-blocking)
+    pollRelayBackground(relayUrl, session).catch(() => {
+      // Background poll failure is logged inside the function
+    })
+
+    return _setupUrl
+  } catch (err) {
+    console.error(`Relay setup failed: ${err}. Server continues in awaiting_setup.`)
+    _state = 'awaiting_setup'
+    return null
+  }
+}
+
+/**
+ * Background task that polls relay and applies config when user submits.
+ */
+async function pollRelayBackground(relayBaseUrl: string, session: RelaySession): Promise<void> {
+  try {
+    const config = await pollForResult(relayBaseUrl, session, 2000, 180_000)
+
+    // Save to config file for future use
+    await writeConfig(SERVER_NAME, config)
+
+    // Apply token
+    _notionToken = config[CREDENTIAL_KEY]
+    _state = 'configured'
+    console.error('Notion config saved and applied successfully')
+
+    // Notify relay page setup is complete
+    await sendMessage(relayBaseUrl, session.sessionId, {
+      type: 'complete',
+      text: 'Notion token saved. Setup complete!'
+    }).catch(() => {})
+
+    // Explicit session cleanup (one-time use)
+    setTimeout(() => {
+      fetch(`${relayBaseUrl}/api/sessions/${session.sessionId}`, { method: 'DELETE' }).catch(() => {})
+    }, 1000)
+  } catch (err: any) {
+    // Cleanup session on failure (except skipped)
+    if (err?.message !== 'RELAY_SKIPPED') {
+      await fetch(`${relayBaseUrl}/api/sessions/${session.sessionId}`, { method: 'DELETE' }).catch(() => {})
+    }
+
+    if (err?.message === 'RELAY_SKIPPED') {
+      console.error('Relay setup skipped by user. Notion tools will be limited.')
+    } else {
+      console.error('Relay setup timed out or session expired')
+    }
+    _state = 'awaiting_setup'
+  } finally {
+    if (_activeSession?.sessionId === session.sessionId) {
+      _activeSession = null
+    }
+  }
+}
+
+/**
+ * Try to open URL in default browser (best-effort).
+ * Uses execFile (not exec) to avoid shell injection.
+ */
+export function tryOpenBrowser(url: string): void {
+  // Guard against unsafe URLs (e.g., file://, javascript:, or flag injection)
+  if (!isSafeWebUrl(url)) {
+    return
+  }
+
+  const platform = process.platform
+
+  if (platform === 'darwin') {
+    execFile('open', [url], () => {})
+  } else if (platform === 'win32') {
+    execFile('rundll32', ['url.dll,FileProtocolHandler', url], () => {})
+  } else {
+    execFile('xdg-open', [url], () => {})
+  }
+}
+
 export function setState(state: CredentialState): void {
   _state = state
 }
 
 export function resetState(): void {
   _state = 'awaiting_setup'
+  _setupUrl = null
   _notionToken = null
   deleteConfig(SERVER_NAME).catch(() => {})
 }
+
+// Cleanup active session on process exit
+const handleExit = async () => {
+  if (_activeSession) {
+    const { relayBaseUrl, sessionId } = _activeSession
+    _activeSession = null
+    try {
+      await fetch(`${relayBaseUrl}/api/sessions/${sessionId}`, { method: 'DELETE' })
+    } catch {
+      // Ignore cleanup errors
+    }
+  }
+  process.exit()
+}
+
+process.on('SIGINT', handleExit)
+process.on('SIGTERM', handleExit)

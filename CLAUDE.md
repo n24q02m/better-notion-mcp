@@ -1,15 +1,15 @@
 # better-notion-mcp
 
-TypeScript MCP Server cho Notion API. 10 composite tools (pages, databases, blocks, users, workspace, comments, content_convert, file_uploads, setup, help), dual-mode stdio/http.
+TypeScript MCP Server cho Notion API. 9 composite tools, dual-mode stdio/http.
 Xem `AGENTS.md` va `README.md` de hieu architecture va OAuth flow.
 
 ## Cau truc
 
 - `src/init-server.ts` -- Server entry point, env validation
-- `src/credential-state.ts` -- State machine (awaiting_setup/setup_in_progress/configured) + stdio fallback spawn (runLocalServer on 127.0.0.1:random)
+- `src/relay-setup.ts` -- Zero-config relay: create session, poll for config
 - `src/relay-schema.ts` -- Relay form schema (Notion token field)
 - `src/tools/registry.ts` -- Tool registration + routing
-- `src/tools/composite/` -- 1 file per domain (pages, databases, blocks, comments, users, workspace, content_convert, file_uploads, setup)
+- `src/tools/composite/` -- 1 file per domain (pages, databases, blocks, comments, users, workspace, content_convert, file_uploads)
 - `src/tools/helpers/` -- errors, markdown, richtext, pagination, properties
 - `src/auth/` -- OAuth 2.1 + PKCE, DCR, session management
 - `src/transports/` -- stdio + http transport handlers
@@ -55,7 +55,7 @@ mise run fix                # bun run check:fix
 - **stdio mode** (default): `NOTION_TOKEN` (bat buoc)
 - **http mode**: `TRANSPORT_MODE=http`, `PUBLIC_URL`, `NOTION_OAUTH_CLIENT_ID`, `NOTION_OAUTH_CLIENT_SECRET`, `DCR_SERVER_SECRET`
 - `PORT` (default 8080)
-- Secrets: skret SSM namespace `/better-notion-mcp/prod` (region `ap-southeast-1`)
+- Infisical: project `eb2a1274-f333-4f5f-b3b9-42c525cec134`
 
 ## Release & Deploy
 
@@ -84,48 +84,3 @@ mise run fix                # bun run check:fix
 - Node builtins phai co `node:` prefix (`node:fs`, `node:path`)
 - SDK pin `@modelcontextprotocol/sdk` v1.x -- v2 removes server-side OAuth
 - Notion API bug: `comments.list` tra 404 voi OAuth tokens tren API version `2025-09-03`
-
-## Modes (Phase L2 restored 2026-04-18)
-
-Selected via `MCP_MODE` env var:
-
-- **`remote-oauth` (default)**: HTTP + delegated OAuth 2.1 redirect flow tới Notion OAuth app tại `https://api.notion.com/v1/oauth/authorize`. Bắt buộc env `NOTION_OAUTH_CLIENT_ID` + `NOTION_OAUTH_CLIENT_SECRET`. Per-user access token lưu in-process keyed by JWT `sub` (= Notion `owner_user_id`). Multi-user thật — khác account OAuth độc lập. Deploy tại `https://better-notion-mcp.n24q02m.com`.
-- **`local-relay`**: HTTP + `runLocalServer` với relaySchema — user paste Notion integration token vào `/authorize` form. Single-user, không external OAuth. Recommend cho local dev hoặc offline.
-- **`stdio proxy`**: `--stdio` hoặc `MCP_TRANSPORT=stdio`. Backward compat.
-
-Chuyển giữa remote-oauth ↔ local-relay qua `MCP_MODE=local-relay`/`MCP_MODE=remote-oauth`. Default = remote-oauth nếu không set.
-
-## Stdio fallback
-
-Khi stdio khởi động và `config.enc` trống, `credential-state.triggerRelaySetup()` spawn `runLocalServer` tại `http://127.0.0.1:<random_port>/` với `RELAY_SCHEMA` paste-token form. URL local được in ra stderr + tool response. Sau khi user paste token và submit, `onCredentialsSaved` callback:
-1. Lưu vào `config.enc` qua `writeConfig`
-2. Set `_state = 'configured'` + cache token in-memory
-3. Schedule `handle.close()` sau 5s grace cho browser render "Connected"
-
-**KHÔNG hit remote URL** (`https://better-notion-mcp.n24q02m.com`) trong fallback này — remote chỉ dùng khi user explicit chọn `MCP_MODE=remote-oauth`. Xem `~/.claude/skills/mcp-dev/references/mode-matrix.md` section `stdio proxy` cho canonical rule.
-
-## Config storage path
-
-TS servers dùng `$APPDATA\mcp\Config\config.enc` (khác Python servers `$LOCALAPPDATA\mcp\config.enc`). Khi debug, clean cả 2 paths nếu need reset state.
-
-## E2E
-
-Driven by `mcp-core/scripts/e2e/` (matrix-locked, 15 configs). Run a single config from this repo via `make e2e` (proxy) or directly:
-
-```
-cd ../mcp-core && uv run --project scripts/e2e python -m e2e.driver <config-id>
-```
-
-Configs for this repo: `notion-paste-token`.
-
-Note: ``notion-oauth`` reclassified out of T2 matrix 2026-04-27 — verify post-deploy via manual smoke against ``notion-mcp.n24q02m.com`` only.
-
-Tier policy:
-
-- **T0** (precommit + CI on PR / main push) - runs without upstream identity. Skret keys not required.
-- **T2 non-interaction** (`make e2e-config CONFIG=<id>` locally) - driver pre-fills relay form from skret AWS SSM `/better-notion-mcp/prod` (`ap-southeast-1`). No user gate.
-- **T2 interaction** - driver fills relay form, then prints upstream user-gate URL; user signs in / types OTP at provider. Driver enforces per-flow timeouts (device-code 900s, oauth-redirect 300s, browser-form 600s) and emits `[poll] elapsed=Xs remaining=Ys status=<body>` every 30s. On timeout, container logs + last `setup-status` are saved to `<tmp>/e2e-diag/` BEFORE teardown for post-mortem.
-
-Multi-user remote mode (deployment property; not a separate config) requires `MCP_DCR_SERVER_SECRET` in the same skret namespace - driver refuses to start the container without it when `PUBLIC_URL` is set.
-
-References: `mcp-core/scripts/e2e/matrix.yaml`, `~/.claude/skills/mcp-dev/references/e2e-full-matrix.md` (harness-readiness gate), `~/.claude/skills/mcp-dev/references/secrets-skret.md` (per-server credential layout), `~/.claude/skills/mcp-dev/references/multi-user-pattern.md` (per-JWT-sub isolation).

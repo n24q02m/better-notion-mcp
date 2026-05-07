@@ -2,33 +2,12 @@
  * Unified entry point for Better Notion MCP
  *
  * TRANSPORT_MODE selects the transport:
- *   - "stdio" (default): Local mode with NOTION_TOKEN env var, MCP SDK
- *     StdioServerTransport directly (no daemon proxy hop). See spec
- *     2026-04-30-multi-mode-stdio-http-architecture.md Task 3.1.
+ *   - "stdio" (default): Local mode with NOTION_TOKEN env var
  *   - "http": Remote mode with OAuth 2.1 via Notion
  */
 
-import { readFileSync, realpathSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { realpathSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { Client } from '@notionhq/client'
-import { getNotionToken, resolveCredentialState } from './credential-state.js'
-import { registerTools } from './tools/registry.js'
-
-const SERVER_NAME = 'better-notion-mcp'
-
-function getPackageVersion(): string {
-  try {
-    const here = dirname(fileURLToPath(import.meta.url))
-    const pkgPath = join(here, '..', 'package.json')
-    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { version?: string }
-    return pkg.version ?? '0.0.0'
-  } catch {
-    return '0.0.0'
-  }
-}
 
 /**
  * Checks if the current module is the main entry point.
@@ -67,53 +46,10 @@ export async function startServer(mode: string): Promise<void> {
   if (mode === 'http') {
     const { startHttp } = await import('./transports/http.js')
     await startHttp()
-    return
+  } else {
+    const { startStdio } = await import('./transports/stdio.js')
+    await startStdio()
   }
-
-  // Stdio mode is single-user and requires NOTION_TOKEN env. Fail fast
-  // with a clear stderr message instead of starting a server that can't
-  // serve any tools. Spec 2026-05-01-stdio-pure-http-multiuser.md §5.2.1.
-  if (!process.env.NOTION_TOKEN) {
-    const msg = `[better-notion-mcp] NOTION_TOKEN required for stdio mode but not set.
-
-Options:
-  1. Set env in plugin config:
-     {"command": "npx", "args": [...], "env": {"NOTION_TOKEN": "ntn_..."}}
-
-  2. Switch to HTTP mode (browser-based setup):
-     See docs/setup-manual.md "Method 5: Self-Hosting HTTP Mode"
-
-Documentation: https://github.com/n24q02m/better-notion-mcp#setup
-`
-    process.stderr.write(msg)
-    process.exit(1)
-    return
-  }
-
-  // Direct MCP SDK stdio transport (no daemon proxy hop).
-  await resolveCredentialState()
-
-  const server = new Server(
-    { name: SERVER_NAME, version: getPackageVersion() },
-    { capabilities: { tools: {}, resources: {} } }
-  )
-
-  // Stdio is single-user: tokens come from NOTION_TOKEN env or local relay
-  // config.enc. The factory returns a client built from whatever token is
-  // currently saved in credential-state.
-  const notionClientFactory = (): Client => {
-    const token = getNotionToken()
-    if (!token) {
-      throw new Error('Notion integration token not configured. Set NOTION_TOKEN env var or run the relay setup form.')
-    }
-    return new Client({ auth: token, notionVersion: '2025-09-03' })
-  }
-
-  registerTools(server, notionClientFactory)
-
-  const transport = new StdioServerTransport()
-  await server.connect(transport)
-  console.error(`[${SERVER_NAME}] Server started in stdio mode (v${getPackageVersion()})`)
 }
 
 // Global state for the selected mode
@@ -135,4 +71,3 @@ export async function bootstrap(selectedMode: string = mode) {
 if (isMain(import.meta.url) && process.env.NODE_ENV !== 'test') {
   bootstrap()
 }
-// Rebuild target: mcp-core 1.11.5 (P0 fork-bomb fix)

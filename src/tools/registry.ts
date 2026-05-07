@@ -4,7 +4,7 @@
  */
 
 import { readFile } from 'node:fs/promises'
-import { basename, dirname, join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import {
@@ -13,31 +13,23 @@ import {
   ListToolsRequestSchema,
   ReadResourceRequestSchema
 } from '@modelcontextprotocol/sdk/types.js'
-import { buildOpenRelayHandler } from '@n24q02m/mcp-core'
 import type { Client } from '@notionhq/client'
-import { getState } from '../credential-state.js'
+import { getSetupUrl, getState, triggerRelaySetup } from '../credential-state.js'
 // Import mega tools
 import { blocks } from './composite/blocks.js'
 import { commentsManage } from './composite/comments.js'
-import { config } from './composite/config.js'
 import { contentConvert } from './composite/content.js'
 import { databases } from './composite/databases.js'
 import { fileUploads } from './composite/file-uploads.js'
 import { pages } from './composite/pages.js'
+import { setup } from './composite/setup.js'
 import { users } from './composite/users.js'
 import { workspace } from './composite/workspace.js'
 import { aiReadableMessage, findClosestMatch, NotionMCPError } from './helpers/errors.js'
 import { wrapToolResult } from './helpers/security.js'
 
 // Tools that work without a Notion token
-const TOKEN_FREE_TOOLS = new Set(['help', 'content_convert', 'config', 'config__open_relay'])
-
-// publicUrl is null in stdio mode (no relay form to open). HTTP mode
-// substitutes it with PUBLIC_URL so the tool returns a valid /authorize URL.
-const openRelayHandler = buildOpenRelayHandler({
-  serverName: 'better-notion-mcp',
-  publicUrl: process.env.PUBLIC_URL ?? null
-})
+const TOKEN_FREE_TOOLS = new Set(['help', 'content_convert', 'setup'])
 
 // Get docs directory path - works for both bundled CLI and unbundled code
 const __filename = fileURLToPath(import.meta.url)
@@ -76,7 +68,7 @@ const TOOLS = [
   {
     name: 'pages',
     description:
-      'Page CRUD for individual pages and database rows.\n\nActions (required params -> optional):\n- create (parent_id -> title, content, properties, icon, cover)\n- get (page_id): returns markdown content\n- get_property (page_id, property_id)\n- update (page_id -> title, content, append_content, properties, icon, cover, archived)\n- move (page_id, parent_id)\n- archive (page_id) / restore (page_id)\n- duplicate (page_id -> parent_id)\n\nUse `databases` instead for querying or bulk row operations. Property format: simple values auto-convert -- string for title/rich_text/select/status, number for number, boolean for checkbox, string[] for multi_select, ISO date "2025-01-15" for date. Example: properties: {"Name": "My Page", "Status": "In Progress", "Tags": ["tag1", "tag2"], "Due": "2025-06-01", "Count": 42, "Done": true}.',
+      'Page CRUD for individual pages and database rows.\n\nActions (required params -> optional):\n- create (parent_id -> title, content, properties, icon, cover)\n- get (page_id): returns markdown content\n- get_property (page_id, property_id)\n- update (page_id -> title, content, append_content, properties, icon, cover, archived)\n- move (page_id, parent_id)\n- archive (page_id) / restore (page_id)\n- duplicate (page_id -> parent_id)\n\nUse `databases` instead for querying or bulk row operations. Property format: simple values auto-convert — string for title/rich_text/select/status, number for number, boolean for checkbox, string[] for multi_select, ISO date "2025-01-15" for date. Example: properties: {"Name": "My Page", "Status": "In Progress", "Tags": ["tag1", "tag2"], "Due": "2025-06-01", "Count": 42, "Done": true}.',
     annotations: {
       title: 'Pages',
       readOnlyHint: false,
@@ -101,13 +93,13 @@ const TOOLS = [
         properties: {
           type: 'object',
           description:
-            'Page properties (for database pages). Use simple values -- auto-converted to Notion format. String: title/rich_text/select/status. Number: number. Boolean: checkbox. String[]: multi_select. ISO date string: date. Object with Notion structure: pass through as-is.'
+            'Page properties (for database pages). Use simple values — auto-converted to Notion format. String: title/rich_text/select/status. Number: number. Boolean: checkbox. String[]: multi_select. ISO date string: date. Object with Notion structure: pass through as-is.'
         },
         property_id: { type: 'string', description: 'Property ID (for get_property action)' },
         icon: {
           type: 'string',
           description:
-            'Icon: emoji (e.g. "(icon)"), external URL (https://...), or built-in shorthand (name:color, e.g. "document:gray")'
+            'Icon: emoji (e.g. "📋"), external URL (https://...), or built-in shorthand (name:color, e.g. "document:gray")'
         },
         cover: {
           type: 'string',
@@ -122,7 +114,7 @@ const TOOLS = [
   {
     name: 'databases',
     description:
-      'Database schema, query, and bulk row operations.\n\nActions (required params -> optional):\n- create (parent_id -> title, properties, is_inline, icon, cover)\n- get (database_id)\n- query (database_id -> filters, sorts, limit, search)\n- create_page (database_id, pages[{properties}])\n- update_page (database_id, page_id, page_properties)\n- delete_page (database_id, page_ids)\n- create_data_source / update_data_source / update_database / list_templates\n\nUse `pages` instead for single page CRUD. Accepts both database_id (from URL) and data_source_id (from workspace search) -- auto-resolved.',
+      'Database schema, query, and bulk row operations.\n\nActions (required params -> optional):\n- create (parent_id -> title, properties, is_inline, icon, cover)\n- get (database_id)\n- query (database_id -> filters, sorts, limit, search)\n- create_page (database_id, pages[{properties}])\n- update_page (database_id, page_id, page_properties)\n- delete_page (database_id, page_ids)\n- create_data_source / update_data_source / update_database / list_templates\n\nUse `pages` instead for single page CRUD. Accepts both database_id (from URL) and data_source_id (from workspace search) — auto-resolved.',
     annotations: {
       title: 'Databases',
       readOnlyHint: false,
@@ -163,7 +155,7 @@ const TOOLS = [
         icon: {
           type: 'string',
           description:
-            'Icon (for update_database): emoji (e.g. "(icon)"), external URL (https://...), or built-in shorthand (name:color, e.g. "document:gray")'
+            'Icon (for update_database): emoji (e.g. "📋"), external URL (https://...), or built-in shorthand (name:color, e.g. "document:gray")'
         },
         cover: {
           type: 'string',
@@ -306,7 +298,7 @@ const TOOLS = [
   {
     name: 'content_convert',
     description:
-      'Convert between markdown and Notion block JSON. Directions: markdown-to-blocks (input: markdown string), blocks-to-markdown (input: JSON array of Notion blocks or JSON string). Most tools (pages, blocks) handle markdown automatically -- use this only for preview/validation. Supported markdown: headings, lists, to-do, code blocks, blockquotes, dividers, callouts (> [!NOTE]), toggles (<details>), tables, images, bookmarks, embeds, equations ($$), columns (:::columns), [toc], [breadcrumb]. Inline: **bold**, *italic*, `code`, ~~strike~~, [link](url).',
+      'Convert between markdown and Notion block JSON. Directions: markdown-to-blocks (input: markdown string), blocks-to-markdown (input: JSON array of Notion blocks or JSON string). Most tools (pages, blocks) handle markdown automatically — use this only for preview/validation. Supported markdown: headings, lists, to-do, code blocks, blockquotes, dividers, callouts (> [!NOTE]), toggles (<details>), tables, images, bookmarks, embeds, equations ($$), columns (:::columns), [toc], [breadcrumb]. Inline: **bold**, *italic*, `code`, ~~strike~~, [link](url).',
     annotations: {
       title: 'Content Convert',
       readOnlyHint: true,
@@ -385,11 +377,11 @@ const TOOLS = [
     }
   },
   {
-    name: 'config',
+    name: 'setup',
     description:
-      'Manage server configuration and credential state.\n\nActions:\n- status: current credential state, token source, setup URL\n- setup_start (-> force): trigger relay setup to configure Notion token via browser\n- setup_reset: clear credentials and config, return to awaiting_setup\n- setup_complete: re-check credentials after external config changes\n- set: update a runtime setting (notion has no mutable settings; returns info)\n- cache_clear: clear any cached state (no-op for notion)',
+      'Manage server credential setup and configuration.\n\nActions:\n- status: current credential state, token source, setup URL\n- start (-> force): trigger relay setup to configure Notion token via browser\n- reset: clear credentials and config, return to awaiting_setup\n- complete: re-check credentials after external config changes',
     annotations: {
-      title: 'Config',
+      title: 'Setup',
       readOnlyHint: false,
       destructiveHint: false,
       idempotentHint: false,
@@ -400,41 +392,15 @@ const TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['status', 'setup_start', 'setup_reset', 'setup_complete', 'set', 'cache_clear'],
+          enum: ['status', 'start', 'reset', 'complete'],
           description: 'Action to perform'
         },
         force: {
           type: 'boolean',
-          description: 'Force setup_start even if already configured'
-        },
-        key: {
-          type: 'string',
-          description: 'Setting key (for set action)'
-        },
-        value: {
-          type: 'string',
-          description: 'Setting value (for set action)'
+          description: 'Force start even if already configured (for start action)'
         }
       },
       required: ['action']
-    }
-  },
-  {
-    name: 'config__open_relay',
-    description:
-      'Open the relay configuration form for better-notion-mcp in the user browser. Returns the relay URL, whether the browser launched, and the current credential state. Auto-respawns the daemon if it has died.',
-    annotations: {
-      title: 'Open Relay',
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: false,
-      openWorldHint: true
-    },
-    inputSchema: {
-      type: 'object',
-      properties: {},
-      additionalProperties: false,
-      required: []
     }
   }
 ]
@@ -471,7 +437,7 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
     }
 
     try {
-      const content = await readFile(join(DOCS_DIR, basename(resource.file)), 'utf-8')
+      const content = await readFile(join(DOCS_DIR, resource.file), 'utf-8')
       return {
         contents: [{ uri, mimeType: 'text/markdown', text: content }]
       }
@@ -495,18 +461,18 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
       }
     }
 
-    // Credential guard. In stdio mode the server exits at startup if
-    // NOTION_TOKEN is missing (see main.ts startServer('stdio')); reaching
-    // this branch means HTTP mode where the per-subject token store is
-    // empty for the current caller. help and content_convert work without
-    // a token.
+    // Credential guard: trigger relay and show URL in tool response (not just stderr).
+    // help and content_convert work without a token.
     if (!TOKEN_FREE_TOOLS.has(name)) {
       const credState = getState()
       if (credState !== 'configured') {
-        const publicUrl = process.env.PUBLIC_URL
-        const setupInstructions = publicUrl
-          ? `Notion access token is not present for this session. Open ${publicUrl}/authorize in your browser to complete the Notion OAuth flow, then retry the tool.`
-          : 'Notion access token is not present. In stdio mode set NOTION_TOKEN env var (https://www.notion.so/my-integrations). In HTTP mode complete the OAuth flow at <PUBLIC_URL>/authorize.'
+        if (credState === 'awaiting_setup') {
+          await triggerRelaySetup()
+        }
+        const url = getSetupUrl()
+        const setupInstructions = url
+          ? `Notion token is not configured yet.\n\nTo set up, open this URL in your browser:\n${url}\n\nAfter submitting your token on the relay page, retry this tool call.`
+          : 'NOTION_TOKEN environment variable is not set.\nGet your integration token from https://www.notion.so/my-integrations\nand set it as NOTION_TOKEN in your MCP server config.'
         return {
           content: [{ type: 'text', text: setupInstructions }],
           isError: true
@@ -540,11 +506,8 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
         case 'content_convert':
           result = await contentConvert(args as any)
           break
-        case 'config':
-          result = await config(args as any)
-          break
-        case 'config__open_relay':
-          result = await openRelayHandler()
+        case 'setup':
+          result = await setup(args as any)
           break
         case 'file_uploads':
           result = await fileUploads(notion, args as any)
@@ -560,16 +523,9 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
               `Valid tools: ${validToolNames.join(', ')}`
             )
           }
-          // Security: Use basename() to ensure we only look for files directly inside DOCS_DIR,
-          // preventing path traversal even if the allowlist validation is bypassed or modified.
-          const docFile = `${basename(toolName)}.md`
-          const fullPath = join(DOCS_DIR, docFile)
-          if (!fullPath.startsWith(DOCS_DIR)) {
-            throw new NotionMCPError('Path traversal attempt detected', 'SECURITY_ERROR', 'Invalid tool_name')
-          }
-
+          const docFile = `${toolName}.md`
           try {
-            const content = await readFile(fullPath, 'utf-8')
+            const content = await readFile(join(DOCS_DIR, docFile), 'utf-8')
             result = { tool: toolName, documentation: content }
           } catch {
             throw new NotionMCPError(`Documentation not found for: ${toolName}`, 'DOC_NOT_FOUND', 'Check tool_name')

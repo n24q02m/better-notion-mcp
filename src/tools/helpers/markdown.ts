@@ -596,16 +596,11 @@ class InlineParser {
 
   public parse(): RichText[] {
     for (this.i = 0; this.i < this.text.length; this.i++) {
-      const char = this.text[this.i]
+      if (this.tryParseMention()) continue
+      if (this.tryParseLink()) continue
+      if (this.tryParseFormatting()) continue
 
-      // Fast path: skip parsing functions if character isn't a potential formatting trigger
-      if (char === '@' || char === '[' || char === '*' || char === '`' || char === '~') {
-        if (this.tryParseMention()) continue
-        if (this.tryParseLink()) continue
-        if (this.tryParseFormatting()) continue
-      }
-
-      this.current += char
+      this.current += this.text[this.i]
     }
 
     this.flushCurrent()
@@ -669,10 +664,8 @@ function richTextToMarkdown(richText: RichText[]): string {
 export function extractPlainText(richText: RichText[]): string {
   if (!richText || !Array.isArray(richText)) return ''
   let result = ''
-  const len = richText.length
-  for (let i = 0; i < len; i++) {
-    const rt = richText[i]
-    result += rt.plain_text || rt.text?.content || ''
+  for (let i = 0; i < richText.length; i++) {
+    result += richText[i].plain_text || richText[i].text?.content || ''
   }
   return result
 }
@@ -688,18 +681,17 @@ interface ParseResult {
 
 function parseCalloutBlock(lines: string[], startIndex: number, match: RegExpMatchArray): ParseResult {
   const calloutType = match[1].toUpperCase()
-  const contentLines: string[] = match[2] ? [match[2]] : []
+  let calloutContent = match[2] || ''
   let i = startIndex
 
   // Collect continuation lines (lines starting with >)
   while (i + 1 < lines.length && lines[i + 1].startsWith('> ')) {
     i++
-    contentLines.push(lines[i].slice(2))
+    calloutContent += (calloutContent ? '\n' : '') + lines[i].slice(2)
   }
 
   const icon = getCalloutIcon(calloutType)
   const color = getCalloutColor(calloutType)
-  const calloutContent = contentLines.join('\n')
   return { block: createCallout(calloutContent || calloutType, icon, color), endIndex: i }
 }
 
@@ -752,23 +744,13 @@ function parseTable(lines: string[], startIndex: number): TableParseResult | nul
 
   if (tableLines.length < 1) return null
 
-  // Optimization: use a single-pass manual loop instead of chained .map().filter().
-  // This reduces array allocations and closure creation in a hot path when parsing markdown tables.
-  const parsedRows: string[][] = new Array(tableLines.length)
-  for (let r = 0; r < tableLines.length; r++) {
-    const line = tableLines[r]
-    const split = line.split('|')
-    const len = split.length
-    if (len < 3) {
-      parsedRows[r] = []
-      continue
-    }
-    const cells: string[] = new Array(len - 2)
-    for (let c = 1; c < len - 1; c++) {
-      cells[c - 1] = split[c].trim()
-    }
-    parsedRows[r] = cells
-  }
+  const parsedRows = tableLines.map((line) => {
+    const cells = line
+      .split('|')
+      .map((cell) => cell.trim())
+      .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1) // Remove empty first/last
+    return cells
+  })
 
   // Check for separator row (contains ---)
   let hasHeader = false
@@ -777,7 +759,7 @@ function parseTable(lines: string[], startIndex: number): TableParseResult | nul
 
   if (parsedRows.length >= 2) {
     const possibleSeparator = parsedRows[1]
-    const isSeparator = possibleSeparator.every((cell: string) => /^[-:]+$/.test(cell.trim()))
+    const isSeparator = possibleSeparator.every((cell) => /^[-:]+$/.test(cell.trim()))
 
     if (isSeparator) {
       hasHeader = true
@@ -939,48 +921,45 @@ function parseColumns(lines: string[], startIndex: number): ColumnParseResult {
 // Callout helpers
 // ============================================================
 
-const CALLOUT_ICONS: Record<string, string> = {
-  NOTE: 'ℹ️',
-  TIP: '💡',
-  IMPORTANT: '❗',
-  WARNING: '⚠️',
-  CAUTION: '🛑',
-  INFO: 'ℹ️',
-  SUCCESS: '✅',
-  ERROR: '❌'
-}
-
-const CALLOUT_COLORS: Record<string, string> = {
-  NOTE: 'blue_background',
-  TIP: 'green_background',
-  IMPORTANT: 'purple_background',
-  WARNING: 'yellow_background',
-  CAUTION: 'red_background',
-  INFO: 'blue_background',
-  SUCCESS: 'green_background',
-  ERROR: 'red_background'
-}
-
-const CALLOUT_ICON_MAP: Record<string, string> = {
-  ℹ️: 'NOTE',
-  '💡': 'TIP',
-  '❗': 'IMPORTANT',
-  '⚠️': 'WARNING',
-  '🛑': 'CAUTION',
-  '✅': 'SUCCESS',
-  '❌': 'ERROR'
-}
-
 function getCalloutIcon(type: string): string {
-  return CALLOUT_ICONS[type] || 'ℹ️'
+  const icons: Record<string, string> = {
+    NOTE: '\u2139\ufe0f',
+    TIP: '\u{1f4a1}',
+    IMPORTANT: '\u2757',
+    WARNING: '\u26a0\ufe0f',
+    CAUTION: '\u{1f6d1}',
+    INFO: '\u2139\ufe0f',
+    SUCCESS: '\u2705',
+    ERROR: '\u274c'
+  }
+  return icons[type] || '\u2139\ufe0f'
 }
 
 function getCalloutColor(type: string): string {
-  return CALLOUT_COLORS[type] || 'gray_background'
+  const colors: Record<string, string> = {
+    NOTE: 'blue_background',
+    TIP: 'green_background',
+    IMPORTANT: 'purple_background',
+    WARNING: 'yellow_background',
+    CAUTION: 'red_background',
+    INFO: 'blue_background',
+    SUCCESS: 'green_background',
+    ERROR: 'red_background'
+  }
+  return colors[type] || 'gray_background'
 }
 
 function getCalloutTypeFromIcon(icon: string): string {
-  return CALLOUT_ICON_MAP[icon] || 'NOTE'
+  const iconMap: Record<string, string> = {
+    '\u2139\ufe0f': 'NOTE',
+    '\u{1f4a1}': 'TIP',
+    '\u2757': 'IMPORTANT',
+    '\u26a0\ufe0f': 'WARNING',
+    '\u{1f6d1}': 'CAUTION',
+    '\u2705': 'SUCCESS',
+    '\u274c': 'ERROR'
+  }
+  return iconMap[icon] || 'NOTE'
 }
 
 // ============================================================

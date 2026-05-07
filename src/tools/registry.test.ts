@@ -9,18 +9,7 @@ vi.mock('./composite/content.js', () => ({ contentConvert: vi.fn() }))
 vi.mock('./composite/users.js', () => ({ users: vi.fn() }))
 vi.mock('./composite/workspace.js', () => ({ workspace: vi.fn() }))
 vi.mock('./composite/file-uploads.js', () => ({ fileUploads: vi.fn() }))
-vi.mock('./composite/config.js', () => ({ config: vi.fn() }))
-
-// Mock mcp-core open-relay helper to avoid spawning daemons in tests
-vi.mock('@n24q02m/mcp-core', () => ({
-  buildOpenRelayHandler: vi.fn(() =>
-    vi.fn(async () => ({
-      url: 'http://127.0.0.1:9999/',
-      browserOpened: false,
-      status: 'unconfigured' as const
-    }))
-  )
-}))
+vi.mock('./composite/setup.js', () => ({ setup: vi.fn() }))
 
 // Mock credential state (tests run with credentials already configured)
 vi.mock('../credential-state.js', () => ({
@@ -37,11 +26,11 @@ vi.mock('node:fs/promises', () => ({
 import { readFile } from 'node:fs/promises'
 import { blocks } from './composite/blocks.js'
 import { commentsManage } from './composite/comments.js'
-import { config } from './composite/config.js'
 import { contentConvert } from './composite/content.js'
 import { databases } from './composite/databases.js'
 import { fileUploads } from './composite/file-uploads.js'
 import { pages } from './composite/pages.js'
+import { setup } from './composite/setup.js'
 import { users } from './composite/users.js'
 import { workspace } from './composite/workspace.js'
 import { NotionMCPError } from './helpers/errors.js'
@@ -57,8 +46,7 @@ const EXPECTED_TOOL_NAMES = [
   'content_convert',
   'file_uploads',
   'help',
-  'config',
-  'config__open_relay'
+  'setup'
 ]
 
 const EXPECTED_RESOURCE_URIS = [
@@ -113,11 +101,11 @@ describe('registerTools', () => {
   })
 
   describe('ListTools handler', () => {
-    it('should return exactly 11 tools', async () => {
+    it('should return exactly 10 tools', async () => {
       const handler = server.getHandler(0)
       const result = await handler()
 
-      expect(result.tools).toHaveLength(11)
+      expect(result.tools).toHaveLength(10)
     })
 
     it('should return all expected tool names', async () => {
@@ -416,48 +404,21 @@ describe('registerTools', () => {
       expect(result.content[0].text).toBe(JSON.stringify(mockResult, null, 2))
     })
 
-    it('should route config tool without notion client', async () => {
+    it('should route setup tool without notion client', async () => {
       const handler = server.getHandler(3)
       const mockResult = { action: 'status', state: 'configured', has_token: true }
-      vi.mocked(config).mockResolvedValue(mockResult)
+      vi.mocked(setup).mockResolvedValue(mockResult)
 
       const result = await handler({
         params: {
-          name: 'config',
+          name: 'setup',
           arguments: { action: 'status' }
         }
       })
 
-      // config is called without notion client
-      expect(config).toHaveBeenCalledWith({ action: 'status' })
+      // setup is called without notion client
+      expect(setup).toHaveBeenCalledWith({ action: 'status' })
       expect(result.content[0].text).toBe(JSON.stringify(mockResult, null, 2))
-    })
-
-    it('should route config__open_relay tool and return relay URL JSON', async () => {
-      const handler = server.getHandler(3)
-
-      const result = await handler({
-        params: { name: 'config__open_relay', arguments: {} }
-      })
-
-      const parsed = JSON.parse(result.content[0].text)
-      expect(parsed).toEqual({
-        url: 'http://127.0.0.1:9999/',
-        browserOpened: false,
-        status: 'unconfigured'
-      })
-      expect(result.isError).toBeUndefined()
-    })
-
-    it('should expose config__open_relay in TOOLS list with empty input schema', async () => {
-      const listHandler = server.getHandler(0)
-      const result = await listHandler()
-      const tool = result.tools.find((t: any) => t.name === 'config__open_relay')
-
-      expect(tool).toBeDefined()
-      expect(tool.inputSchema.type).toBe('object')
-      expect(tool.inputSchema.properties).toEqual({})
-      expect(tool.inputSchema.additionalProperties).toBe(false)
     })
 
     it('should route file_uploads tool correctly', async () => {
@@ -520,20 +481,6 @@ describe('registerTools', () => {
       expect(result.isError).toBe(true)
       expect(result.content[0].text).toContain('Invalid tool name: help')
       expect(result.content[0].text).toContain('Valid tools:')
-    })
-    it('should prevent path traversal in help tool even if allowlist is bypassed', async () => {
-      const handler = server.getHandler(3)
-
-      // Use a tool name that would bypass basename() if it were something like "../../../etc/passwd"
-      // but still be blocked by our startsWith check or basename itself.
-      // Since it is caught by validation first, we test that it would be handled correctly.
-      const result = await handler({
-        params: { name: 'help', arguments: { tool_name: '../../../package.json' } }
-      })
-
-      expect(result.isError).toBe(true)
-      // It should be caught by validation first
-      expect(result.content[0].text).toContain('Invalid tool name')
     })
 
     it('should return error for unknown tool', async () => {
