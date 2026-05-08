@@ -495,26 +495,22 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
       }
     }
 
-    // Credential guard. In stdio mode the server exits at startup if
-    // NOTION_TOKEN is missing (see main.ts startServer('stdio')); reaching
-    // this branch means HTTP mode where the per-subject token store is
-    // empty for the current caller. help and content_convert work without
-    // a token.
-    if (!TOKEN_FREE_TOOLS.has(name)) {
-      const credState = getState()
-      if (credState !== 'configured') {
-        const publicUrl = process.env.PUBLIC_URL
-        const setupInstructions = publicUrl
-          ? `Notion access token is not present for this session. Open ${publicUrl}/authorize in your browser to complete the Notion OAuth flow, then retry the tool.`
-          : 'Notion access token is not present. In stdio mode set NOTION_TOKEN env var (https://www.notion.so/my-integrations). In HTTP mode complete the OAuth flow at <PUBLIC_URL>/authorize.'
-        return {
-          content: [{ type: 'text', text: setupInstructions }],
-          isError: true
+    try {
+      // Credential guard. In stdio mode the server exits at startup if
+      // NOTION_TOKEN is missing (see main.ts startServer('stdio')); reaching
+      // this branch means HTTP mode where the per-subject token store is
+      // empty for the current caller. help and content_convert work without
+      // a token.
+      if (!TOKEN_FREE_TOOLS.has(name)) {
+        const credState = getState()
+        if (credState !== 'configured') {
+          const publicUrl = process.env.PUBLIC_URL
+          const suggestion = publicUrl
+            ? `Open ${publicUrl}/authorize in your browser to complete the Notion OAuth flow, then retry the tool.`
+            : 'Set NOTION_TOKEN env var (https://www.notion.so/my-integrations). Example: NOTION_TOKEN=ntn_xxxxxxxxxxxxx. In HTTP mode complete the OAuth flow at <PUBLIC_URL>/authorize.'
+          throw new NotionMCPError('Notion access token is not present', 'UNAUTHORIZED', suggestion)
         }
       }
-    }
-
-    try {
       let result
       const notion = notionClientFactory()
 
@@ -569,6 +565,21 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
           }
 
           try {
+            // Credential guard. In stdio mode the server exits at startup if
+            // NOTION_TOKEN is missing (see main.ts startServer('stdio')); reaching
+            // this branch means HTTP mode where the per-subject token store is
+            // empty for the current caller. help and content_convert work without
+            // a token.
+            if (!TOKEN_FREE_TOOLS.has(name)) {
+              const credState = getState()
+              if (credState !== 'configured') {
+                const publicUrl = process.env.PUBLIC_URL
+                const suggestion = publicUrl
+                  ? `Open ${publicUrl}/authorize in your browser to complete the Notion OAuth flow, then retry the tool.`
+                  : 'Set NOTION_TOKEN env var (https://www.notion.so/my-integrations). Example: NOTION_TOKEN=ntn_xxxxxxxxxxxxx. In HTTP mode complete the OAuth flow at <PUBLIC_URL>/authorize.'
+                throw new NotionMCPError('Notion access token is not present', 'UNAUTHORIZED', suggestion)
+              }
+            }
             const content = await readFile(fullPath, 'utf-8')
             result = { tool: toolName, documentation: content }
           } catch {
