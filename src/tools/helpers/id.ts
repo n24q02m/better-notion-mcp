@@ -11,6 +11,8 @@ const UUID_REGEX = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f
  * Ensures consistent comparison regardless of input format
  */
 export function normalizeId(id: string): string {
+  // BOLT OPTIMIZATION: Early return to avoid regex overhead on already clean IDs
+  if (id.indexOf('-') === -1) return id
   return id.replace(/-/g, '')
 }
 
