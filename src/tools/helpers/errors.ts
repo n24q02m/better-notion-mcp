@@ -256,8 +256,10 @@ export function findClosestMatch(input: string, validOptions: string[]): string 
 export function aiReadableMessage(error: NotionMCPError): string {
   let message = `Error: ${error.message}`
 
-  if (error.suggestion) {
-    message += `\n\nSuggestion: ${error.suggestion}`
+  // Use explicit suggestion if present, otherwise fallback to suggestFixes()
+  const suggestion = error.suggestion || suggestFixes(error).join('\n- ')
+  if (suggestion) {
+    message += `\n\nSuggestion: ${error.suggestion ? suggestion : `\n- ${suggestion}`}`
   }
 
   if (error.details) {
@@ -297,6 +299,11 @@ const _ERROR_SUGGESTIONS_MAP: Record<string, string[]> = {
     'Reduce request frequency',
     'Implement exponential backoff retry logic',
     'Batch multiple operations together'
+  ],
+  COMMENTS_LIST_UNAVAILABLE: [
+    'Use action="get" with a specific comment_id if known',
+    'Use action="create" to add a new comment (this endpoint is unaffected)',
+    'This is a known Notion API limitation with OAuth tokens as of 2025-09-03'
   ]
 }
 
