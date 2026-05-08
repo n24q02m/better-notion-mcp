@@ -9,3 +9,7 @@
 ## 2025-05-06 - normalizeId Fast Path Optimization
 **Learning:** Using `id.replace(/-/g, '')` directly on strings that are already clean (do not contain hyphens) incurs unnecessary regex evaluation overhead on hot paths, adding ~10-20x extra time compared to checking for the target character first.
 **Action:** When a replacement string is commonly already correctly formatted, apply an early return check using `indexOf` (e.g., `if (id.indexOf('-') === -1) return id`) to bypass the regex engine.
+
+## 2025-05-15 - Object.keys on Iterables Optimization
+**Learning:** Calling `Object.keys(item)` in a loop traversing collections (like array mapped results) forces redundant object array allocations on every iteration, which degrades performance and triggers frequent Garbage Collection.
+**Action:** When extracting mapping values from an array of identical object types, extract property keys only once (e.g. from `results[0].properties`) and pass them along to the parsing/mapping function `extractPageProperties(props, propertyKeys)`.
