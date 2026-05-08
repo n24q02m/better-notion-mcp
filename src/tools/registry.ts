@@ -470,8 +470,13 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
       )
     }
 
+    const fullPath = join(DOCS_DIR, basename(resource.file))
+    if (!fullPath.startsWith(DOCS_DIR)) {
+      throw new NotionMCPError('Path traversal attempt detected', 'SECURITY_ERROR', 'Invalid resource file')
+    }
+
     try {
-      const content = await readFile(join(DOCS_DIR, basename(resource.file)), 'utf-8')
+      const content = await readFile(fullPath, 'utf-8')
       return {
         contents: [{ uri, mimeType: 'text/markdown', text: content }]
       }
