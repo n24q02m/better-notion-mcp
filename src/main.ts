@@ -81,9 +81,9 @@ Options:
      {"command": "npx", "args": [...], "env": {"NOTION_TOKEN": "ntn_..."}}
 
   2. Switch to HTTP mode (browser-based setup):
-     See docs/setup-manual.md "Method 5: Self-Hosting HTTP Mode"
+     See https://mcp.n24q02m.com/servers/better-notion-mcp/setup/ "Self-Hosting HTTP Mode"
 
-Documentation: https://github.com/n24q02m/better-notion-mcp#setup
+Documentation: https://mcp.n24q02m.com/servers/better-notion-mcp/
 `
     process.stderr.write(msg)
     process.exit(1)
