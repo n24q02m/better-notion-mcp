@@ -17,7 +17,7 @@ vi.mock('@n24q02m/mcp-core', () => ({
     vi.fn(async () => ({
       url: 'http://127.0.0.1:9999/',
       browserOpened: false,
-      status: 'unconfigured' as const
+      status: 'awaiting_setup' as const
     }))
   )
 }))
@@ -35,6 +35,7 @@ vi.mock('node:fs/promises', () => ({
 }))
 
 import { readFile } from 'node:fs/promises'
+import { getState } from '../credential-state.js'
 import { blocks } from './composite/blocks.js'
 import { commentsManage } from './composite/comments.js'
 import { config } from './composite/config.js'
@@ -444,7 +445,7 @@ describe('registerTools', () => {
       expect(parsed).toEqual({
         url: 'http://127.0.0.1:9999/',
         browserOpened: false,
-        status: 'unconfigured'
+        status: 'awaiting_setup'
       })
       expect(result.isError).toBeUndefined()
     })
@@ -595,5 +596,42 @@ describe('registerTools', () => {
       expect(result.content[0].text).toContain('<untrusted_notion_content>')
       expect(result.isError).toBeUndefined()
     })
+  })
+
+  it('should return setup instructions when unconfigured and PUBLIC_URL is missing', async () => {
+    const handler = server.getHandler(3)
+    vi.mocked(getState).mockReturnValue('awaiting_setup')
+
+    const originalPublicUrl = process.env.PUBLIC_URL
+    delete process.env.PUBLIC_URL
+
+    const result = await handler({
+      params: { name: 'pages', arguments: { action: 'get', page_id: 'p1' } }
+    })
+
+    expect(result.isError).toBe(true)
+    expect(result.content[0].text).toContain('Notion access token is not present')
+    expect(result.content[0].text).toContain('NOTION_TOKEN')
+
+    process.env.PUBLIC_URL = originalPublicUrl
+    vi.mocked(getState).mockReturnValue('configured')
+  })
+
+  it('should return OAuth instructions when unconfigured and PUBLIC_URL is present', async () => {
+    const handler = server.getHandler(3)
+    vi.mocked(getState).mockReturnValue('awaiting_setup')
+
+    const originalPublicUrl = process.env.PUBLIC_URL
+    process.env.PUBLIC_URL = 'https://mcp.example.com'
+
+    const result = await handler({
+      params: { name: 'pages', arguments: { action: 'get', page_id: 'p1' } }
+    })
+
+    expect(result.isError).toBe(true)
+    expect(result.content[0].text).toContain('https://mcp.example.com/authorize')
+
+    process.env.PUBLIC_URL = originalPublicUrl
+    vi.mocked(getState).mockReturnValue('configured')
   })
 })
