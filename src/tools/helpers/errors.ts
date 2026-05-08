@@ -86,21 +86,9 @@ function stripSensitiveFields(obj: any, seen = new WeakSet()): void {
 }
 
 /**
- * Enhance Notion API error with helpful context
+ * Map network-related errors
  */
-export function enhanceError(error: any): NotionMCPError {
-  // Already a NotionMCPError — pass through unchanged
-  if (error instanceof NotionMCPError) return error
-
-  // Explicitly strip sensitive fields recursively
-  stripSensitiveFields(error)
-
-  // Notion API error
-  if (error.code) {
-    return handleNotionError(error)
-  }
-
-  // Network error
+function mapNetworkError(error: any): NotionMCPError | null {
   if (error.message?.includes('ECONNREFUSED') || error.message?.includes('ENOTFOUND')) {
     return new NotionMCPError(
       'Cannot connect to Notion API',
@@ -108,13 +96,32 @@ export function enhanceError(error: any): NotionMCPError {
       'Check your internet connection and try again'
     )
   }
+  return null
+}
 
-  // Generic error
+/**
+ * Handle validation_error separately as it has dynamic suggestions
+ */
+function mapValidationError(error: any): NotionMCPError | null {
+  if (error.code !== 'validation_error') return null
+
+  const bodyMessage: string = error.body?.message || ''
+  let suggestion = 'Check the API documentation for valid parameter formats'
+
+  // Detect common property format mistakes and provide specific guidance
+  if (bodyMessage.includes('rich_text') || bodyMessage.includes('title')) {
+    suggestion =
+      'Property format error. For database page properties, use simple values: {"Name": "text", "Status": "value", "Tags": ["a","b"], "Count": 42, "Done": true, "Due": "2025-01-15"}. The server auto-converts to Notion format.'
+  } else if (bodyMessage.includes('property')) {
+    suggestion =
+      'Property name or type mismatch. Use databases(action="get") to check the schema, then match property names exactly (case-sensitive).'
+  }
+
   return new NotionMCPError(
-    error.message || 'Unknown error occurred',
-    'UNKNOWN_ERROR',
-    'Please check your request and try again',
-    sanitizeErrorDetails(error)
+    bodyMessage || 'Invalid request parameters',
+    'VALIDATION_ERROR',
+    suggestion,
+    sanitizeValidationBody(error.body)
   )
 }
 
@@ -158,40 +165,49 @@ const NOTION_ERROR_MAP: Record<string, { message: string; code: string; suggesti
 }
 
 /**
- * Handle specific Notion API errors
+ * Map Notion API errors
  */
-function handleNotionError(error: any): NotionMCPError {
+function mapNotionError(error: any): NotionMCPError | null {
+  if (!error.code) return null
+
+  const validationError = mapValidationError(error)
+  if (validationError) return validationError
+
   const code = error.code
   const message = error.message || 'Unknown Notion API error'
-
-  // Handle validation_error separately as it has dynamic suggestions
-  if (code === 'validation_error') {
-    const bodyMessage: string = error.body?.message || ''
-    let suggestion = 'Check the API documentation for valid parameter formats'
-
-    // Detect common property format mistakes and provide specific guidance
-    if (bodyMessage.includes('rich_text') || bodyMessage.includes('title')) {
-      suggestion =
-        'Property format error. For database page properties, use simple values: {"Name": "text", "Status": "value", "Tags": ["a","b"], "Count": 42, "Done": true, "Due": "2025-01-15"}. The server auto-converts to Notion format.'
-    } else if (bodyMessage.includes('property')) {
-      suggestion =
-        'Property name or type mismatch. Use databases(action="get") to check the schema, then match property names exactly (case-sensitive).'
-    }
-
-    return new NotionMCPError(
-      bodyMessage || 'Invalid request parameters',
-      'VALIDATION_ERROR',
-      suggestion,
-      sanitizeValidationBody(error.body)
-    )
-  }
-
   const mapping = NOTION_ERROR_MAP[code]
+
   if (mapping) {
     return new NotionMCPError(mapping.message, mapping.code, mapping.suggestion)
   }
 
   return new NotionMCPError(message, code.toUpperCase(), 'Check the Notion API documentation for this error code')
+}
+
+/**
+ * Map all other errors
+ */
+function mapGenericError(error: any): NotionMCPError {
+  return new NotionMCPError(
+    error.message || 'Unknown error occurred',
+    'UNKNOWN_ERROR',
+    'Please check your request and try again',
+    sanitizeErrorDetails(error)
+  )
+}
+
+/**
+ * Enhance Notion API error with helpful context
+ */
+export function enhanceError(error: any): NotionMCPError {
+  // Already a NotionMCPError — pass through unchanged
+  if (error instanceof NotionMCPError) return error
+
+  // Explicitly strip sensitive fields recursively
+  stripSensitiveFields(error)
+
+  // Chain of responsibility: Notion -> Network -> Generic
+  return mapNotionError(error) || mapNetworkError(error) || mapGenericError(error)
 }
 
 /**
@@ -294,46 +310,7 @@ const _DEFAULT_SUGGESTIONS = [
  * Suggest fixes based on error
  */
 export function suggestFixes(error: NotionMCPError): string[] {
-  const suggestions: string[] = []
-
-  switch (error.code) {
-    case 'UNAUTHORIZED':
-      suggestions.push('Check that NOTION_TOKEN is set in your environment')
-      suggestions.push('Verify token at https://www.notion.so/my-integrations')
-      suggestions.push('Create a new integration token if needed')
-      break
-
-    case 'RESTRICTED_RESOURCE':
-      suggestions.push('Open the page/database in Notion')
-      suggestions.push('Click "..." menu → Add connections → Select your integration')
-      suggestions.push('Grant access to parent pages if needed')
-      break
-
-    case 'NOT_FOUND':
-      suggestions.push('Verify the page/database ID is correct')
-      suggestions.push('Check that the resource was not deleted')
-      suggestions.push('Ensure you have access permissions')
-      break
-
-    case 'VALIDATION_ERROR':
-      suggestions.push('Check parameter types and formats')
-      suggestions.push('Review required vs optional parameters')
-      suggestions.push('Verify property names match database schema')
-      break
-
-    case 'RATE_LIMITED':
-      suggestions.push('Reduce request frequency')
-      suggestions.push('Implement exponential backoff retry logic')
-      suggestions.push('Batch multiple operations together')
-      break
-
-    default:
-      suggestions.push('Check Notion API status at https://status.notion.so')
-      suggestions.push('Review request parameters')
-      suggestions.push('Try again in a few moments')
-  }
-
-  return suggestions
+  return _ERROR_SUGGESTIONS_MAP[error.code] || _DEFAULT_SUGGESTIONS
 }
 
 /**
