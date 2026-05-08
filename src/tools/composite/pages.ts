@@ -3,7 +3,7 @@
  * All page operations in one unified interface
  */
 
-import type { Client } from '@notionhq/client'
+import type { Client, PageObjectResponse } from '@notionhq/client'
 import { formatCover } from '../helpers/covers.js'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { formatIcon } from '../helpers/icons.js'
@@ -178,7 +178,7 @@ async function createPage(notion: Client, input: PagesInput): Promise<CreatePage
   if (input.icon) pageData.icon = formatIcon(input.icon)
   if (input.cover) pageData.cover = formatCover(input.cover)
 
-  const page = await notion.pages.create(pageData)
+  const page = (await notion.pages.create(pageData)) as PageObjectResponse
 
   // Add content if provided
   if (input.content) {
@@ -194,7 +194,7 @@ async function createPage(notion: Client, input: PagesInput): Promise<CreatePage
   return {
     action: 'create',
     page_id: page.id,
-    url: (page as any).url,
+    url: page.url,
     created: true
   }
 }
@@ -208,7 +208,7 @@ async function getPage(notion: Client, input: PagesInput): Promise<GetPageResult
     throw new NotionMCPError('page_id is required for get action', 'VALIDATION_ERROR', 'Provide page_id')
   }
 
-  const page: any = await notion.pages.retrieve({ page_id: input.page_id })
+  const page = (await notion.pages.retrieve({ page_id: input.page_id })) as PageObjectResponse
 
   // Get all blocks with auto-pagination
   const blocks = await autoPaginate((cursor) =>
