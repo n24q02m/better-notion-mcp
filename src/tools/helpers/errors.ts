@@ -12,6 +12,37 @@ export class NotionMCPError extends Error {
     this.name = 'NotionMCPError'
   }
 
+  static validation(message: string, suggestion?: string, details?: any): NotionMCPError {
+    return new NotionMCPError(message, 'VALIDATION_ERROR', suggestion, details)
+  }
+
+  static network(
+    message = 'Cannot connect to Notion API',
+    suggestion = 'Check your internet connection and try again'
+  ): NotionMCPError {
+    return new NotionMCPError(message, 'NETWORK_ERROR', suggestion)
+  }
+
+  static unauthorized(suggestion?: string): NotionMCPError {
+    return new NotionMCPError(
+      'Invalid or missing Notion API token',
+      'UNAUTHORIZED',
+      suggestion ||
+        'Set NOTION_TOKEN environment variable with a valid integration token from https://www.notion.so/my-integrations'
+    )
+  }
+
+  static notFound(
+    message = 'Page or database not found',
+    suggestion = 'Check the ID is correct. For databases: use the database container ID (from URL), not the data_source ID (from search). If you got this ID from workspace search, try databases/get first to resolve the correct ID.'
+  ): NotionMCPError {
+    return new NotionMCPError(message, 'NOT_FOUND', suggestion)
+  }
+
+  static unknown(message = 'Unknown error occurred', details?: any): NotionMCPError {
+    return new NotionMCPError(message, 'UNKNOWN_ERROR', 'Please check your request and try again', details)
+  }
+
   toJSON() {
     return {
       error: this.name,
@@ -102,20 +133,11 @@ export function enhanceError(error: any): NotionMCPError {
 
   // Network error
   if (error.message?.includes('ECONNREFUSED') || error.message?.includes('ENOTFOUND')) {
-    return new NotionMCPError(
-      'Cannot connect to Notion API',
-      'NETWORK_ERROR',
-      'Check your internet connection and try again'
-    )
+    return NotionMCPError.network()
   }
 
   // Generic error
-  return new NotionMCPError(
-    error.message || 'Unknown error occurred',
-    'UNKNOWN_ERROR',
-    'Please check your request and try again',
-    sanitizeErrorDetails(error)
-  )
+  return NotionMCPError.unknown(error.message, sanitizeErrorDetails(error))
 }
 
 /**
@@ -178,9 +200,8 @@ function handleNotionError(error: any): NotionMCPError {
         'Property name or type mismatch. Use databases(action="get") to check the schema, then match property names exactly (case-sensitive).'
     }
 
-    return new NotionMCPError(
+    return NotionMCPError.validation(
       bodyMessage || 'Invalid request parameters',
-      'VALIDATION_ERROR',
       suggestion,
       sanitizeValidationBody(error.body)
     )
@@ -188,6 +209,8 @@ function handleNotionError(error: any): NotionMCPError {
 
   const mapping = NOTION_ERROR_MAP[code]
   if (mapping) {
+    if (code === 'unauthorized') return NotionMCPError.unauthorized()
+    if (code === 'object_not_found') return NotionMCPError.notFound()
     return new NotionMCPError(mapping.message, mapping.code, mapping.suggestion)
   }
 
