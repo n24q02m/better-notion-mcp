@@ -51,7 +51,7 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
           }
         } catch (error: any) {
           if (error.code === 'object_not_found') {
-            // Distinguish between a real 404 and the known Notion API limitation (OAuth 404)
+            // Distinguish between a real 404 and the known Notion API bug (OAuth 404)
             // by checking if the block/page actually exists.
             let blockExists = false
             try {
@@ -65,11 +65,11 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
             }
 
             if (blockExists) {
-              // If retrieve succeeds, it's the known API limitation
+              // If retrieve succeeds, it's the known API bug
               throw new NotionMCPError(
                 'Cannot list comments for this page',
                 'COMMENTS_LIST_UNAVAILABLE',
-                'This is a known Notion API limitation with OAuth integrations (API version 2025-09-03). The comments.list endpoint may return 404 even when the page exists and has comments. Workaround: use action="get" with a specific comment_id, or use action="create" which works normally.'
+                'This is a known Notion API bug with OAuth integrations (API version 2025-09-03). The comments.list endpoint may return 404 even when the page exists and has comments. Workaround: use action="get" with a specific comment_id, or use action="create" which works normally.'
               )
             }
             // If it's a real 404 (block retrieve also failed with object_not_found),
