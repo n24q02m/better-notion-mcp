@@ -6,6 +6,7 @@
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { autoPaginate } from '../helpers/pagination.js'
+import { normalizeId } from '../helpers/id.js'
 import * as RichText from '../helpers/richtext.js'
 
 export interface CommentsManageInput {
@@ -31,7 +32,7 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
         try {
           const comments = await autoPaginate(async (cursor) => {
             return await (notion.comments as any).list({
-              block_id: input.page_id,
+              block_id: normalizeId(input.page_id!),
               start_cursor: cursor
             })
           })
@@ -55,7 +56,7 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
             // by checking if the block/page actually exists.
             let blockExists = false
             try {
-              await notion.blocks.retrieve({ block_id: input.page_id })
+              await notion.blocks.retrieve({ block_id: normalizeId(input.page_id!) })
               blockExists = true
             } catch (innerError: any) {
               // If we get any error other than 404, we should probably know about it
@@ -84,7 +85,7 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
         }
 
         const comment: any = await (notion.comments as any).retrieve({
-          comment_id: input.comment_id
+          comment_id: normalizeId(input.comment_id!)
         })
 
         const text = RichText.extractPlainText(comment.rich_text)
@@ -129,7 +130,7 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
           createParams.discussion_id = input.discussion_id
         } else {
           createParams.parent = {
-            page_id: input.page_id
+            page_id: normalizeId(input.page_id!)
           }
         }
 

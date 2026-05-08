@@ -22,12 +22,12 @@ describe('commentsManage', () => {
       mockNotion.comments.list.mockResolvedValue({
         results: [
           {
-            id: 'comment-1',
+            id: 'comment1',
             created_time: '2024-01-01',
             created_by: { id: 'user-1' },
             discussion_id: 'disc-1',
             rich_text: [{ type: 'text', text: { content: 'Hello' } }],
-            parent: { type: 'page_id', page_id: 'page-1' }
+            parent: { type: 'page_id', page_id: 'page1' }
           },
           {
             id: 'comment-2',
@@ -38,7 +38,7 @@ describe('commentsManage', () => {
               { type: 'text', text: { content: 'World' } },
               { type: 'text', text: { content: '!' } }
             ],
-            parent: { type: 'page_id', page_id: 'page-1' }
+            parent: { type: 'page_id', page_id: 'page1' }
           }
         ],
         next_cursor: null,
@@ -47,19 +47,19 @@ describe('commentsManage', () => {
 
       const result = await commentsManage(mockNotion as any, {
         action: 'list',
-        page_id: 'page-1'
+        page_id: 'page1'
       })
 
-      expect(result.page_id).toBe('page-1')
+      expect(result.page_id).toBe('page1')
       expect(result.total_comments).toBe(2)
       expect(result.results).toHaveLength(2)
       expect(result.results[0]).toEqual({
-        id: 'comment-1',
+        id: 'comment1',
         created_time: '2024-01-01',
         created_by: { id: 'user-1' },
         discussion_id: 'disc-1',
         text: 'Hello',
-        parent: { type: 'page_id', page_id: 'page-1' }
+        parent: { type: 'page_id', page_id: 'page1' }
       })
       expect(result.results[1]).toEqual({
         id: 'comment-2',
@@ -67,10 +67,10 @@ describe('commentsManage', () => {
         created_by: { id: 'user-2' },
         discussion_id: 'disc-1',
         text: 'World!',
-        parent: { type: 'page_id', page_id: 'page-1' }
+        parent: { type: 'page_id', page_id: 'page1' }
       })
       expect(mockNotion.comments.list).toHaveBeenCalledWith({
-        block_id: 'page-1',
+        block_id: 'page1',
         start_cursor: undefined
       })
     })
@@ -84,10 +84,10 @@ describe('commentsManage', () => {
 
       const result = await commentsManage(mockNotion as any, {
         action: 'list',
-        page_id: 'page-1'
+        page_id: 'page1'
       })
 
-      expect(result.page_id).toBe('page-1')
+      expect(result.page_id).toBe('page1')
       expect(result.total_comments).toBe(0)
       expect(result.results).toEqual([])
     })
@@ -96,18 +96,18 @@ describe('commentsManage', () => {
       const notFoundError = new Error('Not found')
       ;(notFoundError as any).code = 'object_not_found'
       mockNotion.comments.list.mockRejectedValue(notFoundError)
-      mockNotion.blocks.retrieve.mockResolvedValue({ id: 'page-1' })
+      mockNotion.blocks.retrieve.mockResolvedValue({ id: 'page1' })
 
       await expect(
         commentsManage(mockNotion as any, {
           action: 'list',
-          page_id: 'page-1'
+          page_id: 'page1'
         })
       ).rejects.toMatchObject({
         code: 'COMMENTS_LIST_UNAVAILABLE',
         message: 'Cannot list comments for this page'
       })
-      expect(mockNotion.blocks.retrieve).toHaveBeenCalledWith({ block_id: 'page-1' })
+      expect(mockNotion.blocks.retrieve).toHaveBeenCalledWith({ block_id: 'page1' })
     })
 
     it('should re-throw object_not_found (wrapped as NOT_FOUND) if page itself does not exist', async () => {
@@ -119,7 +119,7 @@ describe('commentsManage', () => {
       await expect(
         commentsManage(mockNotion as any, {
           action: 'list',
-          page_id: 'page-1'
+          page_id: 'page1'
         })
       ).rejects.toMatchObject({
         code: 'NOT_FOUND'
@@ -134,7 +134,7 @@ describe('commentsManage', () => {
       await expect(
         commentsManage(mockNotion as any, {
           action: 'list',
-          page_id: 'page-1'
+          page_id: 'page1'
         })
       ).rejects.toThrow()
 
@@ -142,7 +142,7 @@ describe('commentsManage', () => {
       await expect(
         commentsManage(mockNotion as any, {
           action: 'list',
-          page_id: 'page-1'
+          page_id: 'page1'
         })
       ).rejects.not.toMatchObject({
         code: 'COMMENTS_LIST_UNAVAILABLE'
@@ -153,13 +153,13 @@ describe('commentsManage', () => {
       mockNotion.comments.list.mockResolvedValue({
         results: [
           {
-            id: 'comment-1',
+            id: 'comment1',
             created_time: '2024-01-01',
             created_by: { id: 'user-1' },
             discussion_id: 'disc-1',
             rich_text: [{ type: 'text', text: { content: 'Hello' } }],
             display_name: 'John Doe',
-            parent: { type: 'page_id', page_id: 'page-1' }
+            parent: { type: 'page_id', page_id: 'page1' }
           }
         ],
         next_cursor: null,
@@ -168,7 +168,7 @@ describe('commentsManage', () => {
 
       const result = await commentsManage(mockNotion as any, {
         action: 'list',
-        page_id: 'page-1'
+        page_id: 'page1'
       })
 
       expect(result.results[0].display_name).toBe('John Doe')
@@ -203,7 +203,7 @@ describe('commentsManage', () => {
       await expect(
         commentsManage(mockNotion as any, {
           action: 'list',
-          page_id: 'page-1'
+          page_id: 'page1'
         })
       ).rejects.toThrow('Pagination failed')
     })
@@ -212,45 +212,45 @@ describe('commentsManage', () => {
   describe('get', () => {
     it('should retrieve a single comment', async () => {
       mockNotion.comments.retrieve.mockResolvedValue({
-        id: 'comment-1',
+        id: 'comment1',
         created_time: '2024-01-01',
         created_by: { id: 'user-1' },
         discussion_id: 'disc-1',
         rich_text: [{ type: 'text', text: { content: 'Test comment' } }],
-        parent: { type: 'page_id', page_id: 'page-1' }
+        parent: { type: 'page_id', page_id: 'page1' }
       })
 
       const result = await commentsManage(mockNotion as any, {
         action: 'get',
-        comment_id: 'comment-1'
+        comment_id: 'comment1'
       })
 
       expect(result.action).toBe('get')
-      expect(result.comment_id).toBe('comment-1')
+      expect(result.comment_id).toBe('comment1')
       expect(result.created_time).toBe('2024-01-01')
       expect(result.created_by).toEqual({ id: 'user-1' })
       expect(result.discussion_id).toBe('disc-1')
       expect(result.text).toBe('Test comment')
       expect(result.rich_text).toEqual([{ type: 'text', text: { content: 'Test comment' } }])
-      expect(result.parent).toEqual({ type: 'page_id', page_id: 'page-1' })
+      expect(result.parent).toEqual({ type: 'page_id', page_id: 'page1' })
       expect(mockNotion.comments.retrieve).toHaveBeenCalledWith({
-        comment_id: 'comment-1'
+        comment_id: 'comment1'
       })
     })
 
     it('should handle undefined rich_text with _note field', async () => {
       mockNotion.comments.retrieve.mockResolvedValue({
-        id: 'comment-1',
+        id: 'comment1',
         created_time: '2024-01-01',
         created_by: { id: 'user-1' },
         discussion_id: 'disc-1',
         rich_text: undefined,
-        parent: { type: 'page_id', page_id: 'page-1' }
+        parent: { type: 'page_id', page_id: 'page1' }
       })
 
       const result = await commentsManage(mockNotion as any, {
         action: 'get',
-        comment_id: 'comment-1'
+        comment_id: 'comment1'
       })
 
       expect(result.text).toBe('')
@@ -260,18 +260,18 @@ describe('commentsManage', () => {
 
     it('should include display_name when present', async () => {
       mockNotion.comments.retrieve.mockResolvedValue({
-        id: 'comment-1',
+        id: 'comment1',
         created_time: '2024-01-01',
         created_by: { id: 'user-1' },
         discussion_id: 'disc-1',
         rich_text: [{ type: 'text', text: { content: 'Hello' } }],
         display_name: 'Jane Doe',
-        parent: { type: 'page_id', page_id: 'page-1' }
+        parent: { type: 'page_id', page_id: 'page1' }
       })
 
       const result = await commentsManage(mockNotion as any, {
         action: 'get',
-        comment_id: 'comment-1'
+        comment_id: 'comment1'
       })
 
       expect(result.display_name).toBe('Jane Doe')
@@ -291,7 +291,7 @@ describe('commentsManage', () => {
       await expect(
         commentsManage(mockNotion as any, {
           action: 'get',
-          comment_id: 'comment-1'
+          comment_id: 'comment1'
         })
       ).rejects.toThrow('Retrieve failed')
     })
@@ -306,7 +306,7 @@ describe('commentsManage', () => {
 
       const result = await commentsManage(mockNotion as any, {
         action: 'create',
-        page_id: 'page-1',
+        page_id: 'page1',
         content: 'New comment'
       })
 
@@ -321,12 +321,12 @@ describe('commentsManage', () => {
             text: { content: 'New comment', link: null }
           })
         ],
-        parent: { page_id: 'page-1' }
+        parent: { page_id: 'page1' }
       })
     })
 
     it('should throw without content', async () => {
-      await expect(commentsManage(mockNotion as any, { action: 'create', page_id: 'page-1' })).rejects.toMatchObject({
+      await expect(commentsManage(mockNotion as any, { action: 'create', page_id: 'page1' })).rejects.toMatchObject({
         code: 'VALIDATION_ERROR',
         message: 'content required for create action',
         suggestion: 'Provide comment content'
@@ -346,7 +346,7 @@ describe('commentsManage', () => {
       await expect(
         commentsManage(mockNotion as any, {
           action: 'create',
-          page_id: 'page-1',
+          page_id: 'page1',
           content: 'Hello'
         })
       ).rejects.toThrow('Create failed')
