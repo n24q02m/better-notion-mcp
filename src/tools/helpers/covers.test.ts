@@ -18,62 +18,94 @@ describe('formatCover', () => {
   describe('solid colors', () => {
     it('should resolve solid_red to Notion CDN URL', () => {
       const result = formatCover('solid_red')
-      expect(result.type).toBe('external')
-      expect(result.external.url).toBe('https://www.notion.so/images/page-cover/solid_red.png')
+      expect(result).toEqual({
+        type: 'external',
+        external: { url: 'https://www.notion.so/images/page-cover/solid_red.png' }
+      })
     })
 
     it('should resolve solid_blue to Notion CDN URL', () => {
       const result = formatCover('solid_blue')
-      expect(result.external.url).toBe('https://www.notion.so/images/page-cover/solid_blue.png')
+      expect(result).toEqual({
+        type: 'external',
+        external: { url: 'https://www.notion.so/images/page-cover/solid_blue.png' }
+      })
     })
 
     it('should resolve solid_yellow to Notion CDN URL', () => {
       const result = formatCover('solid_yellow')
-      expect(result.external.url).toBe('https://www.notion.so/images/page-cover/solid_yellow.png')
+      expect(result).toEqual({
+        type: 'external',
+        external: { url: 'https://www.notion.so/images/page-cover/solid_yellow.png' }
+      })
     })
 
     it('should resolve solid_beige to Notion CDN URL', () => {
       const result = formatCover('solid_beige')
-      expect(result.external.url).toBe('https://www.notion.so/images/page-cover/solid_beige.png')
+      expect(result).toEqual({
+        type: 'external',
+        external: { url: 'https://www.notion.so/images/page-cover/solid_beige.png' }
+      })
     })
   })
 
   describe('gradients', () => {
     it('should resolve gradient_1 (png)', () => {
       const result = formatCover('gradient_1')
-      expect(result.external.url).toBe('https://www.notion.so/images/page-cover/gradients_1.png')
+      expect(result).toEqual({
+        type: 'external',
+        external: { url: 'https://www.notion.so/images/page-cover/gradients_1.png' }
+      })
     })
 
     it('should resolve gradient_10 (jpg)', () => {
       const result = formatCover('gradient_10')
-      expect(result.external.url).toBe('https://www.notion.so/images/page-cover/gradients_10.jpg')
+      expect(result).toEqual({
+        type: 'external',
+        external: { url: 'https://www.notion.so/images/page-cover/gradients_10.jpg' }
+      })
     })
 
     it('should resolve gradient_11 (jpg)', () => {
       const result = formatCover('gradient_11')
-      expect(result.external.url).toBe('https://www.notion.so/images/page-cover/gradients_11.jpg')
+      expect(result).toEqual({
+        type: 'external',
+        external: { url: 'https://www.notion.so/images/page-cover/gradients_11.jpg' }
+      })
     })
   })
 
   describe('museum and NASA covers', () => {
     it('should resolve nasa_carina_nebula', () => {
       const result = formatCover('nasa_carina_nebula')
-      expect(result.external.url).toBe('https://www.notion.so/images/page-cover/nasa_carina_nebula.jpg')
+      expect(result).toEqual({
+        type: 'external',
+        external: { url: 'https://www.notion.so/images/page-cover/nasa_carina_nebula.jpg' }
+      })
     })
 
     it('should resolve met_paul_signac', () => {
       const result = formatCover('met_paul_signac')
-      expect(result.external.url).toBe('https://www.notion.so/images/page-cover/met_paul_signac.jpg')
+      expect(result).toEqual({
+        type: 'external',
+        external: { url: 'https://www.notion.so/images/page-cover/met_paul_signac.jpg' }
+      })
     })
 
     it('should resolve rijksmuseum_rembrandt_1642', () => {
       const result = formatCover('rijksmuseum_rembrandt_1642')
-      expect(result.external.url).toBe('https://www.notion.so/images/page-cover/rijksmuseum_rembrandt_1642.jpg')
+      expect(result).toEqual({
+        type: 'external',
+        external: { url: 'https://www.notion.so/images/page-cover/rijksmuseum_rembrandt_1642.jpg' }
+      })
     })
 
     it('should resolve woodcuts_3', () => {
       const result = formatCover('woodcuts_3')
-      expect(result.external.url).toBe('https://www.notion.so/images/page-cover/woodcuts_3.jpg')
+      expect(result).toEqual({
+        type: 'external',
+        external: { url: 'https://www.notion.so/images/page-cover/woodcuts_3.jpg' }
+      })
     })
   })
 

@@ -251,20 +251,21 @@ describe('aiReadableMessage', () => {
     expect(msg).toBe('Error: Page not found\n\nSuggestion: Check the ID')
   })
 
-  it('should format error without suggestion', () => {
+  it('should format error with fallback suggestions when no explicit suggestion provided', () => {
     const error = new NotionMCPError('Something failed', 'UNKNOWN')
     const msg = aiReadableMessage(error)
 
-    expect(msg).toBe('Error: Something failed')
-    expect(msg).not.toContain('Suggestion')
+    expect(msg).toContain('Error: Something failed')
+    expect(msg).toContain('Suggestion:')
+    expect(msg).toContain('Check Notion API status')
   })
 
-  it('should format error with details', () => {
+  it('should format error with details and fallback suggestions', () => {
     const error = new NotionMCPError('Bad input', 'VALIDATION_ERROR', undefined, { field: 'title' })
     const msg = aiReadableMessage(error)
 
     expect(msg).toContain('Error: Bad input')
-    expect(msg).not.toContain('Suggestion')
+    expect(msg).toContain('Suggestion:')
     expect(msg).toContain('Details:')
     expect(msg).toContain('"field": "title"')
   })

@@ -62,9 +62,9 @@ function createMention(
 const CALLOUT_REGEX = /^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION|INFO|SUCCESS|ERROR)\]\s*(.*)/i
 const IMAGE_REGEX = /^!\[([^\]]*)\]\(([^)]+)\)$/
 const BOOKMARK_REGEX = /^\[(bookmark|embed)\]\(([^)]+)\)$/i
-const CHECKED_LIST_REGEX = /^[-*]\s\[([ xX])\]\s/
-const BULLETED_LIST_REGEX = /^[-*]\s/
-const NUMBERED_LIST_REGEX = /^\d+\.\s/
+const CHECKED_LIST_REGEX = /^\s*[-*+]\s\[([ xX])\](?:\s|$)/
+const BULLETED_LIST_REGEX = /^\s*[-*+]\s/
+const NUMBERED_LIST_REGEX = /^\s*\d+\.\s/
 const DIVIDER_REGEX = /^[-*]{3,}$/
 
 /**
@@ -208,7 +208,8 @@ class MarkdownParser {
 
     // Task list / Checkbox list - [ ] or - [x]
     else if (CHECKED_LIST_REGEX.test(line)) {
-      const checked = line[3] !== ' '
+      const match = line.match(CHECKED_LIST_REGEX)
+      const checked = match ? match[1].toLowerCase() === 'x' : false
       const text = line.replace(CHECKED_LIST_REGEX, '')
       this.currentListType = 'bulleted'
       this.currentList.push(createTodoItem(text, checked))
@@ -331,118 +332,122 @@ function columnListToMarkdown(block: NotionBlock, lines: string[]): void {
   lines.push(':::end')
 }
 
+type BlockHandler = (block: NotionBlock, lines: string[]) => void
+
+const BLOCK_HANDLERS: Record<string, BlockHandler> = {
+  heading_1: (block, lines) => {
+    lines.push(`# ${richTextToMarkdown(block.heading_1.rich_text)}`)
+    if (block.heading_1.children?.length > 0) {
+      lines.push(blocksToMarkdown(block.heading_1.children))
+    }
+  },
+  heading_2: (block, lines) => {
+    lines.push(`## ${richTextToMarkdown(block.heading_2.rich_text)}`)
+    if (block.heading_2.children?.length > 0) {
+      lines.push(blocksToMarkdown(block.heading_2.children))
+    }
+  },
+  heading_3: (block, lines) => {
+    lines.push(`### ${richTextToMarkdown(block.heading_3.rich_text)}`)
+    if (block.heading_3.children?.length > 0) {
+      lines.push(blocksToMarkdown(block.heading_3.children))
+    }
+  },
+  paragraph: (block, lines) => {
+    lines.push(richTextToMarkdown(block.paragraph.rich_text))
+  },
+  bulleted_list_item: (block, lines) => {
+    lines.push(`- ${richTextToMarkdown(block.bulleted_list_item.rich_text)}`)
+    if (block.bulleted_list_item.children?.length > 0) {
+      lines.push(indentChildren(block.bulleted_list_item.children))
+    }
+  },
+  numbered_list_item: (block, lines) => {
+    lines.push(`1. ${richTextToMarkdown(block.numbered_list_item.rich_text)}`)
+    if (block.numbered_list_item.children?.length > 0) {
+      lines.push(indentChildren(block.numbered_list_item.children))
+    }
+  },
+  to_do: (block, lines) => {
+    lines.push(`- [${block.to_do.checked ? 'x' : ' '}] ${richTextToMarkdown(block.to_do.rich_text)}`)
+    if (block.to_do.children?.length > 0) {
+      lines.push(indentChildren(block.to_do.children))
+    }
+  },
+  code: (block, lines) => {
+    lines.push(`\`\`\`${block.code.language || ''}`)
+    lines.push(richTextToMarkdown(block.code.rich_text))
+    lines.push('```')
+  },
+  quote: (block, lines) => {
+    lines.push(`> ${richTextToMarkdown(block.quote.rich_text)}`)
+    if (block.quote.children?.length > 0) {
+      const childMd = blocksToMarkdown(block.quote.children)
+      lines.push(childMd.replace(/^/gm, '> '))
+    }
+  },
+  divider: (_, lines) => {
+    lines.push('---')
+  },
+  callout: (block, lines) => {
+    calloutToMarkdown(block, lines)
+  },
+  toggle: (block, lines) => {
+    toggleToMarkdown(block, lines)
+  },
+  image: (block, lines) => {
+    const imageUrl = block.image?.file?.url || block.image?.external?.url || ''
+    const caption = block.image?.caption ? richTextToMarkdown(block.image.caption) : ''
+    lines.push(`![${caption}](${imageUrl})`)
+  },
+  bookmark: (block, lines) => {
+    lines.push(`[bookmark](${block.bookmark.url})`)
+  },
+  embed: (block, lines) => {
+    lines.push(`[embed](${block.embed.url})`)
+  },
+  equation: (block, lines) => {
+    lines.push(`$$${block.equation.expression}$$`)
+  },
+  table: (block, lines) => {
+    tableToMarkdown(block, lines)
+  },
+  column_list: (block, lines) => {
+    columnListToMarkdown(block, lines)
+  },
+  table_of_contents: (_, lines) => {
+    lines.push('[toc]')
+  },
+  breadcrumb: (_, lines) => {
+    lines.push('[breadcrumb]')
+  },
+  file: (block, lines) => mediaToMarkdown(block, lines),
+  pdf: (block, lines) => mediaToMarkdown(block, lines),
+  video: (block, lines) => mediaToMarkdown(block, lines),
+  audio: (block, lines) => mediaToMarkdown(block, lines),
+  child_page: (block, lines) => {
+    lines.push(`[${block.child_page.title}](${block.id})`)
+  },
+  child_database: (block, lines) => {
+    lines.push(`[${block.child_database.title}](${block.id})`)
+  }
+}
+
+function mediaToMarkdown(block: NotionBlock, lines: string[]): void {
+  const mediaData = block[block.type]
+  const mediaUrl = mediaData?.file?.url || mediaData?.external?.url || ''
+  const mediaCaption = mediaData?.caption ? richTextToMarkdown(mediaData.caption) : ''
+  const mediaName = mediaData?.name || mediaCaption || block.type
+  lines.push(`[${mediaName}](${mediaUrl})`)
+}
+
 export function blocksToMarkdown(blocks: NotionBlock[]): string {
   const lines: string[] = []
 
   for (const block of blocks) {
-    switch (block.type) {
-      case 'heading_1':
-        lines.push(`# ${richTextToMarkdown(block.heading_1.rich_text)}`)
-        if (block.heading_1.children?.length > 0) {
-          lines.push(blocksToMarkdown(block.heading_1.children))
-        }
-        break
-      case 'heading_2':
-        lines.push(`## ${richTextToMarkdown(block.heading_2.rich_text)}`)
-        if (block.heading_2.children?.length > 0) {
-          lines.push(blocksToMarkdown(block.heading_2.children))
-        }
-        break
-      case 'heading_3':
-        lines.push(`### ${richTextToMarkdown(block.heading_3.rich_text)}`)
-        if (block.heading_3.children?.length > 0) {
-          lines.push(blocksToMarkdown(block.heading_3.children))
-        }
-        break
-      case 'paragraph':
-        lines.push(richTextToMarkdown(block.paragraph.rich_text))
-        break
-      case 'bulleted_list_item':
-        lines.push(`- ${richTextToMarkdown(block.bulleted_list_item.rich_text)}`)
-        if (block.bulleted_list_item.children?.length > 0) {
-          lines.push(indentChildren(block.bulleted_list_item.children))
-        }
-        break
-      case 'numbered_list_item':
-        lines.push(`1. ${richTextToMarkdown(block.numbered_list_item.rich_text)}`)
-        if (block.numbered_list_item.children?.length > 0) {
-          lines.push(indentChildren(block.numbered_list_item.children))
-        }
-        break
-      case 'to_do':
-        lines.push(`- [${block.to_do.checked ? 'x' : ' '}] ${richTextToMarkdown(block.to_do.rich_text)}`)
-        if (block.to_do.children?.length > 0) {
-          lines.push(indentChildren(block.to_do.children))
-        }
-        break
-      case 'code':
-        lines.push(`\`\`\`${block.code.language || ''}`)
-        lines.push(richTextToMarkdown(block.code.rich_text))
-        lines.push('```')
-        break
-      case 'quote':
-        lines.push(`> ${richTextToMarkdown(block.quote.rich_text)}`)
-        if (block.quote.children?.length > 0) {
-          const childMd = blocksToMarkdown(block.quote.children)
-          lines.push(childMd.replace(/^/gm, '> '))
-        }
-        break
-      case 'divider':
-        lines.push('---')
-        break
-      case 'callout':
-        calloutToMarkdown(block, lines)
-        break
-      case 'toggle':
-        toggleToMarkdown(block, lines)
-        break
-      case 'image': {
-        const imageUrl = block.image?.file?.url || block.image?.external?.url || ''
-        const caption = block.image?.caption ? richTextToMarkdown(block.image.caption) : ''
-        lines.push(`![${caption}](${imageUrl})`)
-        break
-      }
-      case 'bookmark':
-        lines.push(`[bookmark](${block.bookmark.url})`)
-        break
-      case 'embed':
-        lines.push(`[embed](${block.embed.url})`)
-        break
-      case 'equation':
-        lines.push(`$$${block.equation.expression}$$`)
-        break
-      case 'table':
-        tableToMarkdown(block, lines)
-        break
-      case 'column_list':
-        columnListToMarkdown(block, lines)
-        break
-      case 'table_of_contents':
-        lines.push('[toc]')
-        break
-      case 'breadcrumb':
-        lines.push('[breadcrumb]')
-        break
-      case 'file':
-      case 'pdf':
-      case 'video':
-      case 'audio': {
-        const mediaData = block[block.type]
-        const mediaUrl = mediaData?.file?.url || mediaData?.external?.url || ''
-        const mediaCaption = mediaData?.caption ? richTextToMarkdown(mediaData.caption) : ''
-        const mediaName = mediaData?.name || mediaCaption || block.type
-        lines.push(`[${mediaName}](${mediaUrl})`)
-        break
-      }
-      case 'child_page':
-        lines.push(`[${block.child_page.title}](${block.id})`)
-        break
-      case 'child_database':
-        lines.push(`[${block.child_database.title}](${block.id})`)
-        break
-      default:
-        // Unsupported block type, skip
-        break
+    const handler = BLOCK_HANDLERS[block.type]
+    if (handler) {
+      handler(block, lines)
     }
   }
 
@@ -1230,5 +1235,5 @@ function createBreadcrumb(): NotionBlock {
 }
 
 function isListItem(line: string): boolean {
-  return BULLETED_LIST_REGEX.test(line) || NUMBERED_LIST_REGEX.test(line)
+  return CHECKED_LIST_REGEX.test(line) || BULLETED_LIST_REGEX.test(line) || NUMBERED_LIST_REGEX.test(line)
 }

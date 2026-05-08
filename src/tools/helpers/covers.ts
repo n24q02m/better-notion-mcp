@@ -65,7 +65,7 @@ const COVER_CATALOG: Record<string, string> = {
   met_silk_kashan_carpet: `${NOTION_COVER_BASE}/met_silk_kashan_carpet.jpg`,
   met_horace_pippin: `${NOTION_COVER_BASE}/met_horace_pippin.jpg`,
   met_paul_signac: `${NOTION_COVER_BASE}/met_paul_signac.jpg`,
-  met_fitz_henry_lane: `${NOTION_COVER_BASE}/met_fitz_henry_lane.jpg`,
+  met_fit_henry_lane: `${NOTION_COVER_BASE}/met_fitz_henry_lane.jpg`,
   met_william_turner_1835: `${NOTION_COVER_BASE}/met_william_turner_1835.jpg`,
   met_arnold_bocklin_1880: `${NOTION_COVER_BASE}/met_arnold_bocklin_1880.jpg`,
 
@@ -81,13 +81,18 @@ const COVER_CATALOG: Record<string, string> = {
   rijksmuseum_rembrandt_1642: `${NOTION_COVER_BASE}/rijksmuseum_rembrandt_1642.jpg`
 }
 
+/** Notion cover object (external image or file) */
+export type NotionCover =
+  | { type: 'external'; external: { url: string } }
+  | { type: 'file'; file: { url: string; expiry_time: string } }
+
 /**
  * Format a cover value into the Notion API cover object.
  * Accepts:
  * - Full URL (http/https) -> external cover
  * - Shorthand name (e.g., "gradient_8", "solid_blue") -> resolved to Notion CDN URL
  */
-export function formatCover(value: string): { type: 'external'; external: { url: string } } {
+export function formatCover(value: string): NotionCover {
   // Full URL (with safety check against javascript:, data:, etc.)
   if (value.startsWith('http://') || value.startsWith('https://')) {
     if (!isSafeUrl(value)) {

@@ -35,3 +35,12 @@ Retrieve a single comment by its ID.
 - `comment_id` - Comment ID (for get action)
 - `discussion_id` - Discussion ID (for replies)
 - `content` - Comment content
+
+## Known Limitations
+
+### comments.list returns 404 (OAuth Bug)
+As of 2025-09-03, the Notion API may return a 404 error when attempting to list comments using an OAuth token, even if the page exists and has comments. This is a known issue with the Notion API itself.
+
+**Workarounds:**
+1. **Use action: "get"** - If you have a specific `comment_id`, you can still retrieve it directly.
+2. **Use action: "create"** - Creating new comments or replying to discussions via `discussion_id` is unaffected and works as expected.

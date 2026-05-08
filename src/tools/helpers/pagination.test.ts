@@ -262,7 +262,7 @@ describe('populateDeepChildren', () => {
         }
       }
     }
-    const blocks = [{ id: 'parent-1', type: 'toggle', has_children: true, toggle: {} }]
+    const blocks: any[] = [{ id: 'parent-1', type: 'toggle', has_children: true, toggle: {} }]
 
     await populateDeepChildren(mockNotion as any, blocks)
 

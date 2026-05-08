@@ -67,9 +67,8 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
             if (blockExists) {
               // If retrieve succeeds, it's the known API limitation
               throw new NotionMCPError(
-                'Cannot list comments for this page',
-                'COMMENTS_LIST_UNAVAILABLE',
-                'This is a known Notion API limitation with OAuth integrations (API version 2025-09-03). The comments.list endpoint may return 404 even when the page exists and has comments. Workaround: use action="get" with a specific comment_id, or use action="create" which works normally.'
+                'The comments.list API is currently unavailable for this page due to a known Notion OAuth limitation.',
+                'COMMENTS_LIST_UNAVAILABLE'
               )
             }
             // If it's a real 404 (block retrieve also failed with object_not_found),

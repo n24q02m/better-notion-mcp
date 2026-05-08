@@ -690,4 +690,10 @@ describe('extractPageProperties', () => {
     }
     expect(extractPageProperties(props)).toEqual({})
   })
+
+  it('handles null, undefined or empty input', () => {
+    expect(extractPageProperties(null)).toEqual({})
+    expect(extractPageProperties(undefined)).toEqual({})
+    expect(extractPageProperties({})).toEqual({})
+  })
 })
