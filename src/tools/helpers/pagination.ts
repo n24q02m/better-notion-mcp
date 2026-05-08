@@ -67,17 +67,20 @@ const MAX_DEPTH = 5
 
 /**
  * Simple concurrency queue to manage parallel tasks with a limit.
- * Supports fail-fast (stops starting new tasks if one fails).
+ * Supports optional fail-fast (stops starting new tasks if one fails).
  */
 export class ConcurrencyQueue {
   private activeCount = 0
   private queue: (() => void)[] = []
   private hasError = false
 
-  constructor(private readonly limit: number) {}
+  constructor(
+    private readonly limit: number,
+    private readonly failFast = true
+  ) {}
 
   async run<T>(task: () => Promise<T>): Promise<T> {
-    if (this.hasError) {
+    if (this.failFast && this.hasError) {
       throw new Error('Queue stopped due to previous error')
     }
 
@@ -85,7 +88,7 @@ export class ConcurrencyQueue {
       await new Promise<void>((resolve) => this.queue.push(resolve))
     }
 
-    if (this.hasError) {
+    if (this.failFast && this.hasError) {
       throw new Error('Queue stopped due to previous error')
     }
 
@@ -93,17 +96,19 @@ export class ConcurrencyQueue {
     try {
       return await task()
     } catch (error) {
-      this.hasError = true
-      // Notify all waiting tasks to wake up and see the error
-      const waiters = this.queue
-      this.queue = []
-      for (const resolve of waiters) {
-        resolve()
+      if (this.failFast) {
+        this.hasError = true
+        // Notify all waiting tasks to wake up and see the error
+        const waiters = this.queue
+        this.queue = []
+        for (const resolve of waiters) {
+          resolve()
+        }
       }
       throw error
     } finally {
       this.activeCount--
-      if (this.queue.length > 0 && !this.hasError) {
+      if (this.queue.length > 0 && (!this.failFast || !this.hasError)) {
         const next = this.queue.shift()
         next?.()
       }
@@ -114,37 +119,78 @@ export class ConcurrencyQueue {
 /**
  * Recursively fetch children for blocks that need them (tables, toggles, columns, etc.)
  * Mutates blocks in-place by attaching children arrays.
+ *
+ * Optimized with:
+ * 1. Breadth-first parallel fetching (minimizes N+1 impact)
+ * 2. Promise.allSettled for resilience (one sibling failing doesn't stop others)
+ * 3. Session-scoped cache for in-flight deduplication (avoids multi-tenant data leaks)
  */
 export async function fetchChildrenRecursive(
   blocks: any[],
   fetchChildren: (blockId: string) => Promise<any[]>,
   depth = 0,
-  queue?: ConcurrencyQueue
+  queue?: ConcurrencyQueue,
+  sessionCache?: Map<string, any[]>
 ): Promise<void> {
-  if (depth >= MAX_DEPTH) return
+  if (depth >= MAX_DEPTH || !blocks.length) return
 
-  const fetchAndRecurse = async (block: any) => {
-    const children = queue ? await queue.run(() => fetchChildren(block.id)) : await fetchChildren(block.id)
+  // 1. Identify blocks at current level that need children
+  const targetBlocks = blocks.filter((block) => block.has_children && BLOCKS_NEEDING_CHILDREN.has(block.type))
 
-    // Attach children to the correct property based on block type
-    if (block[block.type]) {
-      block[block.type].children = children
+  if (targetBlocks.length === 0) return
+
+  // 2. Fetch children in parallel for unique IDs at this level
+  const uniqueIds = Array.from(new Set(targetBlocks.map((b) => b.id)))
+  const resultsMap = new Map<string, any[]>()
+
+  const fetchResults = await Promise.allSettled(
+    uniqueIds.map(async (id) => {
+      // Check session cache for in-flight deduplication (e.g. from higher levels)
+      const cached = sessionCache?.get(id)
+      if (cached) return { id, children: cached }
+
+      // Fetch fresh data
+      const children = queue ? await queue.run(() => fetchChildren(id)) : await fetchChildren(id)
+
+      // Update session cache
+      sessionCache?.set(id, children)
+      return { id, children }
+    })
+  )
+
+  // 3. Attach results and collect all discovered children for recursion
+  const allDiscoveredChildren: any[] = []
+
+  // Populate resultsMap for quick lookup
+  for (const result of fetchResults) {
+    if (result.status === 'fulfilled') {
+      resultsMap.set(result.value.id, result.value.children)
+    } else {
+      // Error handling is done per-block below
     }
-
-    // Recurse into children
-    await fetchChildrenRecursive(children, fetchChildren, depth + 1, queue)
   }
 
-  const promises: Promise<void>[] = []
-  for (let i = 0; i < blocks.length; i++) {
-    const block = blocks[i]
-    if (block.has_children && BLOCKS_NEEDING_CHILDREN.has(block.type)) {
-      promises.push(fetchAndRecurse(block))
+  for (const block of targetBlocks) {
+    const children = resultsMap.get(block.id)
+    if (children) {
+      // Attach children to the correct property based on block type
+      if (block[block.type]) {
+        block[block.type].children = children
+      }
+      allDiscoveredChildren.push(...children)
+    } else {
+      // Look for the specific error in fetchResults if it failed for this ID
+      const resultIdx = uniqueIds.indexOf(block.id)
+      const result = fetchResults[resultIdx]
+      if (result && result.status === 'rejected') {
+        console.error(`Failed to fetch children for block ${block.id}:`, result.reason)
+      }
     }
   }
 
-  if (promises.length > 0) {
-    await Promise.all(promises)
+  // 4. Recurse into the next level (breadth-first)
+  if (allDiscoveredChildren.length > 0) {
+    await fetchChildrenRecursive(allDiscoveredChildren, fetchChildren, depth + 1, queue, sessionCache)
   }
 }
 
@@ -173,7 +219,12 @@ export async function processBatches<T, R>(
  */
 export async function populateDeepChildren(notion: Client, blocks: any[]): Promise<void> {
   // Use a shared queue to cap total concurrent Notion API calls at 5 across the whole tree
-  const queue = new ConcurrencyQueue(5)
+  // Set failFast to false to allow parallel sibling fetches even if one fails
+  const queue = new ConcurrencyQueue(5, false)
+
+  // Use a local Map for deduplication within this tool call.
+  // This avoids multi-tenant data leaks inherent in module-level caching.
+  const sessionCache = new Map<string, any[]>()
 
   await fetchChildrenRecursive(
     blocks,
@@ -183,6 +234,7 @@ export async function populateDeepChildren(notion: Client, blocks: any[]): Promi
       ) as any
     },
     0,
-    queue
+    queue,
+    sessionCache
   )
 }
