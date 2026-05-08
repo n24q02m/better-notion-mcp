@@ -140,6 +140,37 @@ export async function pages(notion: Client, input: PagesInput): Promise<PagesRes
  * Create page with title and content
  * Maps to: POST /v1/pages + PATCH /v1/blocks/{id}/children
  */
+
+/**
+ * Translate PagesInput to Notion API page payload structures
+ * Handles icon, cover, title, and properties consistently
+ */
+function translateToNotionPayload(input: PagesInput, options: { isDatabase?: boolean } = {}) {
+  const payload: any = {}
+
+  if (input.icon) payload.icon = formatIcon(input.icon)
+  if (input.cover) payload.cover = formatCover(input.cover)
+
+  if (options.isDatabase) {
+    payload.properties = convertToNotionProperties(input.properties || {})
+    if (input.title && !payload.properties.title && !payload.properties.Name && !payload.properties.Title) {
+      // Default to 'Name' for database pages if no title property provided
+      payload.properties.Name = { title: [RichText.text(input.title)] }
+    }
+  } else if (input.title || input.properties) {
+    payload.properties = {}
+    if (input.title) {
+      payload.properties.title = { title: [RichText.text(input.title)] }
+    }
+    if (input.properties) {
+      const converted = convertToNotionProperties(input.properties)
+      payload.properties = { ...payload.properties, ...converted }
+    }
+  }
+
+  return payload
+}
+
 async function createPage(notion: Client, input: PagesInput): Promise<CreatePageResult> {
   if (!input.title) {
     throw new NotionMCPError('title is required for create action', 'VALIDATION_ERROR', 'Provide page title')
@@ -156,27 +187,13 @@ async function createPage(notion: Client, input: PagesInput): Promise<CreatePage
   const normalizedId = input.parent_id.replace(/-/g, '')
 
   // Auto-detect parent type
-  let parent: any
-  if (input.properties && Object.keys(input.properties).length > 0) {
-    parent = { type: 'database_id', database_id: normalizedId }
-  } else {
-    parent = { type: 'page_id', page_id: normalizedId }
-  }
+  const isDatabase = !!(input.properties && Object.keys(input.properties).length > 0)
+  const parent = isDatabase
+    ? { type: 'database_id', database_id: normalizedId }
+    : { type: 'page_id', page_id: normalizedId }
 
-  // Prepare properties
-  let properties: any = {}
-  if (parent.database_id) {
-    properties = convertToNotionProperties(input.properties || {})
-    if (!properties.title && !properties.Name && !properties.Title) {
-      properties.Name = { title: [RichText.text(input.title)] }
-    }
-  } else {
-    properties = { title: { title: [RichText.text(input.title)] } }
-  }
-
-  const pageData: any = { parent, properties }
-  if (input.icon) pageData.icon = formatIcon(input.icon)
-  if (input.cover) pageData.cover = formatCover(input.cover)
+  const payload = translateToNotionPayload(input, { isDatabase })
+  const pageData: any = { ...payload, parent }
 
   const page = await notion.pages.create(pageData)
 
@@ -338,26 +355,10 @@ async function updatePage(notion: Client, input: PagesInput): Promise<UpdatePage
     throw new NotionMCPError('page_id is required for update action', 'VALIDATION_ERROR', 'Provide page_id')
   }
 
-  const updates: any = {}
+  const updates = translateToNotionPayload(input)
 
   // Update metadata
-  if (input.icon) updates.icon = formatIcon(input.icon)
-  if (input.cover) updates.cover = formatCover(input.cover)
   if (input.archived !== undefined) updates.archived = input.archived
-
-  // Update properties
-  if (input.properties || input.title) {
-    updates.properties = {}
-
-    if (input.title) {
-      updates.properties.title = { title: [RichText.text(input.title)] }
-    }
-
-    if (input.properties) {
-      const converted = convertToNotionProperties(input.properties)
-      updates.properties = { ...updates.properties, ...converted }
-    }
-  }
 
   // Update page if we have metadata/property changes
   if (Object.keys(updates).length > 0) {
