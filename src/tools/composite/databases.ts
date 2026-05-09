@@ -79,6 +79,7 @@ async function getSmartSearchFilter(notion: Client, dataSourceId: string, search
  */
 function formatDatabaseResults(results: any[]): Record<string, any>[] {
   const formattedResults = new Array(results.length)
+
   for (let i = 0; i < results.length; i++) {
     const page: any = results[i]
     const props = extractPageProperties(page.properties)

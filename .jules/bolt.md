@@ -9,3 +9,6 @@
 ## 2025-05-06 - normalizeId Fast Path Optimization
 **Learning:** Using `id.replace(/-/g, '')` directly on strings that are already clean (do not contain hyphens) incurs unnecessary regex evaluation overhead on hot paths, adding ~10-20x extra time compared to checking for the target character first.
 **Action:** When a replacement string is commonly already correctly formatted, apply an early return check using `indexOf` (e.g., `if (id.indexOf('-') === -1) return id`) to bypass the regex engine.
+## 2026-05-09 - Optimize `extractPageProperties` type evaluation chain
+**Learning:** In highly trafficked serialization functions containing massive `if-else` chains (like evaluating over 20 Notion property types), repeatedly accessing object properties (e.g., `p.type`) in every branch condition incurs unnecessary evaluation overhead.
+**Action:** Cache frequently accessed object properties (like `type`, or array references like `title` before a loop) into local variables prior to hot-path evaluations to reduce redundant property lookups without sacrificing readability.
