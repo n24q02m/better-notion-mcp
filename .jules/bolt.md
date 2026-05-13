@@ -9,3 +9,7 @@
 ## 2025-05-06 - normalizeId Fast Path Optimization
 **Learning:** Using `id.replace(/-/g, '')` directly on strings that are already clean (do not contain hyphens) incurs unnecessary regex evaluation overhead on hot paths, adding ~10-20x extra time compared to checking for the target character first.
 **Action:** When a replacement string is commonly already correctly formatted, apply an early return check using `indexOf` (e.g., `if (id.indexOf('-') === -1) return id`) to bypass the regex engine.
+
+## 2025-05-13 - Property Type Caching
+**Learning:** In highly repetitive loops parsing heterogeneous external API payloads (like Notion properties), repeated property access (e.g. `p.type === 'something'`) inside large `if...else if` chains adds unnecessary overhead compared to caching the value into a local variable (`const type = p.type`).
+**Action:** When evaluating the same object property multiple times across conditional branches within a hot path or loop, assign the property to a local `const` variable before the conditional checks.
