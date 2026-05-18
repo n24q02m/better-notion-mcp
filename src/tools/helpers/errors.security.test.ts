@@ -69,4 +69,33 @@ describe('Security: Error Handling', () => {
       expect(enhanced.details.request._headers).not.toHaveProperty('authorization')
     }
   })
+
+  it('should handle case-insensitive authorization headers properly', () => {
+    const errorWithMixedCaseAuth = {
+      message: 'Network error',
+      headers: {
+        AUTHORIZATION: 'Bearer 123',
+        'Content-Type': 'application/json'
+      },
+      config: {
+        headers: {
+          AuThOrIzAtIoN: 'Bearer 456'
+        }
+      }
+    }
+
+    const enhanced = enhanceError(errorWithMixedCaseAuth)
+    expect(enhanced.details).toBeDefined()
+
+    // Convert to JSON string to make it easy to assert no keys are leaked
+    // enhanceError sanitizes objects and moves them to details.
+    // However, it drops `headers` unless they are part of the original generic error structure.
+    // The main verification is that the original object mutated in place does not have the keys.
+    const originalErrorStr = JSON.stringify(errorWithMixedCaseAuth)
+    expect(originalErrorStr).not.toContain('AUTHORIZATION')
+    expect(originalErrorStr).not.toContain('AuThOrIzAtIoN')
+    expect(originalErrorStr).not.toContain('Bearer 123')
+    expect(originalErrorStr).not.toContain('Bearer 456')
+    expect(originalErrorStr).toContain('Content-Type')
+  })
 })

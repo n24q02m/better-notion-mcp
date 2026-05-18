@@ -71,12 +71,19 @@ function stripSensitiveFields(obj: any, seen = new WeakSet()): void {
   delete obj.internal_config
   delete obj.user_email
 
-  // Also strip authorization headers to prevent leaking tokens
-  if (obj.headers?.Authorization) delete obj.headers.Authorization
-  if (obj.headers?.authorization) delete obj.headers.authorization
-  if (obj.request?._headers?.authorization) delete obj.request._headers.authorization
-  if (obj.config?.headers?.Authorization) delete obj.config.headers.Authorization
-  if (obj.config?.headers?.authorization) delete obj.config.headers.authorization
+  // Also strip authorization headers (case-insensitive) to prevent leaking tokens
+  const stripAuthHeaders = (headersObj: any) => {
+    if (!headersObj || typeof headersObj !== 'object') return
+    for (const key of Object.keys(headersObj)) {
+      if (key.toLowerCase() === 'authorization') {
+        delete headersObj[key]
+      }
+    }
+  }
+
+  stripAuthHeaders(obj.headers)
+  stripAuthHeaders(obj.request?._headers)
+  stripAuthHeaders(obj.config?.headers)
 
   for (const key of Object.keys(obj)) {
     if (typeof obj[key] === 'object' && obj[key] !== null) {
