@@ -9,3 +9,7 @@
 ## 2025-05-06 - normalizeId Fast Path Optimization
 **Learning:** Using `id.replace(/-/g, '')` directly on strings that are already clean (do not contain hyphens) incurs unnecessary regex evaluation overhead on hot paths, adding ~10-20x extra time compared to checking for the target character first.
 **Action:** When a replacement string is commonly already correctly formatted, apply an early return check using `indexOf` (e.g., `if (id.indexOf('-') === -1) return id`) to bypass the regex engine.
+
+## 2025-05-19 - Object Property Lookups in Tight Loops
+**Learning:** In V8 and other JS engines, repeatedly accessing the same object property (`p.type`) across a long `if/else if` chain of conditional branches adds measurable overhead due to property lookup mechanics, particularly in tight loops processing large heterogeneous JSON arrays (like Notion API responses).
+**Action:** When evaluating the same property multiple times inside a loop (especially for type-checking branches), cache it into a local `const` variable (e.g., `const type = p.type`) before the conditional chain to reduce property access latency and improve overall throughput.
