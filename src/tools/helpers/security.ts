@@ -5,7 +5,15 @@
  */
 
 /** Tools that return content from external Notion sources (untrusted) */
-const EXTERNAL_CONTENT_TOOLS = new Set(['pages', 'blocks', 'comments', 'databases', 'users', 'workspace'])
+const EXTERNAL_CONTENT_TOOLS = new Set([
+  'pages',
+  'blocks',
+  'comments',
+  'databases',
+  'users',
+  'workspace',
+  'file_uploads'
+])
 
 // Pre-compiled regex for URL validation hot path
 const URL_DELIMITER_REGEX = /[/?#]/

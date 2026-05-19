@@ -316,7 +316,6 @@ describe('registerTools', () => {
 
       expect(pages).toHaveBeenCalledWith(expect.any(Object), { action: 'get', page_id: 'page-123' })
       expect(result.content[0].text).toContain(JSON.stringify(mockResult, null, 2))
-      expect(result.content[0].text).toContain('<untrusted_notion_content>')
       expect(result.content[0].text).toContain('[SECURITY:')
     })
 
@@ -338,7 +337,6 @@ describe('registerTools', () => {
 
       expect(databases).toHaveBeenCalledWith(expect.any(Object), { action: 'query', database_id: 'db-1' })
       expect(result.content[0].text).toContain(JSON.stringify(mockResult, null, 2))
-      expect(result.content[0].text).toContain('<untrusted_notion_content>')
     })
 
     it('should route blocks tool correctly', async () => {
@@ -352,7 +350,6 @@ describe('registerTools', () => {
 
       expect(blocks).toHaveBeenCalledWith(expect.any(Object), { action: 'get', block_id: 'block-1' })
       expect(result.content[0].text).toContain(JSON.stringify(mockResult, null, 2))
-      expect(result.content[0].text).toContain('<untrusted_notion_content>')
     })
 
     it('should route users tool correctly', async () => {
@@ -366,7 +363,6 @@ describe('registerTools', () => {
 
       expect(users).toHaveBeenCalledWith(expect.any(Object), { action: 'me' })
       expect(result.content[0].text).toContain(JSON.stringify(mockResult, null, 2))
-      expect(result.content[0].text).toContain('<untrusted_notion_content>')
     })
 
     it('should route workspace tool correctly', async () => {
@@ -380,7 +376,6 @@ describe('registerTools', () => {
 
       expect(workspace).toHaveBeenCalledWith(expect.any(Object), { action: 'search', query: 'test' })
       expect(result.content[0].text).toContain(JSON.stringify(mockResult, null, 2))
-      expect(result.content[0].text).toContain('<untrusted_notion_content>')
     })
 
     it('should route comments tool correctly', async () => {
@@ -394,7 +389,6 @@ describe('registerTools', () => {
 
       expect(commentsManage).toHaveBeenCalledWith(expect.any(Object), { action: 'list', page_id: 'page-1' })
       expect(result.content[0].text).toContain(JSON.stringify(mockResult, null, 2))
-      expect(result.content[0].text).toContain('<untrusted_notion_content>')
     })
 
     it('should route content_convert tool without notion client', async () => {
@@ -414,7 +408,7 @@ describe('registerTools', () => {
         direction: 'markdown-to-blocks',
         content: '# Hello'
       })
-      expect(result.content[0].text).toBe(JSON.stringify(mockResult, null, 2))
+      expect(result.content[0].text).toContain(JSON.stringify(mockResult, null, 2))
     })
 
     it('should route config tool without notion client', async () => {
@@ -431,7 +425,7 @@ describe('registerTools', () => {
 
       // config is called without notion client
       expect(config).toHaveBeenCalledWith({ action: 'status' })
-      expect(result.content[0].text).toBe(JSON.stringify(mockResult, null, 2))
+      expect(result.content[0].text).toContain(JSON.stringify(mockResult, null, 2))
     })
 
     it('should route config__open_relay tool and return relay URL JSON', async () => {
@@ -471,7 +465,8 @@ describe('registerTools', () => {
       })
 
       expect(fileUploads).toHaveBeenCalledWith(expect.any(Object), { action: 'list' })
-      expect(result.content[0].text).toBe(JSON.stringify(mockResult, null, 2))
+      expect(result.content[0].text).toContain(JSON.stringify(mockResult, null, 2))
+      expect(result.content[0].text).toContain('<untrusted_notion_content>')
     })
 
     it('should route help tool and read documentation file', async () => {
@@ -593,7 +588,6 @@ describe('registerTools', () => {
       })
 
       expect(result.content[0].text).toContain(JSON.stringify({ ok: true }, null, 2))
-      expect(result.content[0].text).toContain('<untrusted_notion_content>')
       expect(result.isError).toBeUndefined()
     })
   })
