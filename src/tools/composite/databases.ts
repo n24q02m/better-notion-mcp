@@ -407,16 +407,17 @@ async function getDatabase(notion: Client, input: DatabasesInput): Promise<GetDa
     if (properties) {
       for (const [name, prop] of Object.entries(properties)) {
         const p = prop as any
+        const type = p.type
         schema[name] = {
-          type: p.type,
+          type,
           id: p.id
         }
 
-        if (p.type === 'select' && p.select?.options) {
+        if (type === 'select' && p.select?.options) {
           schema[name].options = p.select.options.map((o: any) => o.name)
-        } else if (p.type === 'multi_select' && p.multi_select?.options) {
+        } else if (type === 'multi_select' && p.multi_select?.options) {
           schema[name].options = p.multi_select.options.map((o: any) => o.name)
-        } else if (p.type === 'formula' && p.formula) {
+        } else if (type === 'formula' && p.formula) {
           schema[name].expression = p.formula.expression
         }
       }
