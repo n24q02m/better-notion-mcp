@@ -96,7 +96,7 @@ describe('Security Utilities', () => {
 
   describe('wrapToolResult', () => {
     it('should wrap external content tools with safety markers', () => {
-      const externalTools = ['pages', 'blocks', 'comments', 'databases', 'users', 'workspace']
+      const externalTools = ['pages', 'blocks', 'comments', 'databases', 'users', 'workspace', 'file_uploads']
       const jsonText = '{"data": "some untrusted data"}'
 
       for (const tool of externalTools) {

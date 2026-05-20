@@ -471,7 +471,8 @@ describe('registerTools', () => {
       })
 
       expect(fileUploads).toHaveBeenCalledWith(expect.any(Object), { action: 'list' })
-      expect(result.content[0].text).toBe(JSON.stringify(mockResult, null, 2))
+      expect(result.content[0].text).toContain(JSON.stringify(mockResult, null, 2))
+      expect(result.content[0].text).toContain('<untrusted_notion_content>')
     })
 
     it('should route help tool and read documentation file', async () => {
