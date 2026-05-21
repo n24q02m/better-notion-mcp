@@ -405,18 +405,21 @@ async function getDatabase(notion: Client, input: DatabasesInput): Promise<GetDa
 
     // Format properties for AI-friendly output
     if (properties) {
-      for (const [name, prop] of Object.entries(properties)) {
-        const p = prop as any
+      const keys = Object.keys(properties)
+      for (let i = 0; i < keys.length; i++) {
+        const name = keys[i]
+        const p = (properties as any)[name]
+        const type = p.type // Cache type lookup for V8 optimization
         schema[name] = {
-          type: p.type,
+          type: type,
           id: p.id
         }
 
-        if (p.type === 'select' && p.select?.options) {
+        if (type === 'select' && p.select?.options) {
           schema[name].options = p.select.options.map((o: any) => o.name)
-        } else if (p.type === 'multi_select' && p.multi_select?.options) {
+        } else if (type === 'multi_select' && p.multi_select?.options) {
           schema[name].options = p.multi_select.options.map((o: any) => o.name)
-        } else if (p.type === 'formula' && p.formula) {
+        } else if (type === 'formula' && p.formula) {
           schema[name].expression = p.formula.expression
         }
       }
@@ -513,8 +516,10 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
   const properties = await getDataSourceSchema(notion, dataSourceId)
   const schema: Record<string, string> = {}
   if (properties) {
-    for (const [name, prop] of Object.entries(properties)) {
-      schema[name] = (prop as any).type
+    const keys = Object.keys(properties)
+    for (let i = 0; i < keys.length; i++) {
+      const name = keys[i]
+      schema[name] = (properties as any)[name].type
     }
   }
 
