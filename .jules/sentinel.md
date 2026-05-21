@@ -11,3 +11,8 @@
 **Vulnerability:** In `tests/test-oauth-mcp.mjs`, the `_openBrowser` function was using `execFile('cmd', ['/c', 'start', url])` to open authorization URLs on Windows. This allowed any unsanitized `url` payload containing shell metacharacters (like `&` or `|`) to bypass protections and trigger arbitrary code execution, as `cmd.exe` parses and executes them before running the internal `start` command.
 **Learning:** `child_process.execFile` only guarantees safe parameter passing to the binary being invoked. If the binary is a shell (like `cmd.exe`), it applies its own parsing rules to the passed arguments, re-introducing shell injection risks even when using the ostensibly safe `execFile`.
 **Prevention:** When programmatic interaction requires opening URLs on Windows without shell intervention, utilize OS-level file protocol handlers directly via `execFile('rundll32', ['url.dll,FileProtocolHandler', url])` to avoid `cmd.exe` parsing entirely.
+
+## 2024-05-21 - [Prevent Indirect Prompt Injection (XPIA) in file_uploads]
+**Vulnerability:** Newly added tools that fetch external content, like `file_uploads`, were missing from `EXTERNAL_CONTENT_TOOLS`, leaving them vulnerable to XPIA attacks where malicious file contents could alter agent behavior.
+**Learning:** Any MCP tool returning data from external, untrusted sources (especially file content/metadata) must have its output wrapped in security markers to ensure the AI treats it strictly as data.
+**Prevention:** Whenever a new tool interacting with external content is introduced, it must be explicitly added to `EXTERNAL_CONTENT_TOOLS` in `src/tools/helpers/security.ts` to inherit safety wrappers.
