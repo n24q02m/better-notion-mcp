@@ -461,7 +461,7 @@ describe('registerTools', () => {
       expect(tool.inputSchema.additionalProperties).toBe(false)
     })
 
-    it('should route file_uploads tool correctly', async () => {
+    it('should route file_uploads tool correctly and wrap response with XPIA safety markers', async () => {
       const handler = server.getHandler(3)
       const mockResult = { action: 'list', uploads: [] }
       vi.mocked(fileUploads).mockResolvedValue(mockResult)
@@ -471,7 +471,14 @@ describe('registerTools', () => {
       })
 
       expect(fileUploads).toHaveBeenCalledWith(expect.any(Object), { action: 'list' })
-      expect(result.content[0].text).toBe(JSON.stringify(mockResult, null, 2))
+      // file_uploads is now treated as external/untrusted content -- the
+      // JSON payload must be wrapped in <untrusted_notion_content> tags so
+      // downstream LLM prompts treat it as data, not instructions.
+      const text = result.content[0].text
+      expect(text).toContain('<untrusted_notion_content>')
+      expect(text).toContain(JSON.stringify(mockResult, null, 2))
+      expect(text).toContain('</untrusted_notion_content>')
+      expect(text).toContain('[SECURITY:')
     })
 
     it('should route help tool and read documentation file', async () => {
