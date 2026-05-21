@@ -1,7 +1,7 @@
 {
   "name": "better-notion-mcp",
-  "description": "Comprehensive Notion API integration — 9 composite tools, ~95% coverage",
-  "version": "2.33.0",
+  "description": "Comprehensive Notion API integration \u2014 9 composite tools, ~95% coverage",
+  "version": "2.34.0-beta.1",
   "userConfig": {
     "NOTION_TOKEN": {
       "type": "string",
@@ -19,7 +19,10 @@
   "mcpServers": {
     "better-notion-mcp": {
       "command": "npx",
-      "args": ["--yes", "@n24q02m/better-notion-mcp@latest"],
+      "args": [
+        "--yes",
+        "@n24q02m/better-notion-mcp@latest"
+      ],
       "env": {
         "MCP_TRANSPORT": "stdio",
         "NOTION_TOKEN": "${user_config.NOTION_TOKEN}"
