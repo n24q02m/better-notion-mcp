@@ -131,62 +131,76 @@ export function extractPageProperties(pageProperties: any): any {
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i]
     const p = pageProperties[key] as any
+    // Cache p.type once per iteration -- avoids ~20 redundant property
+    // lookups in the if/else-if chain on every Notion page row.
+    const type = p.type as string | undefined
 
-    if (p.type === 'title' && p.title) {
+    if (type === 'title' && p.title) {
       let str = ''
-      for (let j = 0; j < p.title.length; j++) str += p.title[j].plain_text || ''
+      const title = p.title
+      for (let j = 0; j < title.length; j++) str += title[j].plain_text || ''
       properties[key] = str
-    } else if (p.type === 'rich_text' && p.rich_text) {
+    } else if (type === 'rich_text' && p.rich_text) {
       let str = ''
-      for (let j = 0; j < p.rich_text.length; j++) str += p.rich_text[j].plain_text || ''
+      const richText = p.rich_text
+      for (let j = 0; j < richText.length; j++) str += richText[j].plain_text || ''
       properties[key] = str
-    } else if (p.type === 'select' && p.select) {
+    } else if (type === 'select' && p.select) {
       properties[key] = p.select.name
-    } else if (p.type === 'multi_select' && p.multi_select) {
-      const arr = new Array(p.multi_select.length)
-      for (let j = 0; j < p.multi_select.length; j++) arr[j] = p.multi_select[j].name
+    } else if (type === 'multi_select' && p.multi_select) {
+      const ms = p.multi_select
+      const arr = new Array(ms.length)
+      for (let j = 0; j < ms.length; j++) arr[j] = ms[j].name
       properties[key] = arr
-    } else if (p.type === 'number') {
+    } else if (type === 'number') {
       properties[key] = p.number
-    } else if (p.type === 'checkbox') {
+    } else if (type === 'checkbox') {
       properties[key] = p.checkbox
-    } else if (p.type === 'url') {
+    } else if (type === 'url') {
       properties[key] = p.url
-    } else if (p.type === 'email') {
+    } else if (type === 'email') {
       properties[key] = p.email
-    } else if (p.type === 'phone_number') {
+    } else if (type === 'phone_number') {
       properties[key] = p.phone_number
-    } else if (p.type === 'date' && p.date) {
-      properties[key] = p.date.start + (p.date.end ? ` to ${p.date.end}` : '')
-    } else if (p.type === 'relation' && p.relation) {
-      const arr = new Array(p.relation.length)
-      for (let j = 0; j < p.relation.length; j++) arr[j] = p.relation[j].id
+    } else if (type === 'date' && p.date) {
+      const d = p.date
+      properties[key] = d.start + (d.end ? ` to ${d.end}` : '')
+    } else if (type === 'relation' && p.relation) {
+      const rel = p.relation
+      const arr = new Array(rel.length)
+      for (let j = 0; j < rel.length; j++) arr[j] = rel[j].id
       properties[key] = arr
-    } else if (p.type === 'rollup' && p.rollup) {
+    } else if (type === 'rollup' && p.rollup) {
       properties[key] = p.rollup
-    } else if (p.type === 'people' && p.people) {
-      const arr = new Array(p.people.length)
-      for (let j = 0; j < p.people.length; j++) arr[j] = p.people[j].name || p.people[j].id
+    } else if (type === 'people' && p.people) {
+      const ppl = p.people
+      const arr = new Array(ppl.length)
+      for (let j = 0; j < ppl.length; j++) arr[j] = ppl[j].name || ppl[j].id
       properties[key] = arr
-    } else if (p.type === 'files' && p.files) {
-      const arr = new Array(p.files.length)
-      for (let j = 0; j < p.files.length; j++)
-        arr[j] = p.files[j].file?.url || p.files[j].external?.url || p.files[j].name
+    } else if (type === 'files' && p.files) {
+      const files = p.files
+      const arr = new Array(files.length)
+      for (let j = 0; j < files.length; j++) {
+        const f = files[j]
+        arr[j] = f.file?.url || f.external?.url || f.name
+      }
       properties[key] = arr
-    } else if (p.type === 'formula' && p.formula) {
-      properties[key] = p.formula.type ? (p.formula[p.formula.type] ?? null) : null
-    } else if (p.type === 'created_time') {
+    } else if (type === 'formula' && p.formula) {
+      const f = p.formula
+      properties[key] = f.type ? (f[f.type] ?? null) : null
+    } else if (type === 'created_time') {
       properties[key] = p.created_time
-    } else if (p.type === 'last_edited_time') {
+    } else if (type === 'last_edited_time') {
       properties[key] = p.last_edited_time
-    } else if (p.type === 'created_by' && p.created_by) {
+    } else if (type === 'created_by' && p.created_by) {
       properties[key] = p.created_by?.name || p.created_by?.id
-    } else if (p.type === 'last_edited_by' && p.last_edited_by) {
+    } else if (type === 'last_edited_by' && p.last_edited_by) {
       properties[key] = p.last_edited_by?.name || p.last_edited_by?.id
-    } else if (p.type === 'status' && p.status) {
+    } else if (type === 'status' && p.status) {
       properties[key] = p.status?.name
-    } else if (p.type === 'unique_id' && p.unique_id) {
-      properties[key] = p.unique_id.prefix ? `${p.unique_id.prefix}-${p.unique_id.number}` : p.unique_id.number
+    } else if (type === 'unique_id' && p.unique_id) {
+      const u = p.unique_id
+      properties[key] = u.prefix ? `${u.prefix}-${u.number}` : u.number
     }
   }
   return properties

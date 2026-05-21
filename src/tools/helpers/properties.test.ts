@@ -696,4 +696,63 @@ describe('extractPageProperties', () => {
     expect(extractPageProperties(undefined)).toEqual({})
     expect(extractPageProperties({})).toEqual({})
   })
+
+  it('only reads p.type once per iteration (uses cached local)', () => {
+    // Define a getter for `type` that counts accesses. The optimized
+    // extractor caches the value into a local on the first read, so the
+    // remaining 20+ branches in the if/else chain don't trigger the getter.
+    let typeReads = 0
+    const props: any = {
+      Name: new Proxy(
+        { title: [{ plain_text: 'X' }], _type: 'title' },
+        {
+          get(target, prop) {
+            if (prop === 'type') {
+              typeReads++
+              return target._type
+            }
+            return (target as any)[prop]
+          }
+        }
+      )
+    }
+    expect(extractPageProperties(props)).toEqual({ Name: 'X' })
+    expect(typeReads).toBe(1)
+  })
+
+  it('extracts files with mixed file/external/name shapes', () => {
+    const props = {
+      Files: {
+        type: 'files',
+        files: [
+          { file: { url: 'https://internal/file1.pdf' }, name: 'A' },
+          { external: { url: 'https://external/file2.png' }, name: 'B' },
+          { name: 'just-a-name.txt' }
+        ]
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({
+      Files: ['https://internal/file1.pdf', 'https://external/file2.png', 'just-a-name.txt']
+    })
+  })
+
+  it('extracts people with names + ids fallback', () => {
+    const props = {
+      Owners: {
+        type: 'people',
+        people: [{ name: 'Alice', id: 'u1' }, { id: 'u2' }]
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Owners: ['Alice', 'u2'] })
+  })
+
+  it('extracts date range', () => {
+    const props = {
+      Window: {
+        type: 'date',
+        date: { start: '2026-01-01', end: '2026-01-31' }
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Window: '2026-01-01 to 2026-01-31' })
+  })
 })
