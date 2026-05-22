@@ -4,8 +4,22 @@
  * Indirect Prompt Injection (XPIA) attacks.
  */
 
-/** Tools that return content from external Notion sources (untrusted) */
-const EXTERNAL_CONTENT_TOOLS = new Set(['pages', 'blocks', 'comments', 'databases', 'users', 'workspace'])
+/**
+ * Tools that return content from external Notion sources (untrusted).
+ *
+ * `file_uploads` is included because its response includes attachment URLs,
+ * filenames, and free-text metadata that can come from an untrusted upstream
+ * Notion workspace. Treat that payload the same as `pages`/`blocks` content.
+ */
+const EXTERNAL_CONTENT_TOOLS = new Set([
+  'pages',
+  'blocks',
+  'comments',
+  'databases',
+  'users',
+  'workspace',
+  'file_uploads'
+])
 
 // Pre-compiled regex for URL validation hot path
 const URL_DELIMITER_REGEX = /[/?#]/

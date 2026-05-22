@@ -108,6 +108,18 @@ describe('Security Utilities', () => {
       }
     })
 
+    it('should wrap file_uploads output with safety markers (XPIA defense)', () => {
+      // file_uploads returns attachment URLs / filenames / metadata that may
+      // originate from an untrusted upstream Notion workspace -- wrap them
+      // the same as pages/blocks responses.
+      const jsonText = '{"file_uploads": [{"name": "evil.pdf", "url": "https://attacker.example/doc.pdf"}]}'
+      const result = wrapToolResult('file_uploads', jsonText)
+      expect(result).toContain('<untrusted_notion_content>')
+      expect(result).toContain('</untrusted_notion_content>')
+      expect(result).toContain(jsonText)
+      expect(result).toContain('[SECURITY:')
+    })
+
     it('should not wrap internal/safe tools', () => {
       const internalTools = ['search', 'other_tool', 'safe_tool']
       const jsonText = '{"data": "some safe data"}'
@@ -116,6 +128,14 @@ describe('Security Utilities', () => {
         const result = wrapToolResult(tool, jsonText)
         expect(result).toBe(jsonText)
         expect(result).not.toContain('<untrusted_notion_content>')
+      }
+    })
+
+    it('should not wrap content_convert / config / help / setup (no external Notion data)', () => {
+      const localTools = ['content_convert', 'config', 'help', 'setup']
+      const jsonText = '{"markdown": "# Title\\n\\nlocal content"}'
+      for (const tool of localTools) {
+        expect(wrapToolResult(tool, jsonText)).toBe(jsonText)
       }
     })
   })

@@ -62,6 +62,36 @@ function sanitizeErrorDetails(error: any): any {
   return safe
 }
 
+/**
+ * Header names to redact whenever they appear inside an error/details object.
+ * Compared case-insensitively against the actual property names so that
+ * `Authorization`, `authorization`, `AUTHORIZATION`, `Proxy-Authorization`,
+ * etc. are all stripped.
+ */
+const SENSITIVE_HEADER_NAMES = new Set([
+  'authorization',
+  'proxy-authorization',
+  'x-api-key',
+  'x-auth-token',
+  'cookie',
+  'set-cookie'
+])
+
+/**
+ * Remove sensitive headers from a headers-shaped object regardless of the
+ * casing the upstream library happened to use. Notion's SDK normalises
+ * `Authorization` but third-party axios/fetch wrappers may surface
+ * `authorization`, `AUTHORIZATION`, or `X-API-Key`.
+ */
+function redactHeaderMap(headers: any): void {
+  if (!headers || typeof headers !== 'object') return
+  for (const key of Object.keys(headers)) {
+    if (SENSITIVE_HEADER_NAMES.has(key.toLowerCase())) {
+      delete headers[key]
+    }
+  }
+}
+
 function stripSensitiveFields(obj: any, seen = new WeakSet()): void {
   if (!obj || typeof obj !== 'object') return
   if (seen.has(obj)) return
@@ -71,12 +101,20 @@ function stripSensitiveFields(obj: any, seen = new WeakSet()): void {
   delete obj.internal_config
   delete obj.user_email
 
-  // Also strip authorization headers to prevent leaking tokens
-  if (obj.headers?.Authorization) delete obj.headers.Authorization
-  if (obj.headers?.authorization) delete obj.headers.authorization
-  if (obj.request?._headers?.authorization) delete obj.request._headers.authorization
-  if (obj.config?.headers?.Authorization) delete obj.config.headers.Authorization
-  if (obj.config?.headers?.authorization) delete obj.config.headers.authorization
+  // Strip authorization-style headers from the common error-shape locations
+  // (response interceptors copy them onto multiple parent objects).
+  redactHeaderMap(obj.headers)
+  redactHeaderMap(obj._headers)
+  if (obj.request) {
+    redactHeaderMap(obj.request.headers)
+    redactHeaderMap(obj.request._headers)
+  }
+  if (obj.config) {
+    redactHeaderMap(obj.config.headers)
+  }
+  if (obj.response) {
+    redactHeaderMap(obj.response.headers)
+  }
 
   for (const key of Object.keys(obj)) {
     if (typeof obj[key] === 'object' && obj[key] !== null) {
