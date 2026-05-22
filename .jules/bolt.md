@@ -9,3 +9,7 @@
 ## 2025-05-06 - normalizeId Fast Path Optimization
 **Learning:** Using `id.replace(/-/g, '')` directly on strings that are already clean (do not contain hyphens) incurs unnecessary regex evaluation overhead on hot paths, adding ~10-20x extra time compared to checking for the target character first.
 **Action:** When a replacement string is commonly already correctly formatted, apply an early return check using `indexOf` (e.g., `if (id.indexOf('-') === -1) return id`) to bypass the regex engine.
+
+## 2025-05-18 - Object Iteration in Hot Paths
+**Learning:** Using `Object.entries(obj)` creates transient array tuples `[key, value]` for every property in an object. On hot paths like processing Notion schemas (which can be large and heterogeneous), this causes significant garbage collection overhead and is 2-3x slower than using `Object.keys(obj)` combined with indexed loops. Additionally, using array `.map()` and `.includes()` inside these loops adds further overhead compared to standard for-loops and boolean logic.
+**Action:** Replace `Object.entries()` with `Object.keys()` and an indexed loop (e.g. `const name = keys[i]; const p = properties[name]`) in high-frequency data formatting loops.

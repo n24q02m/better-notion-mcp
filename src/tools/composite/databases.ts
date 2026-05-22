@@ -44,23 +44,27 @@ async function getDataSourceSchema(notion: Client, dataSourceId: string): Promis
  * Build a filter that searches across all title and rich_text properties
  */
 function buildSearchFilter(properties: any, search: string): any | null {
-  const textProps = []
-  if (properties) {
-    for (const name of Object.keys(properties)) {
-      const prop = properties[name]
-      if (['title', 'rich_text'].includes(prop.type)) {
-        textProps.push(name)
-      }
+  if (!properties) return null
+
+  const keys = Object.keys(properties)
+  const textProps: string[] = []
+  for (let i = 0; i < keys.length; i++) {
+    const name = keys[i]
+    const type = properties[name].type
+    if (type === 'title' || type === 'rich_text') {
+      textProps.push(name)
     }
   }
 
   if (textProps.length > 0) {
-    return {
-      or: textProps.map((propName) => ({
-        property: propName,
+    const or = new Array(textProps.length)
+    for (let i = 0; i < textProps.length; i++) {
+      or[i] = {
+        property: textProps[i],
         rich_text: { contains: search }
-      }))
+      }
     }
+    return { or }
   }
 
   return null
@@ -405,18 +409,28 @@ async function getDatabase(notion: Client, input: DatabasesInput): Promise<GetDa
 
     // Format properties for AI-friendly output
     if (properties) {
-      for (const [name, prop] of Object.entries(properties)) {
-        const p = prop as any
+      const keys = Object.keys(properties)
+      for (let i = 0; i < keys.length; i++) {
+        const name = keys[i]
+        const p = properties[name] as any
+        const type = p.type
+
         schema[name] = {
-          type: p.type,
+          type,
           id: p.id
         }
 
-        if (p.type === 'select' && p.select?.options) {
-          schema[name].options = p.select.options.map((o: any) => o.name)
-        } else if (p.type === 'multi_select' && p.multi_select?.options) {
-          schema[name].options = p.multi_select.options.map((o: any) => o.name)
-        } else if (p.type === 'formula' && p.formula) {
+        if (type === 'select' && p.select?.options) {
+          const opts = p.select.options
+          const arr = new Array(opts.length)
+          for (let j = 0; j < opts.length; j++) arr[j] = opts[j].name
+          schema[name].options = arr
+        } else if (type === 'multi_select' && p.multi_select?.options) {
+          const opts = p.multi_select.options
+          const arr = new Array(opts.length)
+          for (let j = 0; j < opts.length; j++) arr[j] = opts[j].name
+          schema[name].options = arr
+        } else if (type === 'formula' && p.formula) {
           schema[name].expression = p.formula.expression
         }
       }
@@ -513,8 +527,10 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
   const properties = await getDataSourceSchema(notion, dataSourceId)
   const schema: Record<string, string> = {}
   if (properties) {
-    for (const [name, prop] of Object.entries(properties)) {
-      schema[name] = (prop as any).type
+    const keys = Object.keys(properties)
+    for (let i = 0; i < keys.length; i++) {
+      const name = keys[i]
+      schema[name] = (properties[name] as any).type
     }
   }
 
