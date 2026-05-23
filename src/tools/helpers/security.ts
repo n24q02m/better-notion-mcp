@@ -78,7 +78,11 @@ export function wrapToolResult(toolName: string, jsonText: string): string {
     return jsonText
   }
 
-  return `<untrusted_notion_content>\n${jsonText}\n</untrusted_notion_content>\n\n${SAFETY_WARNING}`
+  // Sanitize the JSON payload to prevent premature closing of the safety wrapper
+  // This prevents Indirect Prompt Injection (XPIA) breakouts
+  const sanitizedJson = jsonText.replace(/<\/untrusted_notion_content>/g, '<\\/untrusted_notion_content>')
+
+  return `<untrusted_notion_content>\n${sanitizedJson}\n</untrusted_notion_content>\n\n${SAFETY_WARNING}`
 }
 
 /**
