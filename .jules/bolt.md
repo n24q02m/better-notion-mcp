@@ -13,3 +13,6 @@
 ## 2025-05-18 - Object Iteration in Hot Paths
 **Learning:** Using `Object.entries(obj)` creates transient array tuples `[key, value]` for every property in an object. On hot paths like processing Notion schemas (which can be large and heterogeneous), this causes significant garbage collection overhead and is 2-3x slower than using `Object.keys(obj)` combined with indexed loops. Additionally, using array `.map()` and `.includes()` inside these loops adds further overhead compared to standard for-loops and boolean logic.
 **Action:** Replace `Object.entries()` with `Object.keys()` and an indexed loop (e.g. `const name = keys[i]; const p = properties[name]`) in high-frequency data formatting loops.
+## 2025-05-24 - URL Validation Fast Path Optimization
+**Learning:** Using `includes()` checks on arrays or sequential `indexOf` / `substring` operations for prefix checking in tight loops (like URL validation) causes noticeable performance hits.
+**Action:** Replace `includes` checks on static arrays with `Set.has` for O(1) lookups. Additionally, when searching for multiple characters in a string simultaneously, consolidate into a single `.exec()` regex pass rather than multiple string operations, which avoids unnecessary allocations and function calls.
