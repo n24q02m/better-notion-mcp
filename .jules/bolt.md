@@ -16,7 +16,3 @@
 ## 2025-05-24 - URL Validation Fast Path Optimization
 **Learning:** Using `includes()` checks on arrays or sequential `indexOf` / `substring` operations for prefix checking in tight loops (like URL validation) causes noticeable performance hits.
 **Action:** Replace `includes` checks on static arrays with `Set.has` for O(1) lookups. Additionally, when searching for multiple characters in a string simultaneously, consolidate into a single `.exec()` regex pass rather than multiple string operations, which avoids unnecessary allocations and function calls.
-
-## 2025-05-30 - Regex Object Allocation in Hot Paths
-**Learning:** Instantiating regex literals like `/[\s\x00-\x1F\x7F]/` inside functions that are called frequently on hot paths (like `isSafeUrl` and `isSafeWebUrl`) causes unnecessary object allocation overhead. In V8, moving a simple regex test to use a module-level cached regex can be ~4x faster than inline regex instantiations.
-**Action:** Extract inline regexes into module-level constants (e.g., `const CONTROL_CHARS_REGEX = /[\s\x00-\x1F\x7F]/`) when used inside high-frequency utility functions.
