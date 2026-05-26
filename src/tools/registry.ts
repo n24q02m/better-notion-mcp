@@ -439,7 +439,6 @@ const TOOLS = [
   }
 ]
 
-
 // Pre-compute valid tool names for the help endpoint to avoid allocations on every call
 // BOLT OPTIMIZATION: Use Set for O(1) lookups instead of dynamic array creation
 const VALID_HELP_TOOL_NAMES = new Set(TOOLS.map((t) => t.name).filter((name) => name !== 'help'))

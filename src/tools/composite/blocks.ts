@@ -8,7 +8,6 @@ import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate, populateDeepChildren } from '../helpers/pagination.js'
 
-
 const UPDATABLE_BLOCK_TYPES = new Set([
   'paragraph',
   'heading_1',
