@@ -52,10 +52,17 @@ export async function startHttp(): Promise<void> {
     throw new Error('NOTION_OAUTH_CLIENT_ID and NOTION_OAUTH_CLIENT_SECRET are required for http mode.')
   }
 
+  // MCP_AUTH_DISABLE=1 skips Bearer JWT verification — for deployments behind
+  // an external auth boundary (reverse proxy, API gateway like agentgateway).
+  // Caller is responsible for upstream auth + providing Notion token via a
+  // separate channel (e.g. NOTION_TOKEN env var resolved by tokenStore default).
+  const authDisabled = process.env.MCP_AUTH_DISABLE === '1'
+
   const handle = await runHttpServer(() => createMCPServer(notionClientFactory) as unknown as McpServer, {
     serverName: SERVER_NAME,
     port,
     host,
+    authDisabled,
     delegatedOAuth: {
       flow: 'redirect',
       upstream: {
@@ -75,8 +82,10 @@ export async function startHttp(): Promise<void> {
         return sub
       }
     },
-    authScope: async (claims: { sub?: unknown }, next: () => Promise<void>) => {
-      const sub = typeof claims.sub === 'string' ? claims.sub : 'default'
+    authScope: async (claims: { sub?: unknown; anonymous?: unknown }, next: () => Promise<void>) => {
+      // Anonymous caller (auth-disabled mode behind gateway): use 'default'
+      // bucket so a single deployment can serve one Notion token via env.
+      const sub = claims.anonymous === true ? 'default' : (typeof claims.sub === 'string' ? claims.sub : 'default')
       await subjectContext.run({ sub }, next)
     }
   })
