@@ -85,7 +85,7 @@ export async function startHttp(): Promise<void> {
     authScope: async (claims: { sub?: unknown; anonymous?: unknown }, next: () => Promise<void>) => {
       // Anonymous caller (auth-disabled mode behind gateway): use 'default'
       // bucket so a single deployment can serve one Notion token via env.
-      const sub = claims.anonymous === true ? 'default' : (typeof claims.sub === 'string' ? claims.sub : 'default')
+      const sub = claims.anonymous === true ? 'default' : typeof claims.sub === 'string' ? claims.sub : 'default'
       await subjectContext.run({ sub }, next)
     }
   })
