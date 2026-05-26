@@ -439,6 +439,11 @@ const TOOLS = [
   }
 ]
 
+
+// Pre-compute valid tool names for the help endpoint to avoid allocations on every call
+// BOLT OPTIMIZATION: Use Set for O(1) lookups instead of dynamic array creation
+const VALID_HELP_TOOL_NAMES = new Set(TOOLS.map((t) => t.name).filter((name) => name !== 'help'))
+const VALID_HELP_TOOLS_STRING = Array.from(VALID_HELP_TOOL_NAMES).join(', ')
 /**
  * Register all tools with MCP server
  * @param notionClientFactory - Returns a Notion Client.
@@ -552,12 +557,11 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
         case 'help': {
           const toolName = (args as { tool_name: string }).tool_name
           // Security: validate tool_name against allowlist to prevent path traversal
-          const validToolNames = TOOLS.filter((t) => t.name !== 'help').map((t) => t.name)
-          if (!validToolNames.includes(toolName)) {
+          if (!VALID_HELP_TOOL_NAMES.has(toolName)) {
             throw new NotionMCPError(
               `Invalid tool name: ${toolName}`,
               'VALIDATION_ERROR',
-              `Valid tools: ${validToolNames.join(', ')}`
+              `Valid tools: ${VALID_HELP_TOOLS_STRING}`
             )
           }
           // Security: Use basename() to ensure we only look for files directly inside DOCS_DIR,
