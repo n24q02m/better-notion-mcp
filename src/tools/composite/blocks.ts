@@ -8,7 +8,6 @@ import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate, populateDeepChildren } from '../helpers/pagination.js'
 
-
 // BOLT OPTIMIZATION: Extract inline array to Set for O(1) lookups and to avoid redundant memory allocations
 // Expected impact: Minor reduction in GC pressure and lookup latency during bulk block updates
 const UPDATABLE_BLOCK_TYPES = new Set([

@@ -19,3 +19,6 @@
 ## 2026-05-27 - Optimize Array includes to Set has
 **Learning:** Instantiating array literals and calling `.includes()` on them within frequently executed code paths (like checking block types during block updates) causes unnecessary O(n) lookups and memory allocations on every call.
 **Action:** Always extract static array literals into module-level `Set` instances and use `Set.has()` for O(1) lookups to avoid redundant memory allocations and reduce execution latency.
+## 2026-05-27 - Always run formatting
+**Learning:** After modifying source files directly (e.g., using Python scripts or raw file writes), failing to run the formatter will cause CI checks (like `bun run check`) to fail due to formatting violations.
+**Action:** Always run `bun run format` and `bun run check` after modifying files to ensure compliance with the project's formatting rules before submitting.
