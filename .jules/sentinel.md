@@ -15,3 +15,8 @@
 **Vulnerability:** The `wrapToolResult` function used `</untrusted_notion_content>` to encapsulate untrusted data returned from Notion to defend against Indirect Prompt Injection (XPIA). However, an attacker could include `</untrusted_notion_content>` in the malicious data payload itself, which would prematurely close the security wrapper and allow subsequent lines to be interpreted as trusted system instructions by the LLM.
 **Learning:** Security wrappers like `<untrusted_content>` tags are vulnerable to premature termination if the encapsulated data is not sanitized or escaped. Attackers can control the returned data (e.g., Notion page content) to craft malicious breakout strings.
 **Prevention:** Always sanitize the payload data (e.g., using `String.replace`) to escape or replace any strings that match the wrapper's closing tags (case-insensitively) before encapsulating the data.
+
+## 2025-05-28 - XPIA Breakout via Whitespace Padding
+**Vulnerability:** Untrusted content tools were protected against XPIA using a closing tag replacement regex (`/<\/untrusted_notion_content>/gi`). However, this regex was strict and failed to match whitespace-padded payloads (e.g., `</untrusted_notion_content >`), allowing an attacker to bypass the sanitization and execute prompt injection.
+**Learning:** XML/HTML parsers (including LLMs parsing pseudo-XML tags) often tolerate whitespace before the closing angle bracket. A strict exact-match regex sanitization is insufficient for tag-based wrappers, as attackers can pad their payload to break out of the wrapper while still satisfying parser leniency.
+**Prevention:** Always use regex quantifiers for optional whitespace (e.g., `\s*`) when matching or sanitizing closing tags to handle evasion tactics effectively.
