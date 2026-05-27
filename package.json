@@ -57,7 +57,7 @@
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@n24q02m/mcp-core": "1.15.0-beta.2",
+    "@n24q02m/mcp-core": "1.15.0",
     "@notionhq/client": "^5.22.0",
     "zod": "^4.4.3"
   },
@@ -65,7 +65,7 @@
     "esbuild"
   ],
   "devDependencies": {
-    "@biomejs/biome": "^2.4.15",
+    "@biomejs/biome": "^2.4.16",
     "@types/node": "^24.12.4",
     "@vitest/coverage-v8": "^4.1.7",
     "esbuild": "^0.28.0",
