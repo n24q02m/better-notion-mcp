@@ -16,3 +16,6 @@
 ## 2025-05-24 - URL Validation Fast Path Optimization
 **Learning:** Using `includes()` checks on arrays or sequential `indexOf` / `substring` operations for prefix checking in tight loops (like URL validation) causes noticeable performance hits.
 **Action:** Replace `includes` checks on static arrays with `Set.has` for O(1) lookups. Additionally, when searching for multiple characters in a string simultaneously, consolidate into a single `.exec()` regex pass rather than multiple string operations, which avoids unnecessary allocations and function calls.
+## 2026-05-27 - Optimize Array includes to Set has
+**Learning:** Instantiating array literals and calling `.includes()` on them within frequently executed code paths (like checking block types during block updates) causes unnecessary O(n) lookups and memory allocations on every call.
+**Action:** Always extract static array literals into module-level `Set` instances and use `Set.has()` for O(1) lookups to avoid redundant memory allocations and reduce execution latency.

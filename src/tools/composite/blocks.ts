@@ -8,6 +8,21 @@ import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate, populateDeepChildren } from '../helpers/pagination.js'
 
+
+// BOLT OPTIMIZATION: Extract inline array to Set for O(1) lookups and to avoid redundant memory allocations
+// Expected impact: Minor reduction in GC pressure and lookup latency during bulk block updates
+const UPDATABLE_BLOCK_TYPES = new Set([
+  'paragraph',
+  'heading_1',
+  'heading_2',
+  'heading_3',
+  'bulleted_list_item',
+  'numbered_list_item',
+  'quote',
+  'to_do',
+  'code'
+])
+
 export interface BlocksInput {
   action: 'get' | 'children' | 'append' | 'update' | 'delete'
   block_id: string
@@ -116,19 +131,7 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
         const updatePayload: any = {}
 
         // Build update based on block type
-        if (
-          [
-            'paragraph',
-            'heading_1',
-            'heading_2',
-            'heading_3',
-            'bulleted_list_item',
-            'numbered_list_item',
-            'quote',
-            'to_do',
-            'code'
-          ].includes(blockType)
-        ) {
+        if (UPDATABLE_BLOCK_TYPES.has(blockType)) {
           if (blockType === 'to_do') {
             updatePayload.to_do = {
               rich_text: (newContent as any).to_do?.rich_text || [],
