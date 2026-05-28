@@ -1,6 +1,10 @@
 import type { BlockObjectResponse, Client } from '@notionhq/client'
 
-type RecursiveBlock = BlockObjectResponse & { [key: string]: any }
+type RecursiveBlock = BlockObjectResponse & {
+  [K in BlockObjectResponse['type']]?: {
+    children?: RecursiveBlock[]
+  }
+}
 
 /**
  * Pagination Helper
@@ -129,8 +133,10 @@ export async function fetchChildrenRecursive(
     const children = queue ? await queue.run(() => fetchChildren(block.id)) : await fetchChildren(block.id)
 
     // Attach children to the correct property based on block type
-    if (block[block.type]) {
-      block[block.type].children = children
+    // We cast to any because TS cannot correlate block.type with the property key on the union
+    const blockData = (block as any)[block.type]
+    if (blockData) {
+      blockData.children = children
     }
 
     // Recurse into children
