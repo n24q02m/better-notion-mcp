@@ -345,8 +345,30 @@ describe('convertToNotionProperties', () => {
         Project: { relation: [{ id: '[123]' }] }
       })
     })
-  })
 
+    it('handles array with non-string elements safely in relation schema', () => {
+      // This previously crashed because extractPageId expected a string
+      const result = convertToNotionProperties({ Project: [123] }, { Project: 'relation' })
+      expect(result).toEqual({
+        Project: { relation: [{ id: 123 }] }
+      })
+    })
+
+    it('covers the catch block in toRelation explicitly', () => {
+      const result = convertToNotionProperties({ Project: '[{"unclosed": "json"' }, { Project: 'relation' })
+      expect(result).toEqual({
+        Project: { relation: [{ id: '[{"unclosed": "json"' }] }
+      })
+    })
+
+    it('passes through non-string non-array values in relation schema', () => {
+      const val = BigInt(123)
+      const result = convertToNotionProperties({ Project: val }, { Project: 'relation' })
+      expect(result).toEqual({
+        Project: val
+      })
+    })
+  })
   describe('mixed properties with schema', () => {
     it('converts multiple property types in a single call', () => {
       const properties = {
@@ -381,6 +403,12 @@ describe('convertToNotionProperties', () => {
       })
     })
   })
+})
+
+it('handles unknown types by passing through as-is', () => {
+  const val = BigInt(123)
+  const result = convertToNotionProperties({ big: val })
+  expect(result).toEqual({ big: val })
 })
 
 describe('extractPageProperties', () => {
