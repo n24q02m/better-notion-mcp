@@ -1,0 +1,337 @@
+diff --git a/src/tools/helpers/errors.security.test.ts b/src/tools/helpers/errors.security.test.ts
+index 04f9bda..7616986 100644
+--- a/src/tools/helpers/errors.security.test.ts
++++ b/src/tools/helpers/errors.security.test.ts
+@@ -27,9 +27,10 @@ describe('Security: Error Handling', () => {
+
+     // Check that safe fields are present
+     expect(enhanced.details).toBeDefined()
+-    expect(enhanced.details.message).toBe('Invalid property value')
+-    expect(enhanced.details.object).toBe('error')
+-    expect(enhanced.details.status).toBe(400)
++    const details = enhanced.details as any
++    expect(details.message).toBe('Invalid property value')
++    expect(details.object).toBe('error')
++    expect(details.status).toBe(400)
+
+     // Check that sensitive fields are REMOVED
+     expect(enhanced.details).not.toHaveProperty('sensitive_token')
+@@ -58,15 +59,16 @@ describe('Security: Error Handling', () => {
+
+     const enhanced = enhanceError(errorWithAuth)
+     expect(enhanced.details).toBeDefined()
+-    if (enhanced.details?.headers) {
+-      expect(enhanced.details.headers).not.toHaveProperty('Authorization')
+-      expect(enhanced.details.headers).toHaveProperty('Content-Type')
++    const detailsWithHeaders = enhanced.details as any
++    if (detailsWithHeaders?.headers) {
++      expect(detailsWithHeaders.headers).not.toHaveProperty('Authorization')
++      expect(detailsWithHeaders.headers).toHaveProperty('Content-Type')
+     }
+-    if (enhanced.details?.config?.headers) {
+-      expect(enhanced.details.config.headers).not.toHaveProperty('authorization')
++    if (detailsWithHeaders?.config?.headers) {
++      expect(detailsWithHeaders.config.headers).not.toHaveProperty('authorization')
+     }
+-    if (enhanced.details?.request?._headers) {
+-      expect(enhanced.details.request._headers).not.toHaveProperty('authorization')
++    if (detailsWithHeaders?.request?._headers) {
++      expect(detailsWithHeaders.request._headers).not.toHaveProperty('authorization')
+     }
+   })
+
+diff --git a/src/tools/helpers/errors.test.ts b/src/tools/helpers/errors.test.ts
+index b042a0f..4cc63f7 100644
+--- a/src/tools/helpers/errors.test.ts
++++ b/src/tools/helpers/errors.test.ts
+@@ -233,12 +233,13 @@ describe('enhanceError', () => {
+
+       // Expectation of SECURE behavior
+       expect(enhanced.details).toBeDefined()
+-      expect(enhanced.details.message).toBe('Something went wrong')
++      const details = enhanced.details as any
++      expect(details.message).toBe('Something went wrong')
+
+       // Verify secret is NOT leaked
+       expect(JSON.stringify(enhanced.details)).not.toContain('secret-token')
+-      expect(enhanced.details.config).toBeUndefined()
+-      expect(enhanced.details.request).toBeUndefined()
++      expect(details.config).toBeUndefined()
++      expect(details.request).toBeUndefined()
+     })
+   })
+ })
+diff --git a/src/tools/helpers/errors.ts b/src/tools/helpers/errors.ts
+index dd0e7d5..a1cbd5c 100644
+--- a/src/tools/helpers/errors.ts
++++ b/src/tools/helpers/errors.ts
+@@ -1,3 +1,41 @@
++/**
++ * Shape of a Notion API error body
++ */
++interface NotionApiErrorBody {
++  message?: string
++  object?: string
++  code?: string
++  status?: number
++  request_id?: string
++  path?: string
++  [key: string]: unknown
++}
++
++/**
++ * Common properties of errors caught in the system
++ */
++interface ErrorLike {
++  message?: string
++  name?: string
++  code?: string
++  status?: number
++  body?: NotionApiErrorBody
++  response?: {
++    status?: number
++    headers?: Record<string, unknown>
++  }
++  request?: {
++    headers?: Record<string, unknown>
++    _headers?: Record<string, unknown>
++  }
++  config?: {
++    headers?: Record<string, unknown>
++  }
++  headers?: Record<string, unknown>
++  _headers?: Record<string, unknown>
++  [key: string]: unknown
++}
++
+ /**
+  * Custom error class for Notion MCP operations
+  */
+@@ -6,7 +44,7 @@ export class NotionMCPError extends Error {
+     public message: string,
+     public code: string,
+     public suggestion?: string,
+-    public details?: any
++    public details?: unknown
+   ) {
+     super(message)
+     this.name = 'NotionMCPError'
+@@ -26,16 +64,17 @@ export class NotionMCPError extends Error {
+ /**
+  * Sanitize validation error body to remove sensitive information
+  */
+-function sanitizeValidationBody(body: any): any {
+-  if (!body || typeof body !== 'object') return body
++function sanitizeValidationBody(body: unknown): Record<string, unknown> | unknown {
++  if (!body || typeof body !== 'object' || body === null) return body
+
++  const bodyObj = body as Record<string, unknown>
+   // whitelist safe properties from Notion API validation_error responses
+-  const safe: any = {}
++  const safe: Record<string, unknown> = {}
+   const safeFields = ['message', 'object', 'code', 'status', 'request_id', 'path']
+
+   for (const field of safeFields) {
+-    if (field in body) {
+-      safe[field] = body[field]
++    if (field in bodyObj) {
++      safe[field] = bodyObj[field]
+     }
+   }
+
+@@ -45,19 +84,20 @@ function sanitizeValidationBody(body: any): any {
+ /**
+  * Sanitize error object to remove sensitive information
+  */
+-function sanitizeErrorDetails(error: any): any {
+-  if (!error || typeof error !== 'object') return error
++function sanitizeErrorDetails(error: unknown): Record<string, unknown> | unknown {
++  if (!error || typeof error !== 'object' || error === null) return error
+
++  const errorObj = error as ErrorLike
+   // whitelist safe properties
+-  const safe: any = {
+-    message: error.message,
+-    name: error.name,
+-    code: error.code
++  const safe: Record<string, unknown> = {
++    message: errorObj.message,
++    name: errorObj.name,
++    code: errorObj.code
+   }
+
+   // Add status if available (common in HTTP errors)
+-  if (error.status) safe.status = error.status
+-  if (error.response?.status) safe.status = error.response.status
++  if (errorObj.status) safe.status = errorObj.status
++  if (errorObj.response?.status) safe.status = errorObj.response.status
+
+   return safe
+ }
+@@ -83,42 +123,46 @@ const SENSITIVE_HEADER_NAMES = new Set([
+  * `Authorization` but third-party axios/fetch wrappers may surface
+  * `authorization`, `AUTHORIZATION`, or `X-API-Key`.
+  */
+-function redactHeaderMap(headers: any): void {
+-  if (!headers || typeof headers !== 'object') return
+-  for (const key of Object.keys(headers)) {
++function redactHeaderMap(headers: unknown): void {
++  if (!headers || typeof headers !== 'object' || headers === null) return
++  const headersObj = headers as Record<string, unknown>
++  for (const key of Object.keys(headersObj)) {
+     if (SENSITIVE_HEADER_NAMES.has(key.toLowerCase())) {
+-      delete headers[key]
++      delete headersObj[key]
+     }
+   }
+ }
+
+-function stripSensitiveFields(obj: any, seen = new WeakSet()): void {
+-  if (!obj || typeof obj !== 'object') return
++function stripSensitiveFields(obj: unknown, seen = new WeakSet<object>()): void {
++  if (!obj || typeof obj !== 'object' || obj === null) return
+   if (seen.has(obj)) return
+   seen.add(obj)
+
+-  delete obj.sensitive_token
+-  delete obj.internal_config
+-  delete obj.user_email
++  const objAsRecord = obj as Record<string, unknown>
++  const errorLike = obj as ErrorLike
++
++  delete objAsRecord.sensitive_token
++  delete objAsRecord.internal_config
++  delete objAsRecord.user_email
+
+   // Strip authorization-style headers from the common error-shape locations
+   // (response interceptors copy them onto multiple parent objects).
+-  redactHeaderMap(obj.headers)
+-  redactHeaderMap(obj._headers)
+-  if (obj.request) {
+-    redactHeaderMap(obj.request.headers)
+-    redactHeaderMap(obj.request._headers)
++  redactHeaderMap(errorLike.headers)
++  redactHeaderMap(errorLike._headers)
++  if (errorLike.request) {
++    redactHeaderMap(errorLike.request.headers)
++    redactHeaderMap(errorLike.request._headers)
+   }
+-  if (obj.config) {
+-    redactHeaderMap(obj.config.headers)
++  if (errorLike.config) {
++    redactHeaderMap(errorLike.config.headers)
+   }
+-  if (obj.response) {
+-    redactHeaderMap(obj.response.headers)
++  if (errorLike.response) {
++    redactHeaderMap(errorLike.response.headers)
+   }
+
+-  for (const key of Object.keys(obj)) {
+-    if (typeof obj[key] === 'object' && obj[key] !== null) {
+-      stripSensitiveFields(obj[key], seen)
++  for (const key of Object.keys(objAsRecord)) {
++    if (typeof objAsRecord[key] === 'object' && objAsRecord[key] !== null) {
++      stripSensitiveFields(objAsRecord[key], seen)
+     }
+   }
+ }
+@@ -126,8 +170,9 @@ function stripSensitiveFields(obj: any, seen = new WeakSet()): void {
+ /**
+  * Map network-related errors
+  */
+-function mapNetworkError(error: any): NotionMCPError | null {
+-  if (error.message?.includes('ECONNREFUSED') || error.message?.includes('ENOTFOUND')) {
++function mapNetworkError(error: unknown): NotionMCPError | null {
++  const errorObj = error as ErrorLike
++  if (errorObj.message?.includes('ECONNREFUSED') || errorObj.message?.includes('ENOTFOUND')) {
+     return new NotionMCPError(
+       'Cannot connect to Notion API',
+       'NETWORK_ERROR',
+@@ -140,10 +185,11 @@ function mapNetworkError(error: any): NotionMCPError | null {
+ /**
+  * Handle validation_error separately as it has dynamic suggestions
+  */
+-function mapValidationError(error: any): NotionMCPError | null {
+-  if (error.code !== 'validation_error') return null
++function mapValidationError(error: unknown): NotionMCPError | null {
++  const errorObj = error as ErrorLike
++  if (errorObj.code !== 'validation_error') return null
+
+-  const bodyMessage: string = error.body?.message || ''
++  const bodyMessage: string = errorObj.body?.message || ''
+   let suggestion = 'Check the API documentation for valid parameter formats'
+
+   // Detect common property format mistakes and provide specific guidance
+@@ -159,7 +205,7 @@ function mapValidationError(error: any): NotionMCPError | null {
+     bodyMessage || 'Invalid request parameters',
+     'VALIDATION_ERROR',
+     suggestion,
+-    sanitizeValidationBody(error.body)
++    sanitizeValidationBody(errorObj.body)
+   )
+ }
+
+@@ -205,14 +251,15 @@ const NOTION_ERROR_MAP: Record<string, { message: string; code: string; suggesti
+ /**
+  * Map Notion API errors
+  */
+-function mapNotionError(error: any): NotionMCPError | null {
+-  if (!error.code) return null
++function mapNotionError(error: unknown): NotionMCPError | null {
++  const errorObj = error as ErrorLike
++  if (!errorObj.code) return null
+
+   const validationError = mapValidationError(error)
+   if (validationError) return validationError
+
+-  const code = error.code
+-  const message = error.message || 'Unknown Notion API error'
++  const code = errorObj.code
++  const message = errorObj.message || 'Unknown Notion API error'
+   const mapping = NOTION_ERROR_MAP[code]
+
+   if (mapping) {
+@@ -225,9 +272,10 @@ function mapNotionError(error: any): NotionMCPError | null {
+ /**
+  * Map all other errors
+  */
+-function mapGenericError(error: any): NotionMCPError {
++function mapGenericError(error: unknown): NotionMCPError {
++  const errorObj = error as ErrorLike
+   return new NotionMCPError(
+-    error.message || 'Unknown error occurred',
++    errorObj.message || 'Unknown error occurred',
+     'UNKNOWN_ERROR',
+     'Please check your request and try again',
+     sanitizeErrorDetails(error)
+@@ -237,7 +285,7 @@ function mapGenericError(error: any): NotionMCPError {
+ /**
+  * Enhance Notion API error with helpful context
+  */
+-export function enhanceError(error: any): NotionMCPError {
++export function enhanceError(error: unknown): NotionMCPError {
+   // Already a NotionMCPError — pass through unchanged
+   if (error instanceof NotionMCPError) return error
+
+@@ -387,17 +435,18 @@ export async function retryWithBackoff<T>(
+ ): Promise<T> {
+   const { maxRetries = 3, initialDelay = 1000, maxDelay = 10000, backoffMultiplier = 2 } = options
+
+-  let lastError: any
++  let lastError: unknown
+   let delay = initialDelay
+
+   for (let attempt = 0; attempt <= maxRetries; attempt++) {
+     try {
+       return await fn()
+-    } catch (error: any) {
++    } catch (error: unknown) {
+       lastError = error
++      const errorObj = error as ErrorLike
+
+       // Don't retry on certain errors
+-      if (error.code === 'UNAUTHORIZED' || error.code === 'NOT_FOUND') {
++      if (errorObj.code === 'UNAUTHORIZED' || errorObj.code === 'NOT_FOUND') {
+         throw enhanceError(error)
+       }
