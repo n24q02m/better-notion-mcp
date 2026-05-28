@@ -20,3 +20,6 @@
 ## 2025-05-26 - Array.includes() vs Set.has() for O(1) Lookups
 **Learning:** Checking for membership in an array using `['a', 'b', ...].includes(value)` within hot paths requires an O(N) scan. This can become an issue when iterating or repeatedly checking values.
 **Action:** Replace `Array.includes()` with `Set.has()` by extracting the array into a module-level `Set`. This improves lookup times significantly to O(1).
+## 2026-05-28 - [PERF] Markdown Table Optimization
+**Learning:** String concatenation in loops for building complex markdown tables creates excessive intermediate string objects, impacting performance as table size grows.
+**Action:** Use array buffering (pushing fragments to an array and joining at the end) for any string construction logic inside loops to optimize memory usage and execution speed.

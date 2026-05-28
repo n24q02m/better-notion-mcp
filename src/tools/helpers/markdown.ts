@@ -293,22 +293,22 @@ function tableToMarkdown(block: NotionBlock, lines: string[]): void {
         continue
       }
 
-      let rowStr = '|'
-      let headerSep = '|'
       const isFirstRowHeader = rowIdx === 0 && block.table?.has_column_header
+      const rowParts: string[] = ['|']
+      const sepParts: string[] = isFirstRowHeader ? ['|'] : []
 
       for (let i = 0; i < rawCells.length; i++) {
         // Optimization: Consolidate row cell rendering and header separator generation
         // into a single loop, eliminating redundant array mappings on cell data.
-        rowStr += ` ${richTextToMarkdown(rawCells[i])} |`
+        rowParts.push(` ${richTextToMarkdown(rawCells[i])} |`)
         if (isFirstRowHeader) {
-          headerSep += ' --- |'
+          sepParts.push(' --- |')
         }
       }
 
-      lines.push(rowStr)
+      lines.push(rowParts.join(''))
       if (isFirstRowHeader) {
-        lines.push(headerSep)
+        lines.push(sepParts.join(''))
       }
     }
   }
