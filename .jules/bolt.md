@@ -20,3 +20,7 @@
 ## 2025-05-26 - Array.includes() vs Set.has() for O(1) Lookups
 **Learning:** Checking for membership in an array using `['a', 'b', ...].includes(value)` within hot paths requires an O(N) scan. This can become an issue when iterating or repeatedly checking values.
 **Action:** Replace `Array.includes()` with `Set.has()` by extracting the array into a module-level `Set`. This improves lookup times significantly to O(1).
+
+## 2025-05-28 - [Performance] Optimized Error Handling Type Safety
+**Learning:** Transitioning from `any` to `unknown` in error handling paths requires robust type guards and property existence checks to avoid runtime failures while satisfying TypeScript's strictness. Using `APIResponseError.isAPIResponseError` from `@notionhq/client` is the preferred way to handle Notion-specific errors.
+**Action:** When refactoring error paths, prioritize `unknown` over `any` and use `Record<string, unknown>` for object property access after verifying the type is `object` and not `null`.
