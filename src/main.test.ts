@@ -230,6 +230,23 @@ describe('main.ts', () => {
       consoleSpy.mockRestore()
     })
 
+    it('verifies fork-bomb protection prevents multiple starts', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      // First call should work
+      await bootstrap('stdio')
+      expect(stdioConnectMock).toHaveBeenCalledTimes(1)
+
+      // Second call should be aborted
+      await bootstrap('stdio')
+      expect(stdioConnectMock).toHaveBeenCalledTimes(1)
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Bootstrap aborted'))
+
+      consoleSpy.mockRestore()
+      delete process.env.BETTER_NOTION_MCP_BOOTSTRAPPED
+    })
+
     it('verifies initialization of global mode from environment', async () => {
       vi.stubEnv('TRANSPORT_MODE', 'http')
       vi.resetModules()
