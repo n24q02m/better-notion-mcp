@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as markdown from '../helpers/markdown.js'
-import { blocks } from './blocks'
+import { blockCache, blocks } from './blocks.js'
 
 const mockNotion = {
   blocks: {
@@ -16,6 +16,7 @@ const mockNotion = {
 
 describe('blocks', () => {
   beforeEach(() => {
+    blockCache.clear()
     vi.clearAllMocks()
   })
 
@@ -423,6 +424,84 @@ describe('blocks', () => {
       await expect(blocks(mockNotion as any, { action: 'invalid' as any, block_id: 'block-1' })).rejects.toThrow(
         'Unknown action: invalid'
       )
+    })
+  })
+
+  describe('caching', () => {
+    it('should cache block retrieval in get action', async () => {
+      mockNotion.blocks.retrieve.mockResolvedValue({
+        id: 'block-1',
+        type: 'paragraph',
+        has_children: false,
+        archived: false,
+        paragraph: { rich_text: [] }
+      })
+
+      // First call - should call API
+      await blocks(mockNotion as any, { action: 'get', block_id: 'block-1' })
+      expect(mockNotion.blocks.retrieve).toHaveBeenCalledTimes(1)
+
+      // Second call - should use cache
+      await blocks(mockNotion as any, { action: 'get', block_id: 'block-1' })
+      expect(mockNotion.blocks.retrieve).toHaveBeenCalledTimes(1)
+    })
+
+    it('should update cache on update action', async () => {
+      const initialBlock = {
+        id: 'block-1',
+        type: 'paragraph',
+        has_children: false,
+        archived: false,
+        paragraph: { rich_text: [{ plain_text: 'initial' }] }
+      }
+      const updatedBlock = {
+        id: 'block-1',
+        type: 'paragraph',
+        has_children: false,
+        archived: false,
+        paragraph: { rich_text: [{ plain_text: 'updated' }] }
+      }
+
+      mockNotion.blocks.retrieve.mockResolvedValue(initialBlock)
+      mockNotion.blocks.update.mockResolvedValue(updatedBlock)
+
+      // Update action
+      await blocks(mockNotion as any, {
+        action: 'update',
+        block_id: 'block-1',
+        content: 'updated'
+      })
+
+      expect(mockNotion.blocks.retrieve).toHaveBeenCalledTimes(1)
+      expect(mockNotion.blocks.update).toHaveBeenCalledTimes(1)
+
+      // Subsequent get action should use updated cache
+      const result = await blocks(mockNotion as any, { action: 'get', block_id: 'block-1' })
+      expect(mockNotion.blocks.retrieve).toHaveBeenCalledTimes(1) // No additional calls
+      expect(result.block).toEqual(updatedBlock)
+    })
+
+    it('should clear cache on delete action', async () => {
+      mockNotion.blocks.retrieve.mockResolvedValue({
+        id: 'block-1',
+        type: 'paragraph',
+        has_children: false,
+        archived: false,
+        paragraph: { rich_text: [] }
+      })
+      mockNotion.blocks.delete.mockResolvedValue({})
+
+      // Fill cache
+      await blocks(mockNotion as any, { action: 'get', block_id: 'block-1' })
+      expect(mockNotion.blocks.retrieve).toHaveBeenCalledTimes(1)
+
+      // Delete action
+      await blocks(mockNotion as any, { action: 'delete', block_id: 'block-1' })
+      expect(mockNotion.blocks.delete).toHaveBeenCalledTimes(1)
+
+      // Subsequent get action should call API again
+      await blocks(mockNotion as any, { action: 'get', block_id: 'block-1' })
+      expect(mockNotion.blocks.retrieve).toHaveBeenCalledTimes(2)
     })
   })
 })

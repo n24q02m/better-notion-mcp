@@ -20,6 +20,27 @@ const UPDATABLE_BLOCK_TYPES = new Set([
   'code'
 ])
 
+// Cache for blocks
+export const blockCache = new Map<string, { block: any; expiresAt: number }>()
+const BLOCK_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+/**
+ * Get block with caching
+ */
+async function getBlockWithCache(notion: Client, blockId: string): Promise<any> {
+  const cached = blockCache.get(blockId)
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.block
+  }
+
+  const block: any = await notion.blocks.retrieve({ block_id: blockId })
+  blockCache.set(blockId, {
+    block,
+    expiresAt: Date.now() + BLOCK_CACHE_TTL
+  })
+  return block
+}
+
 export interface BlocksInput {
   action: 'get' | 'children' | 'append' | 'update' | 'delete'
   block_id: string
@@ -40,7 +61,7 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
 
     switch (input.action) {
       case 'get': {
-        const block: any = await notion.blocks.retrieve({ block_id: input.block_id })
+        const block = await getBlockWithCache(notion, input.block_id)
         return {
           action: 'get',
           block_id: block.id,
@@ -106,7 +127,7 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
         if (!input.content) {
           throw new NotionMCPError('content required for update', 'VALIDATION_ERROR', 'Provide markdown content')
         }
-        const block: any = await notion.blocks.retrieve({ block_id: input.block_id })
+        const block = await getBlockWithCache(notion, input.block_id)
         const blockType = block.type
         const newBlocks = markdownToBlocks(input.content)
 
@@ -152,10 +173,16 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
           )
         }
 
-        await notion.blocks.update({
+        const updatedBlock: any = await notion.blocks.update({
           block_id: input.block_id,
           ...updatePayload
         } as any)
+
+        // Update cache
+        blockCache.set(input.block_id, {
+          block: updatedBlock,
+          expiresAt: Date.now() + BLOCK_CACHE_TTL
+        })
 
         return {
           action: 'update',
@@ -167,6 +194,7 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
 
       case 'delete': {
         await notion.blocks.delete({ block_id: input.block_id })
+        blockCache.delete(input.block_id)
         return {
           action: 'delete',
           block_id: input.block_id,
