@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { enhanceError, NotionMCPError } from './errors'
+import { enhanceError, isObject, NotionMCPError } from './errors'
 
 describe('Security: Error Handling', () => {
   it('should not leak sensitive fields in validation_error body', () => {
@@ -27,9 +27,9 @@ describe('Security: Error Handling', () => {
 
     // Check that safe fields are present
     expect(enhanced.details).toBeDefined()
-    expect(enhanced.details.message).toBe('Invalid property value')
-    expect(enhanced.details.object).toBe('error')
-    expect(enhanced.details.status).toBe(400)
+    expect((enhanced.details as any).message).toBe('Invalid property value')
+    expect((enhanced.details as any).object).toBe('error')
+    expect((enhanced.details as any).status).toBe(400)
 
     // Check that sensitive fields are REMOVED
     expect(enhanced.details).not.toHaveProperty('sensitive_token')
@@ -58,14 +58,18 @@ describe('Security: Error Handling', () => {
 
     const enhanced = enhanceError(errorWithAuth)
     expect(enhanced.details).toBeDefined()
-    if (enhanced.details?.headers) {
+    if (isObject(enhanced.details) && isObject(enhanced.details.headers)) {
       expect(enhanced.details.headers).not.toHaveProperty('Authorization')
       expect(enhanced.details.headers).toHaveProperty('Content-Type')
     }
-    if (enhanced.details?.config?.headers) {
+    if (isObject(enhanced.details) && isObject(enhanced.details.config) && isObject(enhanced.details.config.headers)) {
       expect(enhanced.details.config.headers).not.toHaveProperty('authorization')
     }
-    if (enhanced.details?.request?._headers) {
+    if (
+      isObject(enhanced.details) &&
+      isObject(enhanced.details.request) &&
+      isObject(enhanced.details.request._headers)
+    ) {
       expect(enhanced.details.request._headers).not.toHaveProperty('authorization')
     }
   })
