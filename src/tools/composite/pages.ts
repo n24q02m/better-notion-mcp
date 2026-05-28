@@ -553,9 +553,10 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
           // Notion API rejects null where it expects object or undefined
           const blockType = rest.type
           if (blockType && rest[blockType] && typeof rest[blockType] === 'object') {
-            for (const key of Object.keys(rest[blockType])) {
-              if (rest[blockType][key] === null) {
-                delete rest[blockType][key]
+            const blockData = rest[blockType]
+            for (const key in blockData) {
+              if (Object.hasOwn(blockData, key) && blockData[key] === null) {
+                delete blockData[key]
               }
             }
           }

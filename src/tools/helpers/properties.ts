@@ -46,9 +46,8 @@ export function convertToNotionProperties(
 ): Record<string, any> {
   const converted: Record<string, any> = {}
 
-  const keys = Object.keys(properties)
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i]
+  for (const key in properties) {
+    if (!Object.hasOwn(properties, key)) continue
     const value = properties[key]
 
     if (value === null || value === undefined) {
@@ -127,9 +126,8 @@ export function extractPageProperties(pageProperties: any): any {
   if (!pageProperties) return {}
   const properties: any = {}
 
-  const keys = Object.keys(pageProperties)
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i]
+  for (const key in pageProperties) {
+    if (!Object.hasOwn(pageProperties, key)) continue
     const p = pageProperties[key] as any
     // Cache p.type once per iteration -- avoids ~20 redundant property
     // lookups in the if/else-if chain on every Notion page row.
