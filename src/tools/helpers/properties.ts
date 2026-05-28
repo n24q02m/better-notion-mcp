@@ -3,6 +3,7 @@
  * Convert between human-friendly and Notion API formats
  */
 
+import type { PageObjectResponse } from '@notionhq/client'
 import * as RichText from './richtext.js'
 
 /** Extract a 32-char hex page ID from a Notion URL, or return the input as-is if it's already a raw ID */
@@ -14,7 +15,7 @@ function extractPageId(value: string): string {
 }
 
 /** Convert a single string or array value to Notion relation format */
-function toRelation(value: any): { relation: { id: string }[] } {
+function toRelation(value: unknown): { relation: { id: string }[] } {
   if (typeof value === 'string') {
     if (value === '') return { relation: [] }
     // Try parsing as JSON array (e.g. '["id1", "id2"]')
@@ -31,9 +32,9 @@ function toRelation(value: any): { relation: { id: string }[] } {
     return { relation: [{ id: extractPageId(value) }] }
   }
   if (Array.isArray(value)) {
-    return { relation: value.map((v: string) => ({ id: extractPageId(v) })) }
+    return { relation: value.map((v: unknown) => ({ id: extractPageId(String(v)) })) }
   }
-  return value
+  return value as { relation: { id: string }[] }
 }
 
 /**
@@ -41,7 +42,7 @@ function toRelation(value: any): { relation: { id: string }[] } {
  * Handles auto-detection of property types and conversion
  */
 export function convertToNotionProperties(
-  properties: Record<string, any>,
+  properties: Record<string, unknown>,
   schema?: Record<string, string>
 ): Record<string, any> {
   const converted: Record<string, any> = {}
@@ -99,7 +100,7 @@ export function convertToNotionProperties(
       if (value.length > 0 && value.every((v) => typeof v === 'string')) {
         const multiSelect = new Array(value.length)
         for (let j = 0; j < value.length; j++) {
-          multiSelect[j] = { name: value[j] }
+          multiSelect[j] = { name: String(value[j]) }
         }
         converted[key] = {
           multi_select: multiSelect
@@ -123,17 +124,17 @@ export function convertToNotionProperties(
  * Uses direct string building and fixed-length arrays to avoid
  * creating thousands of intermediate arrays during large `.map()` chains.
  */
-export function extractPageProperties(pageProperties: any): any {
+export function extractPageProperties(pageProperties: PageObjectResponse['properties']): Record<string, unknown> {
   if (!pageProperties) return {}
-  const properties: any = {}
+  const properties: Record<string, unknown> = {}
 
   const keys = Object.keys(pageProperties)
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i]
-    const p = pageProperties[key] as any
+    const p = pageProperties[key]
     // Cache p.type once per iteration -- avoids ~20 redundant property
     // lookups in the if/else-if chain on every Notion page row.
-    const type = p.type as string | undefined
+    const type = p.type
 
     if (type === 'title' && p.title) {
       let str = ''
@@ -175,27 +176,51 @@ export function extractPageProperties(pageProperties: any): any {
     } else if (type === 'people' && p.people) {
       const ppl = p.people
       const arr = new Array(ppl.length)
-      for (let j = 0; j < ppl.length; j++) arr[j] = ppl[j].name || ppl[j].id
+      for (let j = 0; j < ppl.length; j++) {
+        const person = ppl[j] as { name?: string; id: string }
+        arr[j] = person.name || person.id
+      }
       properties[key] = arr
     } else if (type === 'files' && p.files) {
       const files = p.files
       const arr = new Array(files.length)
       for (let j = 0; j < files.length; j++) {
-        const f = files[j]
+        const f = files[j] as {
+          file?: { url: string }
+          external?: { url: string }
+          name?: string
+        }
         arr[j] = f.file?.url || f.external?.url || f.name
       }
       properties[key] = arr
     } else if (type === 'formula' && p.formula) {
       const f = p.formula
-      properties[key] = f.type ? (f[f.type] ?? null) : null
+      switch (f.type) {
+        case 'string':
+          properties[key] = f.string
+          break
+        case 'number':
+          properties[key] = f.number
+          break
+        case 'boolean':
+          properties[key] = f.boolean
+          break
+        case 'date':
+          properties[key] = f.date ? f.date.start + (f.date.end ? ' to ' + f.date.end : '') : null
+          break
+        default:
+          properties[key] = null
+      }
     } else if (type === 'created_time') {
       properties[key] = p.created_time
     } else if (type === 'last_edited_time') {
       properties[key] = p.last_edited_time
     } else if (type === 'created_by' && p.created_by) {
-      properties[key] = p.created_by?.name || p.created_by?.id
+      const user = p.created_by as { name?: string; id: string }
+      properties[key] = user.name || user.id
     } else if (type === 'last_edited_by' && p.last_edited_by) {
-      properties[key] = p.last_edited_by?.name || p.last_edited_by?.id
+      const user = p.last_edited_by as { name?: string; id: string }
+      properties[key] = user.name || user.id
     } else if (type === 'status' && p.status) {
       properties[key] = p.status?.name
     } else if (type === 'unique_id' && p.unique_id) {
