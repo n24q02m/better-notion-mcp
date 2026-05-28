@@ -6,6 +6,7 @@
 import { NotionMCPError } from './errors.js'
 import { isSafeUrl } from './security.js'
 
+export type NotionIcon = { type: 'emoji'; emoji: string } | { type: 'external'; external: { url: string } }
 const NOTION_ICON_COLORS = new Set([
   'pink',
   'red',
@@ -76,7 +77,7 @@ function formatEmojiIcon(value: string): { type: 'emoji'; emoji: string } {
  * - External URL: "https://..." -> { type: "external", external: { url } }
  * - Notion built-in shorthand: "document:gray" -> { type: "external", external: { url: "https://www.notion.so/icons/document_gray.svg" } }
  */
-export function formatIcon(value: string): { type: string; [key: string]: any } {
+export function formatIcon(value: string): NotionIcon {
   if (!value) {
     throw new NotionMCPError(
       'Icon value cannot be empty. Provide an emoji, a valid URL, or a built-in shorthand (name:color).',
