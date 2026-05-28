@@ -20,3 +20,7 @@
 ## 2025-05-26 - Array.includes() vs Set.has() for O(1) Lookups
 **Learning:** Checking for membership in an array using `['a', 'b', ...].includes(value)` within hot paths requires an O(N) scan. This can become an issue when iterating or repeatedly checking values.
 **Action:** Replace `Array.includes()` with `Set.has()` by extracting the array into a module-level `Set`. This improves lookup times significantly to O(1).
+
+## 2026-05-28 - Type Safety: Replacing 'any' with 'unknown'
+**Learning:** Using 'any' in error handling logic masks potential property access issues and reduces type safety. Replacing it with 'unknown' combined with specific interfaces (e.g., 'NotionApiError') and type guards ensures more robust code. However, it requires updating test suites to handle the 'unknown' type, typically through safe casting to 'Record<string, unknown>' or similar.
+**Action:** Always prefer 'unknown' or a specific interface over 'any'. Use type guards (typeof, instanceof, 'field' in object) or safe casting (as Record<string, unknown>) when property access is required on 'unknown' types.
