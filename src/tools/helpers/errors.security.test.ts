@@ -26,15 +26,15 @@ describe('Security: Error Handling', () => {
     expect(enhanced.code).toBe('VALIDATION_ERROR')
 
     // Check that safe fields are present
-    expect(enhanced.details).toBeDefined()
-    expect(enhanced.details.message).toBe('Invalid property value')
-    expect(enhanced.details.object).toBe('error')
-    expect(enhanced.details.status).toBe(400)
+    expect(enhanced.details as any).toBeDefined()
+    expect((enhanced.details as any).message).toBe('Invalid property value')
+    expect((enhanced.details as any).object).toBe('error')
+    expect((enhanced.details as any).status).toBe(400)
 
     // Check that sensitive fields are REMOVED
-    expect(enhanced.details).not.toHaveProperty('sensitive_token')
-    expect(enhanced.details).not.toHaveProperty('internal_config')
-    expect(enhanced.details).not.toHaveProperty('user_email')
+    expect(enhanced.details as any).not.toHaveProperty('sensitive_token')
+    expect(enhanced.details as any).not.toHaveProperty('internal_config')
+    expect(enhanced.details as any).not.toHaveProperty('user_email')
   })
 
   it('should not leak Authorization headers in error objects', () => {
@@ -57,16 +57,16 @@ describe('Security: Error Handling', () => {
     }
 
     const enhanced = enhanceError(errorWithAuth)
-    expect(enhanced.details).toBeDefined()
-    if (enhanced.details?.headers) {
-      expect(enhanced.details.headers).not.toHaveProperty('Authorization')
-      expect(enhanced.details.headers).toHaveProperty('Content-Type')
+    expect(enhanced.details as any).toBeDefined()
+    if ((enhanced.details as any)?.headers) {
+      expect((enhanced.details as any).headers).not.toHaveProperty('Authorization')
+      expect((enhanced.details as any).headers).toHaveProperty('Content-Type')
     }
-    if (enhanced.details?.config?.headers) {
-      expect(enhanced.details.config.headers).not.toHaveProperty('authorization')
+    if ((enhanced.details as any)?.config?.headers) {
+      expect((enhanced.details as any).config.headers).not.toHaveProperty('authorization')
     }
-    if (enhanced.details?.request?._headers) {
-      expect(enhanced.details.request._headers).not.toHaveProperty('authorization')
+    if ((enhanced.details as any)?.request?._headers) {
+      expect((enhanced.details as any).request._headers).not.toHaveProperty('authorization')
     }
   })
 

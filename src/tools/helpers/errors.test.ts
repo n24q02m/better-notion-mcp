@@ -232,13 +232,13 @@ describe('enhanceError', () => {
       const enhanced = enhanceError(sensitiveError)
 
       // Expectation of SECURE behavior
-      expect(enhanced.details).toBeDefined()
-      expect(enhanced.details.message).toBe('Something went wrong')
+      expect(enhanced.details as any).toBeDefined()
+      expect((enhanced.details as any).message).toBe('Something went wrong')
 
       // Verify secret is NOT leaked
-      expect(JSON.stringify(enhanced.details)).not.toContain('secret-token')
-      expect(enhanced.details.config).toBeUndefined()
-      expect(enhanced.details.request).toBeUndefined()
+      expect(JSON.stringify(enhanced.details as any)).not.toContain('secret-token')
+      expect((enhanced.details as any).config).toBeUndefined()
+      expect((enhanced.details as any).request).toBeUndefined()
     })
   })
 })
