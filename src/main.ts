@@ -132,7 +132,7 @@ export async function bootstrap(selectedMode: string = mode) {
   try {
     await startServer(selectedMode)
   } catch (error) {
-    console.error('Failed to start server:', error)
+    console.error('Failed to start server:', error instanceof Error ? error.message : String(error))
     process.exit(1)
   }
 }

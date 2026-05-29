@@ -224,7 +224,7 @@ describe('main.ts', () => {
 
       await bootstrap('stdio')
 
-      expect(consoleSpy).toHaveBeenCalledWith('Failed to start server:', expect.any(Error))
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to start server:', 'Test failure')
       expect(exitSpy).toHaveBeenCalledWith(1)
 
       consoleSpy.mockRestore()
