@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { enhanceError, NotionMCPError } from './errors'
+import { enhanceError, type NotionErrorLike, NotionMCPError } from './errors'
 
 describe('Security: Error Handling', () => {
   it('should not leak sensitive fields in validation_error body', () => {
@@ -27,14 +27,15 @@ describe('Security: Error Handling', () => {
 
     // Check that safe fields are present
     expect(enhanced.details).toBeDefined()
-    expect(enhanced.details.message).toBe('Invalid property value')
-    expect(enhanced.details.object).toBe('error')
-    expect(enhanced.details.status).toBe(400)
+    const details = enhanced.details as any
+    expect(details.message).toBe('Invalid property value')
+    expect(details.object).toBe('error')
+    expect(details.status).toBe(400)
 
     // Check that sensitive fields are REMOVED
-    expect(enhanced.details).not.toHaveProperty('sensitive_token')
-    expect(enhanced.details).not.toHaveProperty('internal_config')
-    expect(enhanced.details).not.toHaveProperty('user_email')
+    expect(details).not.toHaveProperty('sensitive_token')
+    expect(details).not.toHaveProperty('internal_config')
+    expect(details).not.toHaveProperty('user_email')
   })
 
   it('should not leak Authorization headers in error objects', () => {
@@ -58,15 +59,16 @@ describe('Security: Error Handling', () => {
 
     const enhanced = enhanceError(errorWithAuth)
     expect(enhanced.details).toBeDefined()
-    if (enhanced.details?.headers) {
-      expect(enhanced.details.headers).not.toHaveProperty('Authorization')
-      expect(enhanced.details.headers).toHaveProperty('Content-Type')
+    const details = enhanced.details as NotionErrorLike
+    if (details?.headers) {
+      expect(details.headers).not.toHaveProperty('Authorization')
+      expect(details.headers).toHaveProperty('Content-Type')
     }
-    if (enhanced.details?.config?.headers) {
-      expect(enhanced.details.config.headers).not.toHaveProperty('authorization')
+    if (details?.config?.headers) {
+      expect(details.config.headers).not.toHaveProperty('authorization')
     }
-    if (enhanced.details?.request?._headers) {
-      expect(enhanced.details.request._headers).not.toHaveProperty('authorization')
+    if (details?.request?._headers) {
+      expect(details.request._headers).not.toHaveProperty('authorization')
     }
   })
 
@@ -74,7 +76,7 @@ describe('Security: Error Handling', () => {
     // Upstream HTTP libraries differ on header-name casing. The redactor must
     // catch every variant or we leak the bearer token from the source error
     // object (whose reference may be retained elsewhere -- e.g. error logger).
-    const errorWithMixedCase: any = {
+    const errorWithMixedCase: NotionErrorLike = {
       message: 'Failed to fetch',
       headers: {
         AUTHORIZATION: 'Bearer ntn_uppercase',
@@ -102,9 +104,9 @@ describe('Security: Error Handling', () => {
     expect(errorWithMixedCase.headers).not.toHaveProperty('AUTHORIZATION')
     expect(errorWithMixedCase.headers).not.toHaveProperty('X-Api-Key')
     expect(errorWithMixedCase.headers).toHaveProperty('Content-Type')
-    expect(errorWithMixedCase.response.headers).not.toHaveProperty('Authorization')
-    expect(errorWithMixedCase.response.headers).not.toHaveProperty('Set-Cookie')
-    expect(errorWithMixedCase.config.headers).not.toHaveProperty('AuThOrIzAtIoN')
+    expect(errorWithMixedCase.response?.headers).not.toHaveProperty('Authorization')
+    expect(errorWithMixedCase.response?.headers).not.toHaveProperty('Set-Cookie')
+    expect(errorWithMixedCase.config?.headers).not.toHaveProperty('AuThOrIzAtIoN')
 
     // Hard guarantee: no leaked bearer/api-key value anywhere in the tree.
     const json = JSON.stringify(errorWithMixedCase)
@@ -116,7 +118,7 @@ describe('Security: Error Handling', () => {
   })
 
   it('strips Proxy-Authorization, Cookie and X-Auth-Token headers regardless of casing', () => {
-    const error: any = {
+    const error: NotionErrorLike = {
       message: 'Failed',
       headers: {
         'Proxy-Authorization': 'Basic abc',
