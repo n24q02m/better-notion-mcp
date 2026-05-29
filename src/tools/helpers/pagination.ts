@@ -188,3 +188,51 @@ export async function populateDeepChildren(notion: Client, blocks: RecursiveBloc
     queue
   )
 }
+
+/**
+ * Append blocks to a parent block in batches (Notion limit: 100 blocks per call).
+ * Blocks are appended sequentially to maintain order.
+ */
+
+/**
+ * Append blocks to a parent block in batches (Notion limit: 100 blocks per call).
+ * Blocks are appended sequentially to maintain order.
+ * Supports optional position for the first batch.
+ */
+export async function appendBlocks(
+  notion: Client,
+  blockId: string,
+  blocks: any[],
+  position?: { type: 'start' } | { type: 'after_block'; after_block: { id: string } }
+): Promise<number> {
+  if (blocks.length === 0) return 0
+
+  const BATCH_SIZE = 100
+  let totalAppended = 0
+  let currentPosition = position
+
+  for (let i = 0; i < blocks.length; i += BATCH_SIZE) {
+    const batch = blocks.slice(i, i + BATCH_SIZE)
+    const appendParams: any = {
+      block_id: blockId,
+      children: batch
+    }
+
+    if (currentPosition) {
+      appendParams.position = currentPosition
+    }
+
+    const response: any = await notion.blocks.children.append(appendParams)
+    totalAppended += batch.length
+
+    // For subsequent batches, we need to append after the last block of the previous batch
+    // to maintain order if we started at a specific position.
+    // If no position was specified, they just keep appending to the end.
+    if (response.results && response.results.length > 0) {
+      const lastBlockId = response.results[response.results.length - 1].id
+      currentPosition = { type: 'after_block', after_block: { id: lastBlockId } }
+    }
+  }
+
+  return totalAppended
+}

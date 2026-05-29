@@ -6,7 +6,7 @@
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
-import { autoPaginate, populateDeepChildren } from '../helpers/pagination.js'
+import { appendBlocks, autoPaginate, populateDeepChildren } from '../helpers/pagination.js'
 
 const UPDATABLE_BLOCK_TYPES = new Set([
   'paragraph',
@@ -85,16 +85,13 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
           )
         }
         const blocksList = markdownToBlocks(input.content)
-        const appendParams: any = {
-          block_id: input.block_id,
-          children: blocksList as any
-        }
+        let position: any
         if (input.position === 'start') {
-          appendParams.position = { type: 'start' }
+          position = { type: 'start' }
         } else if (input.position === 'after_block' && input.after_block_id) {
-          appendParams.position = { type: 'after_block', after_block: { id: input.after_block_id } }
+          position = { type: 'after_block', after_block: { id: input.after_block_id } }
         }
-        await notion.blocks.children.append(appendParams)
+        await appendBlocks(notion, input.block_id, blocksList, position)
         return {
           action: 'append',
           block_id: input.block_id,

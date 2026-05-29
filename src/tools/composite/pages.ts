@@ -8,7 +8,7 @@ import { formatCover } from '../helpers/covers.js'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { formatIcon } from '../helpers/icons.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
-import { autoPaginate, populateDeepChildren, processBatches } from '../helpers/pagination.js'
+import { appendBlocks, autoPaginate, populateDeepChildren, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties, extractPageProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
 
@@ -184,10 +184,7 @@ async function createPage(notion: Client, input: PagesInput): Promise<CreatePage
   if (input.content) {
     const blocks = markdownToBlocks(input.content)
     if (blocks.length > 0) {
-      await notion.blocks.children.append({
-        block_id: page.id,
-        children: blocks as any
-      })
+      await appendBlocks(notion, page.id, blocks)
     }
   }
 
@@ -208,16 +205,17 @@ async function getPage(notion: Client, input: PagesInput): Promise<GetPageResult
     throw new NotionMCPError('page_id is required for get action', 'VALIDATION_ERROR', 'Provide page_id')
   }
 
-  const page = (await notion.pages.retrieve({ page_id: input.page_id })) as PageObjectResponse
-
-  // Get all blocks with auto-pagination
-  const blocks = await autoPaginate((cursor) =>
-    notion.blocks.children.list({
-      block_id: input.page_id!,
-      start_cursor: cursor,
-      page_size: 100
-    })
-  )
+  // Get page metadata and blocks in parallel
+  const [page, blocks] = await Promise.all([
+    notion.pages.retrieve({ page_id: input.page_id }) as Promise<PageObjectResponse>,
+    autoPaginate((cursor) =>
+      notion.blocks.children.list({
+        block_id: input.page_id!,
+        start_cursor: cursor,
+        page_size: 100
+      })
+    )
+  ])
 
   // Recursively fetch children for blocks that need them (tables, toggles, columns)
   await populateDeepChildren(notion, blocks as any[])
@@ -359,26 +357,42 @@ async function updatePage(notion: Client, input: PagesInput): Promise<UpdatePage
     }
   }
 
-  // Update page if we have metadata/property changes
+  // Update metadata and fetch existing blocks in parallel if replacing content
+  let existingBlocks: any[] = []
+  const updatePromises: Promise<any>[] = []
+
   if (Object.keys(updates).length > 0) {
-    await notion.pages.update({
-      page_id: input.page_id,
-      ...updates
-    })
+    updatePromises.push(
+      notion.pages.update({
+        page_id: input.page_id,
+        ...updates
+      })
+    )
+  }
+
+  if (input.content) {
+    updatePromises.push(
+      autoPaginate((cursor) =>
+        notion.blocks.children.list({
+          block_id: input.page_id!,
+          page_size: 100,
+          start_cursor: cursor
+        })
+      ).then((blocks) => {
+        existingBlocks = blocks
+      })
+    )
+  }
+
+  if (updatePromises.length > 0) {
+    await Promise.all(updatePromises)
   }
 
   // Handle content updates
   if (input.content || input.append_content) {
     if (input.content) {
       // Replace all content
-      // Optimized: Fetch all blocks using autoPaginate, then delete them in batches.
-      const existingBlocks = await autoPaginate((cursor) =>
-        notion.blocks.children.list({
-          block_id: input.page_id!,
-          page_size: 100,
-          start_cursor: cursor
-        })
-      )
+      // Optimized: delete blocks in batches.
 
       if (existingBlocks.length > 0) {
         await processBatches(
@@ -392,18 +406,12 @@ async function updatePage(notion: Client, input: PagesInput): Promise<UpdatePage
 
       const newBlocks = markdownToBlocks(input.content)
       if (newBlocks.length > 0) {
-        await notion.blocks.children.append({
-          block_id: input.page_id,
-          children: newBlocks as any
-        })
+        await appendBlocks(notion, input.page_id, newBlocks)
       }
     } else if (input.append_content) {
       const blocks = markdownToBlocks(input.append_content)
       if (blocks.length > 0) {
-        await notion.blocks.children.append({
-          block_id: input.page_id,
-          children: blocks as any
-        })
+        await appendBlocks(notion, input.page_id, blocks)
       }
     }
   }
@@ -561,10 +569,7 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
           }
           return rest
         })
-        await notion.blocks.children.append({
-          block_id: duplicatedPage.id,
-          children: sanitizedBlocks as any
-        })
+        await appendBlocks(notion, duplicatedPage.id, sanitizedBlocks)
       }
 
       return {

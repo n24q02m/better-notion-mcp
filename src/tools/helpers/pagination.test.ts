@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  appendBlocks,
   autoPaginate,
   ConcurrencyQueue,
   fetchChildrenRecursive,
@@ -306,5 +307,74 @@ describe('ConcurrencyQueue', () => {
     await expect(queue.run(task1)).rejects.toThrow('boom')
     await expect(queue.run(task2)).rejects.toThrow('Queue stopped due to previous error')
     expect(task2).not.toHaveBeenCalled()
+  })
+})
+
+describe('appendBlocks', () => {
+  it('should not call API for empty blocks array', async () => {
+    const mockNotion = {
+      blocks: {
+        children: {
+          append: vi.fn()
+        }
+      }
+    }
+    const result = await appendBlocks(mockNotion as any, 'parent-1', [])
+    expect(result).toBe(0)
+    expect(mockNotion.blocks.children.append).not.toHaveBeenCalled()
+  })
+
+  it('should append blocks in a single batch if count <= 100', async () => {
+    const mockNotion = {
+      blocks: {
+        children: {
+          append: vi.fn().mockResolvedValue({ results: [] })
+        }
+      }
+    }
+    const blocks = Array.from({ length: 50 }, (_, i) => ({
+      type: 'paragraph',
+      paragraph: { rich_text: [{ text: { content: `Block ${i}` } }] }
+    }))
+    const result = await appendBlocks(mockNotion as any, 'parent-1', blocks)
+    expect(result).toBe(50)
+    expect(mockNotion.blocks.children.append).toHaveBeenCalledTimes(1)
+    expect(mockNotion.blocks.children.append).toHaveBeenCalledWith({
+      block_id: 'parent-1',
+      children: blocks
+    })
+  })
+
+  it('should append blocks in multiple batches if count > 100', async () => {
+    const mockNotion = {
+      blocks: {
+        children: {
+          append: vi.fn().mockImplementation(({ children }) => {
+            return Promise.resolve({ results: children.map((_c: any, i: number) => ({ id: `new-id-${i}` })) })
+          })
+        }
+      }
+    }
+    const blocks = Array.from({ length: 250 }, (_, i) => ({
+      type: 'paragraph',
+      paragraph: { rich_text: [{ text: { content: `Block ${i}` } }] }
+    }))
+    const result = await appendBlocks(mockNotion as any, 'parent-1', blocks)
+
+    expect(result).toBe(250)
+    expect(mockNotion.blocks.children.append).toHaveBeenCalledTimes(3)
+
+    // Check first batch
+    expect(mockNotion.blocks.children.append).toHaveBeenNthCalledWith(1, {
+      block_id: 'parent-1',
+      children: blocks.slice(0, 100)
+    })
+
+    // Check second batch
+    expect(mockNotion.blocks.children.append).toHaveBeenNthCalledWith(2, {
+      block_id: 'parent-1',
+      children: blocks.slice(100, 200),
+      position: { type: 'after_block', after_block: { id: 'new-id-99' } }
+    })
   })
 })
