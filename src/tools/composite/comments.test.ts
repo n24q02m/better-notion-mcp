@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { commentsManage } from './comments'
+import { blockExistenceCache, commentsManage } from './comments'
 
 const mockNotion = {
   comments: {
@@ -15,6 +15,7 @@ const mockNotion = {
 describe('commentsManage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    blockExistenceCache.clear()
   })
 
   describe('list', () => {
@@ -206,6 +207,46 @@ describe('commentsManage', () => {
           page_id: 'page-1'
         })
       ).rejects.toThrow('Pagination failed')
+    })
+    it('should cache block existence check', async () => {
+      const notFoundError = new Error('Not found')
+      ;(notFoundError as any).code = 'object_not_found'
+      mockNotion.comments.list.mockRejectedValue(notFoundError)
+      mockNotion.blocks.retrieve.mockResolvedValue({ id: 'page-1' })
+
+      // First call - should call blocks.retrieve
+      await expect(
+        commentsManage(mockNotion as any, {
+          action: 'list',
+          page_id: 'page-1'
+        })
+      ).rejects.toMatchObject({
+        code: 'COMMENTS_LIST_UNAVAILABLE'
+      })
+      expect(mockNotion.blocks.retrieve).toHaveBeenCalledTimes(1)
+
+      // Second call - should use cache and NOT call blocks.retrieve again
+      await expect(
+        commentsManage(mockNotion as any, {
+          action: 'list',
+          page_id: 'page-1'
+        })
+      ).rejects.toMatchObject({
+        code: 'COMMENTS_LIST_UNAVAILABLE'
+      })
+      expect(mockNotion.blocks.retrieve).toHaveBeenCalledTimes(1)
+
+      // Clear cache and try again
+      blockExistenceCache.clear()
+      await expect(
+        commentsManage(mockNotion as any, {
+          action: 'list',
+          page_id: 'page-1'
+        })
+      ).rejects.toMatchObject({
+        code: 'COMMENTS_LIST_UNAVAILABLE'
+      })
+      expect(mockNotion.blocks.retrieve).toHaveBeenCalledTimes(2)
     })
   })
 

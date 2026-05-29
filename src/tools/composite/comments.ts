@@ -16,6 +16,10 @@ export interface CommentsManageInput {
   content?: string // For create action
 }
 
+// Cache for block existence to avoid redundant retrieve calls
+export const blockExistenceCache = new Map<string, { exists: boolean; expiresAt: number }>()
+const BLOCK_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
 /**
  * Manage comments (list, get, create)
  * Maps to: GET /v1/comments, GET /v1/comments/{id}, POST /v1/comments
@@ -51,6 +55,19 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
           }
         } catch (error: any) {
           if (error.code === 'object_not_found') {
+            // Check cache first
+            const cached = blockExistenceCache.get(input.page_id)
+            if (cached && Date.now() < cached.expiresAt) {
+              if (cached.exists) {
+                throw new NotionMCPError(
+                  'The comments.list API is currently unavailable for this page due to a known Notion OAuth limitation.',
+                  'COMMENTS_LIST_UNAVAILABLE'
+                )
+              }
+              // If cached as not existing, let it fall through to re-throw original error
+              throw error
+            }
+
             // Distinguish between a real 404 and the known Notion API limitation (OAuth 404)
             // by checking if the block/page actually exists.
             let blockExists = false
@@ -63,6 +80,12 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
                 throw innerError
               }
             }
+
+            // Update cache
+            blockExistenceCache.set(input.page_id, {
+              exists: blockExists,
+              expiresAt: Date.now() + BLOCK_CACHE_TTL
+            })
 
             if (blockExists) {
               // If retrieve succeeds, it's the known API limitation
