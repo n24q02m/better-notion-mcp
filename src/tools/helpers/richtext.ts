@@ -132,16 +132,18 @@ export function formatText(
 
 /**
  * Extract plain text from rich text array
- * Optimized string accumulation avoids creating intermediate arrays
- * and reduces garbage collection pressure in hot paths.
+ * Using array building and join is more efficient than string concatenation
+ * for accumulating multiple text fragments.
  */
 export function extractPlainText(richText: RichTextItem[] | undefined | null): string {
   if (!richText || !Array.isArray(richText)) return ''
-  let result = ''
-  for (let i = 0; i < richText.length; i++) {
-    result += richText[i].plain_text ?? richText[i].text?.content ?? ''
+  const len = richText.length
+  const parts: string[] = new Array(len)
+  for (let i = 0; i < len; i++) {
+    const item = richText[i]
+    parts[i] = item.plain_text ?? item.text?.content ?? ''
   }
-  return result
+  return parts.join('')
 }
 
 /**
