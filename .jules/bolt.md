@@ -20,3 +20,6 @@
 ## 2025-05-26 - Array.includes() vs Set.has() for O(1) Lookups
 **Learning:** Checking for membership in an array using `['a', 'b', ...].includes(value)` within hot paths requires an O(N) scan. This can become an issue when iterating or repeatedly checking values.
 **Action:** Replace `Array.includes()` with `Set.has()` by extracting the array into a module-level `Set`. This improves lookup times significantly to O(1).
+## 2026-05-28 - Inefficient loop usage for mapped plain text properties
+**Learning:** Refactoring `.map(...).join('')` into a single `for...of` loop or `reduce` avoids allocating intermediate arrays. This is especially beneficial on hot paths where results are concatenated from many items.
+**Action:** Use a `for...of` loop with string concatenation instead of `.map().join('')` when merging large lists of plain text properties.
