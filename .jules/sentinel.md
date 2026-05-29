@@ -20,3 +20,13 @@
 **Vulnerability:** Untrusted content tools were protected against XPIA using a closing tag replacement regex (`/<\/untrusted_notion_content>/gi`). However, this regex was strict and failed to match whitespace-padded payloads (e.g., `</untrusted_notion_content >`), allowing an attacker to bypass the sanitization and execute prompt injection.
 **Learning:** XML/HTML parsers (including LLMs parsing pseudo-XML tags) often tolerate whitespace before the closing angle bracket. A strict exact-match regex sanitization is insufficient for tag-based wrappers, as attackers can pad their payload to break out of the wrapper while still satisfying parser leniency.
 **Prevention:** Always use regex quantifiers for optional whitespace (e.g., `\s*`) when matching or sanitizing closing tags to handle evasion tactics effectively.
+
+## 2026-05-28 - Improve Security Coverage for isSafeWebUrl
+**Vulnerability:** N/A (Testing Task)
+**Learning:** The  function provides a stricter validation layer for opening URLs in external browsers compared to , specifically by enforcing standard web protocols (HTTP/HTTPS) and preventing shell flag injection (URLs starting with ).
+**Prevention:** Ensure all security-critical utility functions have comprehensive unit test coverage, specifically targeting edge cases like protocol obfuscation, shell injection vectors, and malformed URL handling.
+
+## 2026-05-28 - Improve Security Coverage for isSafeWebUrl
+**Vulnerability:** N/A (Testing Task)
+**Learning:** The function isSafeWebUrl provides a stricter validation layer for opening URLs in external browsers compared to isSafeUrl, specifically by enforcing standard web protocols (HTTP/HTTPS) and preventing shell flag injection (URLs starting with dash).
+**Prevention:** Ensure all security-critical utility functions have comprehensive unit test coverage, specifically targeting edge cases like protocol obfuscation, shell injection vectors, and malformed URL handling.
