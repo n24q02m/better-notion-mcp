@@ -92,7 +92,10 @@ describe('enhanceError', () => {
 
       expect(result.code).toBe('VALIDATION_ERROR')
       expect(result.message).toBe('title is required')
-      expect(result.details).toEqual({ message: 'title is required', path: '/properties/title' })
+      expect(result.details as Record<string, unknown>).toEqual({
+        message: 'title is required',
+        path: '/properties/title'
+      })
     })
 
     it('should handle validation_error without body', () => {
@@ -116,7 +119,10 @@ describe('enhanceError', () => {
 
       expect(result.code).toBe('VALIDATION_ERROR')
       expect(result.message).toBe('title is required')
-      expect(result.details).toEqual({ message: 'title is required', path: '/properties/title' })
+      expect(result.details as Record<string, unknown>).toEqual({
+        message: 'title is required',
+        path: '/properties/title'
+      })
       expect(JSON.stringify(result.details)).not.toContain('secret_token')
       expect(JSON.stringify(result.details)).not.toContain('sk-12345')
     })
@@ -199,7 +205,7 @@ describe('enhanceError', () => {
         status: 502
       })
 
-      expect(result.details).toEqual({
+      expect(result.details as Record<string, unknown>).toEqual({
         message: 'oops',
         name: 'SomeError',
         code: undefined,
@@ -233,12 +239,12 @@ describe('enhanceError', () => {
 
       // Expectation of SECURE behavior
       expect(enhanced.details).toBeDefined()
-      expect(enhanced.details.message).toBe('Something went wrong')
+      expect((enhanced.details as Record<string, unknown>).message).toBe('Something went wrong')
 
       // Verify secret is NOT leaked
       expect(JSON.stringify(enhanced.details)).not.toContain('secret-token')
-      expect(enhanced.details.config).toBeUndefined()
-      expect(enhanced.details.request).toBeUndefined()
+      expect((enhanced.details as Record<string, unknown>).config).toBeUndefined()
+      expect((enhanced.details as Record<string, unknown>).request).toBeUndefined()
     })
   })
 })
