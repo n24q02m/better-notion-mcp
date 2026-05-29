@@ -116,9 +116,12 @@ function stripSensitiveFields(obj: any, seen = new WeakSet()): void {
     redactHeaderMap(obj.response.headers)
   }
 
-  for (const key of Object.keys(obj)) {
-    if (typeof obj[key] === 'object' && obj[key] !== null) {
-      stripSensitiveFields(obj[key], seen)
+  for (const key in obj) {
+    if (Object.hasOwn(obj, key)) {
+      const val = obj[key]
+      if (typeof val === 'object' && val !== null) {
+        stripSensitiveFields(val, seen)
+      }
     }
   }
 }

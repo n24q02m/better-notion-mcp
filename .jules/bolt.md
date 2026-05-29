@@ -20,3 +20,6 @@
 ## 2025-05-26 - Array.includes() vs Set.has() for O(1) Lookups
 **Learning:** Checking for membership in an array using `['a', 'b', ...].includes(value)` within hot paths requires an O(N) scan. This can become an issue when iterating or repeatedly checking values.
 **Action:** Replace `Array.includes()` with `Set.has()` by extracting the array into a module-level `Set`. This improves lookup times significantly to O(1).
+## 2026-05-28 - [PERF] Optimized object iteration
+**Learning:** Replacing `for (const key of Object.keys(obj))` with `for (const key in obj)` and `Object.hasOwn(obj, key)` prevents intermediate array allocation, which is beneficial in hot paths. Modern environments (Node 16.9+) support `Object.hasOwn()` which is preferred by linters over `Object.prototype.hasOwnProperty.call()`.
+**Action:** Use `for...in` with `Object.hasOwn()` for performance-critical object iterations.
