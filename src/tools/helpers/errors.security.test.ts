@@ -27,9 +27,9 @@ describe('Security: Error Handling', () => {
 
     // Check that safe fields are present
     expect(enhanced.details).toBeDefined()
-    expect(enhanced.details.message).toBe('Invalid property value')
-    expect(enhanced.details.object).toBe('error')
-    expect(enhanced.details.status).toBe(400)
+    expect((enhanced.details as any).message).toBe('Invalid property value')
+    expect((enhanced.details as any).object).toBe('error')
+    expect((enhanced.details as any).status).toBe(400)
 
     // Check that sensitive fields are REMOVED
     expect(enhanced.details).not.toHaveProperty('sensitive_token')
@@ -58,15 +58,15 @@ describe('Security: Error Handling', () => {
 
     const enhanced = enhanceError(errorWithAuth)
     expect(enhanced.details).toBeDefined()
-    if (enhanced.details?.headers) {
-      expect(enhanced.details.headers).not.toHaveProperty('Authorization')
-      expect(enhanced.details.headers).toHaveProperty('Content-Type')
+    if ((enhanced.details as any)?.headers) {
+      expect((enhanced.details as any).headers).not.toHaveProperty('Authorization')
+      expect((enhanced.details as any).headers).toHaveProperty('Content-Type')
     }
-    if (enhanced.details?.config?.headers) {
-      expect(enhanced.details.config.headers).not.toHaveProperty('authorization')
+    if ((enhanced.details as any)?.config?.headers) {
+      expect((enhanced.details as any).config.headers).not.toHaveProperty('authorization')
     }
-    if (enhanced.details?.request?._headers) {
-      expect(enhanced.details.request._headers).not.toHaveProperty('authorization')
+    if ((enhanced.details as any)?.request?._headers) {
+      expect((enhanced.details as any).request._headers).not.toHaveProperty('authorization')
     }
   })
 
