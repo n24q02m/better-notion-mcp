@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isSafeUrl, wrapToolResult } from './security'
+import { isSafeUrl, isSafeWebUrl, wrapToolResult } from './security'
 
 describe('Security Utilities', () => {
   describe('isSafeUrl', () => {
@@ -166,6 +166,51 @@ describe('Security Utilities', () => {
       for (const tool of localTools) {
         expect(wrapToolResult(tool, jsonText)).toBe(jsonText)
       }
+    })
+  })
+
+  describe('isSafeWebUrl', () => {
+    it('should allow valid http and https URLs', () => {
+      expect(isSafeWebUrl('https://example.com')).toBe(true)
+      expect(isSafeWebUrl('http://example.com')).toBe(true)
+    })
+
+    it('should reject other protocols like mailto, tel, javascript', () => {
+      expect(isSafeWebUrl('mailto:user@example.com')).toBe(false)
+      expect(isSafeWebUrl('tel:+1234567890')).toBe(false)
+      expect(isSafeWebUrl('javascript:alert(1)')).toBe(false)
+      expect(isSafeWebUrl('data:text/html,abc')).toBe(false)
+    })
+
+    it('should reject empty or non-string inputs', () => {
+      expect(isSafeWebUrl('')).toBe(false)
+
+      expect(isSafeWebUrl(null as unknown as string)).toBe(false)
+    })
+
+    it('should reject URLs with whitespace or control characters', () => {
+      expect(isSafeWebUrl(' https://example.com')).toBe(false)
+      expect(isSafeWebUrl('https://example.com ')).toBe(false)
+      expect(isSafeWebUrl('https://example.com\n')).toBe(false)
+      expect(isSafeWebUrl('https://example.com\r')).toBe(false)
+      expect(isSafeWebUrl('https://example.com\t')).toBe(false)
+    })
+
+    it('should reject URLs starting with a dash to prevent flag injection', () => {
+      expect(isSafeWebUrl('-https://example.com')).toBe(false)
+      expect(isSafeWebUrl('--url=https://example.com')).toBe(false)
+    })
+
+    it('should reject relative URLs', () => {
+      expect(isSafeWebUrl('/path/to/resource')).toBe(false)
+      expect(isSafeWebUrl('relative/path')).toBe(false)
+      expect(isSafeWebUrl('file.html')).toBe(false)
+    })
+
+    it('should reject malformed URLs', () => {
+      expect(isSafeWebUrl('http://[')).toBe(false)
+      expect(isSafeWebUrl('not-a-url')).toBe(false)
+      expect(isSafeWebUrl('://')).toBe(false)
     })
   })
 })

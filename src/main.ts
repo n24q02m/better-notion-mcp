@@ -123,10 +123,16 @@ export const mode = getTransportMode()
  * Bootstrap function to start the server with error handling.
  */
 export async function bootstrap(selectedMode: string = mode) {
+  if (process.env.BETTER_NOTION_MCP_BOOTSTRAPPED) {
+    console.error('[better-notion-mcp] Bootstrap aborted: server already running in this process tree.')
+    return
+  }
+  process.env.BETTER_NOTION_MCP_BOOTSTRAPPED = 'true'
+
   try {
     await startServer(selectedMode)
   } catch (error) {
-    console.error('Failed to start server:', error)
+    console.error('Failed to start server:', error instanceof Error ? error.message : String(error))
     process.exit(1)
   }
 }
@@ -135,4 +141,3 @@ export async function bootstrap(selectedMode: string = mode) {
 if (isMain(import.meta.url) && process.env.NODE_ENV !== 'test') {
   bootstrap()
 }
-// Rebuild target: mcp-core 1.11.5 (P0 fork-bomb fix)
