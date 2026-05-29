@@ -22,6 +22,13 @@ export interface PaginationOptions {
 }
 
 /**
+ * Calculate the effective maximum number of pages to fetch.
+ */
+function getEffectiveMaxPages(maxPages: number): number {
+  return maxPages > 0 ? Math.min(maxPages, MAX_PAGES_SAFETY) : MAX_PAGES_SAFETY
+}
+
+/**
  * Fetch all pages automatically
  */
 export async function autoPaginate<T>(
@@ -29,22 +36,21 @@ export async function autoPaginate<T>(
   options: PaginationOptions = {}
 ): Promise<T[]> {
   const { maxPages = 0, pageSize = 100 } = options
-  const effectiveMax = maxPages > 0 ? Math.min(maxPages, MAX_PAGES_SAFETY) : MAX_PAGES_SAFETY
+  const effectiveMax = getEffectiveMaxPages(maxPages)
   const allResults: T[] = []
   let cursor: string | null = null
   let pageCount = 0
 
-  do {
+  while (pageCount < effectiveMax) {
     const response = await fetchFn(cursor || undefined, pageSize)
     allResults.push(...response.results)
     cursor = response.next_cursor
     pageCount++
 
-    // Stop if max pages reached (user-specified or safety limit)
-    if (pageCount >= effectiveMax) {
+    if (cursor === null) {
       break
     }
-  } while (cursor !== null)
+  }
 
   return allResults
 }
@@ -78,39 +84,72 @@ export class ConcurrencyQueue {
 
   constructor(private readonly limit: number) {}
 
+  /**
+   * Run a task within the concurrency limit.
+   */
   async run<T>(task: () => Promise<T>): Promise<T> {
-    if (this.hasError) {
-      throw new Error('Queue stopped due to previous error')
-    }
+    this.checkError()
 
     if (this.activeCount >= this.limit) {
       await new Promise<void>((resolve) => this.queue.push(resolve))
     }
 
-    if (this.hasError) {
-      throw new Error('Queue stopped due to previous error')
-    }
+    this.checkError()
 
     this.activeCount++
     try {
       return await task()
     } catch (error) {
-      this.hasError = true
-      // Notify all waiting tasks to wake up and see the error
-      const waiters = this.queue
-      this.queue = []
-      for (const resolve of waiters) {
-        resolve()
-      }
+      this.handleError()
       throw error
     } finally {
       this.activeCount--
-      if (this.queue.length > 0 && !this.hasError) {
-        const next = this.queue.shift()
-        next?.()
-      }
+      this.advanceQueue()
     }
   }
+
+  private checkError(): void {
+    if (this.hasError) {
+      throw new Error('Queue stopped due to previous error')
+    }
+  }
+
+  private handleError(): void {
+    this.hasError = true
+    // Notify all waiting tasks to wake up and see the error
+    const waiters = this.queue
+    this.queue = []
+    for (const resolve of waiters) {
+      resolve()
+    }
+  }
+
+  private advanceQueue(): void {
+    if (this.queue.length > 0 && !this.hasError) {
+      const next = this.queue.shift()
+      next?.()
+    }
+  }
+}
+
+/**
+ * Fetch children and recurse for a single block.
+ */
+async function fetchAndRecurse(
+  block: RecursiveBlock,
+  fetchChildren: (blockId: string) => Promise<RecursiveBlock[]>,
+  depth: number,
+  queue?: ConcurrencyQueue
+) {
+  const children = queue ? await queue.run(() => fetchChildren(block.id)) : await fetchChildren(block.id)
+
+  // Attach children to the correct property based on block type
+  if (block[block.type]) {
+    block[block.type].children = children
+  }
+
+  // Recurse into children
+  await fetchChildrenRecursive(children, fetchChildren, depth + 1, queue)
 }
 
 /**
@@ -125,23 +164,11 @@ export async function fetchChildrenRecursive(
 ): Promise<void> {
   if (depth >= MAX_DEPTH) return
 
-  const fetchAndRecurse = async (block: RecursiveBlock) => {
-    const children = queue ? await queue.run(() => fetchChildren(block.id)) : await fetchChildren(block.id)
-
-    // Attach children to the correct property based on block type
-    if (block[block.type]) {
-      block[block.type].children = children
-    }
-
-    // Recurse into children
-    await fetchChildrenRecursive(children, fetchChildren, depth + 1, queue)
-  }
-
   const promises: Promise<void>[] = []
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]
     if (block.has_children && BLOCKS_NEEDING_CHILDREN.has(block.type)) {
-      promises.push(fetchAndRecurse(block))
+      promises.push(fetchAndRecurse(block, fetchChildren, depth, queue))
     }
   }
 
