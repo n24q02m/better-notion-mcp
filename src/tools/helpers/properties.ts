@@ -3,6 +3,7 @@
  * Convert between human-friendly and Notion API formats
  */
 
+import type { PageObjectResponse } from '@notionhq/client'
 import * as RichText from './richtext.js'
 
 /** Extract a 32-char hex page ID from a Notion URL, or return the input as-is if it's already a raw ID */
@@ -14,7 +15,7 @@ function extractPageId(value: string): string {
 }
 
 /** Convert a single string or array value to Notion relation format */
-function toRelation(value: any): { relation: { id: string }[] } {
+function toRelation(value: unknown): { relation: { id: string }[] } {
   if (typeof value === 'string') {
     if (value === '') return { relation: [] }
     // Try parsing as JSON array (e.g. '["id1", "id2"]')
@@ -31,9 +32,9 @@ function toRelation(value: any): { relation: { id: string }[] } {
     return { relation: [{ id: extractPageId(value) }] }
   }
   if (Array.isArray(value)) {
-    return { relation: value.map((v: string) => ({ id: extractPageId(v) })) }
+    return { relation: (value as string[]).map((v: string) => ({ id: extractPageId(v) })) }
   }
-  return value
+  return value as { relation: { id: string }[] }
 }
 
 /**
@@ -41,7 +42,7 @@ function toRelation(value: any): { relation: { id: string }[] } {
  * Handles auto-detection of property types and conversion
  */
 export function convertToNotionProperties(
-  properties: Record<string, any>,
+  properties: Record<string, unknown>,
   schema?: Record<string, string>
 ): Record<string, any> {
   const converted: Record<string, any> = {}
@@ -123,14 +124,16 @@ export function convertToNotionProperties(
  * Uses direct string building and fixed-length arrays to avoid
  * creating thousands of intermediate arrays during large `.map()` chains.
  */
-export function extractPageProperties(pageProperties: any): any {
+export function extractPageProperties(
+  pageProperties: PageObjectResponse['properties'] | Record<string, any> | null | undefined
+): Record<string, unknown> {
   if (!pageProperties) return {}
-  const properties: any = {}
+  const properties: Record<string, unknown> = {}
 
   const keys = Object.keys(pageProperties)
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i]
-    const p = pageProperties[key] as any
+    const p = (pageProperties as any)[key]
     // Cache p.type once per iteration -- avoids ~20 redundant property
     // lookups in the if/else-if chain on every Notion page row.
     const type = p.type as string | undefined
