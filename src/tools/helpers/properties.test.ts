@@ -391,7 +391,7 @@ describe('extractPageProperties', () => {
         title: [{ plain_text: 'Hello ' }, { plain_text: 'World' }]
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Name: 'Hello World' })
+    expect(extractPageProperties(props as any)).toEqual({ Name: 'Hello World' })
   })
 
   it('handles empty title correctly', () => {
@@ -401,7 +401,7 @@ describe('extractPageProperties', () => {
         title: []
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Name: '' })
+    expect(extractPageProperties(props as any)).toEqual({ Name: '' })
   })
 
   it('extracts rich_text', () => {
@@ -411,7 +411,7 @@ describe('extractPageProperties', () => {
         rich_text: [{ plain_text: 'Some ' }, { plain_text: 'text' }]
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Desc: 'Some text' })
+    expect(extractPageProperties(props as any)).toEqual({ Desc: 'Some text' })
   })
 
   it('extracts select', () => {
@@ -421,7 +421,7 @@ describe('extractPageProperties', () => {
         select: { name: 'Done' }
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Status: 'Done' })
+    expect(extractPageProperties(props as any)).toEqual({ Status: 'Done' })
   })
 
   it('extracts multi_select', () => {
@@ -431,7 +431,7 @@ describe('extractPageProperties', () => {
         multi_select: [{ name: 'A' }, { name: 'B' }]
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Tags: ['A', 'B'] })
+    expect(extractPageProperties(props as any)).toEqual({ Tags: ['A', 'B'] })
   })
 
   it('extracts number', () => {
@@ -441,7 +441,7 @@ describe('extractPageProperties', () => {
         number: 42
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Price: 42 })
+    expect(extractPageProperties(props as any)).toEqual({ Price: 42 })
   })
 
   it('extracts checkbox', () => {
@@ -451,7 +451,7 @@ describe('extractPageProperties', () => {
         checkbox: true
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Done: true })
+    expect(extractPageProperties(props as any)).toEqual({ Done: true })
   })
 
   it('extracts url', () => {
@@ -461,7 +461,7 @@ describe('extractPageProperties', () => {
         url: 'https://example.com'
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Link: 'https://example.com' })
+    expect(extractPageProperties(props as any)).toEqual({ Link: 'https://example.com' })
   })
 
   it('extracts email', () => {
@@ -471,7 +471,7 @@ describe('extractPageProperties', () => {
         email: 'test@example.com'
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Email: 'test@example.com' })
+    expect(extractPageProperties(props as any)).toEqual({ Email: 'test@example.com' })
   })
 
   it('extracts phone_number', () => {
@@ -481,7 +481,7 @@ describe('extractPageProperties', () => {
         phone_number: '123-456-7890'
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Phone: '123-456-7890' })
+    expect(extractPageProperties(props as any)).toEqual({ Phone: '123-456-7890' })
   })
 
   it('extracts date with start and end', () => {
@@ -491,7 +491,7 @@ describe('extractPageProperties', () => {
         date: { start: '2023-01-01', end: '2023-01-31' }
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Timeline: '2023-01-01 to 2023-01-31' })
+    expect(extractPageProperties(props as any)).toEqual({ Timeline: '2023-01-01 to 2023-01-31' })
   })
 
   it('extracts date with start only', () => {
@@ -501,7 +501,7 @@ describe('extractPageProperties', () => {
         date: { start: '2023-01-01' }
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Date: '2023-01-01' })
+    expect(extractPageProperties(props as any)).toEqual({ Date: '2023-01-01' })
   })
 
   it('extracts relation', () => {
@@ -511,7 +511,7 @@ describe('extractPageProperties', () => {
         relation: [{ id: 'id1' }, { id: 'id2' }]
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Related: ['id1', 'id2'] })
+    expect(extractPageProperties(props as any)).toEqual({ Related: ['id1', 'id2'] })
   })
 
   it('extracts rollup', () => {
@@ -522,7 +522,7 @@ describe('extractPageProperties', () => {
         rollup: rollupValue
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Total: rollupValue })
+    expect(extractPageProperties(props as any)).toEqual({ Total: rollupValue })
   })
 
   it('extracts people with name', () => {
@@ -535,7 +535,7 @@ describe('extractPageProperties', () => {
         ]
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Assignee: ['Alice', 'Bob'] })
+    expect(extractPageProperties(props as any)).toEqual({ Assignee: ['Alice', 'Bob'] })
   })
 
   it('extracts people falling back to id', () => {
@@ -545,7 +545,7 @@ describe('extractPageProperties', () => {
         people: [{ id: 'a1' }]
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Assignee: ['a1'] })
+    expect(extractPageProperties(props as any)).toEqual({ Assignee: ['a1'] })
   })
 
   it('extracts files (url, external url, name fallback)', () => {
@@ -555,7 +555,9 @@ describe('extractPageProperties', () => {
         files: [{ file: { url: 'internal.png' } }, { external: { url: 'external.png' } }, { name: 'fallback.txt' }]
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Attachments: ['internal.png', 'external.png', 'fallback.txt'] })
+    expect(extractPageProperties(props as any)).toEqual({
+      Attachments: ['internal.png', 'external.png', 'fallback.txt']
+    })
   })
 
   it('extracts formula string', () => {
@@ -565,7 +567,7 @@ describe('extractPageProperties', () => {
         formula: { type: 'string', string: 'result' }
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Calc: 'result' })
+    expect(extractPageProperties(props as any)).toEqual({ Calc: 'result' })
   })
 
   it('extracts formula returning null when type is unsupported', () => {
@@ -575,7 +577,7 @@ describe('extractPageProperties', () => {
         formula: { type: 'unknown' }
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Calc: null })
+    expect(extractPageProperties(props as any)).toEqual({ Calc: null })
   })
 
   it('extracts formula returning null when type is missing', () => {
@@ -585,7 +587,7 @@ describe('extractPageProperties', () => {
         formula: {}
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Calc: null })
+    expect(extractPageProperties(props as any)).toEqual({ Calc: null })
   })
 
   it('extracts created_time', () => {
@@ -595,7 +597,7 @@ describe('extractPageProperties', () => {
         created_time: '2023-01-01T00:00:00Z'
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Created: '2023-01-01T00:00:00Z' })
+    expect(extractPageProperties(props as any)).toEqual({ Created: '2023-01-01T00:00:00Z' })
   })
 
   it('extracts last_edited_time', () => {
@@ -605,7 +607,7 @@ describe('extractPageProperties', () => {
         last_edited_time: '2023-01-02T00:00:00Z'
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Edited: '2023-01-02T00:00:00Z' })
+    expect(extractPageProperties(props as any)).toEqual({ Edited: '2023-01-02T00:00:00Z' })
   })
 
   it('extracts created_by name', () => {
@@ -615,7 +617,7 @@ describe('extractPageProperties', () => {
         created_by: { name: 'Alice', id: 'a1' }
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Author: 'Alice' })
+    expect(extractPageProperties(props as any)).toEqual({ Author: 'Alice' })
   })
 
   it('extracts created_by falling back to id', () => {
@@ -625,7 +627,7 @@ describe('extractPageProperties', () => {
         created_by: { id: 'a1' }
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Author: 'a1' })
+    expect(extractPageProperties(props as any)).toEqual({ Author: 'a1' })
   })
 
   it('extracts last_edited_by name', () => {
@@ -635,7 +637,7 @@ describe('extractPageProperties', () => {
         last_edited_by: { name: 'Bob', id: 'b1' }
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Editor: 'Bob' })
+    expect(extractPageProperties(props as any)).toEqual({ Editor: 'Bob' })
   })
 
   it('extracts last_edited_by falling back to id', () => {
@@ -645,7 +647,7 @@ describe('extractPageProperties', () => {
         last_edited_by: { id: 'b1' }
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Editor: 'b1' })
+    expect(extractPageProperties(props as any)).toEqual({ Editor: 'b1' })
   })
 
   it('extracts status', () => {
@@ -655,7 +657,7 @@ describe('extractPageProperties', () => {
         status: { name: 'In Progress' }
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Progress: 'In Progress' })
+    expect(extractPageProperties(props as any)).toEqual({ Progress: 'In Progress' })
   })
 
   it('extracts unique_id with prefix', () => {
@@ -665,7 +667,7 @@ describe('extractPageProperties', () => {
         unique_id: { prefix: 'TASK', number: 123 }
       }
     }
-    expect(extractPageProperties(props)).toEqual({ ID: 'TASK-123' })
+    expect(extractPageProperties(props as any)).toEqual({ ID: 'TASK-123' })
   })
 
   it('extracts unique_id without prefix', () => {
@@ -675,7 +677,7 @@ describe('extractPageProperties', () => {
         unique_id: { number: 456 }
       }
     }
-    expect(extractPageProperties(props)).toEqual({ ID: 456 })
+    expect(extractPageProperties(props as any)).toEqual({ ID: 456 })
   })
 
   it('ignores unsupported or malformed properties', () => {
@@ -688,13 +690,13 @@ describe('extractPageProperties', () => {
         type: 'magical_type'
       }
     }
-    expect(extractPageProperties(props)).toEqual({})
+    expect(extractPageProperties(props as any)).toEqual({})
   })
 
   it('handles null, undefined or empty input', () => {
-    expect(extractPageProperties(null)).toEqual({})
-    expect(extractPageProperties(undefined)).toEqual({})
-    expect(extractPageProperties({})).toEqual({})
+    expect(extractPageProperties(null as any)).toEqual({})
+    expect(extractPageProperties(undefined as any)).toEqual({})
+    expect(extractPageProperties({} as any)).toEqual({})
   })
 
   it('only reads p.type once per iteration (uses cached local)', () => {
@@ -716,7 +718,7 @@ describe('extractPageProperties', () => {
         }
       )
     }
-    expect(extractPageProperties(props)).toEqual({ Name: 'X' })
+    expect(extractPageProperties(props as any)).toEqual({ Name: 'X' })
     expect(typeReads).toBe(1)
   })
 
@@ -731,7 +733,7 @@ describe('extractPageProperties', () => {
         ]
       }
     }
-    expect(extractPageProperties(props)).toEqual({
+    expect(extractPageProperties(props as any)).toEqual({
       Files: ['https://internal/file1.pdf', 'https://external/file2.png', 'just-a-name.txt']
     })
   })
@@ -743,7 +745,7 @@ describe('extractPageProperties', () => {
         people: [{ name: 'Alice', id: 'u1' }, { id: 'u2' }]
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Owners: ['Alice', 'u2'] })
+    expect(extractPageProperties(props as any)).toEqual({ Owners: ['Alice', 'u2'] })
   })
 
   it('extracts date range', () => {
@@ -753,6 +755,6 @@ describe('extractPageProperties', () => {
         date: { start: '2026-01-01', end: '2026-01-31' }
       }
     }
-    expect(extractPageProperties(props)).toEqual({ Window: '2026-01-01 to 2026-01-31' })
+    expect(extractPageProperties(props as any)).toEqual({ Window: '2026-01-01 to 2026-01-31' })
   })
 })
