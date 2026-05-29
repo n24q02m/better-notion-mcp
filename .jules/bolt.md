@@ -20,3 +20,6 @@
 ## 2025-05-26 - Array.includes() vs Set.has() for O(1) Lookups
 **Learning:** Checking for membership in an array using `['a', 'b', ...].includes(value)` within hot paths requires an O(N) scan. This can become an issue when iterating or repeatedly checking values.
 **Action:** Replace `Array.includes()` with `Set.has()` by extracting the array into a module-level `Set`. This improves lookup times significantly to O(1).
+## 2026-05-28 - Caching Notion API Retrieve Calls in Blocks Tool
+**Learning:** Repeated Notion API calls for the same resource within a short timeframe significantly impact performance. Implementing a simple in-memory Map cache with TTL (Time-To-Live) and ensuring the cache is updated/invalidated on mutations (update/delete) provides a substantial performance boost without complexity.
+**Action:** Always check for repeated 'retrieve' or 'get' calls in high-traffic or composite tools and consider implementing a localized cache with proper lifecycle management.
