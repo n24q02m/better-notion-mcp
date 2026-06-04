@@ -570,7 +570,7 @@ describe('pages', () => {
       expect(callArgs.properties.Status).toEqual({ select: { name: 'Done' } })
     })
 
-    it('replaces content by deleting old blocks and appending new', async () => {
+    it('replaces content by deleting old blocks and appending new when replace is true', async () => {
       mockNotion.pages.update.mockResolvedValue({ id: 'page-1' })
       mockNotion.blocks.children.list
         .mockResolvedValueOnce({
@@ -590,11 +590,30 @@ describe('pages', () => {
         action: 'update',
         page_id: 'page-1',
         title: 'Updated',
-        content: '# New Content'
+        content: '# New Content',
+        replace: true
       })
 
       expect(mockNotion.blocks.delete).toHaveBeenCalledWith({ block_id: 'old-block-1' })
       expect(mockNotion.blocks.delete).toHaveBeenCalledWith({ block_id: 'old-block-2' })
+      expect(mockNotion.blocks.children.append).toHaveBeenCalledWith({
+        block_id: 'page-1',
+        children: expect.any(Array)
+      })
+    })
+
+    it('appends content when content is provided but replace is false/missing', async () => {
+      mockNotion.pages.update.mockResolvedValue({ id: 'page-1' })
+      mockNotion.blocks.children.append.mockResolvedValue({ results: [] })
+
+      await pages(mockNotion as any, {
+        action: 'update',
+        page_id: 'page-1',
+        content: '# Appended Content'
+      })
+
+      expect(mockNotion.blocks.delete).not.toHaveBeenCalled()
+      expect(mockNotion.blocks.children.list).not.toHaveBeenCalled()
       expect(mockNotion.blocks.children.append).toHaveBeenCalledWith({
         block_id: 'page-1',
         children: expect.any(Array)
