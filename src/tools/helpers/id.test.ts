@@ -150,4 +150,25 @@ describe('isValidBase64', () => {
     expect(isValidBase64('aGVsbG8=')).toBe(false)
     spy.mockRestore()
   })
+
+  it('should reject non-string inputs', () => {
+    expect(isValidBase64(null as any)).toBe(false)
+    expect(isValidBase64(undefined as any)).toBe(false)
+    expect(isValidBase64(123 as any)).toBe(false)
+    expect(isValidBase64({} as any)).toBe(false)
+  })
+
+  it('should reject URL-safe base64 characters', () => {
+    // Base64url uses - and _ instead of + and /
+    expect(isValidBase64('ab-_')).toBe(false)
+  })
+
+  it('should reject strings with newlines', () => {
+    expect(isValidBase64('aGVs\nbG8=')).toBe(false)
+  })
+
+  it('should accept very long valid base64 strings', () => {
+    const longString = 'a'.repeat(4000)
+    expect(isValidBase64(longString)).toBe(true)
+  })
 })
