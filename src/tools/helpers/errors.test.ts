@@ -283,46 +283,65 @@ describe('aiReadableMessage', () => {
 describe('suggestFixes', () => {
   it('should return UNAUTHORIZED suggestions', () => {
     const fixes = suggestFixes(new NotionMCPError('', 'UNAUTHORIZED'))
-
-    expect(fixes).toHaveLength(3)
-    expect(fixes[0]).toContain('NOTION_TOKEN')
-    expect(fixes[1]).toContain('notion.so/my-integrations')
+    expect(fixes).toEqual([
+      'Check that NOTION_TOKEN is set in your environment',
+      'Verify token at https://www.notion.so/my-integrations',
+      'Create a new integration token if needed'
+    ])
   })
 
   it('should return RESTRICTED_RESOURCE suggestions', () => {
     const fixes = suggestFixes(new NotionMCPError('', 'RESTRICTED_RESOURCE'))
-
-    expect(fixes).toHaveLength(3)
-    expect(fixes.some((f) => f.includes('Add connections'))).toBe(true)
+    expect(fixes).toEqual([
+      'Open the page/database in Notion',
+      'Click "..." menu → Add connections → Select your integration',
+      'Grant access to parent pages if needed'
+    ])
   })
 
   it('should return NOT_FOUND suggestions', () => {
     const fixes = suggestFixes(new NotionMCPError('', 'NOT_FOUND'))
-
-    expect(fixes).toHaveLength(3)
-    expect(fixes[0]).toContain('ID')
+    expect(fixes).toEqual([
+      'Verify the page/database ID is correct',
+      'Check that the resource was not deleted',
+      'Ensure you have access permissions'
+    ])
   })
 
   it('should return VALIDATION_ERROR suggestions', () => {
     const fixes = suggestFixes(new NotionMCPError('', 'VALIDATION_ERROR'))
-
-    expect(fixes).toHaveLength(3)
-    expect(fixes.some((f) => f.includes('parameter'))).toBe(true)
+    expect(fixes).toEqual([
+      'Check parameter types and formats',
+      'Review required vs optional parameters',
+      'Verify property names match database schema'
+    ])
   })
 
   it('should return RATE_LIMITED suggestions', () => {
     const fixes = suggestFixes(new NotionMCPError('', 'RATE_LIMITED'))
+    expect(fixes).toEqual([
+      'Reduce request frequency',
+      'Implement exponential backoff retry logic',
+      'Batch multiple operations together'
+    ])
+  })
 
-    expect(fixes).toHaveLength(3)
-    expect(fixes.some((f) => f.includes('backoff'))).toBe(true)
+  it('should return COMMENTS_LIST_UNAVAILABLE suggestions', () => {
+    const fixes = suggestFixes(new NotionMCPError('', 'COMMENTS_LIST_UNAVAILABLE'))
+    expect(fixes).toEqual([
+      'Use action="get" with a specific comment_id if known',
+      'Use action="create" to add a new comment (this endpoint is unaffected)',
+      'This is a known Notion API limitation with OAuth tokens as of 2025-09-03'
+    ])
   })
 
   it('should return default suggestions for unknown codes', () => {
     const fixes = suggestFixes(new NotionMCPError('', 'SOMETHING_ELSE'))
-
-    expect(fixes).toHaveLength(3)
-    expect(fixes[0]).toContain('status.notion.so')
-    expect(fixes.some((f) => f.includes('Try again'))).toBe(true)
+    expect(fixes).toEqual([
+      'Check Notion API status at https://status.notion.so',
+      'Review request parameters',
+      'Try again in a few moments'
+    ])
   })
 })
 
