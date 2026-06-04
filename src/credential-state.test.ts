@@ -28,6 +28,31 @@ vi.mock('@n24q02m/mcp-core/storage', () => ({
 }))
 
 describe('credential-state', () => {
+  describe('default resolver behavior', () => {
+    it('uses the module-global _notionToken by default', async () => {
+      // This tests the initial assignment: let _subjectTokenResolver = () => _notionToken
+      // Since we can't easily reset the module-level variable _subjectTokenResolver
+      // without reloading the module, and the tests already called setSubjectTokenResolver,
+      // we might need a different approach or just accept that it was covered during initialization
+      // if we run the tests in a fresh environment.
+
+      // Actually, if I add it BEFORE the other tests that call setSubjectTokenResolver,
+      // it might work if vitest doesn't run them in parallel in the same worker in a way that interferes.
+      // But they are in the same file, so they run sequentially in the same worker.
+
+      // Let's look at src/credential-state.ts again.
+      // let _subjectTokenResolver: () => string | null = () => _notionToken
+
+      // If I want to be 100% sure I hit that line, I should call getSubjectToken()
+      // before any setSubjectTokenResolver() calls happen.
+
+      expect(getSubjectToken()).toBeNull()
+      process.env.NOTION_TOKEN = 'default-token'
+      await resolveCredentialState()
+      expect(getSubjectToken()).toBe('default-token')
+    })
+  })
+
   let consoleSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
@@ -97,6 +122,26 @@ describe('credential-state', () => {
       resetState()
       expect(getState()).toBe('awaiting_setup')
       expect(deleteConfig).toHaveBeenCalled()
+    })
+  })
+
+  describe('getNotionToken', () => {
+    it('returns null initially', () => {
+      expect(getNotionToken()).toBeNull()
+    })
+
+    it('returns the token after environment resolution', async () => {
+      process.env.NOTION_TOKEN = 'test-token'
+      await resolveCredentialState()
+      expect(getNotionToken()).toBe('test-token')
+    })
+
+    it('returns null after reset', () => {
+      setState('configured')
+      // Simulate setting token (since we can't set _notionToken directly)
+      // but resolveCredentialState sets it.
+      resetState()
+      expect(getNotionToken()).toBeNull()
     })
   })
 
