@@ -101,14 +101,14 @@ describe('credential-state', () => {
   })
 
   describe('subject token resolver', () => {
-    beforeEach(() => {
-      // Reset to default (module-global single-user fallback)
-      setSubjectTokenResolver(() => getNotionToken())
-    })
-
-    it('defaults to single-user module global when no resolver injected', () => {
+    it('defaults to single-user module global when no resolver injected', async () => {
       setState('awaiting_setup')
       expect(getSubjectToken()).toBeNull()
+
+      // Should reflect global token when set (default resolver behavior)
+      process.env.NOTION_TOKEN = 'global-token'
+      await resolveCredentialState()
+      expect(getSubjectToken()).toBe('global-token')
     })
 
     it('returns injected per-subject token for remote-oauth mode', () => {
