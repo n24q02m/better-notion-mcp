@@ -20,3 +20,6 @@
 ## 2025-05-26 - Array.includes() vs Set.has() for O(1) Lookups
 **Learning:** Checking for membership in an array using `['a', 'b', ...].includes(value)` within hot paths requires an O(N) scan. This can become an issue when iterating or repeatedly checking values.
 **Action:** Replace `Array.includes()` with `Set.has()` by extracting the array into a module-level `Set`. This improves lookup times significantly to O(1).
+## 2026-06-04 - [FIX] Deeply nested conditional in page duplication
+**Learning:** Extracting complex object transformation logic into a dedicated helper function significantly improves the readability of the main business logic and makes it easier to maintain and test.
+**Action:** Always look for opportunities to refactor deeply nested conditionals or complex mappings into smaller, focused helper functions.

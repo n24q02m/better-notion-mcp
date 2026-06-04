@@ -534,33 +534,7 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
 
       // Copy content — strip read-only fields that the create endpoint rejects
       if (originalBlocks.length > 0) {
-        const sanitizedBlocks = originalBlocks.map((block: any) => {
-          const {
-            id,
-            parent,
-            created_time,
-            last_edited_time,
-            created_by,
-            last_edited_by,
-            has_children,
-            archived,
-            in_trash,
-            request_id,
-            object,
-            ...rest
-          } = block
-          // Strip null values inside block type data (e.g., paragraph.icon: null)
-          // Notion API rejects null where it expects object or undefined
-          const blockType = rest.type
-          if (blockType && rest[blockType] && typeof rest[blockType] === 'object') {
-            for (const key of Object.keys(rest[blockType])) {
-              if (rest[blockType][key] === null) {
-                delete rest[blockType][key]
-              }
-            }
-          }
-          return rest
-        })
+        const sanitizedBlocks = originalBlocks.map(stripNullValues)
         await notion.blocks.children.append({
           block_id: duplicatedPage.id,
           children: sanitizedBlocks as any
@@ -581,4 +555,37 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
     processed: results.length,
     results
   }
+}
+
+/**
+ * Strip read-only fields and null values from a block object.
+ * Notion API rejects null where it expects object or undefined.
+ */
+function stripNullValues(block: any): any {
+  const {
+    id,
+    parent,
+    created_time,
+    last_edited_time,
+    created_by,
+    last_edited_by,
+    has_children,
+    archived,
+    in_trash,
+    request_id,
+    object,
+    ...rest
+  } = block
+
+  // Strip null values inside block type data (e.g., paragraph.icon: null)
+  const blockType = rest.type
+  if (blockType && rest[blockType] && typeof rest[blockType] === 'object') {
+    for (const key of Object.keys(rest[blockType])) {
+      if (rest[blockType][key] === null) {
+        delete rest[blockType][key]
+      }
+    }
+  }
+
+  return rest
 }
