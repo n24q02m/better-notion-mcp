@@ -316,3 +316,61 @@ describe('users', () => {
     })
   })
 })
+
+describe('from_workspace with pagination', () => {
+  it('should scan multiple pages of search results', async () => {
+    mockNotion.search
+      .mockResolvedValueOnce({
+        results: [{ created_by: { id: 'user-1', object: 'user' } }],
+        next_cursor: 'c1',
+        has_more: true
+      })
+      .mockResolvedValueOnce({
+        results: [{ created_by: { id: 'user-2', object: 'user' } }],
+        next_cursor: null,
+        has_more: false
+      })
+
+    const result = await users(mockNotion as any, { action: 'from_workspace', limit: 2 })
+
+    expect(result.total).toBe(2)
+    expect(result.users).toContainEqual(expect.objectContaining({ id: 'user-1' }))
+    expect(result.users).toContainEqual(expect.objectContaining({ id: 'user-2' }))
+    expect(mockNotion.search).toHaveBeenCalledTimes(2)
+  })
+
+  it('should respect custom limit', async () => {
+    mockNotion.search.mockResolvedValue({
+      results: Array(10).fill({ created_by: { id: 'user-1', object: 'user' } }),
+      next_cursor: null,
+      has_more: false
+    })
+
+    await users(mockNotion as any, { action: 'from_workspace', limit: 5 })
+
+    // autoPaginate should be called with limit 5
+    expect(mockNotion.search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        page_size: 5
+      })
+    )
+  })
+})
+
+describe('list with pagination', () => {
+  it('should respect custom limit', async () => {
+    mockNotion.users.list.mockResolvedValue({
+      results: [],
+      next_cursor: null,
+      has_more: false
+    })
+
+    await users(mockNotion as any, { action: 'list', limit: 10 })
+
+    expect(mockNotion.users.list).toHaveBeenCalledWith(
+      expect.objectContaining({
+        page_size: 10
+      })
+    )
+  })
+})

@@ -19,6 +19,7 @@ export interface PaginatedResponse<T> {
 export interface PaginationOptions {
   maxPages?: number // Max pages to fetch (0 = unlimited, capped by MAX_PAGES_SAFETY)
   pageSize?: number // Items per page (default: 100)
+  limit?: number // Max items to fetch (0 = unlimited)
 }
 
 /**
@@ -28,17 +29,30 @@ export async function autoPaginate<T>(
   fetchFn: (cursor?: string, pageSize?: number) => Promise<PaginatedResponse<T>>,
   options: PaginationOptions = {}
 ): Promise<T[]> {
-  const { maxPages = 0, pageSize = 100 } = options
+  const { maxPages = 0, pageSize = 100, limit = 0 } = options
   const effectiveMax = maxPages > 0 ? Math.min(maxPages, MAX_PAGES_SAFETY) : MAX_PAGES_SAFETY
   const allResults: T[] = []
   let cursor: string | null = null
   let pageCount = 0
 
   do {
-    const response = await fetchFn(cursor || undefined, pageSize)
+    // Adjust page size if a limit is set and we are close to it
+    let currentPageSize = pageSize
+    if (limit > 0) {
+      const remaining = limit - allResults.length
+      if (remaining <= 0) break
+      currentPageSize = Math.min(pageSize, remaining)
+    }
+
+    const response = await fetchFn(cursor || undefined, currentPageSize)
     allResults.push(...response.results)
     cursor = response.next_cursor
     pageCount++
+
+    // Stop if limit reached
+    if (limit > 0 && allResults.length >= limit) {
+      break
+    }
 
     // Stop if max pages reached (user-specified or safety limit)
     if (pageCount >= effectiveMax) {
@@ -46,7 +60,7 @@ export async function autoPaginate<T>(
     }
   } while (cursor !== null)
 
-  return allResults
+  return limit > 0 ? allResults.slice(0, limit) : allResults
 }
 
 /** Block types that need children fetched for proper markdown rendering */

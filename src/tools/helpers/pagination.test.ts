@@ -308,3 +308,40 @@ describe('ConcurrencyQueue', () => {
     expect(task2).not.toHaveBeenCalled()
   })
 })
+
+describe('autoPaginate with limit', () => {
+  it('should respect the limit and stop fetching', async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce({ results: [1, 2], next_cursor: 'c1', has_more: true })
+      .mockResolvedValueOnce({ results: [3, 4], next_cursor: 'c2', has_more: true })
+      .mockResolvedValueOnce({ results: [5, 6], next_cursor: null, has_more: false })
+
+    const results = await autoPaginate(fetchFn, { limit: 3, pageSize: 2 })
+
+    expect(results).toEqual([1, 2, 3])
+    expect(fetchFn).toHaveBeenCalledTimes(2)
+    // First call: pageSize 2
+    expect(fetchFn).toHaveBeenNthCalledWith(1, undefined, 2)
+    // Second call: pageSize 1 (remaining 1)
+    expect(fetchFn).toHaveBeenNthCalledWith(2, 'c1', 1)
+  })
+
+  it('should return all results if limit is higher than total', async () => {
+    const fetchFn = vi.fn().mockResolvedValueOnce({ results: [1, 2], next_cursor: null, has_more: false })
+
+    const results = await autoPaginate(fetchFn, { limit: 10, pageSize: 2 })
+
+    expect(results).toEqual([1, 2])
+    expect(fetchFn).toHaveBeenCalledTimes(1)
+  })
+
+  it('should handle limit of 0 (unlimited)', async () => {
+    const fetchFn = vi.fn().mockResolvedValueOnce({ results: [1, 2], next_cursor: null, has_more: false })
+
+    const results = await autoPaginate(fetchFn, { limit: 0, pageSize: 2 })
+
+    expect(results).toEqual([1, 2])
+    expect(fetchFn).toHaveBeenCalledTimes(1)
+  })
+})
