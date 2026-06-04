@@ -70,6 +70,61 @@ describe('autoPaginate', () => {
     expect(fetchFn).toHaveBeenCalledTimes(2)
   })
 
+  it('should respect limit when smaller than pageSize', async () => {
+    const fetchFn = vi.fn().mockResolvedValueOnce({
+      results: [1, 2, 3],
+      next_cursor: 'cursor-1',
+      has_more: true
+    })
+
+    const results = await autoPaginate(fetchFn, { limit: 2, pageSize: 10 })
+
+    expect(results).toEqual([1, 2])
+    expect(fetchFn).toHaveBeenCalledTimes(1)
+    expect(fetchFn).toHaveBeenCalledWith(undefined, 2)
+  })
+
+  it('should respect limit when larger than pageSize', async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce({
+        results: [1, 2],
+        next_cursor: 'cursor-1',
+        has_more: true
+      })
+      .mockResolvedValueOnce({
+        results: [3, 4],
+        next_cursor: 'cursor-2',
+        has_more: true
+      })
+      .mockResolvedValueOnce({
+        results: [5],
+        next_cursor: null,
+        has_more: false
+      })
+
+    const results = await autoPaginate(fetchFn, { limit: 3, pageSize: 2 })
+
+    expect(results).toEqual([1, 2, 3])
+    expect(fetchFn).toHaveBeenCalledTimes(2)
+    expect(fetchFn).toHaveBeenNthCalledWith(1, undefined, 2)
+    expect(fetchFn).toHaveBeenNthCalledWith(2, 'cursor-1', 1)
+  })
+
+  it('should trim results to exactly match limit if API returns more', async () => {
+    const fetchFn = vi.fn().mockResolvedValueOnce({
+      results: [1, 2, 3, 4, 5],
+      next_cursor: 'cursor-1',
+      has_more: true
+    })
+
+    const results = await autoPaginate(fetchFn, { limit: 3, pageSize: 10 })
+
+    expect(results).toEqual([1, 2, 3])
+    expect(fetchFn).toHaveBeenCalledTimes(1)
+    expect(fetchFn).toHaveBeenCalledWith(undefined, 3)
+  })
+
   it('should return empty array when results are empty', async () => {
     const fetchFn = vi.fn().mockResolvedValueOnce({
       results: [],
