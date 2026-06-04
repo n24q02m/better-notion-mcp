@@ -370,26 +370,32 @@ async function updatePage(notion: Client, input: PagesInput): Promise<UpdatePage
   // Handle content updates
   if (input.content || input.append_content) {
     if (input.content) {
-      // Replace all content
-      // Optimized: Fetch all blocks using autoPaginate, then delete them in batches.
-      const existingBlocks = await autoPaginate((cursor) =>
-        notion.blocks.children.list({
+      // Optimized: Fetch and delete blocks page-by-page to minimize memory usage and start deletion immediately.
+      let hasMore = true
+      let cursor: string | undefined
+      let pageCount = 0
+
+      while (hasMore && pageCount < 1000) {
+        const response: any = await notion.blocks.children.list({
           block_id: input.page_id!,
           page_size: 100,
           start_cursor: cursor
         })
-      )
 
-      if (existingBlocks.length > 0) {
-        await processBatches(
-          existingBlocks,
-          async (block) => {
-            await notion.blocks.delete({ block_id: block.id })
-          },
-          { batchSize: 1, concurrency: 5 }
-        )
+        if (response.results.length > 0) {
+          await processBatches(
+            response.results,
+            async (block: any) => {
+              await notion.blocks.delete({ block_id: block.id })
+            },
+            { batchSize: 1, concurrency: 5 }
+          )
+        }
+
+        hasMore = response.has_more
+        cursor = response.next_cursor
+        pageCount++
       }
-
       const newBlocks = markdownToBlocks(input.content)
       if (newBlocks.length > 0) {
         await notion.blocks.children.append({
