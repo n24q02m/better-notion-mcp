@@ -33,9 +33,11 @@ vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => {
   return { StdioServerTransport: MockStdioServerTransport }
 })
 
-vi.mock('@notionhq/client', () => ({
-  Client: vi.fn().mockImplementation(() => ({}))
-}))
+vi.mock('@notionhq/client', () => {
+  return {
+    Client: vi.fn().mockImplementation(() => ({}))
+  }
+})
 
 vi.mock('./tools/registry.js', () => ({
   registerTools: (...args: unknown[]) => registerToolsMock(...args)
@@ -51,7 +53,8 @@ vi.mock('node:fs', async (importOriginal) => {
   const original = await importOriginal<typeof import('node:fs')>()
   return {
     ...original,
-    realpathSync: vi.fn(original.realpathSync)
+    realpathSync: vi.fn(original.realpathSync),
+    readFileSync: vi.fn(original.readFileSync)
   }
 })
 
@@ -148,9 +151,24 @@ describe('main.ts', () => {
       expect(getTransportMode(env)).toBe('stdio')
     })
 
-    it('verifies value from TRANSPORT_MODE if set', () => {
+    it('verifies explicit stdio mode', () => {
+      const env = { TRANSPORT_MODE: 'stdio' }
+      expect(getTransportMode(env)).toBe('stdio')
+    })
+
+    it('verifies value from TRANSPORT_MODE if set to http', () => {
       const env = { TRANSPORT_MODE: 'http' }
       expect(getTransportMode(env)).toBe('http')
+    })
+
+    it('verifies arbitrary TRANSPORT_MODE values', () => {
+      const env = { TRANSPORT_MODE: 'custom' }
+      expect(getTransportMode(env)).toBe('custom')
+    })
+
+    it('verifies empty string TRANSPORT_MODE is preserved', () => {
+      const env = { TRANSPORT_MODE: '' }
+      expect(getTransportMode(env)).toBe('')
     })
 
     it('verifies current process.env if no argument is provided', () => {
@@ -198,6 +216,45 @@ describe('main.ts', () => {
     it('verifies error propagation from startHttp', async () => {
       startHttpMock.mockRejectedValueOnce(new Error('HTTP failed'))
       await expect(startServer('http')).rejects.toThrow('HTTP failed')
+    })
+
+    it('verifies default version when readFileSync fails', async () => {
+      vi.mocked(fs.readFileSync).mockImplementationOnce(() => {
+        throw new Error('Read failed')
+      })
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      await startServer('stdio')
+      expect(stdioServerCtor).toHaveBeenCalledWith(expect.objectContaining({ version: '0.0.0' }), expect.any(Object))
+    })
+
+    it('verifies notionClientFactory in startServer', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      const { getNotionToken } = await import('./credential-state.js')
+      vi.mocked(getNotionToken).mockReturnValue('ntn_factory_token')
+
+      await startServer('stdio')
+
+      const call = registerToolsMock.mock.calls.find((call) => typeof call[1] === 'function')
+      expect(call).toBeDefined()
+      const factory = call![1]
+      const client = factory()
+
+      const { Client } = await import('@notionhq/client')
+      expect(Client).toHaveBeenCalledWith(expect.objectContaining({ auth: 'ntn_factory_token' }))
+      expect(client).toBeDefined()
+    })
+
+    it('verifies notionClientFactory throws when token is missing', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      const { getNotionToken } = await import('./credential-state.js')
+      vi.mocked(getNotionToken).mockReturnValue(undefined as unknown as string)
+
+      await startServer('stdio')
+
+      const call = registerToolsMock.mock.calls.find((call) => typeof call[1] === 'function')
+      expect(call).toBeDefined()
+      const factory = call![1]
+      expect(() => factory()).toThrow('Notion integration token not configured')
     })
   })
 
