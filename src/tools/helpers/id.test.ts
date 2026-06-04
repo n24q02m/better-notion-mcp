@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { formatId, isValidBase64, isValidNotionId, normalizeId } from './id'
+import { formatId, isValidBase64, isValidNotionId, normalizeId } from './id.js'
 
 describe('normalizeId', () => {
   it('should strip hyphens from UUID', () => {
@@ -29,6 +29,20 @@ describe('normalizeId', () => {
     expect(normalizeId('🔥-id')).toBe('🔥id')
     expect(normalizeId('-abc-')).toBe('abc')
     expect(normalizeId(' a - b ')).toBe(' a  b ')
+  })
+
+  it('should be idempotent', () => {
+    const id = 'a3802967-3621-4b04-b6af-bfef1b7687b3'
+    expect(normalizeId(normalizeId(id))).toBe(normalizeId(id))
+  })
+
+  it('should preserve case', () => {
+    expect(normalizeId('AbC-DeF')).toBe('AbCDeF')
+  })
+
+  it('should handle extreme hyphenation', () => {
+    expect(normalizeId('---a---b---')).toBe('ab')
+    expect(normalizeId('-'.repeat(100))).toBe('')
   })
 })
 
