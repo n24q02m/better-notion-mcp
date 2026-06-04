@@ -56,11 +56,16 @@ export function convertToNotionProperties(
       continue
     }
 
+    const schemaType = schema?.[key]
+
+    // Handle explicit schema types first
+    if (schemaType === 'relation') {
+      converted[key] = toRelation(value)
+      continue
+    }
+
     // Auto-detect property type and convert
     if (typeof value === 'string') {
-      // Use schema type if available
-      const schemaType = schema?.[key]
-
       if (schemaType === 'title') {
         converted[key] = { title: [RichText.text(value)] }
       } else if (schemaType === 'rich_text') {
@@ -73,8 +78,6 @@ export function convertToNotionProperties(
         converted[key] = { email: value }
       } else if (schemaType === 'phone_number') {
         converted[key] = { phone_number: value }
-      } else if (schemaType === 'relation') {
-        converted[key] = toRelation(value)
       } else if (schemaType === 'status') {
         converted[key] = { status: { name: value } }
       } else if (key === 'Name' || key === 'Title' || key.toLowerCase() === 'title') {
@@ -89,11 +92,6 @@ export function convertToNotionProperties(
     } else if (typeof value === 'boolean') {
       converted[key] = { checkbox: value }
     } else if (Array.isArray(value)) {
-      const schemaType = schema?.[key]
-      if (schemaType === 'relation') {
-        converted[key] = toRelation(value)
-        continue
-      }
       // Could be multi_select, relation, people, files
       // Only assume multi_select if all elements are strings
       if (value.length > 0 && value.every((v) => typeof v === 'string')) {
