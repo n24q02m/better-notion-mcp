@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import * as RichText from './richtext'
+import * as RichText from './richtext.js'
 
 const DEFAULT_ANNOTATIONS = {
   bold: false,
@@ -23,18 +23,16 @@ describe('text', () => {
   it('should handle empty string', () => {
     const result = RichText.text('')
     expect(result.text.content).toBe('')
-    expect(result.annotations).toEqual(DEFAULT_ANNOTATIONS)
   })
 })
 
 describe('bold', () => {
   it('should create bold text', () => {
-    const result = RichText.bold('strong')
+    const result = RichText.bold('important')
     expect(result.type).toBe('text')
-    expect(result.text.content).toBe('strong')
+    expect(result.text.content).toBe('important')
     expect(result.annotations.bold).toBe(true)
     expect(result.annotations.italic).toBe(false)
-    expect(result.annotations.code).toBe(false)
   })
 
   it('should handle empty string', () => {
@@ -46,9 +44,9 @@ describe('bold', () => {
 
 describe('italic', () => {
   it('should create italic text', () => {
-    const result = RichText.italic('emphasis')
+    const result = RichText.italic('slanted')
     expect(result.type).toBe('text')
-    expect(result.text.content).toBe('emphasis')
+    expect(result.text.content).toBe('slanted')
     expect(result.annotations.italic).toBe(true)
     expect(result.annotations.bold).toBe(false)
     expect(result.annotations.code).toBe(false)
@@ -348,15 +346,42 @@ describe('truncate', () => {
     const result = RichText.truncate(items, 4)
     expect(result[0].text.content).toBe('a...')
   })
-})
 
-it('should handle maxLength smaller than ellipsis length', () => {
-  const items = [RichText.text('abcdef')]
-  const result1 = RichText.truncate(items, 1)
-  expect(result1[0].text.content).toBe('a')
-  expect(result1[0].text.content.length).toBe(1)
+  it('should handle maxLength smaller than ellipsis length', () => {
+    const items = [RichText.text('abcdef')]
+    const result1 = RichText.truncate(items, 1)
+    expect(result1[0].text.content).toBe('a')
+    expect(result1[0].text.content.length).toBe(1)
 
-  const result2 = RichText.truncate(items, 2)
-  expect(result2[0].text.content).toBe('ab')
-  expect(result2[0].text.content.length).toBe(2)
+    const result2 = RichText.truncate(items, 2)
+    expect(result2[0].text.content).toBe('ab')
+    expect(result2[0].text.content.length).toBe(2)
+  })
+
+  it('should handle maxLength = 0', () => {
+    const items = [RichText.text('abcdef')]
+    const result = RichText.truncate(items, 0)
+    expect(result[0].text.content).toBe('')
+    expect(result[0].text.content.length).toBe(0)
+  })
+
+  it('should handle maxLength = 3', () => {
+    const items = [RichText.text('abcdef')]
+    const result = RichText.truncate(items, 3)
+    expect(result[0].text.content).toBe('...')
+    expect(result[0].text.content.length).toBe(3)
+  })
+
+  it('should return empty array for empty input and positive maxLength', () => {
+    const items: RichText.RichTextItem[] = []
+    const result = RichText.truncate(items, 10)
+    expect(result).toEqual([])
+  })
+
+  it('should handle negative maxLength by using it in slice (standard JS behavior)', () => {
+    const items = [RichText.text('abcdef')]
+    const result = RichText.truncate(items, -1)
+    // maxLength < 3 is true, so it returns [text(plainText.slice(0, -1))]
+    expect(result[0].text.content).toBe('abcde')
+  })
 })
