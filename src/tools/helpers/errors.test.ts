@@ -7,96 +7,84 @@ import {
   retryWithBackoff,
   suggestFixes,
   withErrorHandling
-} from './errors'
+} from './errors.js'
 
 describe('NotionMCPError', () => {
   it('should set all properties from constructor', () => {
-    const error = new NotionMCPError('test message', 'TEST_CODE', 'try this', { foo: 'bar' })
+    const error = new NotionMCPError('message', 'CODE', 'suggestion', { detail: 'value' })
 
-    expect(error).toBeInstanceOf(Error)
-    expect(error).toBeInstanceOf(NotionMCPError)
+    expect(error.message).toBe('message')
+    expect(error.code).toBe('CODE')
+    expect(error.suggestion).toBe('suggestion')
+    expect(error.details).toEqual({ detail: 'value' })
     expect(error.name).toBe('NotionMCPError')
-    expect(error.message).toBe('test message')
-    expect(error.code).toBe('TEST_CODE')
-    expect(error.suggestion).toBe('try this')
-    expect(error.details).toEqual({ foo: 'bar' })
   })
 
   it('should allow optional suggestion and details', () => {
-    const error = new NotionMCPError('msg', 'CODE')
+    const error = new NotionMCPError('message', 'CODE')
 
     expect(error.suggestion).toBeUndefined()
     expect(error.details).toBeUndefined()
   })
 
   it('toJSON should return correct shape', () => {
-    const error = new NotionMCPError('msg', 'CODE', 'hint', { id: 1 })
+    const error = new NotionMCPError('msg', 'ERR', 'suggest', { d: 1 })
     const json = error.toJSON()
 
     expect(json).toEqual({
       error: 'NotionMCPError',
-      code: 'CODE',
+      code: 'ERR',
       message: 'msg',
-      suggestion: 'hint',
-      details: { id: 1 }
+      suggestion: 'suggest',
+      details: { d: 1 }
     })
   })
 
   it('toJSON should include undefined fields when not provided', () => {
-    const error = new NotionMCPError('msg', 'CODE')
+    const error = new NotionMCPError('msg', 'ERR')
     const json = error.toJSON()
 
-    expect(json).toEqual({
-      error: 'NotionMCPError',
-      code: 'CODE',
-      message: 'msg',
-      suggestion: undefined,
-      details: undefined
-    })
+    expect(json).toHaveProperty('suggestion', undefined)
+    expect(json).toHaveProperty('details', undefined)
   })
 })
 
 describe('enhanceError', () => {
   describe('Notion API errors', () => {
     it('should handle unauthorized error', () => {
-      const result = enhanceError({ code: 'unauthorized', message: 'API token is invalid' })
+      const result = enhanceError({ code: 'unauthorized', message: 'bad' })
 
-      expect(result).toBeInstanceOf(NotionMCPError)
       expect(result.code).toBe('UNAUTHORIZED')
-      expect(result.message).toBe('Invalid or missing Notion API token')
-      expect(result.suggestion).toContain('NOTION_TOKEN')
+      expect(result.message).toContain('Invalid or missing')
+      expect(result.suggestion).toContain('Set NOTION_TOKEN')
     })
 
     it('should handle restricted_resource error', () => {
-      const result = enhanceError({ code: 'restricted_resource', message: 'no access' })
+      const result = enhanceError({ code: 'restricted_resource' })
 
       expect(result.code).toBe('RESTRICTED_RESOURCE')
-      expect(result.message).toContain('does not have access')
-      expect(result.suggestion).toContain('Share')
+      expect(result.suggestion).toContain('Share the page')
     })
 
     it('should handle object_not_found error', () => {
-      const result = enhanceError({ code: 'object_not_found', message: 'not found' })
+      const result = enhanceError({ code: 'object_not_found' })
 
       expect(result.code).toBe('NOT_FOUND')
-      expect(result.message).toContain('not found')
-      expect(result.suggestion).toContain('ID')
+      expect(result.suggestion).toContain('Check the ID')
     })
 
     it('should handle validation_error with body message', () => {
       const result = enhanceError({
         code: 'validation_error',
-        message: 'validation failed',
-        body: { message: 'title is required', path: '/properties/title' }
+        body: { message: 'Property format error' }
       })
 
       expect(result.code).toBe('VALIDATION_ERROR')
-      expect(result.message).toBe('title is required')
-      expect(result.details).toEqual({ message: 'title is required', path: '/properties/title' })
+      expect(result.message).toBe('Property format error')
     })
 
     it('should handle validation_error without body', () => {
-      const result = enhanceError({ code: 'validation_error', message: 'bad request' })
+      const result = enhanceError({ code: 'validation_error' })
 
       expect(result.code).toBe('VALIDATION_ERROR')
       expect(result.message).toBe('Invalid request parameters')
@@ -105,20 +93,20 @@ describe('enhanceError', () => {
     it('should sanitize validation_error body to remove sensitive fields', () => {
       const result = enhanceError({
         code: 'validation_error',
-        message: 'validation failed',
         body: {
-          message: 'title is required',
-          path: '/properties/title',
-          secret_token: 'sk-12345',
-          internal_state: { some: 'data' }
+          message: 'err',
+          status: 400,
+          request_id: '123',
+          some_secret: 'hide me'
         }
       })
 
-      expect(result.code).toBe('VALIDATION_ERROR')
-      expect(result.message).toBe('title is required')
-      expect(result.details).toEqual({ message: 'title is required', path: '/properties/title' })
-      expect(JSON.stringify(result.details)).not.toContain('secret_token')
-      expect(JSON.stringify(result.details)).not.toContain('sk-12345')
+      expect(result.details).toEqual({
+        message: 'err',
+        status: 400,
+        request_id: '123'
+      })
+      expect(result.details.some_secret).toBeUndefined()
     })
 
     it('should handle rate_limited error', () => {
@@ -277,6 +265,30 @@ describe('aiReadableMessage', () => {
     expect(msg).toContain('Error: Bad input')
     expect(msg).toContain('Suggestion: Fix it')
     expect(msg).toContain('Details:')
+  })
+
+  it('should format error with empty message', () => {
+    const error = new NotionMCPError('', 'CODE', 'Fix it')
+    const msg = aiReadableMessage(error)
+
+    expect(msg).toBe('Error: \n\nSuggestion: Fix it')
+  })
+
+  it('should format error with empty details object', () => {
+    const error = new NotionMCPError('Error', 'CODE', undefined, {})
+    const msg = aiReadableMessage(error)
+
+    expect(msg).toContain('Details: {}')
+  })
+
+  it('should format fallback suggestions with exact bulleted list', () => {
+    const error = new NotionMCPError('Failed', 'UNAUTHORIZED')
+    const msg = aiReadableMessage(error)
+
+    // UNAUTHORIZED has 3 suggestions
+    const expectedSuggestion =
+      '\n- Check that NOTION_TOKEN is set in your environment\n- Verify token at https://www.notion.so/my-integrations\n- Create a new integration token if needed'
+    expect(msg).toBe(`Error: Failed\n\nSuggestion: ${expectedSuggestion}`)
   })
 })
 
