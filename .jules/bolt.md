@@ -20,3 +20,6 @@
 ## 2025-05-26 - Array.includes() vs Set.has() for O(1) Lookups
 **Learning:** Checking for membership in an array using `['a', 'b', ...].includes(value)` within hot paths requires an O(N) scan. This can become an issue when iterating or repeatedly checking values.
 **Action:** Replace `Array.includes()` with `Set.has()` by extracting the array into a module-level `Set`. This improves lookup times significantly to O(1).
+## 2025-05-15 - Suboptimal String Joining in Loop
+**Learning:** In modern JavaScript engines, string concatenation (+=) in a loop is often more performant than .map().join('') for accumulating strings, especially when dealing with many small strings or a few large ones, as it avoids creating intermediate arrays and leverages engine optimizations like ConsStrings.
+**Action:** Prefer for-loops with string accumulation over .map().join('') in performance-sensitive paths when combining text fragments.
