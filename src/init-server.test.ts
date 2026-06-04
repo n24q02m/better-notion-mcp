@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const startServerMock = vi.fn()
+const bootstrapMock = vi.fn()
 
 vi.mock('./main.js', () => ({
-  startServer: startServerMock
+  bootstrap: bootstrapMock
 }))
 
 describe('initServer', () => {
@@ -27,26 +27,26 @@ describe('initServer', () => {
     process.argv = [process.argv[0], 'main.js', '--http']
     const { initServer } = await import('./init-server.js')
     await initServer()
-    expect(startServerMock).toHaveBeenCalledWith('http')
+    expect(bootstrapMock).toHaveBeenCalledWith('http')
   })
 
   it('dispatches http when MCP_TRANSPORT=http', async () => {
     process.env.MCP_TRANSPORT = 'http'
     const { initServer } = await import('./init-server.js')
     await initServer()
-    expect(startServerMock).toHaveBeenCalledWith('http')
+    expect(bootstrapMock).toHaveBeenCalledWith('http')
   })
 
   it('dispatches http when TRANSPORT_MODE=http', async () => {
     process.env.TRANSPORT_MODE = 'http'
     const { initServer } = await import('./init-server.js')
     await initServer()
-    expect(startServerMock).toHaveBeenCalledWith('http')
+    expect(bootstrapMock).toHaveBeenCalledWith('http')
   })
 
   it('dispatches stdio by default (post stdio-pure migration)', async () => {
     const { initServer } = await import('./init-server.js')
     await initServer()
-    expect(startServerMock).toHaveBeenCalledWith('stdio')
+    expect(bootstrapMock).toHaveBeenCalledWith('stdio')
   })
 })

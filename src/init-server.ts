@@ -14,6 +14,6 @@ export async function initServer() {
   const isHttp =
     process.argv.includes('--http') || process.env.MCP_TRANSPORT === 'http' || process.env.TRANSPORT_MODE === 'http'
 
-  const { startServer } = await import('./main.js')
-  await startServer(isHttp ? 'http' : 'stdio')
+  const { bootstrap } = await import('./main.js')
+  await bootstrap(isHttp ? 'http' : 'stdio')
 }
