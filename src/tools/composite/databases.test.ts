@@ -215,7 +215,9 @@ describe('databases', () => {
     })
 
     it('should throw when database_id is missing', async () => {
-      await expect(databases(notion, { action: 'get' })).rejects.toThrow('database_id required')
+      await expect(databases(notion, { action: 'get' })).rejects.toThrow(
+        'database_id or data_source_id required for get action'
+      )
     })
   })
 
@@ -416,7 +418,9 @@ describe('databases', () => {
     })
 
     it('should throw when database_id is missing', async () => {
-      await expect(databases(notion, { action: 'query' })).rejects.toThrow('database_id required')
+      await expect(databases(notion, { action: 'query' })).rejects.toThrow(
+        'database_id or data_source_id required for query action'
+      )
     })
   })
 
@@ -474,7 +478,7 @@ describe('databases', () => {
 
     it('should throw when database_id is missing', async () => {
       await expect(databases(notion, { action: 'create_page', page_properties: { Name: 'X' } })).rejects.toThrow(
-        'database_id required'
+        'database_id or data_source_id required'
       )
     })
 
@@ -889,7 +893,9 @@ describe('databases', () => {
     })
 
     it('should throw when database_id is missing', async () => {
-      await expect(databases(notion, { action: 'list_templates' })).rejects.toThrow('database_id required')
+      await expect(databases(notion, { action: 'list_templates' })).rejects.toThrow(
+        'database_id or data_source_id required for list_templates action'
+      )
     })
   })
 
@@ -944,6 +950,63 @@ describe('databases', () => {
   describe('unknown action', () => {
     it('should throw on unknown action', async () => {
       await expect(databases(notion, { action: 'invalid' as any })).rejects.toThrow('Unknown action: invalid')
+    })
+  })
+
+  describe('Optimization: direct data_source_id', () => {
+    it('should skip database.retrieve when data_source_id is provided in query', async () => {
+      mockNotion.dataSources.query.mockResolvedValueOnce({ results: [], next_cursor: null, has_more: false })
+
+      await databases(notion, {
+        action: 'query',
+        data_source_id: 'ds-direct'
+      })
+
+      expect(mockNotion.databases.retrieve).not.toHaveBeenCalled()
+      expect(mockNotion.dataSources.query).toHaveBeenCalledWith(
+        expect.objectContaining({ data_source_id: 'ds-direct' })
+      )
+    })
+
+    it('should skip database.retrieve when data_source_id is provided in create_page', async () => {
+      mockNotion.pages.create.mockResolvedValueOnce({ id: 'page-1' })
+      // getDataSourceSchema will be called, which calls dataSources.retrieve
+      mockNotion.dataSources.retrieve.mockResolvedValueOnce({ properties: {} })
+
+      await databases(notion, {
+        action: 'create_page',
+        data_source_id: 'ds-direct',
+        page_properties: { Name: 'test' }
+      })
+
+      expect(mockNotion.databases.retrieve).not.toHaveBeenCalled()
+      expect(mockNotion.pages.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          parent: { type: 'data_source_id', data_source_id: 'ds-direct' }
+        })
+      )
+    })
+
+    it('should skip database.retrieve when data_source_id is provided in get', async () => {
+      // First call for databases.retrieve replacement
+      mockNotion.dataSources.retrieve.mockResolvedValueOnce({
+        id: 'ds-direct',
+        title: [{ plain_text: 'Direct Source' }],
+        properties: { Name: { type: 'title', title: {} } }
+      })
+      // Second call from getDataSourceSchema
+      mockNotion.dataSources.retrieve.mockResolvedValueOnce({
+        id: 'ds-direct',
+        properties: { Name: { type: 'title', title: {} } }
+      })
+
+      await databases(notion, {
+        action: 'get',
+        data_source_id: 'ds-direct'
+      })
+
+      expect(mockNotion.databases.retrieve).not.toHaveBeenCalled()
+      expect(mockNotion.dataSources.retrieve).toHaveBeenCalledWith({ data_source_id: 'dsdirect' })
     })
   })
 })

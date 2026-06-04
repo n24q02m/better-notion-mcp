@@ -385,14 +385,28 @@ async function createDatabase(notion: Client, input: DatabasesInput): Promise<Cr
  * Maps to: GET /v1/databases/{id} (API 2025-09-03)
  */
 async function getDatabase(notion: Client, input: DatabasesInput): Promise<GetDatabaseResponse> {
-  if (!input.database_id) {
-    throw new NotionMCPError('database_id required for get action', 'VALIDATION_ERROR', 'Provide database_id')
+  if (!input.database_id && !input.data_source_id) {
+    throw new NotionMCPError(
+      'database_id or data_source_id required for get action',
+      'VALIDATION_ERROR',
+      'Provide database_id'
+    )
   }
 
-  // Get database (contains list of data_sources)
-  const database: any = await notion.databases.retrieve({
-    database_id: normalizeId(input.database_id)
-  })
+  // Optimization: If data_source_id is provided, we can skip retrieve if we only want schema
+  let database: any
+  if (input.database_id) {
+    database = await notion.databases.retrieve({
+      database_id: normalizeId(input.database_id)
+    })
+  } else {
+    // If only data_source_id provided, we fetch it directly
+    database = await (notion as any).dataSources.retrieve({
+      data_source_id: normalizeId(input.data_source_id!)
+    })
+    // Mock enough of database structure for the logic below
+    database.data_sources = [{ id: database.id, name: database.title?.[0]?.plain_text || 'Data Source' }]
+  }
 
   // Get detailed schema from first data source
   const schema: any = {}
@@ -456,16 +470,28 @@ async function getDatabase(notion: Client, input: DatabasesInput): Promise<GetDa
  * Maps to: POST /v1/data_sources/{id}/query (API 2025-09-03)
  */
 async function queryDatabase(notion: Client, input: DatabasesInput): Promise<QueryDatabaseResponse> {
-  if (!input.database_id) {
+  if (!input.database_id && !input.data_source_id) {
     throw new NotionMCPError(
-      'database_id required for query action',
+      'database_id or data_source_id required for query action',
       'VALIDATION_ERROR',
       'Provide database_id (from Notion URL) or data_source_id (from workspace search). Both formats are accepted.'
     )
   }
 
-  // Smart resolve: accepts both database_id and data_source_id
-  const { databaseId, dataSourceId } = await resolveDataSourceId(notion, input.database_id)
+  // Smart resolve: prioritize input.data_source_id if available, otherwise resolve from database_id
+  let databaseId = input.database_id || ''
+  let dataSourceId = input.data_source_id || ''
+
+  if (!dataSourceId) {
+    const resolved = await resolveDataSourceId(notion, databaseId)
+    databaseId = resolved.databaseId
+    dataSourceId = resolved.dataSourceId
+  } else if (!databaseId) {
+    // If we only have data_source_id, we can't easily get database_id without an API call,
+    // but most operations only need dataSourceId. We'll set databaseId to dataSourceId for now
+    // as it's often used interchangeably in the response.
+    databaseId = dataSourceId
+  }
 
   let filter = input.filters
 
@@ -512,16 +538,25 @@ async function queryDatabase(notion: Client, input: DatabasesInput): Promise<Que
  * Maps to: Multiple POST /v1/pages with data_source_id parent (API 2025-09-03)
  */
 async function createDatabasePages(notion: Client, input: DatabasesInput): Promise<CreateDatabasePageResponse> {
-  if (!input.database_id) {
+  if (!input.database_id && !input.data_source_id) {
     throw new NotionMCPError(
-      'database_id required',
+      'database_id or data_source_id required',
       'VALIDATION_ERROR',
       'Provide database_id (from Notion URL) or data_source_id (from workspace search). Both formats are accepted.'
     )
   }
 
-  // Smart resolve: accepts both database_id and data_source_id
-  const { databaseId, dataSourceId } = await resolveDataSourceId(notion, input.database_id)
+  // Smart resolve: prioritize input.data_source_id if available, otherwise resolve from database_id
+  let databaseId = input.database_id || ''
+  let dataSourceId = input.data_source_id || ''
+
+  if (!dataSourceId) {
+    const resolved = await resolveDataSourceId(notion, databaseId)
+    databaseId = resolved.databaseId
+    dataSourceId = resolved.dataSourceId
+  } else if (!databaseId) {
+    databaseId = dataSourceId
+  }
 
   // Fetch schema for property type mapping
   const properties = await getDataSourceSchema(notion, dataSourceId)
@@ -807,17 +842,25 @@ async function listDataSourceTemplates(
   notion: Client,
   input: DatabasesInput
 ): Promise<ListDataSourceTemplatesResponse> {
-  if (!input.database_id) {
+  if (!input.database_id && !input.data_source_id) {
     throw new NotionMCPError(
-      'database_id required for list_templates action',
+      'database_id or data_source_id required for list_templates action',
       'VALIDATION_ERROR',
       'Provide database_id (from Notion URL) or data_source_id. Both formats are accepted.'
     )
   }
 
-  // Smart resolve: accepts both database_id and data_source_id
-  const { databaseId, dataSourceId: resolvedDsId } = await resolveDataSourceId(notion, input.database_id)
-  const dataSourceId = input.data_source_id || resolvedDsId
+  // Smart resolve: prioritize input.data_source_id if available
+  let databaseId = input.database_id || ''
+  let dataSourceId = input.data_source_id || ''
+
+  if (!dataSourceId) {
+    const resolved = await resolveDataSourceId(notion, databaseId)
+    databaseId = resolved.databaseId
+    dataSourceId = resolved.dataSourceId
+  } else if (!databaseId) {
+    databaseId = dataSourceId
+  }
 
   const templates = await autoPaginate(async (cursor) => {
     const response: any = await (notion as any).dataSources.listTemplates({
