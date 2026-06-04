@@ -50,6 +50,21 @@ describe('credential-state', () => {
     expect(getNotionToken()).toBeNull()
   })
 
+  describe('getState and setState', () => {
+    it('manages state correctly', () => {
+      setState('configured')
+      expect(getState()).toBe('configured')
+      setState('awaiting_setup')
+      expect(getState()).toBe('awaiting_setup')
+    })
+  })
+
+  describe('getNotionToken', () => {
+    it('returns the notion token', () => {
+      expect(getNotionToken()).toBeNull()
+    })
+  })
+
   describe('resolveCredentialState', () => {
     it('configures when NOTION_TOKEN env var is present', async () => {
       process.env.NOTION_TOKEN = 'env-token'
@@ -101,11 +116,6 @@ describe('credential-state', () => {
   })
 
   describe('subject token resolver', () => {
-    beforeEach(() => {
-      // Reset to default (module-global single-user fallback)
-      setSubjectTokenResolver(() => getNotionToken())
-    })
-
     it('defaults to single-user module global when no resolver injected', () => {
       setState('awaiting_setup')
       expect(getSubjectToken()).toBeNull()
