@@ -131,6 +131,7 @@ export function extractPageProperties(pageProperties: any): any {
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i]
     const p = pageProperties[key] as any
+    if (!p) continue
     // Cache p.type once per iteration -- avoids ~20 redundant property
     // lookups in the if/else-if chain on every Notion page row.
     const type = p.type as string | undefined

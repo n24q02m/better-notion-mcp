@@ -15,6 +15,27 @@ const richText = (content: string) => ({
 })
 
 describe('convertToNotionProperties', () => {
+  it('falls through to default for BigInt', () => {
+    const val = BigInt(123)
+    const props = { Big: val as any }
+    expect(convertToNotionProperties(props)).toEqual({ Big: val })
+  })
+
+  it('toRelation falls through for objects', () => {
+    const obj = { custom: true }
+    const props = { Rel: obj as any }
+    const schema = { Rel: 'relation' }
+    expect(convertToNotionProperties(props, schema)).toEqual({ Rel: obj })
+  })
+
+  it('falls through to default for unknown types like Symbol', () => {
+    const sym = Symbol('test')
+    const props = {
+      Sym: sym as any
+    }
+    expect(convertToNotionProperties(props)).toEqual({ Sym: sym })
+  })
+
   it('returns empty object for empty properties', () => {
     expect(convertToNotionProperties({})).toEqual({})
   })
@@ -754,5 +775,14 @@ describe('extractPageProperties', () => {
       }
     }
     expect(extractPageProperties(props)).toEqual({ Window: '2026-01-01 to 2026-01-31' })
+  })
+
+  it('handles null or undefined property values gracefully', () => {
+    const props = {
+      Valid: { type: 'number', number: 1 },
+      NullProp: null as any,
+      UndefinedProp: undefined as any
+    }
+    expect(extractPageProperties(props)).toEqual({ Valid: 1 })
   })
 })
