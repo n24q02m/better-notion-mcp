@@ -49,4 +49,18 @@ describe('initServer', () => {
     await initServer()
     expect(startServerMock).toHaveBeenCalledWith('stdio')
   })
+
+  it('prefers --http flag over environment variables', async () => {
+    process.env.MCP_TRANSPORT = 'stdio'
+    process.argv = [process.argv[0], 'main.js', '--http']
+    const { initServer } = await import('./init-server.js')
+    await initServer()
+    expect(startServerMock).toHaveBeenCalledWith('http')
+  })
+
+  it('propagates errors from startServer', async () => {
+    startServerMock.mockRejectedValue(new Error('Start failed'))
+    const { initServer } = await import('./init-server.js')
+    await expect(initServer()).rejects.toThrow('Start failed')
+  })
 })
