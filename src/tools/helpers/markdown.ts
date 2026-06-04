@@ -459,14 +459,17 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
  * Supports: bold, italic, code, strikethrough, links, mentions, colors
  */
 class InlineParser {
+  public bold = false
+  public italic = false
+  public code = false
+  public strikethrough = false
   private richText: RichText[] = []
   private current = ''
-  private bold = false
-  private italic = false
-  private code = false
-  private strikethrough = false
   private noMoreCloseBrackets = false
   private noMoreMentionCloseBrackets = false
+  private noMoreBold = false
+  private noMoreItalic = false
+  private noMoreStrikethrough = false
   private i = 0
 
   constructor(private readonly text: string) {}
@@ -489,9 +492,6 @@ class InlineParser {
     const char = this.text[this.i]
     const next = this.text[this.i + 1]
 
-    // Page mention @[Title](page-id-or-url) — must come before link handling
-    // ⚡ Bolt: Added algorithmic short-circuiting to prevent O(N^2) lookaheads on pathological inputs
-    // with many `@[` but no `]`.
     if (char === '@' && next === '[' && !this.noMoreMentionCloseBrackets) {
       const closeBracket = this.text.indexOf(']', this.i + 2)
       if (closeBracket === -1) {
@@ -504,7 +504,6 @@ class InlineParser {
           const mentionTitle = this.text.slice(this.i + 2, closeBracket)
           const mentionTarget = this.text.slice(closeBracket + 2, closeParen)
 
-          // Extract 32-char hex page ID from Notion URL or use as-is
           const idMatch = mentionTarget.match(/([a-f0-9]{32})/)
           const pageId = idMatch ? idMatch[1] : mentionTarget
 
@@ -528,11 +527,9 @@ class InlineParser {
   private tryParseLink(): boolean {
     const char = this.text[this.i]
 
-    // Link [text](url) — optimized to avoid O(N²) on pathological inputs
     if (char === '[' && !this.noMoreCloseBrackets) {
       const closeBracket = this.text.indexOf(']', this.i + 1)
       if (closeBracket === -1) {
-        // No more ] in the rest of the string, skip future indexOf calls
         this.noMoreCloseBrackets = true
       } else if (closeBracket + 1 < this.text.length && this.text[closeBracket + 1] === '(') {
         const closeParen = this.text.indexOf(')', closeBracket + 2)
@@ -544,18 +541,19 @@ class InlineParser {
           const linkUrl = this.text.slice(closeBracket + 2, closeParen)
           const isSafe = isSafeUrl(linkUrl)
 
-          this.richText.push({
-            type: 'text',
-            text: { content: linkText, link: isSafe ? { url: linkUrl } : null },
-            annotations: {
-              bold: this.bold,
-              italic: this.italic,
-              strikethrough: this.strikethrough,
-              underline: false,
-              code: this.code,
-              color: 'default'
+          const innerParser = new InlineParser(linkText)
+          innerParser.bold = this.bold
+          innerParser.italic = this.italic
+          innerParser.strikethrough = this.strikethrough
+          innerParser.code = this.code
+
+          const innerRichTexts = innerParser.parse()
+          for (const rt of innerRichTexts) {
+            if (rt.type === 'text') {
+              rt.text.link = isSafe ? { url: linkUrl } : null
             }
-          })
+            this.richText.push(rt)
+          }
 
           this.i = closeParen
           return true
@@ -569,30 +567,39 @@ class InlineParser {
     const char = this.text[this.i]
     const next = this.text[this.i + 1]
 
-    // Bold **text**
     if (char === '*' && next === '*') {
+      if (!this.bold && !this.noMoreBold) {
+        if (this.text.indexOf('**', this.i + 2) === -1) {
+          this.noMoreBold = true
+          return false
+        }
+      }
       this.flushCurrent()
       this.bold = !this.bold
-      this.i++ // Skip next *
+      this.i++
       return true
     }
-    // Italic *text*
     if (char === '*' && next !== '*') {
+      if (!this.italic && !this.noMoreItalic) {
+        if (this.text.indexOf('*', this.i + 1) === -1) {
+          this.noMoreItalic = true
+          return false
+        }
+      }
       this.flushCurrent()
       this.italic = !this.italic
       return true
     }
-    // Code `text`
-    if (char === '`') {
-      this.flushCurrent()
-      this.code = !this.code
-      return true
-    }
-    // Strikethrough ~~text~~
     if (char === '~' && next === '~') {
+      if (!this.strikethrough && !this.noMoreStrikethrough) {
+        if (this.text.indexOf('~~', this.i + 2) === -1) {
+          this.noMoreStrikethrough = true
+          return false
+        }
+      }
       this.flushCurrent()
       this.strikethrough = !this.strikethrough
-      this.i++ // Skip next ~
+      this.i++
       return true
     }
 
@@ -603,8 +610,34 @@ class InlineParser {
     for (this.i = 0; this.i < this.text.length; this.i++) {
       const char = this.text[this.i]
 
-      // Fast path: skip parsing functions if character isn't a potential formatting trigger
-      if (char === '@' || char === '[' || char === '*' || char === '`' || char === '~') {
+      if (char === '\\') {
+        const next = this.text[this.i + 1]
+        if (next !== undefined) {
+          this.current += next
+          this.i++
+          continue
+        }
+      }
+
+      if (char === '`') {
+        const closeBacktick = this.text.indexOf('`', this.i + 1)
+        if (closeBacktick !== -1) {
+          this.flushCurrent()
+          const codeContent = this.text.slice(this.i + 1, closeBacktick)
+          this.richText.push(
+            createRichText(codeContent, {
+              bold: this.bold,
+              italic: this.italic,
+              strikethrough: this.strikethrough,
+              code: true
+            })
+          )
+          this.i = closeBacktick
+          continue
+        }
+      }
+
+      if (char === '@' || char === '[' || char === '*' || char === '~') {
         if (this.tryParseMention()) continue
         if (this.tryParseLink()) continue
         if (this.tryParseFormatting()) continue
