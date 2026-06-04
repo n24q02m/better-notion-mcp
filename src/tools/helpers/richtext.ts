@@ -182,3 +182,27 @@ export function truncate(richText: RichTextItem[], maxLength: number): RichTextI
   const truncated = `${plainText.slice(0, maxLength - 3)}...`
   return [text(truncated)]
 }
+
+/**
+ * Split text into chunks (max 2000 chars per rich text item)
+ * Notion has a 2000 character limit per rich text item content.
+ */
+export function splitText(content: string, maxLength: number = 2000): RichTextItem[] {
+  if (content.length <= maxLength) {
+    return [text(content)]
+  }
+
+  const chunks: RichTextItem[] = []
+  let remaining = content
+
+  while (remaining.length > maxLength) {
+    chunks.push(text(remaining.slice(0, maxLength)))
+    remaining = remaining.slice(maxLength)
+  }
+
+  if (remaining.length > 0) {
+    chunks.push(text(remaining))
+  }
+
+  return chunks
+}
