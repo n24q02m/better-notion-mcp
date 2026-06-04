@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   autoPaginate,
+  batchItems,
   ConcurrencyQueue,
   fetchChildrenRecursive,
   populateDeepChildren,
@@ -179,6 +180,35 @@ describe('fetchChildrenRecursive', () => {
     const fetchChildren = vi.fn()
     await fetchChildrenRecursive([], fetchChildren)
     expect(fetchChildren).not.toHaveBeenCalled()
+  })
+})
+
+describe('batchItems', () => {
+  it('should return an empty array when input is empty', () => {
+    expect(batchItems([], 10)).toEqual([])
+  })
+
+  it('should handle batch size larger than array length', () => {
+    const items = [1, 2, 3]
+    expect(batchItems(items, 10)).toEqual([[1, 2, 3]])
+  })
+
+  it('should handle batch size exactly equal to array length', () => {
+    const items = [1, 2, 3]
+    expect(batchItems(items, 3)).toEqual([[1, 2, 3]])
+  })
+
+  it('should split items into multiple batches', () => {
+    const items = [1, 2, 3, 4, 5]
+    expect(batchItems(items, 2)).toEqual([[1, 2], [3, 4], [5]])
+  })
+
+  it('should split items into equal batches when multiple of batch size', () => {
+    const items = [1, 2, 3, 4]
+    expect(batchItems(items, 2)).toEqual([
+      [1, 2],
+      [3, 4]
+    ])
   })
 })
 
