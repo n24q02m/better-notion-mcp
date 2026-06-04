@@ -4,6 +4,7 @@
  */
 
 import type { Client } from '@notionhq/client'
+import { NOTION_API_VERSION } from '../../constants.js'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { autoPaginate } from '../helpers/pagination.js'
 import * as RichText from '../helpers/richtext.js'
@@ -99,8 +100,7 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
           ...(comment.display_name ? { display_name: comment.display_name } : {}),
           parent: comment.parent,
           ...(!comment.rich_text && {
-            _note:
-              'rich_text unavailable in Notion API version 2025-09-03 for comments.retrieve. Comment content was set during creation.'
+            _note: `rich_text unavailable in Notion API version ${NOTION_API_VERSION} for comments.retrieve. Comment content was set during creation.`
           })
         }
       }

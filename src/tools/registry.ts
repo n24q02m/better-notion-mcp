@@ -15,6 +15,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js'
 import { buildOpenRelayHandler } from '@n24q02m/mcp-core'
 import type { Client } from '@notionhq/client'
+import { SERVER_NAME } from '../constants.js'
 import { getState } from '../credential-state.js'
 // Import mega tools
 import { blocks } from './composite/blocks.js'
@@ -35,7 +36,7 @@ const TOKEN_FREE_TOOLS = new Set(['help', 'content_convert', 'config', 'config__
 // publicUrl is null in stdio mode (no relay form to open). HTTP mode
 // substitutes it with PUBLIC_URL so the tool returns a valid /authorize URL.
 const openRelayHandler = buildOpenRelayHandler({
-  serverName: 'better-notion-mcp',
+  serverName: SERVER_NAME,
   publicUrl: process.env.PUBLIC_URL ?? null
 })
 

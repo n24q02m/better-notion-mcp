@@ -1,6 +1,7 @@
 import * as mcpCore from '@n24q02m/mcp-core'
 import { Client } from '@notionhq/client'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { NOTION_API_VERSION } from '../constants.js'
 import { createMCPServer } from '../create-server.js'
 import * as credentialState from '../credential-state.js'
 import { startHttp, subjectContext } from './http.js'
@@ -127,7 +128,7 @@ describe('startHttp', () => {
     await subjectContext.run({ sub: 'user1' }, () => {
       const client = factory()
       expect(client).toBeDefined()
-      expect(Client).toHaveBeenCalledWith({ auth: 'test-token', notionVersion: '2025-09-03' })
+      expect(Client).toHaveBeenCalledWith({ auth: 'test-token', notionVersion: NOTION_API_VERSION })
     })
 
     // 2. Verify runHttpServer options

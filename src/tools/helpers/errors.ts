@@ -1,3 +1,5 @@
+import { NOTION_API_VERSION } from '../../constants.js'
+
 /**
  * Custom error class for Notion MCP operations
  */
@@ -341,7 +343,7 @@ const _ERROR_SUGGESTIONS_MAP: Record<string, string[]> = {
   COMMENTS_LIST_UNAVAILABLE: [
     'Use action="get" with a specific comment_id if known',
     'Use action="create" to add a new comment (this endpoint is unaffected)',
-    'This is a known Notion API limitation with OAuth tokens as of 2025-09-03'
+    `This is a known Notion API limitation with OAuth tokens as of ${NOTION_API_VERSION}`
   ]
 }
 

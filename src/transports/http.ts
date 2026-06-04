@@ -17,11 +17,10 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { runHttpServer } from '@n24q02m/mcp-core'
 import { Client } from '@notionhq/client'
 import { NotionTokenStore } from '../auth/notion-token-store.js'
+import { NOTION_API_VERSION, SERVER_NAME } from '../constants.js'
 import { createMCPServer } from '../create-server.js'
 import { resolveCredentialState, setState, setSubjectTokenResolver } from '../credential-state.js'
 import { NotionMCPError } from '../tools/helpers/errors.js'
-
-const SERVER_NAME = 'better-notion-mcp'
 
 export const subjectContext = new AsyncLocalStorage<{ sub: string }>()
 
@@ -40,7 +39,7 @@ export async function startHttp(): Promise<void> {
         'Re-authorize via the Notion OAuth flow on /authorize.'
       )
     }
-    return new Client({ auth: token, notionVersion: '2025-09-03' })
+    return new Client({ auth: token, notionVersion: NOTION_API_VERSION })
   }
 
   const port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 0
