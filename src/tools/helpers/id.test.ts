@@ -94,6 +94,21 @@ describe('formatId', () => {
   it('should format UUIDs with misplaced hyphens correctly', () => {
     expect(formatId('a3802967-3621-4b04-b6af-bfef-1b76-87b3')).toBe('a3802967-3621-4b04-b6af-bfef1b7687b3')
   })
+  it('should return empty string unchanged', () => {
+    expect(formatId('')).toBe('')
+  })
+
+  it('should return string with only hyphens unchanged', () => {
+    expect(formatId('----')).toBe('----')
+  })
+
+  it('should return strings with spaces unchanged', () => {
+    expect(formatId(' a380296736214b04b6afbfef1b7687b3 ')).toBe(' a380296736214b04b6afbfef1b7687b3 ')
+  })
+
+  it('should handle mixed case and preserve it', () => {
+    expect(formatId('A380296736214b04B6afBFEF1b7687b3')).toBe('A3802967-3621-4b04-B6af-BFEF1b7687b3')
+  })
 })
 
 describe('isValidBase64', () => {
