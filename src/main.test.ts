@@ -35,7 +35,10 @@ vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => {
 
 vi.mock('@notionhq/client', () => {
   return {
-    Client: vi.fn().mockImplementation(() => ({}))
+    // biome-ignore lint/complexity/useArrowFunction: constructor mock
+    Client: vi.fn().mockImplementation(function () {
+      return {}
+    })
   }
 })
 
