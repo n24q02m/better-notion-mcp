@@ -150,4 +150,13 @@ describe('isValidBase64', () => {
     expect(isValidBase64('aGVsbG8=')).toBe(false)
     spy.mockRestore()
   })
+
+  it('should return false for strings exceeding max length', () => {
+    // MAX_BASE64_LENGTH is 64MB (67108864).
+    // Creating a string of this size is efficient in modern JS engines using repeat.
+    // It's just metadata until mutated.
+    const maxLen = 64 * 1024 * 1024
+    const largeString = 'A'.repeat(maxLen + 4)
+    expect(isValidBase64(largeString)).toBe(false)
+  })
 })

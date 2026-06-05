@@ -30,3 +30,7 @@
 **Vulnerability:** N/A (Testing Task)
 **Learning:** The function isSafeWebUrl provides a stricter validation layer for opening URLs in external browsers compared to isSafeUrl, specifically by enforcing standard web protocols (HTTP/HTTPS) and preventing shell flag injection (URLs starting with dash).
 **Prevention:** Ensure all security-critical utility functions have comprehensive unit test coverage, specifically targeting edge cases like protocol obfuscation, shell injection vectors, and malformed URL handling.
+## 2023-10-27 - Base64 Validation OOM Vulnerability
+**Vulnerability:** The `isValidBase64` function passed its string argument directly to `Buffer.from(str, 'base64')` without an upper bound length check. An attacker could provide a massive payload string, forcing the server to attempt an excessively large memory allocation and crashing the server due to an Out-Of-Memory (OOM) error (Denial of Service).
+**Learning:** Validating user input using buffer allocations or computationally expensive operations (like regexes) on unbound string lengths exposes Node.js services to synchronous blocking or memory exhaustion attacks.
+**Prevention:** Always enforce a maximum length limit on any string inputs before performing validation routines or memory allocations to prevent resource exhaustion attacks.

@@ -34,6 +34,9 @@ export function formatId(id: string): string {
   return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20)}`
 }
 
+// Maximum allowed length for base64 strings to prevent OOM during validation (64MB)
+const MAX_BASE64_LENGTH = 64 * 1024 * 1024
+
 /**
  * Check if a string is valid base64 encoding
  * Used to validate file_content before Buffer.from
@@ -41,6 +44,11 @@ export function formatId(id: string): string {
  */
 export function isValidBase64(str: string): boolean {
   if (typeof str !== 'string' || str.length === 0 || str.length % 4 !== 0) {
+    return false
+  }
+
+  // Prevent OOM by rejecting excessively large strings before Buffer allocation
+  if (str.length > MAX_BASE64_LENGTH) {
     return false
   }
 
