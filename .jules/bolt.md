@@ -20,3 +20,4 @@
 ## 2025-05-26 - Array.includes() vs Set.has() for O(1) Lookups
 **Learning:** Checking for membership in an array using `['a', 'b', ...].includes(value)` within hot paths requires an O(N) scan. This can become an issue when iterating or repeatedly checking values.
 **Action:** Replace `Array.includes()` with `Set.has()` by extracting the array into a module-level `Set`. This improves lookup times significantly to O(1).
+## 2025-02-28 - Optimize Static Data GC Overhead\n**Learning:** In highly-concurrent MCP servers, using dynamic `.map()` or `.join()` on static arrays (`TOOLS` and `RESOURCES`) inside request handlers creates unnecessary V8 object allocations on every request, leading to measurable GC pauses on hot paths.\n**Action:** Always pre-compute mapped static objects and strings at the module level when their underlying data is immutable, reducing per-request allocation cost to O(1).
