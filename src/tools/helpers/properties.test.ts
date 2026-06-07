@@ -383,6 +383,20 @@ describe('convertToNotionProperties', () => {
   })
 })
 
+describe('edge cases and fallbacks', () => {
+  it('returns value as-is in toRelation if not a string or array', () => {
+    // toRelation is called when schema type is 'relation'
+    const result = convertToNotionProperties({ Project: 123 }, { Project: 'relation' })
+    expect(result).toEqual({ Project: 123 })
+  })
+
+  it('handles BigInt values by passing them through (fallback branch)', () => {
+    const bigIntValue = BigInt(9007199254740991)
+    const result = convertToNotionProperties({ ID: bigIntValue })
+    expect(result).toEqual({ ID: bigIntValue })
+  })
+})
+
 describe('extractPageProperties', () => {
   it('extracts title', () => {
     const props = {
@@ -754,5 +768,21 @@ describe('extractPageProperties', () => {
       }
     }
     expect(extractPageProperties(props)).toEqual({ Window: '2026-01-01 to 2026-01-31' })
+  })
+
+  it('extracts title and rich_text with multiple segments', () => {
+    const props = {
+      Name: {
+        type: 'title',
+        title: [{ plain_text: 'Part 1 ' }, { plain_text: 'Part 2' }]
+      },
+      Bio: {
+        type: 'rich_text',
+        rich_text: [{ plain_text: 'Hello ' }, { plain_text: 'world' }]
+      }
+    }
+    const result = extractPageProperties(props)
+    expect(result.Name).toBe('Part 1 Part 2')
+    expect(result.Bio).toBe('Hello world')
   })
 })
