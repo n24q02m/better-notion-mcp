@@ -95,34 +95,48 @@ class MarkdownParser {
 
   private parseBlock(i: number): number {
     const line = this.lines[i]
+    const trimmedLine = line.trim()
 
-    // Flush list if we're not in a list anymore
+    this.handleListFlushing(line)
+
+    if (!trimmedLine) {
+      return i
+    }
+
+    const metadataIndex = this.handleMetadata(trimmedLine, i)
+    if (metadataIndex !== null) return metadataIndex
+
+    const complexIndex = this.handleComplexBlocks(line, trimmedLine, i)
+    if (complexIndex !== null) return complexIndex
+
+    const basicIndex = this.handleBasicBlocks(line, i)
+    if (basicIndex !== null) return basicIndex
+
+    this.blocks.push(createParagraph(line))
+    return i
+  }
+
+  private handleListFlushing(line: string): void {
     if (this.currentListType && !isListItem(line)) {
       this.blocks.push(...this.currentList)
       this.currentList = []
       this.currentListType = null
     }
+  }
 
-    // Cache trimmed line for performance to avoid repeated string allocations
-    const trimmedLine = line.trim()
-
-    // Skip empty lines
-    if (!trimmedLine) {
-      return i
-    }
-
-    // Table of Contents [toc]
+  private handleMetadata(trimmedLine: string, i: number): number | null {
     if (trimmedLine === '[toc]' || trimmedLine === '[TOC]') {
       this.blocks.push(createTableOfContents())
       return i
     }
-
-    // Breadcrumb [breadcrumb]
     if (trimmedLine === '[breadcrumb]' || trimmedLine === '[BREADCRUMB]') {
       this.blocks.push(createBreadcrumb())
       return i
     }
+    return null
+  }
 
+  private handleComplexBlocks(line: string, trimmedLine: string, i: number): number | null {
     // Equation block $...$
     if (trimmedLine.startsWith('$$')) {
       const eqData = parseEquationBlock(this.lines, i, trimmedLine)
@@ -190,56 +204,66 @@ class MarkdownParser {
       }
     }
 
-    // Heading
-    if (line.startsWith('# ')) {
-      this.blocks.push(createHeading(1, line.slice(2)))
-    } else if (line.startsWith('## ')) {
-      this.blocks.push(createHeading(2, line.slice(3)))
-    } else if (line.startsWith('### ')) {
-      this.blocks.push(createHeading(3, line.slice(4)))
-    }
-
     // Code block
-    else if (line.startsWith('```')) {
+    if (line.startsWith('```')) {
       const codeData = parseCodeBlock(this.lines, i, line)
       this.blocks.push(codeData.block)
       return codeData.endIndex
     }
 
+    return null
+  }
+
+  private handleBasicBlocks(line: string, i: number): number | null {
+    // Heading
+    if (line.startsWith('# ')) {
+      this.blocks.push(createHeading(1, line.slice(2)))
+      return i
+    }
+    if (line.startsWith('## ')) {
+      this.blocks.push(createHeading(2, line.slice(3)))
+      return i
+    }
+    if (line.startsWith('### ')) {
+      this.blocks.push(createHeading(3, line.slice(4)))
+      return i
+    }
+
     // Task list / Checkbox list - [ ] or - [x]
-    else if (CHECKED_LIST_REGEX.test(line)) {
+    if (CHECKED_LIST_REGEX.test(line)) {
       const match = line.match(CHECKED_LIST_REGEX)
       const checked = match ? match[1].toLowerCase() === 'x' : false
       const text = line.replace(CHECKED_LIST_REGEX, '')
       this.currentListType = 'bulleted'
       this.currentList.push(createTodoItem(text, checked))
+      return i
     }
     // Bulleted list
-    else if (BULLETED_LIST_REGEX.test(line)) {
+    if (BULLETED_LIST_REGEX.test(line)) {
       const text = line.replace(BULLETED_LIST_REGEX, '')
       this.currentListType = 'bulleted'
       this.currentList.push(createBulletedListItem(text))
+      return i
     }
     // Numbered list
-    else if (NUMBERED_LIST_REGEX.test(line)) {
+    if (NUMBERED_LIST_REGEX.test(line)) {
       const text = line.replace(NUMBERED_LIST_REGEX, '')
       this.currentListType = 'numbered'
       this.currentList.push(createNumberedListItem(text))
+      return i
     }
     // Quote
-    else if (line.startsWith('> ')) {
+    if (line.startsWith('> ')) {
       this.blocks.push(createQuote(line.slice(2)))
+      return i
     }
     // Divider
-    else if (DIVIDER_REGEX.test(line)) {
+    if (DIVIDER_REGEX.test(line)) {
       this.blocks.push(createDivider())
-    }
-    // Regular paragraph
-    else {
-      this.blocks.push(createParagraph(line))
+      return i
     }
 
-    return i
+    return null
   }
 }
 
