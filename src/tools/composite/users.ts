@@ -10,6 +10,7 @@ import { autoPaginate } from '../helpers/pagination.js'
 export interface UsersInput {
   action: 'list' | 'get' | 'me' | 'from_workspace'
   user_id?: string
+  limit?: number
 }
 
 /**
@@ -21,11 +22,13 @@ export async function users(notion: Client, input: UsersInput): Promise<any> {
     switch (input.action) {
       case 'list': {
         try {
-          const usersList = await autoPaginate((cursor) =>
-            notion.users.list({
-              start_cursor: cursor,
-              page_size: 100
-            })
+          const usersList = await autoPaginate(
+            (cursor, pageSize) =>
+              notion.users.list({
+                start_cursor: cursor,
+                page_size: pageSize
+              }),
+            { limit: input.limit }
           )
 
           return {
@@ -85,13 +88,13 @@ export async function users(notion: Client, input: UsersInput): Promise<any> {
         // Alternative method: Search pages and extract user info from metadata
         // This bypasses the permission issue with direct users.list() call
         const searchResults: any = await autoPaginate(
-          (cursor) =>
+          (cursor, pageSize) =>
             notion.search({
               filter: { property: 'object', value: 'page' },
               start_cursor: cursor,
-              page_size: 100
+              page_size: pageSize
             }),
-          { maxPages: 5 }
+          { limit: input.limit || 500 } // Default to 500 search results to scan
         )
 
         const usersMap = new Map<string, any>()

@@ -112,15 +112,15 @@ export async function workspace(notion: Client, input: WorkspaceInput): Promise<
         }
 
         // Fetch results with pagination
-        const allResults = await autoPaginate((cursor) =>
-          notion.search({
-            ...searchParams,
-            start_cursor: cursor,
-            page_size: 100
-          })
+        const results = await autoPaginate(
+          (cursor, pageSize) =>
+            notion.search({
+              ...searchParams,
+              start_cursor: cursor,
+              page_size: pageSize
+            }),
+          { limit: input.limit }
         )
-
-        const results = input.limit ? allResults.slice(0, input.limit) : allResults
 
         const formattedResults = new Array(results.length)
         for (let i = 0; i < results.length; i++) {
