@@ -45,9 +45,27 @@ describe('credential-state', () => {
     vi.restoreAllMocks()
   })
 
-  it('initial state is awaiting_setup', () => {
-    expect(getState()).toBe('awaiting_setup')
-    expect(getNotionToken()).toBeNull()
+  describe('getState', () => {
+    it('returns awaiting_setup by default', () => {
+      expect(getState()).toBe('awaiting_setup')
+    })
+
+    it('returns configured after setState', () => {
+      setState('configured')
+      expect(getState()).toBe('configured')
+    })
+  })
+
+  describe('getNotionToken', () => {
+    it('returns null by default', () => {
+      expect(getNotionToken()).toBeNull()
+    })
+
+    it('returns the token after resolveCredentialState with env', async () => {
+      process.env.NOTION_TOKEN = 'test-token'
+      await resolveCredentialState()
+      expect(getNotionToken()).toBe('test-token')
+    })
   })
 
   describe('resolveCredentialState', () => {
@@ -92,20 +110,17 @@ describe('credential-state', () => {
       expect(deleteConfig).toHaveBeenCalledWith('better-notion-mcp')
     })
 
-    it('handles deleteConfig failure in resetState', () => {
+    it('handles deleteConfig failure in resetState', async () => {
       vi.mocked(deleteConfig).mockRejectedValue(new Error('delete failed') as never)
       resetState()
+      // Wait for the fire-and-forget .catch() to execute
+      await new Promise((resolve) => setTimeout(resolve, 0))
       expect(getState()).toBe('awaiting_setup')
       expect(deleteConfig).toHaveBeenCalled()
     })
   })
 
   describe('subject token resolver', () => {
-    beforeEach(() => {
-      // Reset to default (module-global single-user fallback)
-      setSubjectTokenResolver(() => getNotionToken())
-    })
-
     it('defaults to single-user module global when no resolver injected', () => {
       setState('awaiting_setup')
       expect(getSubjectToken()).toBeNull()
