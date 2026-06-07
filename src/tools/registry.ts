@@ -449,10 +449,18 @@ const VALID_HELP_TOOLS_STRING = Array.from(VALID_HELP_TOOL_NAMES).join(', ')
  *   Called per tool invocation to support both singleton (stdio) and per-request (HTTP) patterns.
  */
 export function registerTools(server: Server, notionClientFactory: () => Client) {
+  registerListToolsHandler(server)
+  registerResourcesHandlers(server)
+  registerCallToolHandler(server, notionClientFactory)
+}
+
+function registerListToolsHandler(server: Server) {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: TOOLS
   }))
+}
 
+function registerResourcesHandlers(server: Server) {
   // Resources handlers for full documentation
   server.setRequestHandler(ListResourcesRequestSchema, async () => ({
     resources: RESOURCES.map((r) => ({
@@ -483,18 +491,15 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
       throw new NotionMCPError(`Documentation not found for: ${resource.name}`, 'DOC_NOT_FOUND', 'Check resource URI')
     }
   })
+}
 
+function registerCallToolHandler(server: Server, notionClientFactory: () => Client) {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params
 
     if (!args) {
       return {
-        content: [
-          {
-            type: 'text',
-            text: 'Error: No arguments provided'
-          }
-        ],
+        content: [{ type: 'text', text: 'Error: No arguments provided' }],
         isError: true
       }
     }
@@ -519,77 +524,8 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
     }
 
     try {
-      let result
       const notion = notionClientFactory()
-
-      switch (name) {
-        case 'pages':
-          result = await pages(notion, args as any)
-          break
-        case 'databases':
-          result = await databases(notion, args as any)
-          break
-        case 'blocks':
-          result = await blocks(notion, args as any)
-          break
-        case 'users':
-          result = await users(notion, args as any)
-          break
-        case 'workspace':
-          result = await workspace(notion, args as any)
-          break
-        case 'comments':
-          result = await commentsManage(notion, args as any)
-          break
-        case 'content_convert':
-          result = await contentConvert(args as any)
-          break
-        case 'config':
-          result = await config(args as any)
-          break
-        case 'config__open_relay':
-          result = await openRelayHandler()
-          break
-        case 'file_uploads':
-          result = await fileUploads(notion, args as any)
-          break
-        case 'help': {
-          const toolName = (args as { tool_name: string }).tool_name
-          // Security: validate tool_name against allowlist to prevent path traversal
-          if (!VALID_HELP_TOOL_NAMES.has(toolName)) {
-            throw new NotionMCPError(
-              `Invalid tool name: ${toolName}`,
-              'VALIDATION_ERROR',
-              `Valid tools: ${VALID_HELP_TOOLS_STRING}`
-            )
-          }
-          // Security: Use basename() to ensure we only look for files directly inside DOCS_DIR,
-          // preventing path traversal even if the allowlist validation is bypassed or modified.
-          const docFile = `${basename(toolName)}.md`
-          const fullPath = join(DOCS_DIR, docFile)
-          if (!fullPath.startsWith(DOCS_DIR)) {
-            throw new NotionMCPError('Path traversal attempt detected', 'SECURITY_ERROR', 'Invalid tool_name')
-          }
-
-          try {
-            const content = await readFile(fullPath, 'utf-8')
-            result = { tool: toolName, documentation: content }
-          } catch {
-            throw new NotionMCPError(`Documentation not found for: ${toolName}`, 'DOC_NOT_FOUND', 'Check tool_name')
-          }
-          break
-        }
-        default: {
-          const validTools = TOOLS.map((t) => t.name)
-          const closest = findClosestMatch(name, validTools)
-          const suggestion = closest ? ` Did you mean '${closest}'?` : ''
-          throw new NotionMCPError(
-            `Unknown tool: ${name}.${suggestion}`,
-            'UNKNOWN_TOOL',
-            `Available tools: ${validTools.join(', ')}`
-          )
-        }
-      }
+      const result = await executeTool(name, args, notion)
 
       const jsonText = JSON.stringify(result, null, 2)
       return {
@@ -617,4 +553,67 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
       }
     }
   })
+}
+
+async function executeTool(name: string, args: any, notion: Client) {
+  switch (name) {
+    case 'pages':
+      return await pages(notion, args)
+    case 'databases':
+      return await databases(notion, args)
+    case 'blocks':
+      return await blocks(notion, args)
+    case 'users':
+      return await users(notion, args)
+    case 'workspace':
+      return await workspace(notion, args)
+    case 'comments':
+      return await commentsManage(notion, args)
+    case 'content_convert':
+      return await contentConvert(args)
+    case 'config':
+      return await config(args)
+    case 'config__open_relay':
+      return await openRelayHandler()
+    case 'file_uploads':
+      return await fileUploads(notion, args)
+    case 'help':
+      return await handleHelpTool(args)
+    default: {
+      const validTools = TOOLS.map((t) => t.name)
+      const closest = findClosestMatch(name, validTools)
+      const suggestion = closest ? ` Did you mean '${closest}'?` : ''
+      throw new NotionMCPError(
+        `Unknown tool: ${name}.${suggestion}`,
+        'UNKNOWN_TOOL',
+        `Available tools: ${validTools.join(', ')}`
+      )
+    }
+  }
+}
+
+async function handleHelpTool(args: any) {
+  const toolName = (args as { tool_name: string }).tool_name
+  // Security: validate tool_name against allowlist to prevent path traversal
+  if (!VALID_HELP_TOOL_NAMES.has(toolName)) {
+    throw new NotionMCPError(
+      `Invalid tool name: ${toolName}`,
+      'VALIDATION_ERROR',
+      `Valid tools: ${VALID_HELP_TOOLS_STRING}`
+    )
+  }
+  // Security: Use basename() to ensure we only look for files directly inside DOCS_DIR,
+  // preventing path traversal even if the allowlist validation is bypassed or modified.
+  const docFile = `${basename(toolName)}.md`
+  const fullPath = join(DOCS_DIR, docFile)
+  if (!fullPath.startsWith(DOCS_DIR)) {
+    throw new NotionMCPError('Path traversal attempt detected', 'SECURITY_ERROR', 'Invalid tool_name')
+  }
+
+  try {
+    const content = await readFile(fullPath, 'utf-8')
+    return { tool: toolName, documentation: content }
+  } catch {
+    throw new NotionMCPError(`Documentation not found for: ${toolName}`, 'DOC_NOT_FOUND', 'Check tool_name')
+  }
 }
