@@ -99,5 +99,10 @@ describe('formatCover', () => {
     it('rejects vbscript: URLs', () => {
       expect(() => formatCover('vbscript:msgbox(1)')).toThrow(NotionMCPError)
     })
+
+    it('rejects http/https URLs with control characters', () => {
+      expect(() => formatCover('https://example.com/cover.jpg\n')).toThrow(NotionMCPError)
+      expect(() => formatCover('https://example.com/cover.jpg\n')).toThrow('Unsafe cover URL')
+    })
   })
 })
