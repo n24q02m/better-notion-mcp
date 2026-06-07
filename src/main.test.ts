@@ -210,11 +210,13 @@ describe('main.ts', () => {
       process.env.NOTION_TOKEN = 'ntn_test_token'
       await bootstrap()
       expect(stdioConnectMock).toHaveBeenCalled()
+      delete process.env.BETTER_NOTION_MCP_BOOTSTRAPPED
     })
 
     it('verifies execution with provided mode', async () => {
       await bootstrap('http')
       expect(startHttpMock).toHaveBeenCalled()
+      delete process.env.BETTER_NOTION_MCP_BOOTSTRAPPED
     })
 
     it('verifies startup errors in bootstrap', async () => {
@@ -235,13 +237,13 @@ describe('main.ts', () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
       // First call should work
-      await bootstrap('stdio')
+      await startServer('stdio')
       expect(stdioConnectMock).toHaveBeenCalledTimes(1)
 
       // Second call should be aborted
-      await bootstrap('stdio')
+      await startServer('stdio')
       expect(stdioConnectMock).toHaveBeenCalledTimes(1)
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Bootstrap aborted'))
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Server start aborted'))
 
       consoleSpy.mockRestore()
       delete process.env.BETTER_NOTION_MCP_BOOTSTRAPPED
