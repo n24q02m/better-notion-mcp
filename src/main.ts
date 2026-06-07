@@ -11,13 +11,12 @@
 import { readFileSync, realpathSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { Client } from '@notionhq/client'
+import { createMCPServer } from './create-server.js'
 import { getNotionToken, resolveCredentialState } from './credential-state.js'
-import { registerTools } from './tools/registry.js'
 
-const SERVER_NAME = 'better-notion-mcp'
+const SERVER_NAME = '@n24q02m/better-notion-mcp'
 
 function getPackageVersion(): string {
   try {
@@ -93,11 +92,6 @@ Documentation: https://mcp.n24q02m.com/servers/better-notion-mcp/
   // Direct MCP SDK stdio transport (no daemon proxy hop).
   await resolveCredentialState()
 
-  const server = new Server(
-    { name: SERVER_NAME, version: getPackageVersion() },
-    { capabilities: { tools: {}, resources: {} } }
-  )
-
   // Stdio is single-user: tokens come from NOTION_TOKEN env or local relay
   // config.enc. The factory returns a client built from whatever token is
   // currently saved in credential-state.
@@ -109,7 +103,7 @@ Documentation: https://mcp.n24q02m.com/servers/better-notion-mcp/
     return new Client({ auth: token, notionVersion: '2025-09-03' })
   }
 
-  registerTools(server, notionClientFactory)
+  const server = createMCPServer(notionClientFactory)
 
   const transport = new StdioServerTransport()
   await server.connect(transport)

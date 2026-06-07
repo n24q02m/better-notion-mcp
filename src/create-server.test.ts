@@ -65,4 +65,38 @@ describe('createMCPServer', () => {
 
     expect(server.serverInfo.version).toBe('0.0.0')
   })
+
+  it('should return a unique Server instance on every call', () => {
+    const factory = vi.fn()
+    const server1 = createMCPServer(factory)
+    const server2 = createMCPServer(factory)
+
+    expect(server1).not.toBe(server2)
+  })
+
+  it('should return 0.0.0 when package.json is malformed', () => {
+    vi.mocked(readFileSync).mockImplementationOnce(() => 'invalid json')
+    const factory = vi.fn()
+    const server = createMCPServer(factory) as any
+
+    expect(server.serverInfo.version).toBe('0.0.0')
+  })
+
+  it('should return 0.0.0 when version is not a string', () => {
+    vi.mocked(readFileSync).mockImplementationOnce(() => JSON.stringify({ version: 123 }))
+    const factory = vi.fn()
+    const server = createMCPServer(factory) as any
+
+    expect(server.serverInfo.version).toBe('0.0.0')
+  })
+
+  it('should propagate errors from registerTools', async () => {
+    const { registerTools } = await import('./tools/registry.js')
+    vi.mocked(registerTools).mockImplementationOnce(() => {
+      throw new Error('Registration failed')
+    })
+
+    const factory = vi.fn()
+    expect(() => createMCPServer(factory)).toThrow('Registration failed')
+  })
 })

@@ -17,7 +17,7 @@ function getVersion(): string {
   try {
     const pkgPath = join(__dirname, '..', 'package.json')
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
-    return pkg.version ?? '0.0.0'
+    return typeof pkg.version === 'string' ? pkg.version : '0.0.0'
   } catch {
     return '0.0.0'
   }

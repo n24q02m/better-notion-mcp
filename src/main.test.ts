@@ -169,7 +169,7 @@ describe('main.ts', () => {
       process.env.NOTION_TOKEN = 'ntn_test_token'
       await startServer('stdio')
       expect(stdioServerCtor).toHaveBeenCalledWith(
-        expect.objectContaining({ name: 'better-notion-mcp' }),
+        expect.objectContaining({ name: '@n24q02m/better-notion-mcp' }),
         expect.objectContaining({ capabilities: expect.any(Object) })
       )
       expect(stdioTransportCtor).toHaveBeenCalledOnce()
