@@ -16,6 +16,13 @@ import * as RichText from '../helpers/richtext.js'
 export const schemaCache = new Map<string, { properties: any; expiresAt: number }>()
 const SCHEMA_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
+// Cache for ID resolutions (database_id -> data_source_id)
+export const resolveCache = new Map<
+  string,
+  { result: { databaseId: string; dataSourceId: string }; expiresAt: number }
+>()
+const RESOLVE_CACHE_TTL = 30 * 60 * 1000 // 30 minutes
+
 /**
  * Get data source properties with caching
  */
@@ -251,11 +258,19 @@ export type DatabasesResponse =
 async function resolveDataSourceId(notion: Client, id: string): Promise<{ databaseId: string; dataSourceId: string }> {
   const normalized = normalizeId(id)
 
+  // Check cache first
+  const cached = resolveCache.get(normalized)
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.result
+  }
+
   // Try as database container first
   try {
     const database: any = await notion.databases.retrieve({ database_id: normalized })
     if (database.data_sources?.length > 0) {
-      return { databaseId: database.id, dataSourceId: database.data_sources[0].id }
+      const result = { databaseId: database.id, dataSourceId: database.data_sources[0].id }
+      resolveCache.set(normalized, { result, expiresAt: Date.now() + RESOLVE_CACHE_TTL })
+      return result
     }
     throw new NotionMCPError(
       'Database has no data sources',
@@ -269,10 +284,12 @@ async function resolveDataSourceId(notion: Client, id: string): Promise<{ databa
     if (error.code === 'object_not_found') {
       try {
         const ds: any = await (notion as any).dataSources.retrieve({ data_source_id: normalized })
-        return {
+        const result = {
           databaseId: ds.parent?.database_id || normalized,
           dataSourceId: ds.id
         }
+        resolveCache.set(normalized, { result, expiresAt: Date.now() + RESOLVE_CACHE_TTL })
+        return result
       } catch {
         throw new NotionMCPError(
           `ID "${id}" is not a valid database or data source`,
@@ -588,6 +605,21 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
     throw new NotionMCPError('pages or page_id+page_properties required', 'VALIDATION_ERROR', 'Provide items to update')
   }
 
+  // Fetch schema if database_id is provided to improve property conversion accuracy
+  let schema: Record<string, string> | undefined
+  if (input.database_id) {
+    const { dataSourceId } = await resolveDataSourceId(notion, input.database_id)
+    const properties = await getDataSourceSchema(notion, dataSourceId)
+    if (properties) {
+      schema = {}
+      const keys = Object.keys(properties)
+      for (let i = 0; i < keys.length; i++) {
+        const name = keys[i]
+        schema[name] = (properties[name] as any).type
+      }
+    }
+  }
+
   // Validate all items before processing to avoid partial writes on malformed input
   for (let i = 0; i < items.length; i++) {
     if (!items[i] || items[i].properties === undefined || items[i].properties === null) {
@@ -604,7 +636,7 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
       throw new NotionMCPError('page_id required for each item', 'VALIDATION_ERROR', 'Provide page_id')
     }
 
-    const properties = convertToNotionProperties(item.properties)
+    const properties = convertToNotionProperties(item.properties, schema)
 
     await notion.pages.update({
       page_id: item.page_id,
@@ -638,13 +670,41 @@ async function deleteDatabasePages(notion: Client, input: DatabasesInput): Promi
           pageIds.push(p.page_id)
         }
       }
+    } else if (input.database_id) {
+      // Find pages to delete using database_id and optional filters/search
+      const { dataSourceId } = await resolveDataSourceId(notion, input.database_id)
+      let filter = input.filters
+      if (input.search && !filter) {
+        filter = await getSmartSearchFilter(notion, dataSourceId, input.search)
+      }
+
+      const queryParams: any = { data_source_id: dataSourceId }
+      if (filter) queryParams.filter = filter
+
+      const results = await autoPaginate(async (cursor) => {
+        const response: any = await (notion as any).dataSources.query({
+          ...queryParams,
+          start_cursor: cursor,
+          page_size: 100
+        })
+        return {
+          results: response.results,
+          next_cursor: response.next_cursor,
+          has_more: response.has_more
+        }
+      })
+      pageIds = results.map((p: any) => p.id)
     } else {
       pageIds = []
     }
   }
 
   if (pageIds.length === 0) {
-    throw new NotionMCPError('page_id or page_ids required', 'VALIDATION_ERROR', 'Provide page IDs to delete')
+    throw new NotionMCPError(
+      'page_id, page_ids, or database_id required',
+      'VALIDATION_ERROR',
+      'Provide page IDs to delete, or a database_id to delete matching pages'
+    )
   }
 
   const results = await processBatches(

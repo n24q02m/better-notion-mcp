@@ -8,6 +8,7 @@ import {
   type GetDatabaseResponse,
   type ListDataSourceTemplatesResponse,
   type QueryDatabaseResponse,
+  resolveCache,
   schemaCache,
   type UpdateDatabasePageResponse,
   type UpdateDatabaseResponse,
@@ -69,6 +70,7 @@ function makeDataSourceResponse(overrides: Record<string, any> = {}) {
 describe('databases', () => {
   beforeEach(() => {
     schemaCache.clear()
+    resolveCache.clear()
     vi.resetAllMocks()
   })
 
@@ -650,8 +652,33 @@ describe('databases', () => {
       })
     })
 
-    it('should throw when no page ids provided', async () => {
-      await expect(databases(notion, { action: 'delete_page' })).rejects.toThrow('page_id or page_ids required')
+    it('should delete pages by database_id (query)', async () => {
+      mockNotion.databases.retrieve.mockResolvedValueOnce({
+        id: 'db-123',
+        data_sources: [{ id: 'ds-123' }]
+      })
+      mockNotion.dataSources.query.mockResolvedValueOnce({
+        results: [{ id: 'page-q1' }, { id: 'page-q2' }],
+        next_cursor: null,
+        has_more: false
+      })
+      mockNotion.pages.update.mockResolvedValue({})
+
+      const result = (await databases(notion, {
+        action: 'delete_page',
+        database_id: 'db-123'
+      })) as DeleteDatabasePageResponse
+
+      expect(result.processed).toBe(2)
+      expect(result.results).toContainEqual({ page_id: 'page-q1', deleted: true })
+      expect(result.results).toContainEqual({ page_id: 'page-q2', deleted: true })
+      expect(mockNotion.dataSources.query).toHaveBeenCalledWith(expect.objectContaining({ data_source_id: 'ds-123' }))
+    })
+
+    it('should throw when no page ids or database_id provided', async () => {
+      await expect(databases(notion, { action: 'delete_page' })).rejects.toThrow(
+        'page_id, page_ids, or database_id required'
+      )
     })
   })
 
