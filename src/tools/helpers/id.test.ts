@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { formatId, isValidBase64, isValidNotionId, normalizeId } from './id'
+import { formatId, isValidBase64, isValidNotionId, normalizeId } from './id.js'
 
 describe('normalizeId', () => {
   it('should strip hyphens from UUID', () => {
@@ -56,6 +56,26 @@ describe('isValidNotionId', () => {
   it('should be case insensitive', () => {
     expect(isValidNotionId('A3802967-3621-4B04-B6AF-BFEF1B7687B3')).toBe(true)
   })
+
+  it('should reject misplaced or duplicate hyphens', () => {
+    expect(isValidNotionId('a3802967--3621-4b04-b6af-bfef1b7687b3')).toBe(false)
+    expect(isValidNotionId('a3802967-36214b04-b6af-bfef1b7687b3')).toBe(false)
+  })
+
+  it('should reject leading or trailing hyphens', () => {
+    expect(isValidNotionId('-a3802967-3621-4b04-b6af-bfef1b7687b3')).toBe(false)
+    expect(isValidNotionId('a3802967-3621-4b04-b6af-bfef1b7687b3-')).toBe(false)
+  })
+
+  it('should reject mixed hyphenation with incorrect group lengths', () => {
+    expect(isValidNotionId('a38029673621-4b04-b6af-bfef1b7687b3')).toBe(false)
+    expect(isValidNotionId('a3802967-36214b04-b6afbfef1b7687b3')).toBe(false)
+  })
+
+  it('should reject incorrect lengths', () => {
+    expect(isValidNotionId('a3802967-3621-4b04-b6af-bfef1b7687b')).toBe(false)
+    expect(isValidNotionId('a3802967-3621-4b04-b6af-bfef1b7687b33')).toBe(false)
+  })
 })
 
 describe('formatId', () => {
@@ -93,6 +113,11 @@ describe('formatId', () => {
 
   it('should format UUIDs with misplaced hyphens correctly', () => {
     expect(formatId('a3802967-3621-4b04-b6af-bfef-1b76-87b3')).toBe('a3802967-3621-4b04-b6af-bfef1b7687b3')
+  })
+
+  it('should return whitespace and empty strings unchanged', () => {
+    expect(formatId(' ')).toBe(' ')
+    expect(formatId('')).toBe('')
   })
 })
 
@@ -149,5 +174,17 @@ describe('isValidBase64', () => {
     })
     expect(isValidBase64('aGVsbG8=')).toBe(false)
     spy.mockRestore()
+  })
+
+  it('should reject non-string inputs', () => {
+    expect(isValidBase64(null as any)).toBe(false)
+    expect(isValidBase64(123 as any)).toBe(false)
+    expect(isValidBase64({} as any)).toBe(false)
+  })
+
+  it('should reject strings exceeding MAX_BASE64_LENGTH', () => {
+    // 64MB + 4 chars
+    const largeString = 'a'.repeat(64 * 1024 * 1024 + 4)
+    expect(isValidBase64(largeString)).toBe(false)
   })
 })
