@@ -50,29 +50,11 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
             }))
           }
         } catch (error: any) {
-          if (error.code === 'object_not_found') {
-            // Distinguish between a real 404 and the known Notion API limitation (OAuth 404)
-            // by checking if the block/page actually exists.
-            let blockExists = false
-            try {
-              await notion.blocks.retrieve({ block_id: input.page_id })
-              blockExists = true
-            } catch (innerError: any) {
-              // If we get any error other than 404, we should probably know about it
-              if (innerError.code !== 'object_not_found') {
-                throw innerError
-              }
-            }
-
-            if (blockExists) {
-              // If retrieve succeeds, it's the known API limitation
-              throw new NotionMCPError(
-                'The comments.list API is currently unavailable for this page due to a known Notion OAuth limitation.',
-                'COMMENTS_LIST_UNAVAILABLE'
-              )
-            }
-            // If it's a real 404 (block retrieve also failed with object_not_found),
-            // re-throw the original error which will be wrapped as NOT_FOUND by withErrorHandling.
+          if (error.code === 'object_not_found' && (await checkBlockExists(notion, input.page_id))) {
+            throw new NotionMCPError(
+              'The comments.list API is currently unavailable for this page due to a known Notion OAuth limitation.',
+              'COMMENTS_LIST_UNAVAILABLE'
+            )
           }
           throw error
         }
@@ -150,4 +132,21 @@ export async function commentsManage(notion: Client, input: CommentsManageInput)
         )
     }
   })()
+}
+
+/**
+ * Check if a block exists by trying to retrieve it.
+ * Returns true if it exists, false if it returns object_not_found,
+ * and throws any other error.
+ */
+async function checkBlockExists(notion: Client, blockId: string): Promise<boolean> {
+  try {
+    await notion.blocks.retrieve({ block_id: blockId })
+    return true
+  } catch (error: any) {
+    if (error.code === 'object_not_found') {
+      return false
+    }
+    throw error
+  }
 }
