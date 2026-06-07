@@ -43,12 +43,7 @@ export const MAX_BASE64_LENGTH = 64 * 1024 * 1024
  * Implements strict validation by checking character set, length, and canonicality
  */
 export function isValidBase64(str: string): boolean {
-  if (
-    typeof str !== 'string' ||
-    str.length === 0 ||
-    str.length % 4 !== 0 ||
-    str.length > MAX_BASE64_LENGTH
-  ) {
+  if (typeof str !== 'string' || str.length === 0 || str.length % 4 !== 0 || str.length > MAX_BASE64_LENGTH) {
     return false
   }
 
