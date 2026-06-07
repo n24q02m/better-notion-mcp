@@ -30,6 +30,16 @@ describe('normalizeId', () => {
     expect(normalizeId('-abc-')).toBe('abc')
     expect(normalizeId(' a - b ')).toBe(' a  b ')
   })
+
+  it('should preserve other whitespace characters like tabs and newlines', () => {
+    expect(normalizeId('abc-\t-def')).toBe('abc\tdef')
+    expect(normalizeId('abc-\n-def')).toBe('abc\ndef')
+  })
+
+  it('should preserve unicode dashes but strip standard hyphens', () => {
+    // en-dash (–) and em-dash (—) should be preserved
+    expect(normalizeId('a-b–c—d')).toBe('ab–c—d')
+  })
 })
 
 describe('isValidNotionId', () => {
