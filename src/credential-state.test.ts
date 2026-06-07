@@ -128,3 +128,12 @@ describe('credential-state', () => {
     })
   })
 })
+
+describe('setState', () => {
+  it('updates the state', () => {
+    setState('configured')
+    expect(getState()).toBe('configured')
+    setState('awaiting_setup')
+    expect(getState()).toBe('awaiting_setup')
+  })
+})

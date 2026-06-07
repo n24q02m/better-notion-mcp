@@ -12,10 +12,10 @@
  *
  * This module is the single source of truth for "is the server configured?"
  * It supports two token resolution strategies:
- *  - stdio / single-user: module-global ``_notionToken`` from env or
- *    config.enc, set during ``resolveCredentialState``.
+ *  - stdio / single-user: module-global `_notionToken` from env or
+ *    config.enc, set during `resolveCredentialState`.
  *  - HTTP / multi-user (remote-oauth): per-JWT-sub resolver injected by the
- *    HTTP transport so ``config(action=status)`` reflects whether the
+ *    HTTP transport so `config(action=status)` reflects whether the
  *    CURRENT caller has a Notion access token.
  */
 
@@ -42,9 +42,9 @@ export function getNotionToken(): string | null {
 
 /**
  * Per-request token resolver. Stdio / single-user leaves the default
- * resolver, which reads the module global. ``remote-oauth`` HTTP mode
- * injects a resolver that reads the per-JWT-sub ``NotionTokenStore`` so
- * that ``config(action=status)`` reflects whether the CURRENT caller has a
+ * resolver, which reads the module global. `remote-oauth` HTTP mode
+ * injects a resolver that reads the per-JWT-sub `NotionTokenStore` so
+ * that `config(action=status)` reflects whether the CURRENT caller has a
  * Notion access token -- not whether the server process has any global
  * token, which is always null in multi-user remote-oauth mode.
  */
