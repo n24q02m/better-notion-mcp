@@ -49,4 +49,10 @@ describe('initServer', () => {
     await initServer()
     expect(startServerMock).toHaveBeenCalledWith('stdio')
   })
+
+  it('propagates errors from startServer', async () => {
+    startServerMock.mockRejectedValueOnce(new Error('Boot failure'))
+    const { initServer } = await import('./init-server.js')
+    await expect(initServer()).rejects.toThrow('Boot failure')
+  })
 })
