@@ -271,6 +271,37 @@ describe('workspace', () => {
 
       expect(result.results[0].title).toBe('Untitled')
     })
+
+    it('should include database_id for data_source results', async () => {
+      mockNotion.search.mockResolvedValue({
+        results: [
+          {
+            id: 'ds-1',
+            object: 'data_source',
+            title: [{ plain_text: 'My Data Source' }],
+            url: 'https://notion.so/ds-1',
+            last_edited_time: '2024-01-01',
+            parent: { type: 'database_id', database_id: 'db-1' }
+          }
+        ],
+        next_cursor: null,
+        has_more: false
+      })
+
+      const result = (await workspace(mockNotion as any, { action: 'search' })) as Extract<
+        WorkspaceResult,
+        { action: 'search' }
+      >
+
+      expect(result.results[0]).toEqual({
+        id: 'ds-1',
+        object: 'data_source',
+        title: 'My Data Source',
+        url: 'https://notion.so/ds-1',
+        last_edited_time: '2024-01-01',
+        database_id: 'db-1'
+      })
+    })
   })
 
   describe('unknown action', () => {
