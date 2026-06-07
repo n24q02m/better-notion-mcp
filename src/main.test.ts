@@ -34,7 +34,10 @@ vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => {
 })
 
 vi.mock('@notionhq/client', () => ({
-  Client: vi.fn().mockImplementation(() => ({}))
+  // biome-ignore lint/complexity/useArrowFunction: constructor
+  Client: vi.fn().mockImplementation(function () {
+    return {}
+  })
 }))
 
 vi.mock('./tools/registry.js', () => ({
@@ -46,12 +49,13 @@ vi.mock('./credential-state.js', () => ({
   getNotionToken: vi.fn().mockReturnValue('ntn_test_token')
 }))
 
-// Mock node:fs to allow spying on realpathSync in ESM
+// Mock node:fs to allow spying on realpathSync and readFileSync in ESM
 vi.mock('node:fs', async (importOriginal) => {
   const original = await importOriginal<typeof import('node:fs')>()
   return {
     ...original,
-    realpathSync: vi.fn(original.realpathSync)
+    realpathSync: vi.fn(original.realpathSync),
+    readFileSync: vi.fn(original.readFileSync)
   }
 })
 
@@ -140,6 +144,11 @@ describe('main.ts', () => {
 
       expect(isMain(import.meta.url)).toBe(false)
     })
+
+    it('verifies false when fileURLToPath throws (invalid URL)', () => {
+      process.argv[1] = 'somefile.ts'
+      expect(isMain('invalid-url')).toBe(false)
+    })
   })
 
   describe('getTransportMode', () => {
@@ -198,6 +207,33 @@ describe('main.ts', () => {
     it('verifies error propagation from startHttp', async () => {
       startHttpMock.mockRejectedValueOnce(new Error('HTTP failed'))
       await expect(startServer('http')).rejects.toThrow('HTTP failed')
+    })
+
+    it('verifies package version defaults to 0.0.0 when readFileSync fails', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      vi.mocked(fs.readFileSync).mockImplementationOnce(() => {
+        throw new Error('Read failed')
+      })
+      await startServer('stdio')
+      expect(stdioServerCtor).toHaveBeenCalledWith(expect.objectContaining({ version: '0.0.0' }), expect.any(Object))
+    })
+
+    it('verifies notionClientFactory in stdio mode', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      await startServer('stdio')
+
+      // Extract the factory function passed to registerTools
+      const factory = registerToolsMock.mock.calls[0][1]
+      expect(typeof factory).toBe('function')
+
+      // Test factory with token
+      const client = factory()
+      expect(client).toBeDefined()
+
+      // Test factory without token
+      const { getNotionToken } = await import('./credential-state.js')
+      vi.mocked(getNotionToken).mockReturnValueOnce(null)
+      expect(() => factory()).toThrow('Notion integration token not configured')
     })
   })
 
