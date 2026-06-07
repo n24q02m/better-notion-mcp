@@ -98,12 +98,18 @@ describe('credential-state', () => {
       expect(getState()).toBe('awaiting_setup')
       expect(deleteConfig).toHaveBeenCalled()
     })
+
+    it('restores default token resolver', () => {
+      setSubjectTokenResolver(() => 'custom-token')
+      expect(getSubjectToken()).toBe('custom-token')
+      resetState()
+      expect(getSubjectToken()).toBeNull() // should be back to default which returns _notionToken (null after reset)
+    })
   })
 
   describe('subject token resolver', () => {
     beforeEach(() => {
-      // Reset to default (module-global single-user fallback)
-      setSubjectTokenResolver(() => getNotionToken())
+      // resetState() in top-level beforeEach now handles this
     })
 
     it('defaults to single-user module global when no resolver injected', () => {

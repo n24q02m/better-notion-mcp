@@ -1,0 +1,29 @@
+<<<<<<< SEARCH
+/**
+ * Per-request token resolver. Stdio / single-user leaves the default
+ * resolver, which reads the module global. ``remote-oauth`` HTTP mode
+ * injects a resolver that reads the per-JWT-sub ``NotionTokenStore`` so
+ * that ``config(action=status)`` reflects whether the CURRENT caller has a
+ * Notion access token -- not whether the server process has any global
+ * token, which is always null in multi-user remote-oauth mode.
+ */
+let _subjectTokenResolver: () => string | null = () => _notionToken
+
+export function setSubjectTokenResolver(fn: () => string | null): void {
+=======
+/**
+ * Per-request token resolver. Stdio / single-user leaves the default
+ * resolver, which reads the module global. ``remote-oauth`` HTTP mode
+ * injects a resolver that reads the per-JWT-sub ``NotionTokenStore`` so
+ * that ``config(action=status)`` reflects whether the CURRENT caller has a
+ * Notion access token -- not whether the server process has any global
+ * token, which is always null in multi-user remote-oauth mode.
+ */
+function defaultResolver(): string | null {
+  return _notionToken
+}
+
+let _subjectTokenResolver: () => string | null = defaultResolver
+
+export function setSubjectTokenResolver(fn: () => string | null): void {
+>>>>>>> REPLACE
