@@ -561,6 +561,36 @@ describe('databases', () => {
   })
 
   describe('update_page', () => {
+    it('should use schema for property conversion when database_id is provided', async () => {
+      mockNotion.databases.retrieve.mockResolvedValueOnce(
+        makeDbRetrieveResponse({
+          data_sources: [{ id: 'ds-1' }]
+        })
+      )
+      mockNotion.dataSources.retrieve.mockResolvedValueOnce({
+        id: 'ds-1',
+        properties: {
+          Status: { type: 'status' }
+        }
+      })
+      mockNotion.pages.update.mockResolvedValueOnce({ id: 'page-1' })
+
+      await databases(notion, {
+        action: 'update_page',
+        database_id: 'db-1',
+        page_id: 'page-1',
+        page_properties: { Status: 'Done' }
+      })
+
+      expect(mockNotion.pages.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          properties: expect.objectContaining({
+            Status: { status: { name: 'Done' } }
+          })
+        })
+      )
+    })
+
     it('should update a single page with page_id and page_properties', async () => {
       mockNotion.pages.update.mockResolvedValueOnce({ id: 'page-1' })
 

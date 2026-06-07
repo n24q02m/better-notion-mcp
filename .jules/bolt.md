@@ -20,3 +20,7 @@
 ## 2025-05-26 - Array.includes() vs Set.has() for O(1) Lookups
 **Learning:** Checking for membership in an array using `['a', 'b', ...].includes(value)` within hot paths requires an O(N) scan. This can become an issue when iterating or repeatedly checking values.
 **Action:** Replace `Array.includes()` with `Set.has()` by extracting the array into a module-level `Set`. This improves lookup times significantly to O(1).
+
+## 2026-06-07 - Optimization of updateDatabasePages Schema Resolution
+**Learning:** Bulk operations like 'updateDatabasePages' that iterate over multiple items can suffer from N+1 query patterns if they perform ID resolution or schema fetching inside the loop. In this case, 'convertToNotionProperties' was called without a schema inside 'processBatches', leading to suboptimal property conversion and missing out on the benefits of 'getDataSourceSchema' caching when the database ID was known upfront.
+**Action:** Always resolve the parent container ID (database or data source) and fetch its schema exactly once before starting a batch processing loop. Pass this pre-fetched schema to conversion helpers to ensure both performance and accuracy of property mappings.
