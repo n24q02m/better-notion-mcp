@@ -48,6 +48,15 @@ describe('credential-state', () => {
   it('initial state is awaiting_setup', () => {
     expect(getState()).toBe('awaiting_setup')
     expect(getNotionToken()).toBeNull()
+    // Exercise default anonymous token resolver () => _notionToken
+    expect(getSubjectToken()).toBeNull()
+  })
+
+  it('getState reflects state changes', () => {
+    setState('configured')
+    expect(getState()).toBe('configured')
+    resetState()
+    expect(getState()).toBe('awaiting_setup')
   })
 
   describe('resolveCredentialState', () => {
@@ -92,9 +101,11 @@ describe('credential-state', () => {
       expect(deleteConfig).toHaveBeenCalledWith('better-notion-mcp')
     })
 
-    it('handles deleteConfig failure in resetState', () => {
+    it('handles deleteConfig failure in resetState', async () => {
       vi.mocked(deleteConfig).mockRejectedValue(new Error('delete failed') as never)
       resetState()
+      // Wait for fire-and-forget catch block
+      await new Promise((resolve) => setTimeout(resolve, 0))
       expect(getState()).toBe('awaiting_setup')
       expect(deleteConfig).toHaveBeenCalled()
     })
