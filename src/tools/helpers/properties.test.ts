@@ -756,3 +756,68 @@ describe('extractPageProperties', () => {
     expect(extractPageProperties(props)).toEqual({ Window: '2026-01-01 to 2026-01-31' })
   })
 })
+
+describe('extractPageProperties - additional edge cases', () => {
+  it('handles title with missing plain_text', () => {
+    const props = {
+      Name: {
+        type: 'title',
+        title: [{} as any]
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Name: '' })
+  })
+
+  it('handles rich_text with missing plain_text', () => {
+    const props = {
+      Desc: {
+        type: 'rich_text',
+        rich_text: [{} as any]
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Desc: '' })
+  })
+
+  it('handles unique_id with zero number', () => {
+    const props = {
+      ID: {
+        type: 'unique_id',
+        unique_id: { number: 0 }
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ ID: 0 })
+  })
+
+  it('ignores date if date object is missing', () => {
+    const props = { When: { type: 'date' } }
+    expect(extractPageProperties(props)).toEqual({})
+  })
+
+  it('handles empty files array', () => {
+    const props = {
+      Attachments: {
+        type: 'files',
+        files: []
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Attachments: [] })
+  })
+
+  it('handles empty people array', () => {
+    const props = {
+      Owners: {
+        type: 'people',
+        people: []
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Owners: [] })
+  })
+})
+
+describe('convertToNotionProperties - additional coverage', () => {
+  it('returns value as-is for bigint', () => {
+    // This hits the final fallback in convertToNotionProperties
+    const result = convertToNotionProperties({ Big: 100n })
+    expect(result).toEqual({ Big: 100n })
+  })
+})
