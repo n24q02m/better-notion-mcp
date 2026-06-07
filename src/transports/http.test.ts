@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import * as mcpCore from '@n24q02m/mcp-core'
 import { Client } from '@notionhq/client'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -40,6 +41,12 @@ vi.mock('../credential-state.js', () => ({
 vi.mock('@notionhq/client', () => ({
   Client: vi.fn()
 }))
+
+describe('subjectContext', () => {
+  it('is an instance of AsyncLocalStorage', () => {
+    expect(subjectContext).toBeInstanceOf(AsyncLocalStorage)
+  })
+})
 
 describe('startHttp', () => {
   const originalEnv = process.env
@@ -87,6 +94,64 @@ describe('startHttp', () => {
     await startPromise
     expect(closeMock).toHaveBeenCalled()
     onceSpy.mockRestore()
+  })
+
+  it('handles shutdown via SIGTERM', async () => {
+    const closeMock = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(mcpCore.runHttpServer).mockResolvedValue({
+      host: 'localhost',
+      port: 3000,
+      close: closeMock
+    } as any)
+
+    const handlers: Record<string, (...args: any[]) => any> = {}
+    const onceSpy = vi.spyOn(process, 'once').mockImplementation((event, handler) => {
+      handlers[event as string] = handler as (...args: any[]) => any
+      return process
+    })
+
+    const startPromise = startHttp()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(handlers.SIGTERM).toBeDefined()
+    if (handlers.SIGTERM) await handlers.SIGTERM()
+    await startPromise
+    expect(closeMock).toHaveBeenCalled()
+    onceSpy.mockRestore()
+  })
+
+  it('respects PORT, HOST, and MCP_AUTH_DISABLE env vars', async () => {
+    process.env.PORT = '4000'
+    process.env.HOST = '0.0.0.0'
+    process.env.MCP_AUTH_DISABLE = '1'
+
+    const closeMock = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(mcpCore.runHttpServer).mockResolvedValue({
+      host: '0.0.0.0',
+      port: 4000,
+      close: closeMock
+    } as any)
+
+    const handlers: Record<string, (...args: any[]) => any> = {}
+    vi.spyOn(process, 'once').mockImplementation((event, handler) => {
+      handlers[event as string] = handler as (...args: any[]) => any
+      return process
+    })
+
+    const startPromise = startHttp()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(mcpCore.runHttpServer).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({
+        port: 4000,
+        host: '0.0.0.0',
+        authDisabled: true
+      })
+    )
+
+    if (handlers.SIGINT) await handlers.SIGINT()
+    await startPromise
   })
 
   it('verifies callbacks and factory', async () => {
@@ -141,6 +206,16 @@ describe('startHttp', () => {
     expect(sub).toBe('user2')
     expect(mockTokenStoreInstance.save).toHaveBeenCalledWith('user2', 'new-token')
 
+    // Test onTokenReceived - missing access_token
+    const subNoToken = onTokenReceived!({ owner_user_id: 'user-no-token' })
+    expect(subNoToken).toBe('user-no-token')
+    expect(mockTokenStoreInstance.save).not.toHaveBeenCalledWith('user-no-token', expect.any(String))
+
+    // Test onTokenReceived - missing owner_user_id
+    const subNoId = onTokenReceived!({ access_token: 'token-no-id' })
+    expect(subNoId).toBe('default')
+    expect(mockTokenStoreInstance.save).toHaveBeenCalledWith('default', 'token-no-id')
+
     // Test authScope
     const next = vi.fn().mockResolvedValue(undefined)
     await authScope!({ sub: 'user3' }, next)
@@ -151,6 +226,18 @@ describe('startHttp', () => {
       capturedSub = subjectContext.getStore()?.sub
     })
     expect(capturedSub).toBe('user4')
+
+    // Test authScope - anonymous
+    await authScope!({ anonymous: true }, async () => {
+      capturedSub = subjectContext.getStore()?.sub
+    })
+    expect(capturedSub).toBe('default')
+
+    // Test authScope - neither
+    await authScope!({}, async () => {
+      capturedSub = subjectContext.getStore()?.sub
+    })
+    expect(capturedSub).toBe('default')
 
     // 3. Verify setSubjectTokenResolver
     expect(credentialState.setSubjectTokenResolver).toHaveBeenCalled()
@@ -164,6 +251,12 @@ describe('startHttp', () => {
     await subjectContext.run({ sub: 'user-abc' }, () => {
       expect(resolver()).toBe('token-abc')
       expect(mockTokenStoreInstance.get).toHaveBeenCalledWith('user-abc')
+    })
+
+    // Test resolver with context but NO token
+    mockTokenStoreInstance.get.mockReturnValue(undefined)
+    await subjectContext.run({ sub: 'user-no-token-in-store' }, () => {
+      expect(resolver()).toBeNull()
     })
 
     if (handlers.SIGINT) await handlers.SIGINT()
