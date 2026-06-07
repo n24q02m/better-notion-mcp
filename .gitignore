@@ -33,3 +33,14 @@ docs/superpowers/
 superpower/
 superpowers/
 docs/superpowers/
+
+# Redundant lockfile (bun.lock is authoritative) — 2026-06-07
+package-lock.json
+
+# Bot/merge junk artifacts (prevent accidental commits) — 2026-06-07
+*.orig
+*.rej
+*.cover
+*.bak
+/*.patch
+/*.diff
