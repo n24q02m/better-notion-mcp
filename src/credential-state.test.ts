@@ -56,7 +56,7 @@ describe('credential-state', () => {
       const state = await resolveCredentialState()
       expect(state).toBe('configured')
       expect(getNotionToken()).toBe('env-token')
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('found in environment'))
+      expect(consoleSpy).not.toHaveBeenCalled()
     })
 
     it('configures when config file has token', async () => {
@@ -67,13 +67,13 @@ describe('credential-state', () => {
       const state = await resolveCredentialState()
       expect(state).toBe('configured')
       expect(getNotionToken()).toBe('file-token')
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('loaded from file'))
+      expect(consoleSpy).not.toHaveBeenCalled()
     })
 
     it('stays in awaiting_setup when nothing found', async () => {
       const state = await resolveCredentialState()
       expect(state).toBe('awaiting_setup')
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('No Notion token found'))
+      expect(consoleSpy).not.toHaveBeenCalled()
     })
 
     it('handles config read failure gracefully', async () => {
