@@ -94,6 +94,11 @@ describe('formatId', () => {
   it('should format UUIDs with misplaced hyphens correctly', () => {
     expect(formatId('a3802967-3621-4b04-b6af-bfef-1b76-87b3')).toBe('a3802967-3621-4b04-b6af-bfef1b7687b3')
   })
+
+  it('should return whitespace strings unchanged', () => {
+    expect(formatId(' ')).toBe(' ')
+    expect(formatId('  ')).toBe('  ')
+  })
 })
 
 describe('isValidBase64', () => {
@@ -149,5 +154,12 @@ describe('isValidBase64', () => {
     })
     expect(isValidBase64('aGVsbG8=')).toBe(false)
     spy.mockRestore()
+  })
+
+  it('should reject non-string inputs', () => {
+    expect(isValidBase64(null as any)).toBe(false)
+    expect(isValidBase64(undefined as any)).toBe(false)
+    expect(isValidBase64(123 as any)).toBe(false)
+    expect(isValidBase64({} as any)).toBe(false)
   })
 })
