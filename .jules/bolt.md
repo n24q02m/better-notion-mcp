@@ -20,3 +20,7 @@
 ## 2025-05-26 - Array.includes() vs Set.has() for O(1) Lookups
 **Learning:** Checking for membership in an array using `['a', 'b', ...].includes(value)` within hot paths requires an O(N) scan. This can become an issue when iterating or repeatedly checking values.
 **Action:** Replace `Array.includes()` with `Set.has()` by extracting the array into a module-level `Set`. This improves lookup times significantly to O(1).
+
+## 2026-06-07 - String Accumulation in Hot Paths
+**Learning:** Using `.map().join('')` creates an intermediate array and then performs a full join, which can be inefficient for large numbers of segments or frequent calls. Direct string accumulation (`+=`) in a loop avoids the array allocation.
+**Action:** Replace `.map().join('')` with a `for...of` loop and string accumulation (`+=`) for property result concatenation in paginated Notion results.
