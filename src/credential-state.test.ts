@@ -83,9 +83,22 @@ describe('credential-state', () => {
     })
   })
 
-  describe('resetState', () => {
-    it('resets all state and calls deleteConfig', () => {
+  describe('setState', () => {
+    it('updates the state', () => {
       setState('configured')
+      expect(getState()).toBe('configured')
+      setState('awaiting_setup')
+      expect(getState()).toBe('awaiting_setup')
+    })
+  })
+
+  describe('resetState', () => {
+    it('resets all state and calls deleteConfig', async () => {
+      // Use resolveCredentialState to set both _state and _notionToken
+      process.env.NOTION_TOKEN = 'reset-me'
+      await resolveCredentialState()
+      expect(getNotionToken()).toBe('reset-me')
+
       resetState()
       expect(getState()).toBe('awaiting_setup')
       expect(getNotionToken()).toBeNull()
@@ -101,30 +114,38 @@ describe('credential-state', () => {
   })
 
   describe('subject token resolver', () => {
-    beforeEach(() => {
-      // Reset to default (module-global single-user fallback)
-      setSubjectTokenResolver(() => getNotionToken())
+    it('defaults to single-user module global (uses the original default resolver)', async () => {
+      process.env.NOTION_TOKEN = 'default-token'
+      await resolveCredentialState()
+      expect(getSubjectToken()).toBe('default-token')
     })
 
-    it('defaults to single-user module global when no resolver injected', () => {
-      setState('awaiting_setup')
-      expect(getSubjectToken()).toBeNull()
-    })
-
-    it('returns injected per-subject token for remote-oauth mode', () => {
-      let currentSub = 'alice'
-      const storeByAlice = 'ntn_alice_token'
-      const storeByBob = 'ntn_bob_token'
-      setSubjectTokenResolver(() => {
-        if (currentSub === 'alice') return storeByAlice
-        if (currentSub === 'bob') return storeByBob
-        return null
+    describe('with custom resolver', () => {
+      beforeEach(() => {
+        // Reset to default (module-global single-user fallback)
+        setSubjectTokenResolver(() => getNotionToken())
       })
-      expect(getSubjectToken()).toBe(storeByAlice)
-      currentSub = 'bob'
-      expect(getSubjectToken()).toBe(storeByBob)
-      currentSub = 'unknown'
-      expect(getSubjectToken()).toBeNull()
+
+      it('defaults to single-user module global when no resolver injected', () => {
+        setState('awaiting_setup')
+        expect(getSubjectToken()).toBeNull()
+      })
+
+      it('returns injected per-subject token for remote-oauth mode', () => {
+        let currentSub = 'alice'
+        const storeByAlice = 'ntn_alice_token'
+        const storeByBob = 'ntn_bob_token'
+        setSubjectTokenResolver(() => {
+          if (currentSub === 'alice') return storeByAlice
+          if (currentSub === 'bob') return storeByBob
+          return null
+        })
+        expect(getSubjectToken()).toBe(storeByAlice)
+        currentSub = 'bob'
+        expect(getSubjectToken()).toBe(storeByBob)
+        currentSub = 'unknown'
+        expect(getSubjectToken()).toBeNull()
+      })
     })
   })
 })
