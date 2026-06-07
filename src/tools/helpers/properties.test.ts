@@ -345,6 +345,20 @@ describe('convertToNotionProperties', () => {
         Project: { relation: [{ id: '[123]' }] }
       })
     })
+
+    it('passes through non-string non-array values as-is (coverage for line 36)', () => {
+      // If the value is a number, it will be auto-detected as a number property
+      const result = convertToNotionProperties({ Project: 123 }, { Project: 'relation' })
+      expect(result).toEqual({
+        Project: { number: 123 }
+      })
+    })
+  })
+
+  it('passes through unsupported types as-is (e.g. BigInt) (coverage for line 114)', () => {
+    const bigIntValue = BigInt(9007199254740991)
+    const result = convertToNotionProperties({ BigField: bigIntValue })
+    expect(result).toEqual({ BigField: bigIntValue })
   })
 
   describe('mixed properties with schema', () => {
