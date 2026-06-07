@@ -724,6 +724,60 @@ describe('pages', () => {
       expect(result.results).toEqual([{ page_id: 'page-solo', archived: true }])
     })
 
+    it('strips null values from block data during duplication', async () => {
+      mockNotion.pages.retrieve.mockResolvedValue({
+        id: 'orig-5',
+        parent: { type: 'page_id', page_id: 'parent-1' },
+        properties: {},
+        icon: null,
+        cover: null
+      })
+      mockNotion.blocks.children.list.mockResolvedValue({
+        results: [
+          {
+            id: 'block-null',
+            type: 'paragraph',
+            paragraph: {
+              rich_text: [],
+              color: 'default',
+              // Example of a null value that Notion API might reject
+              icon: null
+            },
+            // Read-only fields to be stripped
+            created_time: '2023-01-01',
+            last_edited_time: '2023-01-01',
+            object: 'block'
+          }
+        ],
+        next_cursor: null,
+        has_more: false
+      })
+      mockNotion.pages.create.mockResolvedValue({
+        id: 'dup-5',
+        url: 'https://notion.so/dup-5'
+      })
+
+      await pages(mockNotion as any, { action: 'duplicate', page_id: 'orig-5' })
+
+      expect(mockNotion.blocks.children.append).toHaveBeenCalledWith({
+        block_id: 'dup-5',
+        children: [
+          {
+            type: 'paragraph',
+            paragraph: {
+              rich_text: [],
+              color: 'default'
+              // icon: null should be deleted
+            }
+          }
+        ]
+      })
+
+      const appendedChildren = mockNotion.blocks.children.append.mock.calls[0][0].children
+      expect(appendedChildren[0].paragraph).not.toHaveProperty('icon')
+      expect(appendedChildren[0]).not.toHaveProperty('id')
+      expect(appendedChildren[0]).not.toHaveProperty('created_time')
+    })
     it('throws without page_id or page_ids', async () => {
       await expect(pages(mockNotion as any, { action: 'archive' })).rejects.toThrow('page_id or page_ids required')
     })
