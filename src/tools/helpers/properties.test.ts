@@ -380,6 +380,23 @@ describe('convertToNotionProperties', () => {
         Notes: null
       })
     })
+
+    it('returns value as-is for unknown types', () => {
+      const result = convertToNotionProperties({ Big: 100n })
+      expect(result).toEqual({ Big: 100n })
+    })
+
+    it('returns value as-is for relation with invalid input', () => {
+      // toRelation returns value as-is if not string or array
+      const result = convertToNotionProperties({ Rel: 123 }, { Rel: 'relation' })
+      expect(result).toEqual({ Rel: 123 })
+    })
+
+    it('handles objects in convertToNotionProperties', () => {
+      const obj = { custom: 'format' }
+      const result = convertToNotionProperties({ Obj: obj })
+      expect(result).toEqual({ Obj: obj })
+    })
   })
 })
 
@@ -392,6 +409,16 @@ describe('extractPageProperties', () => {
       }
     }
     expect(extractPageProperties(props)).toEqual({ Name: 'Hello World' })
+  })
+
+  it('handles title with missing plain_text', () => {
+    const props = {
+      Name: {
+        type: 'title',
+        title: [{} as any]
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Name: '' })
   })
 
   it('handles empty title correctly', () => {
@@ -412,6 +439,16 @@ describe('extractPageProperties', () => {
       }
     }
     expect(extractPageProperties(props)).toEqual({ Desc: 'Some text' })
+  })
+
+  it('handles rich_text with missing plain_text', () => {
+    const props = {
+      Desc: {
+        type: 'rich_text',
+        rich_text: [{} as any]
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Desc: '' })
   })
 
   it('extracts select', () => {
@@ -678,6 +715,16 @@ describe('extractPageProperties', () => {
     expect(extractPageProperties(props)).toEqual({ ID: 456 })
   })
 
+  it('handles unique_id with zero number', () => {
+    const props = {
+      ID: {
+        type: 'unique_id',
+        unique_id: { number: 0 }
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ ID: 0 })
+  })
+
   it('ignores unsupported or malformed properties', () => {
     const props = {
       BadTitle: {
@@ -746,6 +793,16 @@ describe('extractPageProperties', () => {
     expect(extractPageProperties(props)).toEqual({ Owners: ['Alice', 'u2'] })
   })
 
+  it('handles empty files array', () => {
+    const props = {
+      Attachments: {
+        type: 'files',
+        files: []
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Attachments: [] })
+  })
+
   it('extracts date range', () => {
     const props = {
       Window: {
@@ -754,5 +811,24 @@ describe('extractPageProperties', () => {
       }
     }
     expect(extractPageProperties(props)).toEqual({ Window: '2026-01-01 to 2026-01-31' })
+  })
+
+  it('ignores date if date object is missing', () => {
+    const props = {
+      When: {
+        type: 'date'
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({})
+  })
+
+  it('handles empty people array', () => {
+    const props = {
+      Owners: {
+        type: 'people',
+        people: []
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Owners: [] })
   })
 })
