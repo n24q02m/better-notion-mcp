@@ -1,0 +1,34 @@
+<<<<<<< SEARCH
+  it('should return false if Buffer.from fails', () => {
+    const spy = vi.spyOn(Buffer, 'from').mockImplementation(() => {
+      throw new Error('Buffer failure')
+    })
+    expect(isValidBase64('aGVsbG8=')).toBe(false)
+    spy.mockRestore()
+  })
+})
+=======
+  it('should return false if Buffer.from fails', () => {
+    const spy = vi.spyOn(Buffer, 'from').mockImplementation(() => {
+      throw new Error('Buffer failure')
+    })
+    expect(isValidBase64('aGVsbG8=')).toBe(false)
+    spy.mockRestore()
+  })
+
+  it('should reject strings exceeding MAX_BASE64_LENGTH', () => {
+    // MAX_BASE64_LENGTH is 64MB. We don't need to actually allocate 64MB if we mock length
+    const longStr = {
+      length: 64 * 1024 * 1024 + 4,
+      toString: () => '',
+      indexOf: () => -1,
+      [Symbol.iterator]: function* () { yield '' }
+    }
+    // Since isValidBase64 checks typeof str !== 'string' first, we need a real string or a mock that passes
+    // Better to just create a large string since 64MB is manageable in memory but let's be careful.
+    // Actually, let's just use a real string of size 64MB + 4.
+    const bigStr = 'A'.repeat(64 * 1024 * 1024 + 4)
+    expect(isValidBase64(bigStr)).toBe(false)
+  })
+})
+>>>>>>> REPLACE

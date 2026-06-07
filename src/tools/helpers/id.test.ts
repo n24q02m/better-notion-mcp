@@ -150,4 +150,9 @@ describe('isValidBase64', () => {
     expect(isValidBase64('aGVsbG8=')).toBe(false)
     spy.mockRestore()
   })
+
+  it('should reject strings exceeding MAX_BASE64_LENGTH', () => {
+    const bigStr = 'A'.repeat(64 * 1024 * 1024 + 4)
+    expect(isValidBase64(bigStr)).toBe(false)
+  })
 })
