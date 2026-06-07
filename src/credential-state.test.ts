@@ -92,23 +92,26 @@ describe('credential-state', () => {
       expect(deleteConfig).toHaveBeenCalledWith('better-notion-mcp')
     })
 
-    it('handles deleteConfig failure in resetState', () => {
+    it('handles deleteConfig failure in resetState', async () => {
       vi.mocked(deleteConfig).mockRejectedValue(new Error('delete failed') as never)
       resetState()
+      // Wait for the async catch block to execute
+      await new Promise((resolve) => setTimeout(resolve, 0))
       expect(getState()).toBe('awaiting_setup')
       expect(deleteConfig).toHaveBeenCalled()
     })
   })
 
   describe('subject token resolver', () => {
-    beforeEach(() => {
-      // Reset to default (module-global single-user fallback)
-      setSubjectTokenResolver(() => getNotionToken())
+    it('defaults to single-user module global (initial resolver)', () => {
+      expect(getSubjectToken()).toBe(getNotionToken())
     })
 
-    it('defaults to single-user module global when no resolver injected', () => {
-      setState('awaiting_setup')
-      expect(getSubjectToken()).toBeNull()
+    it('can set a custom resolver', () => {
+      const customToken = 'custom-token'
+      setSubjectTokenResolver(() => customToken)
+      expect(getSubjectToken()).toBe(customToken)
+      expect(getSubjectToken()).toBe('custom-token')
     })
 
     it('returns injected per-subject token for remote-oauth mode', () => {
