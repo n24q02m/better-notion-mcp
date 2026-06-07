@@ -360,3 +360,43 @@ it('should handle maxLength smaller than ellipsis length', () => {
   expect(result2[0].text.content).toBe('ab')
   expect(result2[0].text.content.length).toBe(2)
 })
+
+describe('splitText', () => {
+  it('should return a single item if text is within maxLength', () => {
+    const content = 'hello world'
+    const result = RichText.splitText(content, 20)
+    expect(result).toHaveLength(1)
+    expect(result[0].text.content).toBe(content)
+  })
+
+  it('should return a single item if text is exactly maxLength', () => {
+    const content = '12345'
+    const result = RichText.splitText(content, 5)
+    expect(result).toHaveLength(1)
+    expect(result[0].text.content).toBe(content)
+  })
+
+  it('should split text into multiple chunks if it exceeds maxLength', () => {
+    const content = 'abcdefghij' // 10 chars
+    const result = RichText.splitText(content, 3)
+    expect(result).toHaveLength(4)
+    expect(result[0].text.content).toBe('abc')
+    expect(result[1].text.content).toBe('def')
+    expect(result[2].text.content).toBe('ghi')
+    expect(result[3].text.content).toBe('j')
+  })
+
+  it('should handle empty string', () => {
+    const result = RichText.splitText('', 10)
+    expect(result).toHaveLength(1)
+    expect(result[0].text.content).toBe('')
+  })
+
+  it('should use default maxLength of 2000', () => {
+    const longText = 'a'.repeat(2500)
+    const result = RichText.splitText(longText)
+    expect(result).toHaveLength(2)
+    expect(result[0].text.content).toHaveLength(2000)
+    expect(result[1].text.content).toHaveLength(500)
+  })
+})
