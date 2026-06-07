@@ -65,4 +65,20 @@ describe('createMCPServer', () => {
 
     expect(server.serverInfo.version).toBe('0.0.0')
   })
+
+  it('should return default version 0.0.0 when package.json contains invalid JSON', () => {
+    vi.mocked(readFileSync).mockImplementationOnce(() => 'invalid json')
+    const factory = vi.fn()
+    const server = createMCPServer(factory) as any
+
+    expect(server.serverInfo.version).toBe('0.0.0')
+  })
+
+  it('should return a new Server instance on each call', () => {
+    const factory = vi.fn()
+    const server1 = createMCPServer(factory)
+    const server2 = createMCPServer(factory)
+
+    expect(server1).not.toBe(server2)
+  })
 })
