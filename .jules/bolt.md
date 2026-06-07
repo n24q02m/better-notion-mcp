@@ -20,3 +20,6 @@
 ## 2025-05-26 - Array.includes() vs Set.has() for O(1) Lookups
 **Learning:** Checking for membership in an array using `['a', 'b', ...].includes(value)` within hot paths requires an O(N) scan. This can become an issue when iterating or repeatedly checking values.
 **Action:** Replace `Array.includes()` with `Set.has()` by extracting the array into a module-level `Set`. This improves lookup times significantly to O(1).
+## 2025-05-15 - Repeated Object Keys Extraction in Nested Loop
+**Learning:** Performing `Object.keys()` and multiple property lookups inside a nested loop (especially within a `.map()` callback) causes unnecessary allocations and V8 property lookup overhead.
+**Action:** Cache the nested object into a local variable and use a standard indexed `for` loop over a pre-extracted keys array to minimize iterator overhead and garbage collection.
