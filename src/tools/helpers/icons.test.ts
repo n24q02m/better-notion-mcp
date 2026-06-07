@@ -31,6 +31,10 @@ describe('formatIcon', () => {
         external: { url: 'http://example.com/icon.svg' }
       })
     })
+    it('throws NotionMCPError for unsafe http URL (e.g. contains space)', () => {
+      expect(() => formatIcon('https://example.com/icon .png')).toThrow(NotionMCPError)
+      expect(() => formatIcon('https://example.com/icon .png')).toThrow(/Unsafe icon URL/)
+    })
   })
 
   describe('Notion built-in icon shorthand', () => {
@@ -89,6 +93,19 @@ describe('formatIcon', () => {
 
     it('rejects vbscript: URLs', () => {
       expect(() => formatIcon('vbscript:msgbox(1)')).toThrow(NotionMCPError)
+    })
+  })
+
+  describe('shorthand detection edge cases', () => {
+    it('returns as emoji for string without colon', () => {
+      expect(formatIcon('justtext')).toEqual({ type: 'emoji', emoji: 'justtext' })
+    })
+
+    it('rejects string starting with colon as unsafe', () => {
+      // isNotionIconShorthand returns false because colonIdx is 0.
+      // formatEmojiIcon then rejects it because isSafeUrl(':blue') is false (suspicious colon).
+      expect(() => formatIcon(':blue')).toThrow(NotionMCPError)
+      expect(() => formatIcon(':blue')).toThrow(/Unsafe icon value/)
     })
   })
 })
