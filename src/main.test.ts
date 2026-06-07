@@ -34,24 +34,31 @@ vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => {
 })
 
 vi.mock('@notionhq/client', () => ({
-  Client: vi.fn().mockImplementation(() => ({}))
+  // biome-ignore lint/complexity/useArrowFunction: constructor
+  Client: vi.fn().mockImplementation(function () {
+    return {}
+  })
 }))
 
 vi.mock('./tools/registry.js', () => ({
   registerTools: (...args: unknown[]) => registerToolsMock(...args)
 }))
 
+const { getNotionTokenMock } = vi.hoisted(() => ({
+  getNotionTokenMock: vi.fn().mockReturnValue('ntn_test_token')
+}))
 vi.mock('./credential-state.js', () => ({
   resolveCredentialState: vi.fn().mockResolvedValue('configured'),
-  getNotionToken: vi.fn().mockReturnValue('ntn_test_token')
+  getNotionToken: getNotionTokenMock
 }))
 
-// Mock node:fs to allow spying on realpathSync in ESM
+// Mock node:fs to allow spying on realpathSync and readFileSync in ESM
 vi.mock('node:fs', async (importOriginal) => {
   const original = await importOriginal<typeof import('node:fs')>()
   return {
     ...original,
-    realpathSync: vi.fn(original.realpathSync)
+    realpathSync: vi.fn(original.realpathSync),
+    readFileSync: vi.fn(original.readFileSync)
   }
 })
 
@@ -157,6 +164,14 @@ describe('main.ts', () => {
       vi.stubEnv('TRANSPORT_MODE', 'http')
       expect(getTransportMode()).toBe('http')
     })
+
+    it('returns unexpected values as is (validation is done in startServer)', () => {
+      expect(getTransportMode({ TRANSPORT_MODE: 'invalid' })).toBe('invalid')
+    })
+
+    it('returns empty string if TRANSPORT_MODE is empty', () => {
+      expect(getTransportMode({ TRANSPORT_MODE: '' })).toBe('')
+    })
   })
 
   describe('startServer', () => {
@@ -199,9 +214,47 @@ describe('main.ts', () => {
       startHttpMock.mockRejectedValueOnce(new Error('HTTP failed'))
       await expect(startServer('http')).rejects.toThrow('HTTP failed')
     })
+
+    it('verifies notionClientFactory success and failure', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      await startServer('stdio')
+
+      const factory = registerToolsMock.mock.calls[0][1]
+      expect(typeof factory).toBe('function')
+
+      // Test success
+      getNotionTokenMock.mockReturnValue('ntn_valid')
+      const client = factory()
+      expect(client).toBeDefined()
+
+      // Test failure
+      getNotionTokenMock.mockReturnValue(null)
+      expect(() => factory()).toThrow('Notion integration token not configured')
+    })
   })
 
   describe('bootstrap and exports', () => {
+    it('verifies fallback for getPackageVersion when file is missing', async () => {
+      vi.mocked(fs.readFileSync).mockImplementationOnce(() => {
+        throw new Error('File not found')
+      })
+
+      // Need to re-import or re-run logic because it's used inside startServer
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      await startServer('stdio')
+
+      expect(stdioServerCtor).toHaveBeenCalledWith(expect.objectContaining({ version: '0.0.0' }), expect.any(Object))
+    })
+
+    it('verifies fallback for getPackageVersion when version key is missing', async () => {
+      vi.mocked(fs.readFileSync).mockReturnValueOnce(JSON.stringify({ name: 'no-version' }))
+
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      await startServer('stdio')
+
+      expect(stdioServerCtor).toHaveBeenCalledWith(expect.objectContaining({ version: '0.0.0' }), expect.any(Object))
+    })
+
     it('verifies export of selected mode', () => {
       expect(typeof mode).toBe('string')
     })
@@ -252,6 +305,25 @@ describe('main.ts', () => {
       vi.resetModules()
       const { mode: newMode } = await import('./main.js')
       expect(newMode).toBe('http')
+    })
+
+    it('verifies top-level bootstrap execution when isMain is true', async () => {
+      process.env.NODE_ENV = 'production'
+      const currentDir = dirname(fileURLToPath(import.meta.url))
+      const mainPath = join(currentDir, 'main.ts')
+      process.argv[1] = mainPath
+
+      // We need to re-import main.js to trigger the top-level code
+      // and we need to ensure NOTION_TOKEN is set so it doesn't exit 1
+      process.env.NOTION_TOKEN = 'ntn_test'
+
+      vi.resetModules()
+      await import('./main.js')
+
+      // If it ran, stdioConnectMock should have been called (via bootstrap -> startServer)
+      expect(stdioConnectMock).toHaveBeenCalled()
+
+      delete process.env.BETTER_NOTION_MCP_BOOTSTRAPPED
     })
   })
 })
