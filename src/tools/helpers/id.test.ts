@@ -56,6 +56,34 @@ describe('isValidNotionId', () => {
   it('should be case insensitive', () => {
     expect(isValidNotionId('A3802967-3621-4B04-B6AF-BFEF1B7687B3')).toBe(true)
   })
+
+  it('should reject 31-character hex strings', () => {
+    expect(isValidNotionId('a380296736214b04b6afbfef1b7687b')).toBe(false)
+  })
+
+  it('should reject 33-character hex strings', () => {
+    expect(isValidNotionId('a380296736214b04b6afbfef1b7687b3a')).toBe(false)
+  })
+
+  it('should reject leading hyphen', () => {
+    expect(isValidNotionId('-a380296736214b04b6afbfef1b7687b3')).toBe(false)
+  })
+
+  it('should reject trailing hyphen', () => {
+    expect(isValidNotionId('a380296736214b04b6afbfef1b7687b3-')).toBe(false)
+  })
+
+  it('should reject multiple hyphens between groups', () => {
+    expect(isValidNotionId('a3802967--3621-4b04-b6af-bfef1b7687b3')).toBe(false)
+  })
+
+  it('should reject misplaced hyphens', () => {
+    expect(isValidNotionId('a380296-73621-4b04-b6af-bfef1b7687b3')).toBe(false)
+  })
+
+  it('should accept mixed hyphenation', () => {
+    expect(isValidNotionId('a38029673621-4b04-b6afbfef1b7687b3')).toBe(true)
+  })
 })
 
 describe('formatId', () => {
