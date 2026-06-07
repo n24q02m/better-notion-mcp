@@ -50,6 +50,26 @@ describe('credential-state', () => {
     expect(getNotionToken()).toBeNull()
   })
 
+  describe('getNotionToken', () => {
+    it('returns null initially', () => {
+      expect(getNotionToken()).toBeNull()
+    })
+
+    it('returns the token after resolveCredentialState with env var', async () => {
+      process.env.NOTION_TOKEN = 'test-token'
+      await resolveCredentialState()
+      expect(getNotionToken()).toBe('test-token')
+    })
+
+    it('returns null after resetState', async () => {
+      process.env.NOTION_TOKEN = 'test-token'
+      await resolveCredentialState()
+      expect(getNotionToken()).toBe('test-token')
+      resetState()
+      expect(getNotionToken()).toBeNull()
+    })
+  })
+
   describe('resolveCredentialState', () => {
     it('configures when NOTION_TOKEN env var is present', async () => {
       process.env.NOTION_TOKEN = 'env-token'
@@ -92,23 +112,29 @@ describe('credential-state', () => {
       expect(deleteConfig).toHaveBeenCalledWith('better-notion-mcp')
     })
 
-    it('handles deleteConfig failure in resetState', () => {
+    it('handles deleteConfig failure in resetState', async () => {
       vi.mocked(deleteConfig).mockRejectedValue(new Error('delete failed') as never)
       resetState()
+      // Flush microtasks to execute the catch block
+      await new Promise((resolve) => setTimeout(resolve, 0))
       expect(getState()).toBe('awaiting_setup')
       expect(deleteConfig).toHaveBeenCalled()
     })
   })
 
   describe('subject token resolver', () => {
-    beforeEach(() => {
-      // Reset to default (module-global single-user fallback)
-      setSubjectTokenResolver(() => getNotionToken())
+    it('defaults to single-user module global when no resolver injected', () => {
+      expect(getSubjectToken()).toBeNull()
+      process.env.NOTION_TOKEN = 'global-token'
+      // We need to re-resolve or manually set it since we reset state in beforeEach
+      setState('configured')
+      // Note: we can't easily set _notionToken without resolveCredentialState or resetState
     })
 
-    it('defaults to single-user module global when no resolver injected', () => {
-      setState('awaiting_setup')
-      expect(getSubjectToken()).toBeNull()
+    it('reflects module global token in default resolver', async () => {
+      process.env.NOTION_TOKEN = 'global-token'
+      await resolveCredentialState()
+      expect(getSubjectToken()).toBe('global-token')
     })
 
     it('returns injected per-subject token for remote-oauth mode', () => {
@@ -125,6 +151,17 @@ describe('credential-state', () => {
       expect(getSubjectToken()).toBe(storeByBob)
       currentSub = 'unknown'
       expect(getSubjectToken()).toBeNull()
+    })
+
+    it('restores default resolver on resetState', async () => {
+      setSubjectTokenResolver(() => 'overridden')
+      expect(getSubjectToken()).toBe('overridden')
+      resetState()
+      expect(getSubjectToken()).toBeNull()
+
+      process.env.NOTION_TOKEN = 'new-token'
+      await resolveCredentialState()
+      expect(getSubjectToken()).toBe('new-token')
     })
   })
 })
