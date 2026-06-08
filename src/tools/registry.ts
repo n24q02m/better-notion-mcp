@@ -444,16 +444,18 @@ const TOOLS = [
 const VALID_HELP_TOOL_NAMES = new Set(TOOLS.map((t) => t.name).filter((name) => name !== 'help'))
 const VALID_HELP_TOOLS_STRING = Array.from(VALID_HELP_TOOL_NAMES).join(', ')
 /**
- * Register all tools with MCP server
- * @param notionClientFactory - Returns a Notion Client.
- *   Called per tool invocation to support both singleton (stdio) and per-request (HTTP) patterns.
+ * Register ListTools handler
  */
-export function registerTools(server: Server, notionClientFactory: () => Client) {
+function registerListTools(server: Server) {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: TOOLS
   }))
+}
 
-  // Resources handlers for full documentation
+/**
+ * Register Resources handlers for full documentation
+ */
+function registerResources(server: Server) {
   server.setRequestHandler(ListResourcesRequestSchema, async () => ({
     resources: RESOURCES.map((r) => ({
       uri: r.uri,
@@ -483,114 +485,125 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
       throw new NotionMCPError(`Documentation not found for: ${resource.name}`, 'DOC_NOT_FOUND', 'Check resource URI')
     }
   })
+}
 
+/**
+ * Security-vetted documentation retrieval for the help tool
+ */
+async function handleHelpTool(args: any): Promise<any> {
+  const toolName = (args as { tool_name: string }).tool_name
+  // Security: validate tool_name against allowlist to prevent path traversal
+  if (!VALID_HELP_TOOL_NAMES.has(toolName)) {
+    throw new NotionMCPError(
+      `Invalid tool name: ${toolName}`,
+      'VALIDATION_ERROR',
+      `Valid tools: ${VALID_HELP_TOOLS_STRING}`
+    )
+  }
+  // Security: Use basename() to ensure we only look for files directly inside DOCS_DIR,
+  // preventing path traversal even if the allowlist validation is bypassed or modified.
+  const docFile = `${basename(toolName)}.md`
+  const fullPath = join(DOCS_DIR, docFile)
+  if (!fullPath.startsWith(DOCS_DIR)) {
+    throw new NotionMCPError('Path traversal attempt detected', 'SECURITY_ERROR', 'Invalid tool_name')
+  }
+
+  try {
+    const content = await readFile(fullPath, 'utf-8')
+    return { tool: toolName, documentation: content }
+  } catch {
+    throw new NotionMCPError(`Documentation not found for: ${toolName}`, 'DOC_NOT_FOUND', 'Check tool_name')
+  }
+}
+
+/**
+ * Routes tool calls to their respective composite handlers
+ */
+async function handleToolCall(name: string, args: any, notion: Client): Promise<any> {
+  switch (name) {
+    case 'pages':
+      return await pages(notion, args as any)
+    case 'databases':
+      return await databases(notion, args as any)
+    case 'blocks':
+      return await blocks(notion, args as any)
+    case 'users':
+      return await users(notion, args as any)
+    case 'workspace':
+      return await workspace(notion, args as any)
+    case 'comments':
+      return await commentsManage(notion, args as any)
+    case 'content_convert':
+      return await contentConvert(args as any)
+    case 'config':
+      return await config(args as any)
+    case 'config__open_relay':
+      return await openRelayHandler()
+    case 'file_uploads':
+      return await fileUploads(notion, args as any)
+    case 'help':
+      return await handleHelpTool(args)
+    default: {
+      const validTools = TOOLS.map((t) => t.name)
+      const closest = findClosestMatch(name, validTools)
+      const suggestion = closest ? ` Did you mean '${closest}'?` : ''
+      throw new NotionMCPError(
+        `Unknown tool: ${name}.${suggestion}`,
+        'UNKNOWN_TOOL',
+        `Available tools: ${validTools.join(', ')}`
+      )
+    }
+  }
+}
+
+/**
+ * Credential guard to ensure tools have necessary access tokens.
+ * In stdio mode the server exits at startup if NOTION_TOKEN is missing.
+ * In HTTP mode, it checks the per-subject token store.
+ */
+function checkCredentials(toolName: string): { content: { type: 'text'; text: string }[]; isError: true } | null {
+  if (TOKEN_FREE_TOOLS.has(toolName)) {
+    return null
+  }
+
+  const credState = getState()
+  if (credState === 'configured') {
+    return null
+  }
+
+  const publicUrl = process.env.PUBLIC_URL
+  const setupInstructions = publicUrl
+    ? `Notion access token is not present for this session. Open ${publicUrl}/authorize in your browser to complete the Notion OAuth flow, then retry the tool.`
+    : 'Notion access token is not present. In stdio mode set NOTION_TOKEN env var (https://www.notion.so/my-integrations). In HTTP mode complete the OAuth flow at <PUBLIC_URL>/authorize.'
+
+  return {
+    content: [{ type: 'text', text: setupInstructions }],
+    isError: true
+  }
+}
+
+/**
+ * Register CallTool handler with routing and credential guard
+ */
+function registerCallTool(server: Server, notionClientFactory: () => Client) {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params
 
     if (!args) {
       return {
-        content: [
-          {
-            type: 'text',
-            text: 'Error: No arguments provided'
-          }
-        ],
+        content: [{ type: 'text', text: 'Error: No arguments provided' }],
         isError: true
       }
     }
 
-    // Credential guard. In stdio mode the server exits at startup if
-    // NOTION_TOKEN is missing (see main.ts startServer('stdio')); reaching
-    // this branch means HTTP mode where the per-subject token store is
-    // empty for the current caller. help and content_convert work without
-    // a token.
-    if (!TOKEN_FREE_TOOLS.has(name)) {
-      const credState = getState()
-      if (credState !== 'configured') {
-        const publicUrl = process.env.PUBLIC_URL
-        const setupInstructions = publicUrl
-          ? `Notion access token is not present for this session. Open ${publicUrl}/authorize in your browser to complete the Notion OAuth flow, then retry the tool.`
-          : 'Notion access token is not present. In stdio mode set NOTION_TOKEN env var (https://www.notion.so/my-integrations). In HTTP mode complete the OAuth flow at <PUBLIC_URL>/authorize.'
-        return {
-          content: [{ type: 'text', text: setupInstructions }],
-          isError: true
-        }
-      }
+    const authError = checkCredentials(name)
+    if (authError) {
+      return authError
     }
 
     try {
-      let result
       const notion = notionClientFactory()
-
-      switch (name) {
-        case 'pages':
-          result = await pages(notion, args as any)
-          break
-        case 'databases':
-          result = await databases(notion, args as any)
-          break
-        case 'blocks':
-          result = await blocks(notion, args as any)
-          break
-        case 'users':
-          result = await users(notion, args as any)
-          break
-        case 'workspace':
-          result = await workspace(notion, args as any)
-          break
-        case 'comments':
-          result = await commentsManage(notion, args as any)
-          break
-        case 'content_convert':
-          result = await contentConvert(args as any)
-          break
-        case 'config':
-          result = await config(args as any)
-          break
-        case 'config__open_relay':
-          result = await openRelayHandler()
-          break
-        case 'file_uploads':
-          result = await fileUploads(notion, args as any)
-          break
-        case 'help': {
-          const toolName = (args as { tool_name: string }).tool_name
-          // Security: validate tool_name against allowlist to prevent path traversal
-          if (!VALID_HELP_TOOL_NAMES.has(toolName)) {
-            throw new NotionMCPError(
-              `Invalid tool name: ${toolName}`,
-              'VALIDATION_ERROR',
-              `Valid tools: ${VALID_HELP_TOOLS_STRING}`
-            )
-          }
-          // Security: Use basename() to ensure we only look for files directly inside DOCS_DIR,
-          // preventing path traversal even if the allowlist validation is bypassed or modified.
-          const docFile = `${basename(toolName)}.md`
-          const fullPath = join(DOCS_DIR, docFile)
-          if (!fullPath.startsWith(DOCS_DIR)) {
-            throw new NotionMCPError('Path traversal attempt detected', 'SECURITY_ERROR', 'Invalid tool_name')
-          }
-
-          try {
-            const content = await readFile(fullPath, 'utf-8')
-            result = { tool: toolName, documentation: content }
-          } catch {
-            throw new NotionMCPError(`Documentation not found for: ${toolName}`, 'DOC_NOT_FOUND', 'Check tool_name')
-          }
-          break
-        }
-        default: {
-          const validTools = TOOLS.map((t) => t.name)
-          const closest = findClosestMatch(name, validTools)
-          const suggestion = closest ? ` Did you mean '${closest}'?` : ''
-          throw new NotionMCPError(
-            `Unknown tool: ${name}.${suggestion}`,
-            'UNKNOWN_TOOL',
-            `Available tools: ${validTools.join(', ')}`
-          )
-        }
-      }
-
+      const result = await handleToolCall(name, args, notion)
       const jsonText = JSON.stringify(result, null, 2)
       return {
         content: [
@@ -617,4 +630,15 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
       }
     }
   })
+}
+
+/**
+ * Register all tools with MCP server
+ * @param notionClientFactory - Returns a Notion Client.
+ *   Called per tool invocation to support both singleton (stdio) and per-request (HTTP) patterns.
+ */
+export function registerTools(server: Server, notionClientFactory: () => Client) {
+  registerListTools(server)
+  registerResources(server)
+  registerCallTool(server, notionClientFactory)
 }

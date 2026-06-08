@@ -1,0 +1,99 @@
+<<<<<<< SEARCH
+/**
+ * Register all tools with MCP server
+ * @param notionClientFactory - Returns a Notion Client.
+ *   Called per tool invocation to support both singleton (stdio) and per-request (HTTP) patterns.
+ */
+export function registerTools(server: Server, notionClientFactory: () => Client) {
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools: TOOLS
+  }))
+
+  // Resources handlers for full documentation
+  server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+    resources: RESOURCES.map((r) => ({
+      uri: r.uri,
+      name: r.name,
+      mimeType: 'text/markdown'
+    }))
+  }))
+
+  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    const { uri } = request.params
+    const resource = RESOURCES.find((r) => r.uri === uri)
+
+    if (!resource) {
+      throw new NotionMCPError(
+        `Resource not found: ${uri}`,
+        'RESOURCE_NOT_FOUND',
+        `Available: ${RESOURCES.map((r) => r.uri).join(', ')}`
+      )
+    }
+
+    try {
+      const content = await readFile(join(DOCS_DIR, basename(resource.file)), 'utf-8')
+      return {
+        contents: [{ uri, mimeType: 'text/markdown', text: content }]
+      }
+    } catch {
+      throw new NotionMCPError(`Documentation not found for: ${resource.name}`, 'DOC_NOT_FOUND', 'Check resource URI')
+    }
+  })
+
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+=======
+/**
+ * Register ListTools handler
+ */
+function registerListTools(server: Server) {
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools: TOOLS
+  }))
+}
+
+/**
+ * Register Resources handlers for full documentation
+ */
+function registerResources(server: Server) {
+  server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+    resources: RESOURCES.map((r) => ({
+      uri: r.uri,
+      name: r.name,
+      mimeType: 'text/markdown'
+    }))
+  }))
+
+  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    const { uri } = request.params
+    const resource = RESOURCES.find((r) => r.uri === uri)
+
+    if (!resource) {
+      throw new NotionMCPError(
+        `Resource not found: ${uri}`,
+        'RESOURCE_NOT_FOUND',
+        `Available: ${RESOURCES.map((r) => r.uri).join(', ')}`
+      )
+    }
+
+    try {
+      const content = await readFile(join(DOCS_DIR, basename(resource.file)), 'utf-8')
+      return {
+        contents: [{ uri, mimeType: 'text/markdown', text: content }]
+      }
+    } catch {
+      throw new NotionMCPError(`Documentation not found for: ${resource.name}`, 'DOC_NOT_FOUND', 'Check resource URI')
+    }
+  })
+}
+
+/**
+ * Register all tools with MCP server
+ * @param notionClientFactory - Returns a Notion Client.
+ *   Called per tool invocation to support both singleton (stdio) and per-request (HTTP) patterns.
+ */
+export function registerTools(server: Server, notionClientFactory: () => Client) {
+  registerListTools(server)
+  registerResources(server)
+
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+>>>>>>> REPLACE
