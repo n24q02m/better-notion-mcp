@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { markdownToBlocks } from './markdown.js'
 
 describe('MarkdownParser Regression Tests', () => {
