@@ -50,6 +50,24 @@ describe('credential-state', () => {
     expect(getNotionToken()).toBeNull()
   })
 
+  describe('getState / setState', () => {
+    it('sets and gets state correctly', () => {
+      setState('configured')
+      expect(getState()).toBe('configured')
+      setState('awaiting_setup')
+      expect(getState()).toBe('awaiting_setup')
+    })
+  })
+
+  describe('getNotionToken', () => {
+    it('returns the module-global token', () => {
+      expect(getNotionToken()).toBeNull()
+      process.env.NOTION_TOKEN = 'test-token'
+      resolveCredentialState()
+      expect(getNotionToken()).toBe('test-token')
+    })
+  })
+
   describe('resolveCredentialState', () => {
     it('configures when NOTION_TOKEN env var is present', async () => {
       process.env.NOTION_TOKEN = 'env-token'
@@ -98,14 +116,16 @@ describe('credential-state', () => {
       expect(getState()).toBe('awaiting_setup')
       expect(deleteConfig).toHaveBeenCalled()
     })
+
+    it('restores default subject token resolver', () => {
+      setSubjectTokenResolver(() => 'override-token')
+      expect(getSubjectToken()).toBe('override-token')
+      resetState()
+      expect(getSubjectToken()).toBeNull() // default resolver returns null since _notionToken was reset
+    })
   })
 
   describe('subject token resolver', () => {
-    beforeEach(() => {
-      // Reset to default (module-global single-user fallback)
-      setSubjectTokenResolver(() => getNotionToken())
-    })
-
     it('defaults to single-user module global when no resolver injected', () => {
       setState('awaiting_setup')
       expect(getSubjectToken()).toBeNull()
