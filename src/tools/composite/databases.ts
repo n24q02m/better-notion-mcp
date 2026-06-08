@@ -94,6 +94,61 @@ function formatDatabaseResults(results: any[]): Record<string, any>[] {
   return formattedResults
 }
 
+/**
+ * Helper to fetch pages from a database/data source with optional filtering and search
+ */
+async function fetchDatabasePages(
+  notion: Client,
+  input: {
+    database_id: string
+    filters?: any
+    sorts?: any[]
+    search?: string
+    limit?: number
+  }
+): Promise<{ results: any[]; databaseId: string; dataSourceId: string }> {
+  // Smart resolve: accepts both database_id and data_source_id
+  const { databaseId, dataSourceId } = await resolveDataSourceId(notion, input.database_id)
+
+  const queryParams: any = {
+    data_source_id: dataSourceId
+  }
+
+  if (input.filters) queryParams.filter = input.filters
+  if (input.sorts) queryParams.sorts = input.sorts
+
+  // Smart search: if search term provided, build filter for all text properties
+  if (input.search) {
+    const searchFilter = await getSmartSearchFilter(notion, dataSourceId, input.search)
+    if (searchFilter) {
+      if (queryParams.filter) {
+        queryParams.filter = { and: [queryParams.filter, searchFilter] }
+      } else {
+        queryParams.filter = searchFilter
+      }
+    }
+  }
+
+  // Fetch with pagination
+  const allResults = await autoPaginate(async (cursor) => {
+    const response: any = await (notion as any).dataSources.query({
+      ...queryParams,
+      start_cursor: cursor,
+      page_size: 100
+    })
+    return {
+      results: response.results,
+      next_cursor: response.next_cursor,
+      has_more: response.has_more
+    }
+  })
+
+  // Limit results if specified
+  const results = input.limit ? allResults.slice(0, input.limit) : allResults
+
+  return { results, databaseId, dataSourceId }
+}
+
 export interface DatabasesInput {
   action:
     | 'create'
@@ -184,6 +239,8 @@ export interface CreateDatabasePageResponse {
 
 export interface UpdateDatabasePageResponse {
   action: 'update_page'
+  database_id?: string
+  data_source_id?: string
   processed: number
   results: {
     page_id: string
@@ -193,6 +250,8 @@ export interface UpdateDatabasePageResponse {
 
 export interface DeleteDatabasePageResponse {
   action: 'delete_page'
+  database_id?: string
+  data_source_id?: string
   processed: number
   results: {
     page_id: string
@@ -464,36 +523,13 @@ async function queryDatabase(notion: Client, input: DatabasesInput): Promise<Que
     )
   }
 
-  // Smart resolve: accepts both database_id and data_source_id
-  const { databaseId, dataSourceId } = await resolveDataSourceId(notion, input.database_id)
-
-  let filter = input.filters
-
-  // Smart search across text properties
-  if (input.search && !filter) {
-    filter = await getSmartSearchFilter(notion, dataSourceId, input.search)
-  }
-
-  const queryParams: any = { data_source_id: dataSourceId }
-  if (filter) queryParams.filter = filter
-  if (input.sorts) queryParams.sorts = input.sorts
-
-  // Fetch with pagination
-  const allResults = await autoPaginate(async (cursor) => {
-    const response: any = await (notion as any).dataSources.query({
-      ...queryParams,
-      start_cursor: cursor,
-      page_size: 100
-    })
-    return {
-      results: response.results,
-      next_cursor: response.next_cursor,
-      has_more: response.has_more
-    }
+  const { results, databaseId, dataSourceId } = await fetchDatabasePages(notion, {
+    database_id: input.database_id,
+    filters: input.filters,
+    sorts: input.sorts,
+    search: input.search,
+    limit: input.limit
   })
-
-  // Limit results if specified
-  const results = input.limit ? allResults.slice(0, input.limit) : allResults
 
   // Format results
   const formattedResults = formatDatabaseResults(results)
@@ -551,20 +587,24 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
     }
   }
 
-  const results = await processBatches(items, async (item) => {
-    const properties = convertToNotionProperties(item.properties, schema)
+  const results = await processBatches(
+    items,
+    async (item) => {
+      const properties = convertToNotionProperties(item.properties, schema)
 
-    const page = await notion.pages.create({
-      parent: { type: 'data_source_id', data_source_id: dataSourceId },
-      properties
-    } as any)
+      const page = await notion.pages.create({
+        parent: { type: 'data_source_id', data_source_id: dataSourceId },
+        properties
+      } as any)
 
-    return {
-      page_id: page.id,
-      url: (page as any).url,
-      created: true
-    }
-  })
+      return {
+        page_id: page.id,
+        url: (page as any).url,
+        created: true
+      }
+    },
+    { batchSize: 5, concurrency: 3 }
+  )
 
   return {
     action: 'create_page',
@@ -588,6 +628,19 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
     throw new NotionMCPError('pages or page_id+page_properties required', 'VALIDATION_ERROR', 'Provide items to update')
   }
 
+  // Smart resolve: optional for update_page, but helpful for response
+  let databaseId: string | undefined
+  let dataSourceId: string | undefined
+  if (input.database_id) {
+    try {
+      const resolved = await resolveDataSourceId(notion, input.database_id)
+      databaseId = resolved.databaseId
+      dataSourceId = resolved.dataSourceId
+    } catch {
+      // Ignore resolution errors for update_page as page_id is primary
+    }
+  }
+
   // Validate all items before processing to avoid partial writes on malformed input
   for (let i = 0; i < items.length; i++) {
     if (!items[i] || items[i].properties === undefined || items[i].properties === null) {
@@ -599,26 +652,32 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
     }
   }
 
-  const results = await processBatches(items, async (item) => {
-    if (!item.page_id) {
-      throw new NotionMCPError('page_id required for each item', 'VALIDATION_ERROR', 'Provide page_id')
-    }
+  const results = await processBatches(
+    items,
+    async (item) => {
+      if (!item.page_id) {
+        throw new NotionMCPError('page_id required for each item', 'VALIDATION_ERROR', 'Provide page_id')
+      }
 
-    const properties = convertToNotionProperties(item.properties)
+      const properties = convertToNotionProperties(item.properties)
 
-    await notion.pages.update({
-      page_id: item.page_id,
-      properties
-    })
+      await notion.pages.update({
+        page_id: item.page_id,
+        properties
+      })
 
-    return {
-      page_id: item.page_id,
-      updated: true
-    }
-  })
+      return {
+        page_id: item.page_id,
+        updated: true
+      }
+    },
+    { batchSize: 5, concurrency: 3 }
+  )
 
   return {
     action: 'update_page',
+    database_id: databaseId,
+    data_source_id: dataSourceId,
     processed: results.length,
     results
   }
@@ -630,21 +689,35 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
  */
 async function deleteDatabasePages(notion: Client, input: DatabasesInput): Promise<DeleteDatabasePageResponse> {
   let pageIds = input.page_ids || (input.page_id ? [input.page_id] : [])
+  let databaseId: string | undefined
+  let dataSourceId: string | undefined
+
   if (!pageIds || pageIds.length === 0) {
     if (input.pages) {
       pageIds = []
       for (const p of input.pages) {
-        if (p.page_id) {
-          pageIds.push(p.page_id)
-        }
+        if (p.page_id) pageIds.push(p.page_id)
       }
-    } else {
-      pageIds = []
+    } else if (input.database_id) {
+      // Bulk delete by database ID
+      const queryResult = await fetchDatabasePages(notion, {
+        database_id: input.database_id,
+        filters: input.filters,
+        search: input.search,
+        limit: input.limit
+      })
+      pageIds = queryResult.results.map((p: any) => p.id)
+      databaseId = queryResult.databaseId
+      dataSourceId = queryResult.dataSourceId
     }
   }
 
-  if (pageIds.length === 0) {
-    throw new NotionMCPError('page_id or page_ids required', 'VALIDATION_ERROR', 'Provide page IDs to delete')
+  if (!pageIds || pageIds.length === 0) {
+    throw new NotionMCPError(
+      'page_id, page_ids, or database_id required',
+      'VALIDATION_ERROR',
+      'Provide page IDs or a database ID to delete'
+    )
   }
 
   const results = await processBatches(
@@ -665,6 +738,8 @@ async function deleteDatabasePages(notion: Client, input: DatabasesInput): Promi
 
   return {
     action: 'delete_page',
+    database_id: databaseId,
+    data_source_id: dataSourceId,
     processed: results.length,
     results
   }

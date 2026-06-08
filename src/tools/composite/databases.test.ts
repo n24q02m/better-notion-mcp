@@ -651,7 +651,63 @@ describe('databases', () => {
     })
 
     it('should throw when no page ids provided', async () => {
-      await expect(databases(notion, { action: 'delete_page' })).rejects.toThrow('page_id or page_ids required')
+      await expect(databases(notion, { action: 'delete_page' })).rejects.toThrow(
+        'page_id, page_ids, or database_id required'
+      )
+    })
+
+    it('should delete all pages in a database by database_id', async () => {
+      mockNotion.databases.retrieve.mockResolvedValueOnce(makeDbRetrieveResponse())
+      mockNotion.dataSources.query.mockResolvedValueOnce({
+        results: [{ id: 'p1' }, { id: 'p2' }],
+        next_cursor: null,
+        has_more: false
+      })
+      mockNotion.pages.update.mockResolvedValue({})
+
+      const result = (await databases(notion, {
+        action: 'delete_page',
+        database_id: 'db-1'
+      })) as DeleteDatabasePageResponse
+
+      expect(result.action).toBe('delete_page')
+      expect(result.database_id).toBe('db-1')
+      expect(result.data_source_id).toBe('ds-1')
+      expect(result.processed).toBe(2)
+      expect(mockNotion.pages.update).toHaveBeenCalledTimes(2)
+      expect(mockNotion.pages.update).toHaveBeenCalledWith({ page_id: 'p1', archived: true })
+      expect(mockNotion.pages.update).toHaveBeenCalledWith({ page_id: 'p2', archived: true })
+    })
+
+    it('should delete pages in a database with filters and search', async () => {
+      mockNotion.databases.retrieve.mockResolvedValueOnce(makeDbRetrieveResponse())
+      mockNotion.dataSources.retrieve.mockResolvedValueOnce(makeDataSourceResponse())
+      mockNotion.dataSources.query.mockResolvedValueOnce({
+        results: [{ id: 'p-filtered' }],
+        next_cursor: null,
+        has_more: false
+      })
+      mockNotion.pages.update.mockResolvedValue({})
+
+      await databases(notion, {
+        action: 'delete_page',
+        database_id: 'db-1',
+        filters: { property: 'Status', select: { equals: 'Done' } },
+        search: 'Cleanup'
+      })
+
+      expect(mockNotion.dataSources.query).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filter: {
+            and: [
+              { property: 'Status', select: { equals: 'Done' } },
+              {
+                or: [{ property: 'Name', rich_text: { contains: 'Cleanup' } }]
+              }
+            ]
+          }
+        })
+      )
     })
   })
 
