@@ -101,13 +101,20 @@ describe('credential-state', () => {
   })
 
   describe('subject token resolver', () => {
-    beforeEach(() => {
-      // Reset to default (module-global single-user fallback)
-      setSubjectTokenResolver(() => getNotionToken())
-    })
-
     it('defaults to single-user module global when no resolver injected', () => {
       setState('awaiting_setup')
+      expect(getSubjectToken()).toBeNull()
+    })
+
+    it('can be overridden via setSubjectTokenResolver', () => {
+      setSubjectTokenResolver(() => 'custom-token')
+      expect(getSubjectToken()).toBe('custom-token')
+    })
+
+    it('is restored to default by resetState', () => {
+      setSubjectTokenResolver(() => 'custom-token')
+      expect(getSubjectToken()).toBe('custom-token')
+      resetState()
       expect(getSubjectToken()).toBeNull()
     })
 
