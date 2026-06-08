@@ -5,7 +5,7 @@
 
 import type { Client, PageObjectResponse } from '@notionhq/client'
 import { formatCover } from '../helpers/covers.js'
-import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
+import { NotionMCPError, retryWithBackoff, withErrorHandling } from '../helpers/errors.js'
 import { formatIcon } from '../helpers/icons.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate, populateDeepChildren, processBatches } from '../helpers/pagination.js'
@@ -374,21 +374,25 @@ async function updatePage(notion: Client, input: PagesInput): Promise<UpdatePage
       // Delete existing content only if replace: true is explicitly set
       if (input.replace) {
         // Optimized: Fetch all blocks using autoPaginate, then delete them in batches.
+        // Notion API lacks a bulk delete endpoint for blocks, so we parallelize
+        // individual delete calls using processBatches to mitigate N+1 overhead.
         const existingBlocks = await autoPaginate((cursor) =>
-          notion.blocks.children.list({
-            block_id: input.page_id!,
-            page_size: 100,
-            start_cursor: cursor
-          })
+          retryWithBackoff(() =>
+            notion.blocks.children.list({
+              block_id: input.page_id!,
+              page_size: 100,
+              start_cursor: cursor
+            })
+          )
         )
 
         if (existingBlocks.length > 0) {
           await processBatches(
             existingBlocks,
             async (block) => {
-              await notion.blocks.delete({ block_id: block.id })
+              await retryWithBackoff(() => notion.blocks.delete({ block_id: block.id }))
             },
-            { batchSize: 1, concurrency: 5 }
+            { batchSize: 5, concurrency: 3 }
           )
         }
       }
@@ -466,13 +470,15 @@ async function archivePage(notion: Client, input: PagesInput): Promise<ArchivePa
   const results = await processBatches(
     pageIds,
     async (pageId) => {
-      await notion.pages.update({
-        page_id: pageId,
-        archived
-      })
+      await retryWithBackoff(() =>
+        notion.pages.update({
+          page_id: pageId,
+          archived
+        })
+      )
       return { page_id: pageId, archived }
     },
-    { batchSize: 1, concurrency: 5 }
+    { batchSize: 5, concurrency: 3 }
   )
 
   return {
