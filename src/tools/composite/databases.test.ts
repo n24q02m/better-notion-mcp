@@ -596,7 +596,7 @@ describe('databases', () => {
 
     it('should throw when neither pages nor page_id+page_properties provided', async () => {
       await expect(databases(notion, { action: 'update_page' })).rejects.toThrow(
-        'pages or page_id+page_properties required'
+        'pages, page_ids+page_properties, or database_id+filters+page_properties required'
       )
     })
 

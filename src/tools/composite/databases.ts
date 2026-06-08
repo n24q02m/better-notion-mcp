@@ -187,6 +187,7 @@ export interface UpdateDatabasePageResponse {
   processed: number
   results: {
     page_id: string
+    url?: string
     updated: boolean
   }[]
 }
@@ -551,20 +552,24 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
     }
   }
 
-  const results = await processBatches(items, async (item) => {
-    const properties = convertToNotionProperties(item.properties, schema)
+  const results = await processBatches(
+    items,
+    async (item) => {
+      const properties = convertToNotionProperties(item.properties, schema)
 
-    const page = await notion.pages.create({
-      parent: { type: 'data_source_id', data_source_id: dataSourceId },
-      properties
-    } as any)
+      const page = await notion.pages.create({
+        parent: { type: 'data_source_id', data_source_id: dataSourceId },
+        properties
+      } as any)
 
-    return {
-      page_id: page.id,
-      url: (page as any).url,
-      created: true
-    }
-  })
+      return {
+        page_id: page.id,
+        url: (page as any).url,
+        created: true
+      }
+    },
+    { batchSize: 5, concurrency: 3 }
+  )
 
   return {
     action: 'create_page',
@@ -580,12 +585,74 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
  * Maps to: Multiple PATCH /v1/pages/{id}
  */
 async function updateDatabasePages(notion: Client, input: DatabasesInput): Promise<UpdateDatabasePageResponse> {
-  const items =
-    input.pages ||
-    (input.page_id && input.page_properties ? [{ page_id: input.page_id, properties: input.page_properties }] : [])
+  // Smart resolve database/data_source if provided
+  let databaseId: string | undefined
+  let dataSourceId: string | undefined
+  let schema: Record<string, string> | undefined
+
+  if (input.database_id) {
+    const resolved = await resolveDataSourceId(notion, input.database_id)
+    databaseId = resolved.databaseId
+    dataSourceId = resolved.dataSourceId
+
+    const schemaProperties = await getDataSourceSchema(notion, dataSourceId)
+    if (schemaProperties) {
+      schema = {}
+      const keys = Object.keys(schemaProperties)
+      for (let i = 0; i < keys.length; i++) {
+        const name = keys[i]
+        schema[name] = (schemaProperties[name] as any).type
+      }
+    }
+  }
+
+  let items = input.pages || []
+
+  // Support for bulk update by query/search
+  if (items.length === 0 && databaseId && dataSourceId && input.page_properties) {
+    let filter = input.filters
+    if (input.search) {
+      const smartFilter = await getSmartSearchFilter(notion, dataSourceId, input.search)
+      if (smartFilter) {
+        filter = filter ? { and: [filter, smartFilter] } : smartFilter
+      }
+    }
+
+    const matchedPages = await autoPaginate((cursor) =>
+      (notion as any).dataSources.query({
+        data_source_id: dataSourceId,
+        filter,
+        sorts: input.sorts,
+        start_cursor: cursor,
+        page_size: 100
+      })
+    )
+
+    items = matchedPages.map((page: any) => ({
+      page_id: page.id,
+      properties: input.page_properties
+    }))
+  }
+
+  // Support for page_ids + page_properties
+  if (items.length === 0 && input.page_ids && input.page_properties) {
+    items = input.page_ids.map((id) => ({
+      page_id: id,
+      properties: input.page_properties
+    }))
+  }
+
+  // Single page fallback
+  if (items.length === 0 && input.page_id && input.page_properties) {
+    items = [{ page_id: input.page_id, properties: input.page_properties }]
+  }
 
   if (items.length === 0) {
-    throw new NotionMCPError('pages or page_id+page_properties required', 'VALIDATION_ERROR', 'Provide items to update')
+    throw new NotionMCPError(
+      'pages, page_ids+page_properties, or database_id+filters+page_properties required',
+      'VALIDATION_ERROR',
+      'Provide items to update'
+    )
   }
 
   // Validate all items before processing to avoid partial writes on malformed input
@@ -599,23 +666,28 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
     }
   }
 
-  const results = await processBatches(items, async (item) => {
-    if (!item.page_id) {
-      throw new NotionMCPError('page_id required for each item', 'VALIDATION_ERROR', 'Provide page_id')
-    }
+  const results = await processBatches(
+    items,
+    async (item) => {
+      if (!item.page_id) {
+        throw new NotionMCPError('page_id required for each item', 'VALIDATION_ERROR', 'Provide page_id')
+      }
 
-    const properties = convertToNotionProperties(item.properties)
+      const properties = convertToNotionProperties(item.properties, schema)
 
-    await notion.pages.update({
-      page_id: item.page_id,
-      properties
-    })
+      const page: any = await notion.pages.update({
+        page_id: item.page_id,
+        properties
+      })
 
-    return {
-      page_id: item.page_id,
-      updated: true
-    }
-  })
+      return {
+        page_id: item.page_id,
+        url: page.url,
+        updated: true
+      }
+    },
+    { batchSize: 5, concurrency: 3 }
+  )
 
   return {
     action: 'update_page',
