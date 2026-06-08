@@ -19,6 +19,69 @@ describe('convertToNotionProperties', () => {
     expect(convertToNotionProperties({})).toEqual({})
   })
 
+  it('converts hyphenated UUIDs correctly via extractPageId', () => {
+    const id = '12345678-1234-1234-1234-1234567890ab'
+    const result = convertToNotionProperties({ Related: id }, { Related: 'relation' })
+    expect(result).toEqual({
+      Related: { relation: [{ id: id }] }
+    })
+  })
+
+  it('handles invalid JSON strings in relation fields by treating as single ID', () => {
+    const invalidJson = '[id1, id2'
+    const result = convertToNotionProperties({ Related: invalidJson }, { Related: 'relation' })
+    expect(result).toEqual({
+      Related: { relation: [{ id: invalidJson }] }
+    })
+  })
+
+  it('handles JSON arrays of non-strings in relation fields by treating as single ID', () => {
+    const nonStringArray = '[1, 2]'
+    const result = convertToNotionProperties({ Related: nonStringArray }, { Related: 'relation' })
+    expect(result).toEqual({
+      Related: { relation: [{ id: nonStringArray }] }
+    })
+  })
+
+  it('handles empty relation arrays', () => {
+    const result = convertToNotionProperties({ Related: [] }, { Related: 'relation' })
+    expect(result).toEqual({
+      Related: { relation: [] }
+    })
+  })
+
+  it('handles non-string, non-array fallback in toRelation', () => {
+    const complexObj = { something: 'else' }
+    // Passing a raw object to a relation field (where toRelation is called)
+    const result = convertToNotionProperties({ Related: complexObj }, { Related: 'relation' })
+    expect(result).toEqual({
+      Related: complexObj
+    })
+  })
+
+  it('toRelation fallback branch coverage (BigInt)', () => {
+    // BigInt is not string or array
+    const val = BigInt(123)
+    const result = convertToNotionProperties({ Related: val }, { Related: 'relation' })
+    expect(result).toEqual({ Related: val })
+  })
+
+  it('convertToNotionProperties final fallback branch coverage (BigInt)', () => {
+    const val = BigInt(456)
+    const result = convertToNotionProperties({ Big: val })
+    expect(result).toEqual({ Big: val })
+  })
+
+  it('handles empty arrays in convertToNotionProperties (non-relation)', () => {
+    const result = convertToNotionProperties({ Tags: [] })
+    expect(result).toEqual({ Tags: [] })
+  })
+
+  it('handles arrays of non-strings in convertToNotionProperties (non-relation)', () => {
+    const result = convertToNotionProperties({ Data: [1, 2] })
+    expect(result).toEqual({ Data: [1, 2] })
+  })
+
   describe('null and undefined values', () => {
     it('passes null through as-is', () => {
       const result = convertToNotionProperties({ field: null })
@@ -768,5 +831,62 @@ describe('extractPageProperties', () => {
       }
     }
     expect(extractPageProperties(props)).toEqual({ Window: '2026-01-01 to 2026-01-31' })
+  })
+
+  it('handles title and rich_text with missing plain_text', () => {
+    const props = {
+      Name: {
+        type: 'title',
+        title: [{ annotations: {} }] // plain_text missing
+      },
+      Notes: {
+        type: 'rich_text',
+        rich_text: [{ href: 'xxx' }] // plain_text missing
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Name: '', Notes: '' })
+  })
+
+  it('extracts formula with falsy values (0, false)', () => {
+    const props = {
+      Count: {
+        type: 'formula',
+        formula: { type: 'number', number: 0 }
+      },
+      Check: {
+        type: 'formula',
+        formula: { type: 'boolean', boolean: false }
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Count: 0, Check: false })
+  })
+
+  it('extracts formula with date value', () => {
+    const props = {
+      Due: {
+        type: 'formula',
+        formula: { type: 'date', date: { start: '2025-01-01' } }
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Due: { start: '2025-01-01' } })
+  })
+
+  it('extracts formula returning null when value is missing for type', () => {
+    const props = {
+      Calc: {
+        type: 'formula',
+        formula: { type: 'string' } // string property missing
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Calc: null })
+  })
+
+  it('handles empty relation, people, and files arrays', () => {
+    const props = {
+      Rel: { type: 'relation', relation: [] },
+      Ppl: { type: 'people', people: [] },
+      Fl: { type: 'files', files: [] }
+    }
+    expect(extractPageProperties(props)).toEqual({ Rel: [], Ppl: [], Fl: [] })
   })
 })
