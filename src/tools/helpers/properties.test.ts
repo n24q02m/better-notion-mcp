@@ -234,10 +234,16 @@ describe('extractPageProperties', () => {
   })
 
   it('extracts formula values including boolean and date', () => {
-    expect(extractPageProperties({ f: { type: 'formula', formula: { type: 'string', string: 's' } } })).toEqual({ f: 's' })
+    expect(extractPageProperties({ f: { type: 'formula', formula: { type: 'string', string: 's' } } })).toEqual({
+      f: 's'
+    })
     expect(extractPageProperties({ f: { type: 'formula', formula: { type: 'number', number: 1 } } })).toEqual({ f: 1 })
-    expect(extractPageProperties({ f: { type: 'formula', formula: { type: 'boolean', boolean: true } } })).toEqual({ f: true })
-    expect(extractPageProperties({ f: { type: 'formula', formula: { type: 'date', date: { start: '2023' } } } })).toEqual({ f: { start: '2023' } })
+    expect(extractPageProperties({ f: { type: 'formula', formula: { type: 'boolean', boolean: true } } })).toEqual({
+      f: true
+    })
+    expect(
+      extractPageProperties({ f: { type: 'formula', formula: { type: 'date', date: { start: '2023' } } } })
+    ).toEqual({ f: { start: '2023' } })
     expect(extractPageProperties({ f: { type: 'formula', formula: { type: 'unknown' } } })).toEqual({ f: null })
     expect(extractPageProperties({ f: { type: 'formula', formula: {} } })).toEqual({ f: null })
   })
@@ -253,12 +259,15 @@ describe('extractPageProperties', () => {
   it('optimizes type reading', () => {
     let reads = 0
     const props = {
-      p: new Proxy({ type: 'number', number: 1 }, {
-        get(t, p) {
-          if (p === 'type') reads++
-          return (t as any)[p]
+      p: new Proxy(
+        { type: 'number', number: 1 },
+        {
+          get(t, p) {
+            if (p === 'type') reads++
+            return (t as any)[p]
+          }
         }
-      })
+      )
     }
     extractPageProperties(props)
     expect(reads).toBe(1)
