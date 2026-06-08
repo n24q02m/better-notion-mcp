@@ -75,6 +75,37 @@ describe('formatCover', () => {
       const result = formatCover('woodcuts_3')
       expect(result.external.url).toBe('https://www.notion.so/images/page-cover/woodcuts_3.jpg')
     })
+
+    it('should resolve nasa_space_shuttle_columbia', () => {
+      const result = formatCover('nasa_space_shuttle_columbia')
+      expect(result.external.url).toBe('https://www.notion.so/images/page-cover/nasa_space_shuttle_columbia.jpg')
+    })
+
+    it('should resolve met_william_morris_1875', () => {
+      const result = formatCover('met_william_morris_1875')
+      expect(result.external.url).toBe('https://www.notion.so/images/page-cover/met_william_morris_1875.jpg')
+    })
+
+    it('should resolve woodcuts_11', () => {
+      const result = formatCover('woodcuts_11')
+      expect(result.external.url).toBe('https://www.notion.so/images/page-cover/woodcuts_11.jpg')
+    })
+  })
+
+  describe('edge cases', () => {
+    it('rejects empty string', () => {
+      expect(() => formatCover('')).toThrow('Unknown cover shorthand')
+    })
+
+    it('rejects safe but unknown shorthand', () => {
+      expect(() => formatCover('safe_but_not_in_catalog')).toThrow('Unknown cover shorthand')
+    })
+
+    it('handles prototype properties (documenting current behavior)', () => {
+      const result = formatCover('toString')
+      expect(result.type).toBe('external')
+      expect(typeof result.external.url).toBe('function')
+    })
   })
 
   describe('error handling', () => {
