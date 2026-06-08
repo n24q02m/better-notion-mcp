@@ -34,7 +34,9 @@ vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => {
 })
 
 vi.mock('@notionhq/client', () => ({
-  Client: vi.fn().mockImplementation(() => ({}))
+  Client: vi.fn().mockImplementation(function (this: any) {
+    return {}
+  })
 }))
 
 vi.mock('./tools/registry.js', () => ({
@@ -51,7 +53,8 @@ vi.mock('node:fs', async (importOriginal) => {
   const original = await importOriginal<typeof import('node:fs')>()
   return {
     ...original,
-    realpathSync: vi.fn(original.realpathSync)
+    realpathSync: vi.fn(original.realpathSync),
+    readFileSync: vi.fn(original.readFileSync)
   }
 })
 
@@ -157,6 +160,16 @@ describe('main.ts', () => {
       vi.stubEnv('TRANSPORT_MODE', 'http')
       expect(getTransportMode()).toBe('http')
     })
+
+    it('verifies empty string from TRANSPORT_MODE if set', () => {
+      const env = { TRANSPORT_MODE: '' }
+      expect(getTransportMode(env)).toBe('')
+    })
+
+    it('verifies non-standard value from TRANSPORT_MODE if set', () => {
+      const env = { TRANSPORT_MODE: 'custom' }
+      expect(getTransportMode(env)).toBe('custom')
+    })
   })
 
   describe('startServer', () => {
@@ -252,6 +265,42 @@ describe('main.ts', () => {
       vi.resetModules()
       const { mode: newMode } = await import('./main.js')
       expect(newMode).toBe('http')
+    })
+
+    it('verifies fallback in getPackageVersion when file reading fails', async () => {
+      vi.mocked(fs.readFileSync).mockImplementationOnce(() => {
+        throw new Error('Read failed')
+      })
+      vi.resetModules()
+      const { startServer: newStartServer } = await import('./main.js')
+      process.env.NOTION_TOKEN = 'ntn_test'
+      await newStartServer('stdio')
+
+      // Line 29 (return '0.0.0') should be covered
+      expect(stdioServerCtor).toHaveBeenCalledWith(
+        expect.objectContaining({ version: '0.0.0' }),
+        expect.any(Object)
+      )
+    })
+
+    it('verifies notionClientFactory logic', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test'
+      let capturedFactory: any
+      registerToolsMock.mockImplementationOnce((_server, factory) => {
+        capturedFactory = factory
+      })
+
+      await startServer('stdio')
+      expect(capturedFactory).toBeDefined()
+
+      // Test successful client creation
+      const client = capturedFactory()
+      expect(client).toBeDefined()
+
+      // Test failure when token is missing
+      const { getNotionToken } = await import('./credential-state.js')
+      vi.mocked(getNotionToken).mockReturnValueOnce(null)
+      expect(() => capturedFactory()).toThrow('Notion integration token not configured')
     })
   })
 })
