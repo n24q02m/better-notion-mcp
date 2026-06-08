@@ -30,6 +30,20 @@ describe('normalizeId', () => {
     expect(normalizeId('-abc-')).toBe('abc')
     expect(normalizeId(' a - b ')).toBe(' a  b ')
   })
+
+  it('should not remove non-standard dashes like en-dash or em-dash', () => {
+    expect(normalizeId('a–b—c')).toBe('a–b—c')
+  })
+
+  it('should handle very long strings with many hyphens', () => {
+    const longStr = 'a-'.repeat(1000) + 'b'
+    const expected = 'a'.repeat(1000) + 'b'
+    expect(normalizeId(longStr)).toBe(expected)
+  })
+
+  it('should handle a single hyphen', () => {
+    expect(normalizeId('-')).toBe('')
+  })
 })
 
 describe('isValidNotionId', () => {
