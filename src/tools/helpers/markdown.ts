@@ -95,42 +95,54 @@ class MarkdownParser {
 
   private parseBlock(i: number): number {
     const line = this.lines[i]
+    this.handleListFlushing(line)
 
-    // Flush list if we're not in a list anymore
+    const trimmedLine = line.trim()
+    if (!trimmedLine) return i
+
+    if (this.handleMetadata(trimmedLine)) return i
+
+    const complexResult = this.handleComplexBlocks(line, trimmedLine, i)
+    if (complexResult !== null) return complexResult
+
+    const basicResult = this.handleBasicBlocks(line, trimmedLine, i)
+    if (typeof basicResult === 'number') return basicResult
+    if (basicResult === true) return i
+
+    // Fallback to regular paragraph
+    this.blocks.push(createParagraph(line))
+    return i
+  }
+
+  private handleListFlushing(line: string): void {
     if (this.currentListType && !isListItem(line)) {
       this.blocks.push(...this.currentList)
       this.currentList = []
       this.currentListType = null
     }
+  }
 
-    // Cache trimmed line for performance to avoid repeated string allocations
-    const trimmedLine = line.trim()
-
-    // Skip empty lines
-    if (!trimmedLine) {
-      return i
-    }
-
-    // Table of Contents [toc]
+  private handleMetadata(trimmedLine: string): boolean {
     if (trimmedLine === '[toc]' || trimmedLine === '[TOC]') {
       this.blocks.push(createTableOfContents())
-      return i
+      return true
     }
-
-    // Breadcrumb [breadcrumb]
     if (trimmedLine === '[breadcrumb]' || trimmedLine === '[BREADCRUMB]') {
       this.blocks.push(createBreadcrumb())
-      return i
+      return true
     }
+    return false
+  }
 
-    // Equation block $...$
+  private handleComplexBlocks(line: string, trimmedLine: string, i: number): number | null {
+    // Equation block $$...$$
     if (trimmedLine.startsWith('$$')) {
       const eqData = parseEquationBlock(this.lines, i, trimmedLine)
       this.blocks.push(eqData.block)
       return eqData.endIndex
     }
 
-    // Callout > [!TYPE] content or > [!TYPE]\n> content
+    // Callout > [!TYPE] content
     const calloutMatch = line.match(CALLOUT_REGEX)
     if (calloutMatch) {
       const calloutData = parseCalloutBlock(this.lines, i, calloutMatch)
@@ -150,7 +162,7 @@ class MarkdownParser {
       return i
     }
 
-    // Bookmark/Embed [bookmark](url) or [embed](url)
+    // Bookmark/Embed [bookmark](url)
     const bookmarkMatch = line.match(BOOKMARK_REGEX)
     if (bookmarkMatch) {
       const type = bookmarkMatch[1].toLowerCase()
@@ -167,7 +179,7 @@ class MarkdownParser {
       return i
     }
 
-    // Toggle <details><summary>Title</summary>
+    // Toggle <details>
     if (trimmedLine === '<details>' || trimmedLine.startsWith('<details>')) {
       const toggleData = parseToggle(this.lines, i)
       this.blocks.push(createToggle(toggleData.title, toggleData.children))
@@ -190,56 +202,70 @@ class MarkdownParser {
       }
     }
 
+    return null
+  }
+
+  private handleBasicBlocks(line: string, _trimmedLine: string, i: number): number | boolean {
     // Heading
     if (line.startsWith('# ')) {
       this.blocks.push(createHeading(1, line.slice(2)))
-    } else if (line.startsWith('## ')) {
+      return true
+    }
+    if (line.startsWith('## ')) {
       this.blocks.push(createHeading(2, line.slice(3)))
-    } else if (line.startsWith('### ')) {
+      return true
+    }
+    if (line.startsWith('### ')) {
       this.blocks.push(createHeading(3, line.slice(4)))
+      return true
     }
 
     // Code block
-    else if (line.startsWith('```')) {
+    if (line.startsWith('```')) {
       const codeData = parseCodeBlock(this.lines, i, line)
       this.blocks.push(codeData.block)
       return codeData.endIndex
     }
 
     // Task list / Checkbox list - [ ] or - [x]
-    else if (CHECKED_LIST_REGEX.test(line)) {
+    if (CHECKED_LIST_REGEX.test(line)) {
       const match = line.match(CHECKED_LIST_REGEX)
       const checked = match ? match[1].toLowerCase() === 'x' : false
       const text = line.replace(CHECKED_LIST_REGEX, '')
       this.currentListType = 'bulleted'
       this.currentList.push(createTodoItem(text, checked))
+      return true
     }
+
     // Bulleted list
-    else if (BULLETED_LIST_REGEX.test(line)) {
+    if (BULLETED_LIST_REGEX.test(line)) {
       const text = line.replace(BULLETED_LIST_REGEX, '')
       this.currentListType = 'bulleted'
       this.currentList.push(createBulletedListItem(text))
+      return true
     }
+
     // Numbered list
-    else if (NUMBERED_LIST_REGEX.test(line)) {
+    if (NUMBERED_LIST_REGEX.test(line)) {
       const text = line.replace(NUMBERED_LIST_REGEX, '')
       this.currentListType = 'numbered'
       this.currentList.push(createNumberedListItem(text))
-    }
-    // Quote
-    else if (line.startsWith('> ')) {
-      this.blocks.push(createQuote(line.slice(2)))
-    }
-    // Divider
-    else if (DIVIDER_REGEX.test(line)) {
-      this.blocks.push(createDivider())
-    }
-    // Regular paragraph
-    else {
-      this.blocks.push(createParagraph(line))
+      return true
     }
 
-    return i
+    // Quote
+    if (line.startsWith('> ')) {
+      this.blocks.push(createQuote(line.slice(2)))
+      return true
+    }
+
+    // Divider
+    if (DIVIDER_REGEX.test(line)) {
+      this.blocks.push(createDivider())
+      return true
+    }
+
+    return false
   }
 }
 
