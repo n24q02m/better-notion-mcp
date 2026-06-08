@@ -21,7 +21,6 @@ const NOTION_ICON_COLORS = new Set([
 
 /** Check if a string is a Notion built-in icon shorthand (e.g. "helm:blue") */
 function isNotionIconShorthand(value: string): boolean {
-  if (value.startsWith('http://') || value.startsWith('https://')) return false
   const colonIdx = value.lastIndexOf(':')
   if (colonIdx < 1) return false
   const color = value.slice(colonIdx + 1)

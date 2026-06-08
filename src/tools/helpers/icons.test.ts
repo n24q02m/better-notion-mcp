@@ -76,6 +76,20 @@ describe('formatIcon', () => {
         external: { url: 'https://example.com/icon:blue.svg' }
       })
     })
+
+    it('handles multiple colons in shorthand', () => {
+      expect(formatIcon('document:filled:blue')).toEqual({
+        type: 'external',
+        external: { url: 'https://www.notion.so/icons/document:filled_blue.svg' }
+      })
+    })
+
+    it('treats unusual shorthand-like strings as shorthand if color matches', () => {
+      expect(formatIcon('http:blue')).toEqual({
+        type: 'external',
+        external: { url: 'https://www.notion.so/icons/http_blue.svg' }
+      })
+    })
   })
 
   describe('invalid color shorthand', () => {
@@ -96,6 +110,7 @@ describe('formatIcon', () => {
   describe('unsafe URL rejection', () => {
     it('rejects javascript: URLs', () => {
       expect(() => formatIcon('javascript:alert(1)')).toThrow(NotionMCPError)
+      expect(() => formatIcon('javascript:alert(1)')).toThrow(/Unsafe icon value/)
     })
 
     it('rejects data: URLs', () => {
@@ -108,10 +123,27 @@ describe('formatIcon', () => {
 
     it('rejects http URLs with whitespace', () => {
       expect(() => formatIcon('https://example.com/icon .png')).toThrow(NotionMCPError)
+      expect(() => formatIcon('https://example.com/icon .png')).toThrow(/Unsafe icon URL/)
     })
   })
 
-  describe('edge cases', () => {
+  describe('safe non-HTTP protocols', () => {
+    it('treats mailto: as emoji (safe protocol but not HTTP/shorthand)', () => {
+      expect(formatIcon('mailto:test@example.com')).toEqual({
+        type: 'emoji',
+        emoji: 'mailto:test@example.com'
+      })
+    })
+
+    it('treats tel: as emoji', () => {
+      expect(formatIcon('tel:+123456789')).toEqual({
+        type: 'emoji',
+        emoji: 'tel:+123456789'
+      })
+    })
+  })
+
+  describe('edge cases and robustness', () => {
     it('does not treat a leading colon as shorthand', () => {
       // ':blue' has colonIdx 0, which is < 1, so it falls through to emoji
       // then isSafeUrl(':blue') returns false because it's a relative URL with a colon
@@ -120,6 +152,17 @@ describe('formatIcon', () => {
 
     it('treats a plain string as emoji', () => {
       expect(formatIcon('star')).toEqual({ type: 'emoji', emoji: 'star' })
+    })
+
+    it('handles null/undefined by throwing validation error', () => {
+      expect(() => formatIcon(null as any)).toThrow(/Icon value cannot be empty/)
+      expect(() => formatIcon(undefined as any)).toThrow(/Icon value cannot be empty/)
+    })
+
+    it('handles non-string inputs by falling through or throwing', () => {
+      // Numbers don't have .startsWith, so they will throw TypeError if not handled.
+      // Current implementation assumes string. Let's verify it throws.
+      expect(() => formatIcon(123 as any)).toThrow()
     })
   })
 })
