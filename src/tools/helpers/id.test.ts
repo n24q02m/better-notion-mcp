@@ -183,4 +183,17 @@ describe('isValidBase64', () => {
     const largeStr = 'a'.repeat(64 * 1024 * 1024 + 4)
     expect(isValidBase64(largeStr)).toBe(false)
   })
+
+  it('should accept string that is exactly maximum length', () => {
+    // MAX_BASE64_LENGTH is 64MB.
+    const largeStr = 'a'.repeat(64 * 1024 * 1024)
+    expect(isValidBase64(largeStr)).toBe(true)
+  })
+
+  it('should reject non-string inputs', () => {
+    expect(isValidBase64(null as any)).toBe(false)
+    expect(isValidBase64(undefined as any)).toBe(false)
+    expect(isValidBase64(123 as any)).toBe(false)
+    expect(isValidBase64({} as any)).toBe(false)
+  })
 })
