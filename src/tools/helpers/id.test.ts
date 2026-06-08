@@ -84,6 +84,46 @@ describe('isValidNotionId', () => {
   it('should accept mixed hyphenation', () => {
     expect(isValidNotionId('a38029673621-4b04-b6afbfef1b7687b3')).toBe(true)
   })
+
+  it('should reject strings with leading/trailing whitespace', () => {
+    expect(isValidNotionId(' a380296736214b04b6afbfef1b7687b3')).toBe(false)
+    expect(isValidNotionId('a380296736214b04b6afbfef1b7687b3 ')).toBe(false)
+    expect(isValidNotionId(' a3802967-3621-4b04-b6af-bfef1b7687b3 ')).toBe(false)
+  })
+
+  it('should reject strings with internal whitespace', () => {
+    expect(isValidNotionId('a3802967 36214b04b6afbfef1b7687b3')).toBe(false)
+    expect(isValidNotionId('a3802967-3621-4b04-b6af- bfef1b7687b3')).toBe(false)
+  })
+
+  it('should reject non-string inputs', () => {
+    expect(isValidNotionId(null as any)).toBe(false)
+    expect(isValidNotionId(undefined as any)).toBe(false)
+    expect(isValidNotionId(123 as any)).toBe(false)
+    expect(isValidNotionId({} as any)).toBe(false)
+    expect(isValidNotionId([] as any)).toBe(false)
+  })
+
+  it('should reject strings with line breaks', () => {
+    expect(isValidNotionId('a380296736214b04b6afbfef1b7687b3\n')).toBe(false)
+    expect(isValidNotionId('a3802967\n36214b04b6afbfef1b7687b3')).toBe(false)
+  })
+
+  it('should reject strings with special characters', () => {
+    expect(isValidNotionId('a380296736214b04b6afbfef1b7687b@')).toBe(false)
+    expect(isValidNotionId('a3802967-3621-4b04-b6af-bfef1b7687b!')).toBe(false)
+  })
+
+  it('should reject multiple hyphens in row at start or end', () => {
+    expect(isValidNotionId('--a380296736214b04b6afbfef1b7687b3')).toBe(false)
+    expect(isValidNotionId('a380296736214b04b6afbfef1b7687b3--')).toBe(false)
+  })
+
+  it('should reject strings that are too long even with hyphens', () => {
+    // Correct format is 32 hex chars + up to 4 hyphens = 36 chars.
+    // This is 32 'a's and 5 hyphens = 37 chars.
+    expect(isValidNotionId('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa-')).toBe(false)
+  })
 })
 
 describe('formatId', () => {
