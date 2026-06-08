@@ -936,6 +936,50 @@ describe('pages', () => {
       expect(result.results).toHaveLength(2)
     })
 
+    it('strips null values from block type data during duplication', async () => {
+      mockNotion.pages.retrieve.mockResolvedValue({
+        id: 'orig-1',
+        parent: { type: 'page_id', page_id: 'p-1' },
+        properties: {}
+      })
+      mockNotion.blocks.children.list.mockResolvedValue({
+        results: [
+          {
+            id: 'block-1',
+            type: 'paragraph',
+            paragraph: {
+              rich_text: [],
+              color: null // This should be stripped
+            },
+            object: 'block',
+            created_time: '2025-01-01T00:00:00Z'
+          }
+        ],
+        next_cursor: null,
+        has_more: false
+      })
+      mockNotion.pages.create.mockResolvedValue({ id: 'dup-1', url: 'url-1' })
+      mockNotion.blocks.children.append.mockResolvedValue({ results: [] })
+
+      await pages(mockNotion as any, {
+        action: 'duplicate',
+        page_id: 'orig-1'
+      })
+
+      expect(mockNotion.blocks.children.append).toHaveBeenCalledWith({
+        block_id: 'dup-1',
+        children: [
+          {
+            type: 'paragraph',
+            paragraph: {
+              rich_text: []
+              // color: null should be gone
+            }
+          }
+        ]
+      })
+    })
+
     it('throws without page_id or page_ids', async () => {
       await expect(pages(mockNotion as any, { action: 'duplicate' })).rejects.toThrow('page_id or page_ids required')
     })

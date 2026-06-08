@@ -483,6 +483,21 @@ async function archivePage(notion: Client, input: PagesInput): Promise<ArchivePa
 }
 
 /**
+ * Highly optimized helper to strip null values from an object.
+ * Uses a standard for loop with cached keys to avoid iterator overhead.
+ */
+function stripNullValues(obj: any): void {
+  if (!obj || typeof obj !== 'object') return
+  const keys = Object.keys(obj)
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i]
+    if (obj[key] === null) {
+      delete obj[key]
+    }
+  }
+}
+
+/**
  * Duplicate page
  * Maps to: GET /v1/pages/{id} + POST /v1/pages + GET/PATCH /v1/blocks
  */
@@ -555,12 +570,8 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
           // Strip null values inside block type data (e.g., paragraph.icon: null)
           // Notion API rejects null where it expects object or undefined
           const blockType = rest.type
-          if (blockType && rest[blockType] && typeof rest[blockType] === 'object') {
-            for (const key of Object.keys(rest[blockType])) {
-              if (rest[blockType][key] === null) {
-                delete rest[blockType][key]
-              }
-            }
+          if (blockType && rest[blockType]) {
+            stripNullValues(rest[blockType])
           }
           return rest
         })

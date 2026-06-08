@@ -20,3 +20,7 @@
 ## 2025-05-26 - Array.includes() vs Set.has() for O(1) Lookups
 **Learning:** Checking for membership in an array using `['a', 'b', ...].includes(value)` within hot paths requires an O(N) scan. This can become an issue when iterating or repeatedly checking values.
 **Action:** Replace `Array.includes()` with `Set.has()` by extracting the array into a module-level `Set`. This improves lookup times significantly to O(1).
+
+## 2025-05-31 - Object Iteration and Iterator Overhead Optimization
+**Learning:** Repeatedly calling `Object.keys(obj)` inside a loop, especially in nested mapping operations like block duplication, causes redundant array allocations and iterator overhead. Refactoring this into a dedicated helper that uses a manual indexed `for` loop with cached keys is significantly more performant and reduces GC pressure.
+**Action:** Extract object-cleaning logic into a `stripNullValues` helper using an indexed `for` loop over a single `Object.keys()` call for high-frequency operations.
