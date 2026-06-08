@@ -443,6 +443,16 @@ const TOOLS = [
 // BOLT OPTIMIZATION: Use Set for O(1) lookups instead of dynamic array creation
 const VALID_HELP_TOOL_NAMES = new Set(TOOLS.map((t) => t.name).filter((name) => name !== 'help'))
 const VALID_HELP_TOOLS_STRING = Array.from(VALID_HELP_TOOL_NAMES).join(', ')
+
+// BOLT OPTIMIZATION: Pre-compute static values for resource endpoints and unknown tool suggestions
+const ALL_TOOL_NAMES = TOOLS.map((t) => t.name)
+const PRECOMPUTED_RESOURCES = RESOURCES.map((r) => ({
+  uri: r.uri,
+  name: r.name,
+  mimeType: 'text/markdown'
+}))
+const AVAILABLE_RESOURCES_STRING = RESOURCES.map((r) => r.uri).join(', ')
+
 /**
  * Register all tools with MCP server
  * @param notionClientFactory - Returns a Notion Client.
@@ -455,11 +465,7 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
 
   // Resources handlers for full documentation
   server.setRequestHandler(ListResourcesRequestSchema, async () => ({
-    resources: RESOURCES.map((r) => ({
-      uri: r.uri,
-      name: r.name,
-      mimeType: 'text/markdown'
-    }))
+    resources: PRECOMPUTED_RESOURCES
   }))
 
   server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
@@ -470,7 +476,7 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
       throw new NotionMCPError(
         `Resource not found: ${uri}`,
         'RESOURCE_NOT_FOUND',
-        `Available: ${RESOURCES.map((r) => r.uri).join(', ')}`
+        `Available: ${AVAILABLE_RESOURCES_STRING}`
       )
     }
 
@@ -580,13 +586,12 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
           break
         }
         default: {
-          const validTools = TOOLS.map((t) => t.name)
-          const closest = findClosestMatch(name, validTools)
+          const closest = findClosestMatch(name, ALL_TOOL_NAMES)
           const suggestion = closest ? ` Did you mean '${closest}'?` : ''
           throw new NotionMCPError(
             `Unknown tool: ${name}.${suggestion}`,
             'UNKNOWN_TOOL',
-            `Available tools: ${validTools.join(', ')}`
+            `Available tools: ${ALL_TOOL_NAMES.join(', ')}`
           )
         }
       }

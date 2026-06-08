@@ -20,3 +20,7 @@
 ## 2025-05-26 - Array.includes() vs Set.has() for O(1) Lookups
 **Learning:** Checking for membership in an array using `['a', 'b', ...].includes(value)` within hot paths requires an O(N) scan. This can become an issue when iterating or repeatedly checking values.
 **Action:** Replace `Array.includes()` with `Set.has()` by extracting the array into a module-level `Set`. This improves lookup times significantly to O(1).
+
+## 2025-05-28 - Precomputing Static Data from Arrays
+**Learning:** Using `Array.prototype.map()` over constant module-level arrays inside hot path functions (such as request handlers mapping `TOOLS` or `RESOURCES` on each invocation) causes completely unnecessary dynamic array allocations, leading to performance degradation and increased garbage collection overhead.
+**Action:** When a computed value depends entirely on static data that will never change at runtime, precompute that data by performing the `.map()` and `.join()` operations once outside of the function, storing the result in a module-level constant.
