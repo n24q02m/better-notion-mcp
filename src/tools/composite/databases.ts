@@ -630,7 +630,7 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
 
     items = matchedPages.map((page: any) => ({
       page_id: page.id,
-      properties: input.page_properties
+      properties: input.page_properties!
     }))
   }
 
@@ -638,7 +638,7 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
   if (items.length === 0 && input.page_ids && input.page_properties) {
     items = input.page_ids.map((id) => ({
       page_id: id,
-      properties: input.page_properties
+      properties: input.page_properties!
     }))
   }
 
