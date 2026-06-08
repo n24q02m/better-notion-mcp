@@ -39,141 +39,16 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
     }
 
     switch (input.action) {
-      case 'get': {
-        const block: any = await notion.blocks.retrieve({ block_id: input.block_id })
-        return {
-          action: 'get',
-          block_id: block.id,
-          type: block.type,
-          has_children: block.has_children,
-          archived: block.archived,
-          block
-        }
-      }
-
-      case 'children': {
-        const blocksList = await autoPaginate((cursor) =>
-          notion.blocks.children.list({
-            block_id: input.block_id,
-            start_cursor: cursor,
-            page_size: 100
-          })
-        )
-
-        // Recursively fetch children for blocks that need them (tables, toggles, columns)
-        await populateDeepChildren(notion, blocksList as any[])
-
-        const markdown = blocksToMarkdown(blocksList as any)
-        return {
-          action: 'children',
-          block_id: input.block_id,
-          total_children: blocksList.length,
-          markdown,
-          blocks: blocksList
-        }
-      }
-
-      case 'append': {
-        if (!input.content) {
-          throw new NotionMCPError('content required for append', 'VALIDATION_ERROR', 'Provide markdown content')
-        }
-        if (input.position === 'after_block' && !input.after_block_id) {
-          throw new NotionMCPError(
-            'after_block_id required when position is after_block',
-            'VALIDATION_ERROR',
-            'Provide after_block_id with the block ID to insert after'
-          )
-        }
-        const blocksList = markdownToBlocks(input.content)
-        const appendParams: any = {
-          block_id: input.block_id,
-          children: blocksList as any
-        }
-        if (input.position === 'start') {
-          appendParams.position = { type: 'start' }
-        } else if (input.position === 'after_block' && input.after_block_id) {
-          appendParams.position = { type: 'after_block', after_block: { id: input.after_block_id } }
-        }
-        await notion.blocks.children.append(appendParams)
-        return {
-          action: 'append',
-          block_id: input.block_id,
-          appended_count: blocksList.length
-        }
-      }
-
-      case 'update': {
-        if (!input.content) {
-          throw new NotionMCPError('content required for update', 'VALIDATION_ERROR', 'Provide markdown content')
-        }
-        const block: any = await notion.blocks.retrieve({ block_id: input.block_id })
-        const blockType = block.type
-        const newBlocks = markdownToBlocks(input.content)
-
-        if (newBlocks.length === 0) {
-          throw new NotionMCPError('Content must produce at least one block', 'VALIDATION_ERROR', 'Invalid markdown')
-        }
-
-        const newContent = newBlocks[0]
-
-        // Validate block type match
-        if (newContent.type !== blockType) {
-          throw new NotionMCPError(
-            `Block type mismatch: cannot update ${blockType} with content that parses to ${newContent.type}`,
-            'VALIDATION_ERROR',
-            `Provide markdown that parses to ${blockType}`
-          )
-        }
-
-        const updatePayload: any = {}
-
-        // Build update based on block type
-        if (UPDATABLE_BLOCK_TYPES.has(blockType)) {
-          if (blockType === 'to_do') {
-            updatePayload.to_do = {
-              rich_text: (newContent as any).to_do?.rich_text || [],
-              checked: (newContent as any).to_do?.checked ?? block.to_do?.checked ?? false
-            }
-          } else if (blockType === 'code') {
-            updatePayload.code = {
-              rich_text: (newContent as any).code?.rich_text || [],
-              language: (newContent as any).code?.language || block.code?.language || 'plain text'
-            }
-          } else {
-            updatePayload[blockType] = {
-              rich_text: (newContent as any)[blockType]?.rich_text || []
-            }
-          }
-        } else {
-          throw new NotionMCPError(
-            `Block type '${blockType}' cannot be updated`,
-            'VALIDATION_ERROR',
-            'Only text-based blocks (paragraph, headings, lists, quote, to_do, code) can be updated'
-          )
-        }
-
-        await notion.blocks.update({
-          block_id: input.block_id,
-          ...updatePayload
-        } as any)
-
-        return {
-          action: 'update',
-          block_id: input.block_id,
-          type: blockType,
-          updated: true
-        }
-      }
-
-      case 'delete': {
-        await notion.blocks.delete({ block_id: input.block_id })
-        return {
-          action: 'delete',
-          block_id: input.block_id,
-          deleted: true
-        }
-      }
-
+      case 'get':
+        return handleBlockGet(notion, input.block_id)
+      case 'children':
+        return handleBlockChildren(notion, input.block_id)
+      case 'append':
+        return handleBlockAppend(notion, input)
+      case 'update':
+        return handleBlockUpdate(notion, input)
+      case 'delete':
+        return handleBlockDelete(notion, input.block_id)
       default:
         throw new NotionMCPError(
           `Unknown action: ${input.action}`,
@@ -182,4 +57,154 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
         )
     }
   })()
+}
+
+/**
+ * Retrieve a block
+ */
+async function handleBlockGet(notion: Client, blockId: string): Promise<any> {
+  const block: any = await notion.blocks.retrieve({ block_id: blockId })
+  return {
+    action: 'get',
+    block_id: block.id,
+    type: block.type,
+    has_children: block.has_children,
+    archived: block.archived,
+    block
+  }
+}
+
+/**
+ * List block children
+ */
+async function handleBlockChildren(notion: Client, blockId: string): Promise<any> {
+  const blocksList = await autoPaginate((cursor) =>
+    notion.blocks.children.list({
+      block_id: blockId,
+      start_cursor: cursor,
+      page_size: 100
+    })
+  )
+
+  // Recursively fetch children for blocks that need them (tables, toggles, columns)
+  await populateDeepChildren(notion, blocksList as any[])
+
+  const markdown = blocksToMarkdown(blocksList as any)
+  return {
+    action: 'children',
+    block_id: blockId,
+    total_children: blocksList.length,
+    markdown,
+    blocks: blocksList
+  }
+}
+
+/**
+ * Append blocks to children
+ */
+async function handleBlockAppend(notion: Client, input: BlocksInput): Promise<any> {
+  if (!input.content) {
+    throw new NotionMCPError('content required for append', 'VALIDATION_ERROR', 'Provide markdown content')
+  }
+  if (input.position === 'after_block' && !input.after_block_id) {
+    throw new NotionMCPError(
+      'after_block_id required when position is after_block',
+      'VALIDATION_ERROR',
+      'Provide after_block_id with the block ID to insert after'
+    )
+  }
+  const blocksList = markdownToBlocks(input.content)
+  const appendParams: any = {
+    block_id: input.block_id,
+    children: blocksList as any
+  }
+  if (input.position === 'start') {
+    appendParams.position = { type: 'start' }
+  } else if (input.position === 'after_block' && input.after_block_id) {
+    appendParams.position = { type: 'after_block', after_block: { id: input.after_block_id } }
+  }
+  await notion.blocks.children.append(appendParams)
+  return {
+    action: 'append',
+    block_id: input.block_id,
+    appended_count: blocksList.length
+  }
+}
+
+/**
+ * Update a block
+ */
+async function handleBlockUpdate(notion: Client, input: BlocksInput): Promise<any> {
+  if (!input.content) {
+    throw new NotionMCPError('content required for update', 'VALIDATION_ERROR', 'Provide markdown content')
+  }
+  const block: any = await notion.blocks.retrieve({ block_id: input.block_id })
+  const blockType = block.type
+  const newBlocks = markdownToBlocks(input.content)
+
+  if (newBlocks.length === 0) {
+    throw new NotionMCPError('Content must produce at least one block', 'VALIDATION_ERROR', 'Invalid markdown')
+  }
+
+  const newContent = newBlocks[0]
+
+  // Validate block type match
+  if (newContent.type !== blockType) {
+    throw new NotionMCPError(
+      `Block type mismatch: cannot update ${blockType} with content that parses to ${newContent.type}`,
+      'VALIDATION_ERROR',
+      `Provide markdown that parses to ${blockType}`
+    )
+  }
+
+  const updatePayload: any = {}
+
+  // Build update based on block type
+  if (UPDATABLE_BLOCK_TYPES.has(blockType)) {
+    if (blockType === 'to_do') {
+      updatePayload.to_do = {
+        rich_text: (newContent as any).to_do?.rich_text || [],
+        checked: (newContent as any).to_do?.checked ?? block.to_do?.checked ?? false
+      }
+    } else if (blockType === 'code') {
+      updatePayload.code = {
+        rich_text: (newContent as any).code?.rich_text || [],
+        language: (newContent as any).code?.language || block.code?.language || 'plain text'
+      }
+    } else {
+      updatePayload[blockType] = {
+        rich_text: (newContent as any)[blockType]?.rich_text || []
+      }
+    }
+  } else {
+    throw new NotionMCPError(
+      `Block type '${blockType}' cannot be updated`,
+      'VALIDATION_ERROR',
+      'Only text-based blocks (paragraph, headings, lists, quote, to_do, code) can be updated'
+    )
+  }
+
+  await notion.blocks.update({
+    block_id: input.block_id,
+    ...updatePayload
+  } as any)
+
+  return {
+    action: 'update',
+    block_id: input.block_id,
+    type: blockType,
+    updated: true
+  }
+}
+
+/**
+ * Delete a block
+ */
+async function handleBlockDelete(notion: Client, blockId: string): Promise<any> {
+  await notion.blocks.delete({ block_id: blockId })
+  return {
+    action: 'delete',
+    block_id: blockId,
+    deleted: true
+  }
 }
