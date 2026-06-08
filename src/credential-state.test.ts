@@ -92,11 +92,21 @@ describe('credential-state', () => {
       expect(deleteConfig).toHaveBeenCalledWith('better-notion-mcp')
     })
 
-    it('handles deleteConfig failure in resetState', () => {
+    it('restores the default subject token resolver', () => {
+      setSubjectTokenResolver(() => 'temp-token')
+      expect(getSubjectToken()).toBe('temp-token')
+
+      resetState()
+      expect(getSubjectToken()).toBeNull() // Should use defaultTokenResolver which returns _notionToken (null)
+    })
+
+    it('handles deleteConfig failure in resetState', async () => {
       vi.mocked(deleteConfig).mockRejectedValue(new Error('delete failed') as never)
       resetState()
       expect(getState()).toBe('awaiting_setup')
       expect(deleteConfig).toHaveBeenCalled()
+      // Wait for the microtask to ensure catch branch is executed
+      await new Promise((resolve) => setTimeout(resolve, 0))
     })
   })
 
