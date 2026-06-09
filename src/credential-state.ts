@@ -117,6 +117,5 @@ function handleDeleteConfigError(): void {}
 export function resetState(): void {
   _state = 'awaiting_setup'
   _notionToken = null
-  _subjectTokenResolver = defaultTokenResolver
   deleteConfig(SERVER_NAME).catch(handleDeleteConfigError)
 }

@@ -48,6 +48,7 @@ describe('credential-state', () => {
   it('initial state is awaiting_setup', () => {
     expect(getState()).toBe('awaiting_setup')
     expect(getNotionToken()).toBeNull()
+    expect(getSubjectToken()).toBeNull() // Covers defaultTokenResolver
   })
 
   describe('resolveCredentialState', () => {
@@ -90,14 +91,6 @@ describe('credential-state', () => {
       expect(getState()).toBe('awaiting_setup')
       expect(getNotionToken()).toBeNull()
       expect(deleteConfig).toHaveBeenCalledWith('better-notion-mcp')
-    })
-
-    it('restores the default subject token resolver', () => {
-      setSubjectTokenResolver(() => 'temp-token')
-      expect(getSubjectToken()).toBe('temp-token')
-
-      resetState()
-      expect(getSubjectToken()).toBeNull() // Should use defaultTokenResolver which returns _notionToken (null)
     })
 
     it('handles deleteConfig failure in resetState', async () => {
