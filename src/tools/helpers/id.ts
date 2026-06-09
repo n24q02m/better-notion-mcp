@@ -34,21 +34,13 @@ export function formatId(id: string): string {
   return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20)}`
 }
 
-/**
- * Maximum length for base64 string to prevent OOM during validation (32MB).
- * This is 3x the max file upload size (10MB) to allow for base64 overhead
- * and concurrent request headroom.
- */
-const MAX_BASE64_LENGTH = 32 * 1024 * 1024
+/** Maximum length for base64 string to prevent OOM during validation (64MB) */
+const MAX_BASE64_LENGTH = 64 * 1024 * 1024
 
 /**
- * Check if a string is valid base64 encoding.
- * Used to validate file_content before Buffer.from.
- *
- * Implements multi-stage strict validation for both correctness and safety:
- * 1. Cheap early returns for type, length, and MAX_BASE64_LENGTH (OOM guard).
- * 2. Regex check for character set and padding structure.
- * 3. Buffer roundtrip to ensure canonicality (rejects bits in padding).
+ * Check if a string is valid base64 encoding
+ * Used to validate file_content before Buffer.from
+ * Implements strict validation by checking character set, length, and canonicality
  */
 export function isValidBase64(str: string): boolean {
   if (typeof str !== 'string' || str.length === 0 || str.length % 4 !== 0 || str.length > MAX_BASE64_LENGTH) {
@@ -60,8 +52,7 @@ export function isValidBase64(str: string): boolean {
     return false
   }
 
-  // Strict check: Buffer roundtrip to ensure canonicality.
-  // The str.length check above ensures this won't cause OOM.
+  // Strict check: Buffer roundtrip to ensure canonicality
   try {
     const buffer = Buffer.from(str, 'base64')
     return buffer.toString('base64') === str

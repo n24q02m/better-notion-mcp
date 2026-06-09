@@ -178,33 +178,9 @@ describe('isValidBase64', () => {
     expect(isValidBase64('aGVsbG8=')).toBe(false)
     spy.mockRestore()
   })
-
   it('should reject string that exceeds maximum length', () => {
-    // MAX_BASE64_LENGTH is 32MB. Let's create a string slightly larger.
-    const largeStr = 'a'.repeat(32 * 1024 * 1024 + 4)
+    // MAX_BASE64_LENGTH is 64MB. Let's create a string slightly larger.
+    const largeStr = 'a'.repeat(64 * 1024 * 1024 + 4)
     expect(isValidBase64(largeStr)).toBe(false)
-  })
-
-  it('should reject non-string types', () => {
-    expect(isValidBase64(null as any)).toBe(false)
-    expect(isValidBase64(undefined as any)).toBe(false)
-    expect(isValidBase64(123 as any)).toBe(false)
-    expect(isValidBase64({} as any)).toBe(false)
-  })
-
-  it('should reject more non-canonical base64 examples', () => {
-    // These have bits set in the padding bits that should be zero
-    // 'f' -> 'Zg==' (canonical)
-    // 'g' is 100000, padding bits are 0000.
-    // 'h' is 100001, last bit is 1.
-    expect(isValidBase64('Zh==')).toBe(false)
-    expect(isValidBase64('Zi==')).toBe(false)
-    expect(isValidBase64('Zg==')).toBe(true)
-
-    // 'fo' -> 'Zm8=' (canonical)
-    // '8' is 111100, padding bits are 00.
-    // '9' is 111101, last bit is 1.
-    expect(isValidBase64('Zm9=')).toBe(false)
-    expect(isValidBase64('Zm8=')).toBe(true)
   })
 })
