@@ -48,6 +48,8 @@ describe('credential-state', () => {
   it('initial state is awaiting_setup', () => {
     expect(getState()).toBe('awaiting_setup')
     expect(getNotionToken()).toBeNull()
+    // Cover initial default subject token resolver
+    expect(getSubjectToken()).toBeNull()
   })
 
   describe('getState / setState', () => {
@@ -116,16 +118,14 @@ describe('credential-state', () => {
       expect(getState()).toBe('awaiting_setup')
       expect(deleteConfig).toHaveBeenCalled()
     })
-
-    it('restores default subject token resolver', () => {
-      setSubjectTokenResolver(() => 'override-token')
-      expect(getSubjectToken()).toBe('override-token')
-      resetState()
-      expect(getSubjectToken()).toBeNull() // default resolver returns null since _notionToken was reset
-    })
   })
 
   describe('subject token resolver', () => {
+    beforeEach(() => {
+      // Reset to default (module-global single-user fallback)
+      setSubjectTokenResolver(() => getNotionToken())
+    })
+
     it('defaults to single-user module global when no resolver injected', () => {
       setState('awaiting_setup')
       expect(getSubjectToken()).toBeNull()

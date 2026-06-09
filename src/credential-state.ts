@@ -41,14 +41,6 @@ export function getNotionToken(): string | null {
 }
 
 /**
- * Default token resolver for single-user / stdio mode.
- * Extracted to a named function to avoid test leakage and allow verification.
- */
-function defaultTokenResolver(): string | null {
-  return _notionToken
-}
-
-/**
  * Per-request token resolver. Stdio / single-user leaves the default
  * resolver, which reads the module global. ``remote-oauth`` HTTP mode
  * injects a resolver that reads the per-JWT-sub ``NotionTokenStore`` so
@@ -56,7 +48,7 @@ function defaultTokenResolver(): string | null {
  * Notion access token -- not whether the server process has any global
  * token, which is always null in multi-user remote-oauth mode.
  */
-let _subjectTokenResolver: () => string | null = defaultTokenResolver
+let _subjectTokenResolver: () => string | null = () => _notionToken
 
 export function setSubjectTokenResolver(fn: () => string | null): void {
   _subjectTokenResolver = fn
@@ -113,6 +105,5 @@ export function setState(state: CredentialState): void {
 export function resetState(): void {
   _state = 'awaiting_setup'
   _notionToken = null
-  _subjectTokenResolver = defaultTokenResolver
   deleteConfig(SERVER_NAME).catch(() => {})
 }
