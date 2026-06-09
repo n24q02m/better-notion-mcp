@@ -28,9 +28,11 @@ vi.mock('@n24q02m/mcp-core/storage', () => ({
 }))
 
 describe('credential-state', () => {
+  let consoleSpy: ReturnType<typeof vi.spyOn>
+
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     vi.mocked(deleteConfig).mockResolvedValue(undefined as never)
     vi.mocked(resolveConfig).mockResolvedValue({ config: null, source: null } as never)
@@ -54,6 +56,7 @@ describe('credential-state', () => {
       const state = await resolveCredentialState()
       expect(state).toBe('configured')
       expect(getNotionToken()).toBe('env-token')
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('found in environment'))
     })
 
     it('configures when config file has token', async () => {
@@ -64,11 +67,13 @@ describe('credential-state', () => {
       const state = await resolveCredentialState()
       expect(state).toBe('configured')
       expect(getNotionToken()).toBe('file-token')
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('loaded from file'))
     })
 
     it('stays in awaiting_setup when nothing found', async () => {
       const state = await resolveCredentialState()
       expect(state).toBe('awaiting_setup')
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('No Notion token found'))
     })
 
     it('handles config read failure gracefully', async () => {

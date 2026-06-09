@@ -74,6 +74,7 @@ export async function resolveCredentialState(): Promise<CredentialState> {
   if (envToken) {
     _notionToken = envToken
     _state = 'configured'
+    console.error('Notion token found in environment')
     return _state
   }
 
@@ -84,6 +85,7 @@ export async function resolveCredentialState(): Promise<CredentialState> {
     if (result.config !== null) {
       _notionToken = result.config[CREDENTIAL_KEY]
       _state = 'configured'
+      console.error(`Notion config loaded from ${result.source}`)
       return _state
     }
   } catch {
@@ -91,6 +93,7 @@ export async function resolveCredentialState(): Promise<CredentialState> {
   }
 
   // 3. Nothing found
+  console.error('No Notion token found -- server starting in awaiting_setup mode')
   _state = 'awaiting_setup'
   return _state
 }
