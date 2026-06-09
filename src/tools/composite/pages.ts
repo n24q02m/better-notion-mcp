@@ -292,9 +292,15 @@ async function getPageProperty(notion: Client, input: PagesInput): Promise<GetPa
   let value: any
   switch (propertyType) {
     case 'title':
-    case 'rich_text':
-      value = allResults.map((item: any) => item[propertyType]?.plain_text || '').join('')
+    case 'rich_text': {
+      let str = ''
+      for (let i = 0; i < allResults.length; i++) {
+        const item = allResults[i] as any
+        str += item[propertyType]?.plain_text || ''
+      }
+      value = str
       break
+    }
     case 'relation': {
       const relationIds: string[] = []
       for (const item of allResults as any[]) {
@@ -309,12 +315,18 @@ async function getPageProperty(notion: Client, input: PagesInput): Promise<GetPa
     case 'rollup':
       value = firstResult.rollup
       break
-    case 'people':
-      value = allResults.map((item: any) => ({
-        id: item.people?.id,
-        name: item.people?.name
-      }))
+    case 'people': {
+      const ppl = new Array(allResults.length)
+      for (let i = 0; i < allResults.length; i++) {
+        const item = allResults[i] as any
+        ppl[i] = {
+          id: item.people?.id,
+          name: item.people?.name
+        }
+      }
+      value = ppl
       break
+    }
     default:
       // For non-paginated types, return the raw value
       value = firstResult?.[propertyType] ?? firstResult
