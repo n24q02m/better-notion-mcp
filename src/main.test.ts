@@ -230,24 +230,7 @@ describe('main.ts', () => {
       consoleSpy.mockRestore()
     })
 
-    it('verifies fork-bomb protection prevents multiple starts via startServer', async () => {
-      process.env.NOTION_TOKEN = 'ntn_test_token'
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-
-      // First call should work
-      await startServer('stdio')
-      expect(stdioConnectMock).toHaveBeenCalledTimes(1)
-
-      // Second call should be aborted
-      await startServer('stdio')
-      expect(stdioConnectMock).toHaveBeenCalledTimes(1)
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Startup aborted'))
-
-      consoleSpy.mockRestore()
-      delete process.env.BETTER_NOTION_MCP_BOOTSTRAPPED
-    })
-
-    it('verifies fork-bomb protection prevents multiple starts via bootstrap', async () => {
+    it('verifies fork-bomb protection prevents multiple starts', async () => {
       process.env.NOTION_TOKEN = 'ntn_test_token'
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
@@ -258,7 +241,7 @@ describe('main.ts', () => {
       // Second call should be aborted
       await bootstrap('stdio')
       expect(stdioConnectMock).toHaveBeenCalledTimes(1)
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Startup aborted'))
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Bootstrap aborted'))
 
       consoleSpy.mockRestore()
       delete process.env.BETTER_NOTION_MCP_BOOTSTRAPPED
