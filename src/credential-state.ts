@@ -48,8 +48,7 @@ export function getNotionToken(): string | null {
  * Notion access token -- not whether the server process has any global
  * token, which is always null in multi-user remote-oauth mode.
  */
-const defaultResolver = () => _notionToken
-let _subjectTokenResolver: () => string | null = defaultResolver
+let _subjectTokenResolver: () => string | null = () => _notionToken
 
 export function setSubjectTokenResolver(fn: () => string | null): void {
   _subjectTokenResolver = fn
@@ -106,6 +105,5 @@ export function setState(state: CredentialState): void {
 export function resetState(): void {
   _state = 'awaiting_setup'
   _notionToken = null
-  _subjectTokenResolver = defaultResolver
   deleteConfig(SERVER_NAME).catch(() => {})
 }

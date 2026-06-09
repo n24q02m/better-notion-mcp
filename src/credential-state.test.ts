@@ -101,6 +101,11 @@ describe('credential-state', () => {
   })
 
   describe('subject token resolver', () => {
+    beforeEach(() => {
+      // Reset to default (module-global single-user fallback)
+      setSubjectTokenResolver(() => getNotionToken())
+    })
+
     it('defaults to single-user module global when no resolver injected', () => {
       setState('awaiting_setup')
       expect(getSubjectToken()).toBeNull()
