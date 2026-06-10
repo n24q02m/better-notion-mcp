@@ -122,6 +122,18 @@ describe('formatId', () => {
   it('should format UUIDs with misplaced hyphens correctly', () => {
     expect(formatId('a3802967-3621-4b04-b6af-bfef-1b76-87b3')).toBe('a3802967-3621-4b04-b6af-bfef1b7687b3')
   })
+
+  it('should return empty string unchanged', () => {
+    expect(formatId('')).toBe('')
+  })
+
+  it('should return string with only whitespace unchanged', () => {
+    expect(formatId('   ')).toBe('   ')
+  })
+
+  it('should return 32-character string with non-hex symbols unchanged', () => {
+    expect(formatId('a380296736214b04b6afbfef1b7687b!')).toBe('a380296736214b04b6afbfef1b7687b!')
+  })
 })
 
 describe('isValidBase64', () => {
