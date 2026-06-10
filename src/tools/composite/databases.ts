@@ -551,20 +551,24 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
     }
   }
 
-  const results = await processBatches(items, async (item) => {
-    const properties = convertToNotionProperties(item.properties, schema)
+  const results = await processBatches(
+    items,
+    async (item) => {
+      const properties = convertToNotionProperties(item.properties, schema)
 
-    const page = await notion.pages.create({
-      parent: { type: 'data_source_id', data_source_id: dataSourceId },
-      properties
-    } as any)
+      const page = await notion.pages.create({
+        parent: { type: 'data_source_id', data_source_id: dataSourceId },
+        properties
+      } as any)
 
-    return {
-      page_id: page.id,
-      url: (page as any).url,
-      created: true
-    }
-  })
+      return {
+        page_id: page.id,
+        url: (page as any).url,
+        created: true
+      }
+    },
+    { batchSize: 5, concurrency: 3 }
+  )
 
   return {
     action: 'create_page',
@@ -599,23 +603,42 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
     }
   }
 
-  const results = await processBatches(items, async (item) => {
-    if (!item.page_id) {
-      throw new NotionMCPError('page_id required for each item', 'VALIDATION_ERROR', 'Provide page_id')
+  // Fetch schema once for the batch if database_id is available
+  let schema: Record<string, string> | undefined
+  if (input.database_id || input.data_source_id) {
+    const { dataSourceId } = await resolveDataSourceId(notion, (input.database_id || input.data_source_id)!)
+    const props = await getDataSourceSchema(notion, dataSourceId)
+    if (props) {
+      schema = {}
+      const keys = Object.keys(props)
+      for (let j = 0; j < keys.length; j++) {
+        const name = keys[j]
+        schema[name] = (props[name] as any).type
+      }
     }
+  }
 
-    const properties = convertToNotionProperties(item.properties)
+  const results = await processBatches(
+    items,
+    async (item) => {
+      if (!item.page_id) {
+        throw new NotionMCPError('page_id required for each item', 'VALIDATION_ERROR', 'Provide page_id')
+      }
 
-    await notion.pages.update({
-      page_id: item.page_id,
-      properties
-    })
+      const properties = convertToNotionProperties(item.properties, schema)
 
-    return {
-      page_id: item.page_id,
-      updated: true
-    }
-  })
+      await notion.pages.update({
+        page_id: item.page_id,
+        properties
+      })
+
+      return {
+        page_id: item.page_id,
+        updated: true
+      }
+    },
+    { batchSize: 5, concurrency: 3 }
+  )
 
   return {
     action: 'update_page',
