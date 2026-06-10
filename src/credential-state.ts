@@ -12,10 +12,10 @@
  *
  * This module is the single source of truth for "is the server configured?"
  * It supports two token resolution strategies:
- *  - stdio / single-user: module-global ``_notionToken`` from env or
- *    config.enc, set during ``resolveCredentialState``.
+ *  - stdio / single-user: module-global `_notionToken` from env or
+ *    config.enc, set during `resolveCredentialState`.
  *  - HTTP / multi-user (remote-oauth): per-JWT-sub resolver injected by the
- *    HTTP transport so ``config(action=status)`` reflects whether the
+ *    HTTP transport so `config(action=status)` reflects whether the
  *    CURRENT caller has a Notion access token.
  */
 
@@ -41,6 +41,13 @@ export function getNotionToken(): string | null {
 }
 
 /**
+ * Default resolver reads the single-user module global.
+ */
+function defaultResolver(): string | null {
+  return _notionToken
+}
+
+/**
  * Per-request token resolver. Stdio / single-user leaves the default
  * resolver, which reads the module global. ``remote-oauth`` HTTP mode
  * injects a resolver that reads the per-JWT-sub ``NotionTokenStore`` so
@@ -48,7 +55,7 @@ export function getNotionToken(): string | null {
  * Notion access token -- not whether the server process has any global
  * token, which is always null in multi-user remote-oauth mode.
  */
-let _subjectTokenResolver: () => string | null = () => _notionToken
+let _subjectTokenResolver: () => string | null = defaultResolver
 
 export function setSubjectTokenResolver(fn: () => string | null): void {
   _subjectTokenResolver = fn
@@ -105,5 +112,6 @@ export function setState(state: CredentialState): void {
 export function resetState(): void {
   _state = 'awaiting_setup'
   _notionToken = null
+  _subjectTokenResolver = defaultResolver
   deleteConfig(SERVER_NAME).catch(() => {})
 }
