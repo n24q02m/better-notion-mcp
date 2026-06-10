@@ -6,7 +6,8 @@
 import * as RichText from './richtext.js'
 
 /** Extract a 32-char hex page ID from a Notion URL, or return the input as-is if it's already a raw ID */
-function extractPageId(value: string): string {
+function extractPageId(value: any): string {
+  if (typeof value !== 'string') return String(value)
   const match = value.match(/([a-f0-9]{32})/)
   if (match) return match[1]
   // Also accept hyphenated UUIDs as-is
@@ -31,7 +32,9 @@ function toRelation(value: any): { relation: { id: string }[] } {
     return { relation: [{ id: extractPageId(value) }] }
   }
   if (Array.isArray(value)) {
-    return { relation: value.map((v: string) => ({ id: extractPageId(v) })) }
+    return {
+      relation: value.map((v: any) => (typeof v === 'object' && v !== null && 'id' in v ? v : { id: extractPageId(v) }))
+    }
   }
   return value
 }

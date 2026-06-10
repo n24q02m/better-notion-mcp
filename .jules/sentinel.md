@@ -34,3 +34,8 @@
 **Vulnerability:** Untrusted content returned from external APIs was wrapped in `<untrusted_notion_content>` tags. The regex used to sanitize payload breakout attempts (`/<\/untrusted_notion_content\s*>/gi`) only matched trailing whitespace. An attacker could bypass this wrapper by injecting arbitrary attributes into the closing tag within their payload (e.g., `</untrusted_notion_content bypass="true">`), prematurely escaping the security boundary.
 **Learning:** Security boundaries relying on XML/HTML-style tags must account for the leniency of the underlying parsers (including LLMs). Exact matches or simple whitespace checks fail when attackers exploit syntax flexibility, such as tag attributes, which are normally invalid in closing tags but tolerated by parsers.
 **Prevention:** When sanitizing closing tags for prompt injection defense, use a regex that matches any character except the closing angle bracket (e.g., `[^>]*`) to neutralize all variations, padding, and attributes that could be used for evasion.
+
+## 2026-06-10 - Missing tests for normalizeId
+**Vulnerability:** N/A (Testing Task)
+**Learning:** `normalizeId` is a stable utility used for ID comparison. Comprehensive testing should verify that it only removes hyphens and does not affect case or other whitespace characters (tabs, newlines), ensuring consistency across the MCP server.
+**Prevention:** Always verify that utility functions have tests covering not just the happy path but also the preservation of non-target characters like case and whitespace.

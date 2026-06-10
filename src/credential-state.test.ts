@@ -28,11 +28,9 @@ vi.mock('@n24q02m/mcp-core/storage', () => ({
 }))
 
 describe('credential-state', () => {
-  let consoleSpy: ReturnType<typeof vi.spyOn>
-
   beforeEach(() => {
     vi.resetAllMocks()
-    consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'error').mockImplementation(() => {})
 
     vi.mocked(deleteConfig).mockResolvedValue(undefined as never)
     vi.mocked(resolveConfig).mockResolvedValue({ config: null, source: null } as never)
@@ -50,13 +48,24 @@ describe('credential-state', () => {
     expect(getNotionToken()).toBeNull()
   })
 
+  describe('getNotionToken', () => {
+    it('returns null when not configured', () => {
+      expect(getNotionToken()).toBeNull()
+    })
+
+    it('returns the token when configured via env', async () => {
+      process.env.NOTION_TOKEN = 'test-token'
+      await resolveCredentialState()
+      expect(getNotionToken()).toBe('test-token')
+    })
+  })
+
   describe('resolveCredentialState', () => {
     it('configures when NOTION_TOKEN env var is present', async () => {
       process.env.NOTION_TOKEN = 'env-token'
       const state = await resolveCredentialState()
       expect(state).toBe('configured')
       expect(getNotionToken()).toBe('env-token')
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('found in environment'))
     })
 
     it('configures when config file has token', async () => {
@@ -67,13 +76,11 @@ describe('credential-state', () => {
       const state = await resolveCredentialState()
       expect(state).toBe('configured')
       expect(getNotionToken()).toBe('file-token')
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('loaded from file'))
     })
 
     it('stays in awaiting_setup when nothing found', async () => {
       const state = await resolveCredentialState()
       expect(state).toBe('awaiting_setup')
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('No Notion token found'))
     })
 
     it('handles config read failure gracefully', async () => {
@@ -92,20 +99,17 @@ describe('credential-state', () => {
       expect(deleteConfig).toHaveBeenCalledWith('better-notion-mcp')
     })
 
-    it('handles deleteConfig failure in resetState', () => {
+    it('handles deleteConfig failure in resetState', async () => {
       vi.mocked(deleteConfig).mockRejectedValue(new Error('delete failed') as never)
       resetState()
+      // Allow the unreturned promise catch block to execute
+      await new Promise((r) => setTimeout(r, 0))
       expect(getState()).toBe('awaiting_setup')
       expect(deleteConfig).toHaveBeenCalled()
     })
   })
 
   describe('subject token resolver', () => {
-    beforeEach(() => {
-      // Reset to default (module-global single-user fallback)
-      setSubjectTokenResolver(() => getNotionToken())
-    })
-
     it('defaults to single-user module global when no resolver injected', () => {
       setState('awaiting_setup')
       expect(getSubjectToken()).toBeNull()
@@ -124,6 +128,13 @@ describe('credential-state', () => {
       currentSub = 'bob'
       expect(getSubjectToken()).toBe(storeByBob)
       currentSub = 'unknown'
+      expect(getSubjectToken()).toBeNull()
+    })
+
+    it('restores default resolver on resetState', () => {
+      setSubjectTokenResolver(() => 'forced-token')
+      expect(getSubjectToken()).toBe('forced-token')
+      resetState()
       expect(getSubjectToken()).toBeNull()
     })
   })

@@ -30,6 +30,13 @@ describe('normalizeId', () => {
     expect(normalizeId('-abc-')).toBe('abc')
     expect(normalizeId(' a - b ')).toBe(' a  b ')
   })
+  it('should preserve case', () => {
+    expect(normalizeId('AbC-DeF')).toBe('AbCDeF')
+  })
+
+  it('should handle tabs and newlines mixed with hyphens', () => {
+    expect(normalizeId('a\t-b\n')).toBe('a\tb\n')
+  })
 })
 
 describe('isValidNotionId', () => {
@@ -84,6 +91,34 @@ describe('isValidNotionId', () => {
   it('should accept mixed hyphenation', () => {
     expect(isValidNotionId('a38029673621-4b04-b6afbfef1b7687b3')).toBe(true)
   })
+
+  it('should accept single hyphen at the first slot', () => {
+    expect(isValidNotionId('a3802967-36214b04b6afbfef1b7687b3')).toBe(true)
+  })
+
+  it('should accept single hyphen at the second slot', () => {
+    expect(isValidNotionId('a38029673621-4b04b6afbfef1b7687b3')).toBe(true)
+  })
+
+  it('should accept single hyphen at the third slot', () => {
+    expect(isValidNotionId('a380296736214b04-b6afbfef1b7687b3')).toBe(true)
+  })
+
+  it('should accept single hyphen at the fourth slot', () => {
+    expect(isValidNotionId('a380296736214b04b6af-bfef1b7687b3')).toBe(true)
+  })
+
+  it('should reject dots as separators', () => {
+    expect(isValidNotionId('a3802967.3621.4b04.b6af.bfef1b7687b3')).toBe(false)
+  })
+
+  it('should reject underscores as separators', () => {
+    expect(isValidNotionId('a3802967_3621_4b04_b6af_bfef1b7687b3')).toBe(false)
+  })
+
+  it('should reject spaces as separators', () => {
+    expect(isValidNotionId('a3802967 3621 4b04 b6af bfef1b7687b3')).toBe(false)
+  })
 })
 
 describe('formatId', () => {
@@ -121,6 +156,18 @@ describe('formatId', () => {
 
   it('should format UUIDs with misplaced hyphens correctly', () => {
     expect(formatId('a3802967-3621-4b04-b6af-bfef-1b76-87b3')).toBe('a3802967-3621-4b04-b6af-bfef1b7687b3')
+  })
+
+  it('should return empty string unchanged', () => {
+    expect(formatId('')).toBe('')
+  })
+
+  it('should return string with only whitespace unchanged', () => {
+    expect(formatId('   ')).toBe('   ')
+  })
+
+  it('should return 32-character string with non-hex symbols unchanged', () => {
+    expect(formatId('a380296736214b04b6afbfef1b7687b!')).toBe('a380296736214b04b6afbfef1b7687b!')
   })
 })
 
@@ -178,9 +225,47 @@ describe('isValidBase64', () => {
     expect(isValidBase64('aGVsbG8=')).toBe(false)
     spy.mockRestore()
   })
+
   it('should reject string that exceeds maximum length', () => {
     // MAX_BASE64_LENGTH is 64MB. Let's create a string slightly larger.
     const largeStr = 'a'.repeat(64 * 1024 * 1024 + 4)
     expect(isValidBase64(largeStr)).toBe(false)
+  })
+
+  it('should reject URL-safe base64 characters', () => {
+    // Notion API expects standard base64 (+/), not URL-safe (-_)
+    expect(isValidBase64('aA-_')).toBe(false)
+  })
+
+  it('should reject non-string inputs', () => {
+    // @ts-expect-error
+    expect(isValidBase64(null)).toBe(false)
+    // @ts-expect-error
+    expect(isValidBase64(undefined)).toBe(false)
+    // @ts-expect-error
+    expect(isValidBase64(123)).toBe(false)
+    // @ts-expect-error
+    expect(isValidBase64({ key: 'value' })).toBe(false)
+    // @ts-expect-error
+    expect(isValidBase64(['a', 'b'])).toBe(false)
+  })
+
+  it('should reject strings with other special characters', () => {
+    expect(isValidBase64('aGVsbG8#')).toBe(false)
+    expect(isValidBase64('aGVsbG8@')).toBe(false)
+    expect(isValidBase64('aGVsbG8*')).toBe(false)
+  })
+
+  it('should reject padding characters in the middle', () => {
+    expect(isValidBase64('a=GVsbG8')).toBe(false)
+    expect(isValidBase64('aGV=sbG8')).toBe(false)
+  })
+
+  it('should accept diverse valid base64 strings', () => {
+    expect(isValidBase64('YWJj')).toBe(true) // 'abc'
+    expect(isValidBase64('YWJjZA==')).toBe(true) // 'abcd'
+    expect(isValidBase64('YWJjZGU=')).toBe(true) // 'abcde'
+    expect(isValidBase64('YWJjZGVm')).toBe(true) // 'abcdef'
+    expect(isValidBase64('U29tZSB0ZXh0IHdpdGggc3BlY2lhbCBjaGFycyAhQCMkJV4mKigp')).toBe(true)
   })
 })

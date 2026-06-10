@@ -2,10 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const startServerMock = vi.fn()
 
-vi.mock('./main.js', () => ({
-  startServer: startServerMock
-}))
-
+vi.mock('./main.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./main.js')>()
+  return {
+    ...actual,
+    startServer: startServerMock
+  }
+})
 describe('initServer', () => {
   const originalEnv = process.env
   const originalArgv = process.argv
@@ -48,5 +51,18 @@ describe('initServer', () => {
     const { initServer } = await import('./init-server.js')
     await initServer()
     expect(startServerMock).toHaveBeenCalledWith('stdio')
+  })
+
+  it('does not dispatch http for partial matches like --http-proxy', async () => {
+    process.argv = [process.argv[0], 'main.js', '--http-proxy']
+    const { initServer } = await import('./init-server.js')
+    await initServer()
+    expect(startServerMock).toHaveBeenCalledWith('stdio')
+  })
+
+  it('propagates errors from startServer', async () => {
+    startServerMock.mockRejectedValueOnce(new Error('Startup failed'))
+    const { initServer } = await import('./init-server.js')
+    await expect(initServer()).rejects.toThrow('Startup failed')
   })
 })

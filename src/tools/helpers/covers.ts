@@ -9,7 +9,7 @@ import { isSafeUrl } from './security.js'
 const NOTION_COVER_BASE = 'https://www.notion.so/images/page-cover'
 
 /** Complete catalog of Notion's built-in cover images */
-const COVER_CATALOG: Record<string, string> = {
+const COVER_CATALOG: Record<string, string> = Object.assign(Object.create(null), {
   // Solid colors
   solid_red: `${NOTION_COVER_BASE}/solid_red.png`,
   solid_yellow: `${NOTION_COVER_BASE}/solid_yellow.png`,
@@ -79,7 +79,7 @@ const COVER_CATALOG: Record<string, string> = {
   rijksmuseum_jansz_1637: `${NOTION_COVER_BASE}/rijksmuseum_jansz_1637.jpg`,
   rijksmuseum_jansz_1641: `${NOTION_COVER_BASE}/rijksmuseum_jansz_1641.jpg`,
   rijksmuseum_rembrandt_1642: `${NOTION_COVER_BASE}/rijksmuseum_rembrandt_1642.jpg`
-}
+})
 
 /**
  * Format a cover value into the Notion API cover object.

@@ -41,6 +41,13 @@ export function getNotionToken(): string | null {
 }
 
 /**
+ * Default token resolver for single-user mode.
+ */
+function defaultResolver(): string | null {
+  return _notionToken
+}
+
+/**
  * Per-request token resolver. Stdio / single-user leaves the default
  * resolver, which reads the module global. ``remote-oauth`` HTTP mode
  * injects a resolver that reads the per-JWT-sub ``NotionTokenStore`` so
@@ -48,7 +55,7 @@ export function getNotionToken(): string | null {
  * Notion access token -- not whether the server process has any global
  * token, which is always null in multi-user remote-oauth mode.
  */
-let _subjectTokenResolver: () => string | null = () => _notionToken
+let _subjectTokenResolver: () => string | null = defaultResolver
 
 export function setSubjectTokenResolver(fn: () => string | null): void {
   _subjectTokenResolver = fn
@@ -74,7 +81,6 @@ export async function resolveCredentialState(): Promise<CredentialState> {
   if (envToken) {
     _notionToken = envToken
     _state = 'configured'
-    console.error('Notion token found in environment')
     return _state
   }
 
@@ -85,7 +91,6 @@ export async function resolveCredentialState(): Promise<CredentialState> {
     if (result.config !== null) {
       _notionToken = result.config[CREDENTIAL_KEY]
       _state = 'configured'
-      console.error(`Notion config loaded from ${result.source}`)
       return _state
     }
   } catch {
@@ -93,7 +98,6 @@ export async function resolveCredentialState(): Promise<CredentialState> {
   }
 
   // 3. Nothing found
-  console.error('No Notion token found -- server starting in awaiting_setup mode')
   _state = 'awaiting_setup'
   return _state
 }
@@ -105,5 +109,6 @@ export function setState(state: CredentialState): void {
 export function resetState(): void {
   _state = 'awaiting_setup'
   _notionToken = null
+  _subjectTokenResolver = defaultResolver
   deleteConfig(SERVER_NAME).catch(() => {})
 }

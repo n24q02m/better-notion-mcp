@@ -49,7 +49,10 @@ describe('startHttp', () => {
     process.env = {
       ...originalEnv,
       NOTION_OAUTH_CLIENT_ID: 'id',
-      NOTION_OAUTH_CLIENT_SECRET: 'secret'
+      NOTION_OAUTH_CLIENT_SECRET: 'secret',
+      PORT: undefined,
+      HOST: undefined,
+      MCP_AUTH_DISABLE: undefined
     }
     // Prevent logs during tests
     vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -89,7 +92,91 @@ describe('startHttp', () => {
     onceSpy.mockRestore()
   })
 
-  it('verifies callbacks and factory', async () => {
+  it('handles shutdown via SIGTERM', async () => {
+    const closeMock = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(mcpCore.runHttpServer).mockResolvedValue({
+      host: 'localhost',
+      port: 3000,
+      close: closeMock
+    } as any)
+
+    const handlers: Record<string, (...args: any[]) => any> = {}
+    const onceSpy = vi.spyOn(process, 'once').mockImplementation((event, handler) => {
+      handlers[event as string] = handler as (...args: any[]) => any
+      return process
+    })
+
+    const startPromise = startHttp()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(handlers.SIGTERM).toBeDefined()
+    if (handlers.SIGTERM) await handlers.SIGTERM()
+    await startPromise
+    expect(closeMock).toHaveBeenCalled()
+    onceSpy.mockRestore()
+  })
+
+  it('uses PORT and HOST environment variables', async () => {
+    process.env.PORT = '8080'
+    process.env.HOST = '0.0.0.0'
+
+    vi.mocked(mcpCore.runHttpServer).mockResolvedValue({
+      host: '0.0.0.0',
+      port: 8080,
+      close: vi.fn().mockResolvedValue(undefined)
+    } as any)
+
+    const handlers: Record<string, (...args: any[]) => any> = {}
+    vi.spyOn(process, 'once').mockImplementation((event, handler) => {
+      handlers[event as string] = handler as (...args: any[]) => any
+      return process
+    })
+
+    const startPromise = startHttp()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(mcpCore.runHttpServer).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({
+        port: 8080,
+        host: '0.0.0.0'
+      })
+    )
+
+    if (handlers.SIGINT) await handlers.SIGINT()
+    await startPromise
+  })
+
+  it('uses MCP_AUTH_DISABLE environment variable', async () => {
+    process.env.MCP_AUTH_DISABLE = '1'
+
+    vi.mocked(mcpCore.runHttpServer).mockResolvedValue({
+      host: 'localhost',
+      port: 3000,
+      close: vi.fn().mockResolvedValue(undefined)
+    } as any)
+
+    const handlers: Record<string, (...args: any[]) => any> = {}
+    vi.spyOn(process, 'once').mockImplementation((event, handler) => {
+      handlers[event as string] = handler as (...args: any[]) => any
+      return process
+    })
+
+    const startPromise = startHttp()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(mcpCore.runHttpServer).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({
+        authDisabled: true
+      })
+    )
+
+    if (handlers.SIGINT) await handlers.SIGINT()
+    await startPromise
+  })
+
+  it('verifies callbacks and factory with edge cases', async () => {
     const closeMock = vi.fn().mockResolvedValue(undefined)
     vi.mocked(mcpCore.runHttpServer).mockImplementation(async (factory: any) => {
       factory() // Trigger the factory to call createMCPServer
@@ -136,21 +223,51 @@ describe('startHttp', () => {
     const onTokenReceived = options.delegatedOAuth?.onTokenReceived
     const authScope = options.authScope
 
-    // Test onTokenReceived
+    // Test onTokenReceived - success
     const sub = onTokenReceived!({ access_token: 'new-token', owner_user_id: 'user2' })
     expect(sub).toBe('user2')
     expect(mockTokenStoreInstance.save).toHaveBeenCalledWith('user2', 'new-token')
 
-    // Test authScope
+    // Test onTokenReceived - missing access_token (should not save)
+    mockTokenStoreInstance.save.mockClear()
+    const sub2 = onTokenReceived!({ owner_user_id: 'user3' })
+    expect(sub2).toBe('user3')
+    expect(mockTokenStoreInstance.save).not.toHaveBeenCalled()
+
+    // Test onTokenReceived - missing owner_user_id (should default to 'default')
+    const sub3 = onTokenReceived!({ access_token: 'token-3' })
+    expect(sub3).toBe('default')
+    expect(mockTokenStoreInstance.save).toHaveBeenCalledWith('default', 'token-3')
+
+    // Test authScope - normal
     const next = vi.fn().mockResolvedValue(undefined)
     await authScope!({ sub: 'user3' }, next)
     expect(next).toHaveBeenCalled()
 
+    // Test authScope - captured sub
     let capturedSub: string | undefined
     await authScope!({ sub: 'user4' }, async () => {
       capturedSub = subjectContext.getStore()?.sub
     })
     expect(capturedSub).toBe('user4')
+
+    // Test authScope - anonymous
+    await authScope!({ anonymous: true }, async () => {
+      capturedSub = subjectContext.getStore()?.sub
+    })
+    expect(capturedSub).toBe('default')
+
+    // Test authScope - invalid sub type
+    await authScope!({ sub: 123 }, async () => {
+      capturedSub = subjectContext.getStore()?.sub
+    })
+    expect(capturedSub).toBe('default')
+
+    // Test authScope - missing sub
+    await authScope!({}, async () => {
+      capturedSub = subjectContext.getStore()?.sub
+    })
+    expect(capturedSub).toBe('default')
 
     // 3. Verify setSubjectTokenResolver
     expect(credentialState.setSubjectTokenResolver).toHaveBeenCalled()
@@ -164,6 +281,12 @@ describe('startHttp', () => {
     await subjectContext.run({ sub: 'user-abc' }, () => {
       expect(resolver()).toBe('token-abc')
       expect(mockTokenStoreInstance.get).toHaveBeenCalledWith('user-abc')
+    })
+
+    // Test resolver with context but NO token in store
+    mockTokenStoreInstance.get.mockReturnValue(undefined)
+    await subjectContext.run({ sub: 'user-no-token' }, () => {
+      expect(resolver()).toBeNull()
     })
 
     if (handlers.SIGINT) await handlers.SIGINT()
