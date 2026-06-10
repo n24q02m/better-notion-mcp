@@ -939,6 +939,54 @@ describe('pages', () => {
     it('throws without page_id or page_ids', async () => {
       await expect(pages(mockNotion as any, { action: 'duplicate' })).rejects.toThrow('page_id or page_ids required')
     })
+    it("strips null values from block type data", async () => {
+      mockNotion.pages.retrieve.mockResolvedValue({
+        id: "orig-1",
+        parent: { type: "page_id", page_id: "parent-1" },
+        properties: {},
+        icon: null,
+        cover: null
+      })
+      mockNotion.blocks.children.list.mockResolvedValue({
+        results: [
+          {
+            id: "block-1",
+            type: "paragraph",
+            paragraph: {
+              rich_text: [],
+              color: "default",
+              children: null
+            }
+          }
+        ],
+        next_cursor: null,
+        has_more: false
+      })
+      mockNotion.pages.create.mockResolvedValue({
+        id: "dup-1",
+        url: "https://notion.so/dup-1"
+      })
+      mockNotion.blocks.children.append.mockResolvedValue({ results: [] })
+
+      await pages(mockNotion as any, { action: "duplicate", page_id: "orig-1" })
+
+      expect(mockNotion.blocks.children.append).toHaveBeenCalledWith(
+        expect.objectContaining({
+          children: [
+            expect.objectContaining({
+              type: "paragraph",
+              paragraph: {
+                rich_text: [],
+                color: "default"
+              }
+            })
+          ]
+        })
+      )
+      const appendCall = mockNotion.blocks.children.append.mock.calls[0][0]
+      expect(appendCall.children[0].paragraph).not.toHaveProperty("children")
+    })
+
   })
 
   // ---------------------------------------------------------------------------

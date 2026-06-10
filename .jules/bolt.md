@@ -20,3 +20,7 @@
 ## 2025-05-26 - Array.includes() vs Set.has() for O(1) Lookups
 **Learning:** Checking for membership in an array using `['a', 'b', ...].includes(value)` within hot paths requires an O(N) scan. This can become an issue when iterating or repeatedly checking values.
 **Action:** Replace `Array.includes()` with `Set.has()` by extracting the array into a module-level `Set`. This improves lookup times significantly to O(1).
+
+## 2026-06-10 - Optimized Object Sanitization in Nested Loops
+**Learning:** Using `Object.keys(obj)` inside a `.map()` callback that iterates over hundreds of blocks causes redundant key array allocations and garbage collection pressure. Additionally, using `for...of` on these keys is slower than a standard indexed `for` loop in V8.
+**Action:** Extract sanitization logic into a dedicated helper function (`stripNullValues`) that uses a module-level cached key extraction or an optimized indexed `for` loop to minimize allocation overhead on hot paths.
