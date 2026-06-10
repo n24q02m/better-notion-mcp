@@ -65,6 +65,12 @@ export function getTransportMode(env: NodeJS.ProcessEnv = process.env, argv: str
  * Dynamically imports and starts the server for the specified mode.
  */
 export async function startServer(mode: string): Promise<void> {
+  if (process.env.BETTER_NOTION_MCP_BOOTSTRAPPED) {
+    console.error('[better-notion-mcp] Startup aborted: server already running in this process tree.')
+    return
+  }
+  process.env.BETTER_NOTION_MCP_BOOTSTRAPPED = 'true'
+
   if (mode === 'http') {
     const { startHttp } = await import('./transports/http.js')
     await startHttp()
@@ -124,12 +130,6 @@ export const mode = getTransportMode()
  * Bootstrap function to start the server with error handling.
  */
 export async function bootstrap(selectedMode: string = mode) {
-  if (process.env.BETTER_NOTION_MCP_BOOTSTRAPPED) {
-    console.error('[better-notion-mcp] Bootstrap aborted: server already running in this process tree.')
-    return
-  }
-  process.env.BETTER_NOTION_MCP_BOOTSTRAPPED = 'true'
-
   try {
     await startServer(selectedMode)
   } catch (error) {
@@ -137,6 +137,7 @@ export async function bootstrap(selectedMode: string = mode) {
     process.exit(1)
   }
 }
+// Rebuild target: mcp-core 1.11.5 (P0 fork-bomb fix)
 
 // Only execute bootstrap if we're the main module and not in a test environment.
 if (isMain(import.meta.url) && process.env.NODE_ENV !== 'test') {
