@@ -48,6 +48,18 @@ describe('credential-state', () => {
     expect(getNotionToken()).toBeNull()
   })
 
+  describe('getNotionToken', () => {
+    it('returns null when not configured', () => {
+      expect(getNotionToken()).toBeNull()
+    })
+
+    it('returns the token when configured via env', async () => {
+      process.env.NOTION_TOKEN = 'test-token'
+      await resolveCredentialState()
+      expect(getNotionToken()).toBe('test-token')
+    })
+  })
+
   describe('resolveCredentialState', () => {
     it('configures when NOTION_TOKEN env var is present', async () => {
       process.env.NOTION_TOKEN = 'env-token'
@@ -87,20 +99,17 @@ describe('credential-state', () => {
       expect(deleteConfig).toHaveBeenCalledWith('better-notion-mcp')
     })
 
-    it('handles deleteConfig failure in resetState', () => {
+    it('handles deleteConfig failure in resetState', async () => {
       vi.mocked(deleteConfig).mockRejectedValue(new Error('delete failed') as never)
       resetState()
+      // Allow the unreturned promise catch block to execute
+      await new Promise((r) => setTimeout(r, 0))
       expect(getState()).toBe('awaiting_setup')
       expect(deleteConfig).toHaveBeenCalled()
     })
   })
 
   describe('subject token resolver', () => {
-    beforeEach(() => {
-      // Reset to default (module-global single-user fallback)
-      setSubjectTokenResolver(() => getNotionToken())
-    })
-
     it('defaults to single-user module global when no resolver injected', () => {
       setState('awaiting_setup')
       expect(getSubjectToken()).toBeNull()
@@ -119,6 +128,13 @@ describe('credential-state', () => {
       currentSub = 'bob'
       expect(getSubjectToken()).toBe(storeByBob)
       currentSub = 'unknown'
+      expect(getSubjectToken()).toBeNull()
+    })
+
+    it('restores default resolver on resetState', () => {
+      setSubjectTokenResolver(() => 'forced-token')
+      expect(getSubjectToken()).toBe('forced-token')
+      resetState()
       expect(getSubjectToken()).toBeNull()
     })
   })
