@@ -84,6 +84,34 @@ describe('isValidNotionId', () => {
   it('should accept mixed hyphenation', () => {
     expect(isValidNotionId('a38029673621-4b04-b6afbfef1b7687b3')).toBe(true)
   })
+
+  it('should accept single hyphen at the first slot', () => {
+    expect(isValidNotionId('a3802967-36214b04b6afbfef1b7687b3')).toBe(true)
+  })
+
+  it('should accept single hyphen at the second slot', () => {
+    expect(isValidNotionId('a38029673621-4b04b6afbfef1b7687b3')).toBe(true)
+  })
+
+  it('should accept single hyphen at the third slot', () => {
+    expect(isValidNotionId('a380296736214b04-b6afbfef1b7687b3')).toBe(true)
+  })
+
+  it('should accept single hyphen at the fourth slot', () => {
+    expect(isValidNotionId('a380296736214b04b6af-bfef1b7687b3')).toBe(true)
+  })
+
+  it('should reject dots as separators', () => {
+    expect(isValidNotionId('a3802967.3621.4b04.b6af.bfef1b7687b3')).toBe(false)
+  })
+
+  it('should reject underscores as separators', () => {
+    expect(isValidNotionId('a3802967_3621_4b04_b6af_bfef1b7687b3')).toBe(false)
+  })
+
+  it('should reject spaces as separators', () => {
+    expect(isValidNotionId('a3802967 3621 4b04 b6af bfef1b7687b3')).toBe(false)
+  })
 })
 
 describe('formatId', () => {
