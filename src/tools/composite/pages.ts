@@ -5,7 +5,7 @@
 
 import type { Client, PageObjectResponse } from '@notionhq/client'
 import { formatCover } from '../helpers/covers.js'
-import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
+import { NotionMCPError, retryWithBackoff, withErrorHandling } from '../helpers/errors.js'
 import { formatIcon } from '../helpers/icons.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate, populateDeepChildren, processBatches } from '../helpers/pagination.js'
@@ -386,9 +386,9 @@ async function updatePage(notion: Client, input: PagesInput): Promise<UpdatePage
           await processBatches(
             existingBlocks,
             async (block) => {
-              await notion.blocks.delete({ block_id: block.id })
+              await retryWithBackoff(() => notion.blocks.delete({ block_id: block.id }))
             },
-            { batchSize: 1, concurrency: 5 }
+            { batchSize: 5, concurrency: 3 }
           )
         }
       }
@@ -466,13 +466,15 @@ async function archivePage(notion: Client, input: PagesInput): Promise<ArchivePa
   const results = await processBatches(
     pageIds,
     async (pageId) => {
-      await notion.pages.update({
-        page_id: pageId,
-        archived
-      })
+      await retryWithBackoff(() =>
+        notion.pages.update({
+          page_id: pageId,
+          archived
+        })
+      )
       return { page_id: pageId, archived }
     },
-    { batchSize: 1, concurrency: 5 }
+    { batchSize: 5, concurrency: 3 }
   )
 
   return {
@@ -500,7 +502,7 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
       // Get original page and content in parallel
 
       const [originalPage, originalBlocks] = await Promise.all([
-        notion.pages.retrieve({ page_id: pageId }) as Promise<any>,
+        retryWithBackoff(() => notion.pages.retrieve({ page_id: pageId }) as Promise<any>),
 
         autoPaginate((cursor) =>
           notion.blocks.children.list({
@@ -528,12 +530,14 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
       }
 
       // Create duplicate
-      const duplicatedPage: any = await notion.pages.create({
-        parent,
-        properties: originalPage.properties,
-        icon: originalPage.icon,
-        cover: originalPage.cover
-      })
+      const duplicatedPage: any = await retryWithBackoff(() =>
+        notion.pages.create({
+          parent,
+          properties: originalPage.properties,
+          icon: originalPage.icon,
+          cover: originalPage.cover
+        })
+      )
 
       // Copy content — strip read-only fields that the create endpoint rejects
       if (originalBlocks.length > 0) {
@@ -564,10 +568,12 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
           }
           return rest
         })
-        await notion.blocks.children.append({
-          block_id: duplicatedPage.id,
-          children: sanitizedBlocks as any
-        })
+        await retryWithBackoff(() =>
+          notion.blocks.children.append({
+            block_id: duplicatedPage.id,
+            children: sanitizedBlocks as any
+          })
+        )
       }
 
       return {
