@@ -87,25 +87,18 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) with automat
 
 ### Types
 
+Only `feat` and `fix` are accepted (enforced by the commit-message hook):
+
 - `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation changes
-- `style`: Code style changes (formatting, no logic change)
-- `refactor`: Code refactoring
-- `perf`: Performance improvements
-- `test`: Adding or updating tests
-- `chore`: Maintenance tasks, dependencies
-- `ci`: CI/CD changes
-- `build`: Build system changes
+- `fix`: Bug fix (also used for docs, tests, chores, and other maintenance changes)
 
 ### Examples
 
 ```text
 feat: add bulk delete operation for pages
 fix: handle pagination errors gracefully
-docs: update API examples in README
-test: add integration tests for databases tool
-chore: upgrade dependencies
+fix: update API examples in README
+fix: add integration tests for databases tool
 ```
 
 **Note**: Commit messages are validated automatically via git hooks when you commit.
@@ -120,8 +113,7 @@ It is mandatory to use correct commit types so the release system knows how to b
 
 - **fix**: Patches a bug (PATCH version bump, e.g., 1.0.0 -> 1.0.1)
 - **feat**: Introduces a new feature (MINOR version bump, e.g., 1.0.0 -> 1.1.0)
-- **feat!** or **fix!** (or generic **BREAKING CHANGE** in footer): Introduces a breaking change (MAJOR version bump, e.g., 1.0.0 -> 2.0.0)
-- **chore**, **docs**, **style**, **refactor**, **test**: No version bump (usually)
+- **BREAKING CHANGE** in the commit footer: Introduces a breaking change (MAJOR version bump, e.g., 1.0.0 -> 2.0.0)
 
 ### How to Release
 

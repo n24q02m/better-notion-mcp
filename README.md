@@ -2,7 +2,7 @@
 
 mcp-name: io.github.n24q02m/better-notion-mcp
 
-**Markdown-first Notion API server for AI agents -- 10 composite tools replacing 28+ endpoint calls**
+**Markdown-first Notion API server for AI agents -- 11 composite tools replacing 28+ endpoint calls**
 
 <!-- Badge Row 1: Status -->
 [![CI](https://github.com/n24q02m/better-notion-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/n24q02m/better-notion-mcp/actions/workflows/ci.yml)
@@ -27,7 +27,7 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 | [better-code-review-graph](https://github.com/n24q02m/better-code-review-graph) | Knowledge graph for token-efficient code reviews -- fixed search, configurabl... | MCP |
 | [better-email-mcp](https://github.com/n24q02m/better-email-mcp) | IMAP/SMTP email server for AI agents -- 6 composite tools with multi-account ... | MCP |
 | [better-godot-mcp](https://github.com/n24q02m/better-godot-mcp) | Composite MCP server for Godot Engine -- 17 mega-tools for AI-assisted game d... | MCP |
-| [better-notion-mcp](https://github.com/n24q02m/better-notion-mcp) | Markdown-first Notion API server for AI agents -- 10 composite tools replacin... | MCP |
+| [better-notion-mcp](https://github.com/n24q02m/better-notion-mcp) | Markdown-first Notion API server for AI agents -- 11 composite tools replacin... | MCP |
 | [better-telegram-mcp](https://github.com/n24q02m/better-telegram-mcp) | MCP server for Telegram with dual-mode support: Bot API (httpx) for quick bot... | MCP |
 | [claude-plugins](https://github.com/n24q02m/claude-plugins) | Full documentation: mcp.n24q02m.com — unified docs for all 8 servers + the mc... | Marketplace |
 | [imagine-mcp](https://github.com/n24q02m/imagine-mcp) | Production-grade MCP server for image and video understanding + generation ac... | MCP |
@@ -63,7 +63,7 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 ## Features
 
 - **Markdown in, Markdown out** -- human-readable content instead of raw JSON blocks
-- **10 composite tools** with 44 actions -- one call instead of chaining 2+ atomic endpoints
+- **11 composite tools** with 44 actions -- one call instead of chaining 2+ atomic endpoints
 - **Auto-pagination and bulk operations** -- no manual cursor handling or looping
 - **Tiered token optimization** -- ~77% reduction via compressed descriptions + on-demand `help` tool
 - **Dual transport** -- local stdio (token) or remote HTTP (OAuth 2.1, no token needed)
@@ -112,7 +112,8 @@ Full docs at **[mcp.n24q02m.com/servers/better-notion-mcp/](https://mcp.n24q02m.
 | `comments` | `list`, `get`, `create` | Page and block comments |
 | `content_convert` | `markdown-to-blocks`, `blocks-to-markdown` | Convert between Markdown and Notion blocks |
 | `file_uploads` | `create`, `send`, `complete`, `retrieve`, `list` | Upload files to Notion |
-| `setup` | `status`, `start`, `reset`, `complete` | Credential setup via browser relay, status check, reset, re-resolve |
+| `config` | `status`, `setup_start`, `setup_reset`, `setup_complete`, `set`, `cache_clear` | Manage server configuration and credential state via browser relay |
+| `config__open_relay` | - | Open the relay configuration form in the browser and return the relay URL + credential state |
 | `help` | - | Get full documentation for any tool |
 
 ### MCP Resources
@@ -178,7 +179,7 @@ bun run dev
 
 ## Trust Model
 
-This plugin implements **TC-NearZK** (in-memory, ephemeral). See [mcp-core/docs/TRUST-MODEL.md](https://github.com/n24q02m/mcp-core/blob/main/docs/TRUST-MODEL.md) for full classification.
+This plugin implements **TC-NearZK** (in-memory, ephemeral). See [the trust model reference](https://mcp.n24q02m.com/servers/mcp-core/trust-model/) for full classification.
 
 | Mode | Storage | Encryption | Who can read your data? |
 |---|---|---|---|
