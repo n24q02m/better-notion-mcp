@@ -49,6 +49,7 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 - [Documentation](#documentation)
 - [Tools](#tools)
 - [Configuration](#configuration)
+- [Comparison](#comparison)
 - [Security](#security)
 - [Build from Source](#build-from-source)
 - [Trust Model](#trust-model)
@@ -160,6 +161,20 @@ docker run -p 8080:8080 \
   -e NOTION_OAUTH_CLIENT_SECRET=your-client-secret \
   n24q02m/better-notion-mcp:latest
 ```
+
+## Comparison
+
+How better-notion-mcp stacks up against direct competitors in each pillar:
+
+| Capability | better-notion-mcp | makenotion/notion-mcp-server | suekou/mcp-notion-server | awkoy/notion-mcp-server |
+|---|---|---|---|---|
+| Markdown in / out | Yes (round-trip on pages + blocks) | No (raw Notion JSON) | partial (experimental, append + opt-in convert) | Yes (round-trip + GFM) |
+| Composite tool design | Yes (11 tools, 44 actions) | No (22 endpoint-mapped tools) | partial (simplified + raw JSON tools) | Yes (2 dispatch tools, 35+ ops) |
+| File uploads to Notion | Yes (`file_uploads`, single + multi-part) | No | No | Yes (`upload_file`, single + multi-part) |
+| Comments | Yes (`comments`: list/get/create) | Yes | Yes | Yes |
+| Remote HTTP + OAuth 2.1 transport | Yes (per-JWT-sub multi-user) | partial (HTTP + bearer token, no OAuth) | No (stdio token only) | No (stdio token only) |
+| Self-hostable | Yes (Docker, own OAuth app) | Yes | Yes | Yes |
+| License | MIT | ? | MIT | MIT |
 
 ## Security
 
