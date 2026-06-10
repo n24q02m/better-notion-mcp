@@ -182,6 +182,24 @@ describe('convertToNotionProperties', () => {
       })
     })
 
+    it('preserves pre-formatted relation objects within a relation array', () => {
+      const result = convertToNotionProperties({ Projects: ['abc123', { id: 'def456' }] }, { Projects: 'relation' })
+      expect(result).toEqual({
+        Projects: {
+          relation: [{ id: 'abc123' }, { id: 'def456' }]
+        }
+      })
+    })
+
+    it('handles mixed string and non-string elements in a relation array (should not crash)', () => {
+      const result = convertToNotionProperties({ Projects: ['abc123', 456, null] }, { Projects: 'relation' })
+      expect(result).toEqual({
+        Projects: {
+          relation: [{ id: 'abc123' }, { id: '456' }, { id: 'null' }]
+        }
+      })
+    })
+
     it('passes array of objects through as-is', () => {
       const relations = [{ id: 'abc-123' }, { id: 'def-456' }]
       const result = convertToNotionProperties({ Related: relations })
@@ -212,6 +230,12 @@ describe('convertToNotionProperties', () => {
         expect(result).toEqual({
           Mixed: mixed
         })
+      })
+
+      it('passes through non-string non-array values within an array if not a relation schema', () => {
+        const mixed = [true, { complex: true }]
+        const result = convertToNotionProperties({ Items: mixed })
+        expect(result).toEqual({ Items: mixed })
       })
     })
   })
@@ -355,7 +379,7 @@ describe('convertToNotionProperties', () => {
     })
   })
 
-  it('passes through unsupported types as-is (e.g. BigInt) (coverage for line 114)', () => {
+  it('passes through unsupported types as-is (e.g. BigInt) (coverage for line 117)', () => {
     const bigIntValue = BigInt(9007199254740991)
     const result = convertToNotionProperties({ BigField: bigIntValue })
     expect(result).toEqual({ BigField: bigIntValue })
