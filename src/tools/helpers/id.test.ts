@@ -179,8 +179,8 @@ describe('isValidBase64', () => {
     spy.mockRestore()
   })
   it('should reject string that exceeds maximum length', () => {
-    // MAX_BASE64_LENGTH is 64MB. Let's create a string slightly larger.
-    const largeStr = 'a'.repeat(64 * 1024 * 1024 + 4)
+    // MAX_BASE64_LENGTH is 20MB. Let's create a string slightly larger.
+    const largeStr = 'a'.repeat(20 * 1024 * 1024 + 4)
     expect(isValidBase64(largeStr)).toBe(false)
   })
 })
