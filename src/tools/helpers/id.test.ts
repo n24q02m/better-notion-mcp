@@ -178,9 +178,47 @@ describe('isValidBase64', () => {
     expect(isValidBase64('aGVsbG8=')).toBe(false)
     spy.mockRestore()
   })
+
   it('should reject string that exceeds maximum length', () => {
     // MAX_BASE64_LENGTH is 64MB. Let's create a string slightly larger.
     const largeStr = 'a'.repeat(64 * 1024 * 1024 + 4)
     expect(isValidBase64(largeStr)).toBe(false)
+  })
+
+  it('should reject URL-safe base64 characters', () => {
+    // Notion API expects standard base64 (+/), not URL-safe (-_)
+    expect(isValidBase64('aA-_')).toBe(false)
+  })
+
+  it('should reject non-string inputs', () => {
+    // @ts-expect-error
+    expect(isValidBase64(null)).toBe(false)
+    // @ts-expect-error
+    expect(isValidBase64(undefined)).toBe(false)
+    // @ts-expect-error
+    expect(isValidBase64(123)).toBe(false)
+    // @ts-expect-error
+    expect(isValidBase64({ key: 'value' })).toBe(false)
+    // @ts-expect-error
+    expect(isValidBase64(['a', 'b'])).toBe(false)
+  })
+
+  it('should reject strings with other special characters', () => {
+    expect(isValidBase64('aGVsbG8#')).toBe(false)
+    expect(isValidBase64('aGVsbG8@')).toBe(false)
+    expect(isValidBase64('aGVsbG8*')).toBe(false)
+  })
+
+  it('should reject padding characters in the middle', () => {
+    expect(isValidBase64('a=GVsbG8')).toBe(false)
+    expect(isValidBase64('aGV=sbG8')).toBe(false)
+  })
+
+  it('should accept diverse valid base64 strings', () => {
+    expect(isValidBase64('YWJj')).toBe(true) // 'abc'
+    expect(isValidBase64('YWJjZA==')).toBe(true) // 'abcd'
+    expect(isValidBase64('YWJjZGU=')).toBe(true) // 'abcde'
+    expect(isValidBase64('YWJjZGVm')).toBe(true) // 'abcdef'
+    expect(isValidBase64('U29tZSB0ZXh0IHdpdGggc3BlY2lhbCBjaGFycyAhQCMkJV4mKigp')).toBe(true)
   })
 })

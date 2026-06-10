@@ -178,6 +178,16 @@ describe('fileUploads', () => {
         'file_content is required'
       )
     })
+
+    it('should throw with invalid base64 content', async () => {
+      await expect(
+        fileUploads(mockNotion as any, {
+          action: 'send',
+          file_upload_id: 'upload-123',
+          file_content: 'invalid-base64!'
+        })
+      ).rejects.toThrow('file_content is not valid base64 encoding')
+    })
   })
 
   describe('complete', () => {
