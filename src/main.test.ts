@@ -34,7 +34,7 @@ vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => {
 })
 
 vi.mock('@notionhq/client', () => ({
-  Client: vi.fn().mockImplementation(function() { return {}; })
+  Client: vi.fn().mockImplementation(class {} as any)
 }))
 
 vi.mock('./tools/registry.js', () => ({
