@@ -85,12 +85,16 @@ class MarkdownParser {
       i = this.parseBlock(i)
     }
 
-    // Flush remaining list
+    this.flushList()
+    return this.blocks
+  }
+
+  private flushList(): void {
     if (this.currentList.length > 0) {
       this.blocks.push(...this.currentList)
+      this.currentList = []
+      this.currentListType = null
     }
-
-    return this.blocks
   }
 
   private parseBlock(i: number): number {
@@ -98,9 +102,7 @@ class MarkdownParser {
 
     // Flush list if we're not in a list anymore
     if (this.currentListType && !isListItem(line)) {
-      this.blocks.push(...this.currentList)
-      this.currentList = []
-      this.currentListType = null
+      this.flushList()
     }
 
     // Cache trimmed line for performance to avoid repeated string allocations
@@ -111,33 +113,141 @@ class MarkdownParser {
       return i
     }
 
-    // Table of Contents [toc]
-    if (trimmedLine === '[toc]' || trimmedLine === '[TOC]') {
-      this.blocks.push(createTableOfContents())
-      return i
-    }
-
-    // Breadcrumb [breadcrumb]
-    if (trimmedLine === '[breadcrumb]' || trimmedLine === '[BREADCRUMB]') {
-      this.blocks.push(createBreadcrumb())
-      return i
-    }
-
-    // Equation block $...$
-    if (trimmedLine.startsWith('$$')) {
-      const eqData = parseEquationBlock(this.lines, i, trimmedLine)
-      this.blocks.push(eqData.block)
-      return eqData.endIndex
+    // Special blocks (TOC, Breadcrumb, Equation)
+    const specialBlockResult = this.parseSpecialBlocks(i, trimmedLine)
+    if (specialBlockResult !== null) {
+      return specialBlockResult
     }
 
     // Callout > [!TYPE] content or > [!TYPE]\n> content
-    const calloutMatch = line.match(CALLOUT_REGEX)
-    if (calloutMatch) {
-      const calloutData = parseCalloutBlock(this.lines, i, calloutMatch)
-      this.blocks.push(calloutData.block)
-      return calloutData.endIndex
+    const calloutResult = this.parseCallout(i, line)
+    if (calloutResult !== null) {
+      return calloutResult
     }
 
+    // Media blocks (Image, Bookmark, Embed)
+    const mediaResult = this.parseMedia(i, line)
+    if (mediaResult !== null) {
+      return mediaResult
+    }
+
+    // Structural blocks (Toggle, Columns, Table)
+    const structureResult = this.parseStructuralBlocks(i, line, trimmedLine)
+    if (structureResult !== null) {
+      return structureResult
+    }
+
+    // Basic elements (Heading, Code, Quote, Divider)
+    const basicResult = this.parseBasicBlocks(i, line)
+    if (basicResult !== null) {
+      return basicResult
+    }
+
+    // List elements (Todo, Bulleted, Numbered)
+    const listResult = this.parseListBlocks(i, line)
+    if (listResult !== null) {
+      return listResult
+    }
+
+    // Regular paragraph
+    this.blocks.push(createParagraph(line))
+    return i
+  }
+
+  private parseListBlocks(i: number, line: string): number | null {
+    // Task list / Checkbox list - [ ] or - [x]
+    if (CHECKED_LIST_REGEX.test(line)) {
+      const match = line.match(CHECKED_LIST_REGEX)
+      const checked = match ? match[1].toLowerCase() === 'x' : false
+      const text = line.replace(CHECKED_LIST_REGEX, '')
+      this.currentListType = 'bulleted'
+      this.currentList.push(createTodoItem(text, checked))
+      return i
+    }
+
+    // Bulleted list
+    if (BULLETED_LIST_REGEX.test(line)) {
+      const text = line.replace(BULLETED_LIST_REGEX, '')
+      this.currentListType = 'bulleted'
+      this.currentList.push(createBulletedListItem(text))
+      return i
+    }
+
+    // Numbered list
+    if (NUMBERED_LIST_REGEX.test(line)) {
+      const text = line.replace(NUMBERED_LIST_REGEX, '')
+      this.currentListType = 'numbered'
+      this.currentList.push(createNumberedListItem(text))
+      return i
+    }
+
+    return null
+  }
+
+  private parseBasicBlocks(i: number, line: string): number | null {
+    // Heading
+    if (line.startsWith('# ')) {
+      this.blocks.push(createHeading(1, line.slice(2)))
+      return i
+    }
+    if (line.startsWith('## ')) {
+      this.blocks.push(createHeading(2, line.slice(3)))
+      return i
+    }
+    if (line.startsWith('### ')) {
+      this.blocks.push(createHeading(3, line.slice(4)))
+      return i
+    }
+
+    // Code block
+    if (line.startsWith('```')) {
+      const codeData = parseCodeBlock(this.lines, i, line)
+      this.blocks.push(codeData.block)
+      return codeData.endIndex
+    }
+
+    // Quote
+    if (line.startsWith('> ')) {
+      this.blocks.push(createQuote(line.slice(2)))
+      return i
+    }
+
+    // Divider
+    if (DIVIDER_REGEX.test(line)) {
+      this.blocks.push(createDivider())
+      return i
+    }
+
+    return null
+  }
+
+  private parseStructuralBlocks(i: number, line: string, trimmedLine: string): number | null {
+    // Toggle <details><summary>Title</summary>
+    if (trimmedLine === '<details>' || trimmedLine.startsWith('<details>')) {
+      const toggleData = parseToggle(this.lines, i)
+      this.blocks.push(createToggle(toggleData.title, toggleData.children))
+      return toggleData.endIndex
+    }
+
+    // Column layout :::columns
+    if (trimmedLine === ':::columns') {
+      const columnData = parseColumns(this.lines, i)
+      this.blocks.push(createColumnList(columnData.columns, columnData.widthRatios))
+      return columnData.endIndex
+    }
+
+    // Table (pipe-delimited)
+    if (line.includes('|') && trimmedLine.startsWith('|')) {
+      const tableData = parseTable(this.lines, i)
+      if (tableData) {
+        this.blocks.push(createTable(tableData.headers, tableData.rows, tableData.hasHeader))
+        return tableData.endIndex
+      }
+    }
+    return null
+  }
+
+  private parseMedia(i: number, line: string): number | null {
     // Image ![alt](url)
     const imageMatch = line.match(IMAGE_REGEX)
     if (imageMatch) {
@@ -166,80 +276,40 @@ class MarkdownParser {
       }
       return i
     }
+    return null
+  }
 
-    // Toggle <details><summary>Title</summary>
-    if (trimmedLine === '<details>' || trimmedLine.startsWith('<details>')) {
-      const toggleData = parseToggle(this.lines, i)
-      this.blocks.push(createToggle(toggleData.title, toggleData.children))
-      return toggleData.endIndex
+  private parseCallout(i: number, line: string): number | null {
+    const calloutMatch = line.match(CALLOUT_REGEX)
+    if (calloutMatch) {
+      const calloutData = parseCalloutBlock(this.lines, i, calloutMatch)
+      this.blocks.push(calloutData.block)
+      return calloutData.endIndex
     }
+    return null
+  }
 
-    // Column layout :::columns
-    if (trimmedLine === ':::columns') {
-      const columnData = parseColumns(this.lines, i)
-      this.blocks.push(createColumnList(columnData.columns, columnData.widthRatios))
-      return columnData.endIndex
-    }
-
-    // Table (pipe-delimited)
-    if (line.includes('|') && trimmedLine.startsWith('|')) {
-      const tableData = parseTable(this.lines, i)
-      if (tableData) {
-        this.blocks.push(createTable(tableData.headers, tableData.rows, tableData.hasHeader))
-        return tableData.endIndex
-      }
+  private parseSpecialBlocks(i: number, trimmedLine: string): number | null {
+    // Table of Contents [toc]
+    if (trimmedLine === '[toc]' || trimmedLine === '[TOC]') {
+      this.blocks.push(createTableOfContents())
+      return i
     }
 
-    // Heading
-    if (line.startsWith('# ')) {
-      this.blocks.push(createHeading(1, line.slice(2)))
-    } else if (line.startsWith('## ')) {
-      this.blocks.push(createHeading(2, line.slice(3)))
-    } else if (line.startsWith('### ')) {
-      this.blocks.push(createHeading(3, line.slice(4)))
+    // Breadcrumb [breadcrumb]
+    if (trimmedLine === '[breadcrumb]' || trimmedLine === '[BREADCRUMB]') {
+      this.blocks.push(createBreadcrumb())
+      return i
     }
 
-    // Code block
-    else if (line.startsWith('```')) {
-      const codeData = parseCodeBlock(this.lines, i, line)
-      this.blocks.push(codeData.block)
-      return codeData.endIndex
+    // Equation block $...$
+    if (trimmedLine.startsWith('$$')) {
+      const eqData = parseEquationBlock(this.lines, i, trimmedLine)
+      this.blocks.push(eqData.block)
+      return eqData.endIndex
     }
 
-    // Task list / Checkbox list - [ ] or - [x]
-    else if (CHECKED_LIST_REGEX.test(line)) {
-      const match = line.match(CHECKED_LIST_REGEX)
-      const checked = match ? match[1].toLowerCase() === 'x' : false
-      const text = line.replace(CHECKED_LIST_REGEX, '')
-      this.currentListType = 'bulleted'
-      this.currentList.push(createTodoItem(text, checked))
-    }
-    // Bulleted list
-    else if (BULLETED_LIST_REGEX.test(line)) {
-      const text = line.replace(BULLETED_LIST_REGEX, '')
-      this.currentListType = 'bulleted'
-      this.currentList.push(createBulletedListItem(text))
-    }
-    // Numbered list
-    else if (NUMBERED_LIST_REGEX.test(line)) {
-      const text = line.replace(NUMBERED_LIST_REGEX, '')
-      this.currentListType = 'numbered'
-      this.currentList.push(createNumberedListItem(text))
-    }
-    // Quote
-    else if (line.startsWith('> ')) {
-      this.blocks.push(createQuote(line.slice(2)))
-    }
-    // Divider
-    else if (DIVIDER_REGEX.test(line)) {
-      this.blocks.push(createDivider())
-    }
-    // Regular paragraph
-    else {
-      this.blocks.push(createParagraph(line))
-    }
-
-    return i
+    return null
   }
 }
 

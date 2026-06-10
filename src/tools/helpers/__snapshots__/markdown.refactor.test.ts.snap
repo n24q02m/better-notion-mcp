@@ -1,0 +1,639 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`MarkdownParser refactor parity > should handle TOC and Breadcrumb identically 1`] = `
+[
+  {
+    "object": "block",
+    "table_of_contents": {
+      "color": "default",
+    },
+    "type": "table_of_contents",
+  },
+  {
+    "breadcrumb": {},
+    "object": "block",
+    "type": "breadcrumb",
+  },
+]
+`;
+
+exports[`MarkdownParser refactor parity > should handle callouts identically 1`] = `
+[
+  {
+    "callout": {
+      "color": "blue_background",
+      "icon": {
+        "emoji": "ℹ️",
+        "type": "emoji",
+      },
+      "rich_text": [
+        {
+          "annotations": {
+            "bold": false,
+            "code": false,
+            "color": "default",
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+          },
+          "text": {
+            "content": "note content
+more content",
+            "link": null,
+          },
+          "type": "text",
+        },
+      ],
+    },
+    "object": "block",
+    "type": "callout",
+  },
+]
+`;
+
+exports[`MarkdownParser refactor parity > should handle code blocks identically 1`] = `
+[
+  {
+    "code": {
+      "language": "typescript",
+      "rich_text": [
+        {
+          "annotations": {
+            "bold": false,
+            "code": false,
+            "color": "default",
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+          },
+          "text": {
+            "content": "const x = 1;",
+            "link": null,
+          },
+          "type": "text",
+        },
+      ],
+    },
+    "object": "block",
+    "type": "code",
+  },
+]
+`;
+
+exports[`MarkdownParser refactor parity > should handle columns identically 1`] = `
+[
+  {
+    "column_list": {
+      "children": [
+        {
+          "column": {
+            "children": [
+              {
+                "object": "block",
+                "paragraph": {
+                  "color": "default",
+                  "rich_text": [
+                    {
+                      "annotations": {
+                        "bold": false,
+                        "code": false,
+                        "color": "default",
+                        "italic": false,
+                        "strikethrough": false,
+                        "underline": false,
+                      },
+                      "text": {
+                        "content": "col 1",
+                        "link": null,
+                      },
+                      "type": "text",
+                    },
+                  ],
+                },
+                "type": "paragraph",
+              },
+            ],
+          },
+          "object": "block",
+          "type": "column",
+        },
+        {
+          "column": {
+            "children": [
+              {
+                "object": "block",
+                "paragraph": {
+                  "color": "default",
+                  "rich_text": [
+                    {
+                      "annotations": {
+                        "bold": false,
+                        "code": false,
+                        "color": "default",
+                        "italic": false,
+                        "strikethrough": false,
+                        "underline": false,
+                      },
+                      "text": {
+                        "content": "col 2",
+                        "link": null,
+                      },
+                      "type": "text",
+                    },
+                  ],
+                },
+                "type": "paragraph",
+              },
+            ],
+          },
+          "object": "block",
+          "type": "column",
+        },
+      ],
+    },
+    "object": "block",
+    "type": "column_list",
+  },
+]
+`;
+
+exports[`MarkdownParser refactor parity > should handle equations identically 1`] = `
+[
+  {
+    "equation": {
+      "expression": "x^2",
+    },
+    "object": "block",
+    "type": "equation",
+  },
+]
+`;
+
+exports[`MarkdownParser refactor parity > should handle headers identically 1`] = `
+[
+  {
+    "heading_1": {
+      "color": "default",
+      "rich_text": [
+        {
+          "annotations": {
+            "bold": false,
+            "code": false,
+            "color": "default",
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+          },
+          "text": {
+            "content": "H1",
+            "link": null,
+          },
+          "type": "text",
+        },
+      ],
+    },
+    "object": "block",
+    "type": "heading_1",
+  },
+  {
+    "heading_2": {
+      "color": "default",
+      "rich_text": [
+        {
+          "annotations": {
+            "bold": false,
+            "code": false,
+            "color": "default",
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+          },
+          "text": {
+            "content": "H2",
+            "link": null,
+          },
+          "type": "text",
+        },
+      ],
+    },
+    "object": "block",
+    "type": "heading_2",
+  },
+  {
+    "heading_3": {
+      "color": "default",
+      "rich_text": [
+        {
+          "annotations": {
+            "bold": false,
+            "code": false,
+            "color": "default",
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+          },
+          "text": {
+            "content": "H3",
+            "link": null,
+          },
+          "type": "text",
+        },
+      ],
+    },
+    "object": "block",
+    "type": "heading_3",
+  },
+]
+`;
+
+exports[`MarkdownParser refactor parity > should handle images and links identically 1`] = `
+[
+  {
+    "image": {
+      "caption": [
+        {
+          "annotations": {
+            "bold": false,
+            "code": false,
+            "color": "default",
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+          },
+          "text": {
+            "content": "alt",
+            "link": null,
+          },
+          "type": "text",
+        },
+      ],
+      "external": {
+        "url": "https://example.com/img.png",
+      },
+      "type": "external",
+    },
+    "object": "block",
+    "type": "image",
+  },
+  {
+    "bookmark": {
+      "caption": [],
+      "url": "https://example.com",
+    },
+    "object": "block",
+    "type": "bookmark",
+  },
+  {
+    "embed": {
+      "url": "https://example.com",
+    },
+    "object": "block",
+    "type": "embed",
+  },
+]
+`;
+
+exports[`MarkdownParser refactor parity > should handle lists identically 1`] = `
+[
+  {
+    "bulleted_list_item": {
+      "color": "default",
+      "rich_text": [
+        {
+          "annotations": {
+            "bold": false,
+            "code": false,
+            "color": "default",
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+          },
+          "text": {
+            "content": "item 1",
+            "link": null,
+          },
+          "type": "text",
+        },
+      ],
+    },
+    "object": "block",
+    "type": "bulleted_list_item",
+  },
+  {
+    "bulleted_list_item": {
+      "color": "default",
+      "rich_text": [
+        {
+          "annotations": {
+            "bold": false,
+            "code": false,
+            "color": "default",
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+          },
+          "text": {
+            "content": "item 2",
+            "link": null,
+          },
+          "type": "text",
+        },
+      ],
+    },
+    "object": "block",
+    "type": "bulleted_list_item",
+  },
+  {
+    "numbered_list_item": {
+      "color": "default",
+      "rich_text": [
+        {
+          "annotations": {
+            "bold": false,
+            "code": false,
+            "color": "default",
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+          },
+          "text": {
+            "content": "numbered 1",
+            "link": null,
+          },
+          "type": "text",
+        },
+      ],
+    },
+    "object": "block",
+    "type": "numbered_list_item",
+  },
+  {
+    "numbered_list_item": {
+      "color": "default",
+      "rich_text": [
+        {
+          "annotations": {
+            "bold": false,
+            "code": false,
+            "color": "default",
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+          },
+          "text": {
+            "content": "numbered 2",
+            "link": null,
+          },
+          "type": "text",
+        },
+      ],
+    },
+    "object": "block",
+    "type": "numbered_list_item",
+  },
+  {
+    "object": "block",
+    "to_do": {
+      "checked": false,
+      "color": "default",
+      "rich_text": [
+        {
+          "annotations": {
+            "bold": false,
+            "code": false,
+            "color": "default",
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+          },
+          "text": {
+            "content": "todo 1",
+            "link": null,
+          },
+          "type": "text",
+        },
+      ],
+    },
+    "type": "to_do",
+  },
+  {
+    "object": "block",
+    "to_do": {
+      "checked": true,
+      "color": "default",
+      "rich_text": [
+        {
+          "annotations": {
+            "bold": false,
+            "code": false,
+            "color": "default",
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+          },
+          "text": {
+            "content": "todo 2",
+            "link": null,
+          },
+          "type": "text",
+        },
+      ],
+    },
+    "type": "to_do",
+  },
+]
+`;
+
+exports[`MarkdownParser refactor parity > should handle quotes and dividers identically 1`] = `
+[
+  {
+    "object": "block",
+    "quote": {
+      "color": "default",
+      "rich_text": [
+        {
+          "annotations": {
+            "bold": false,
+            "code": false,
+            "color": "default",
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+          },
+          "text": {
+            "content": "quote",
+            "link": null,
+          },
+          "type": "text",
+        },
+      ],
+    },
+    "type": "quote",
+  },
+  {
+    "divider": {},
+    "object": "block",
+    "type": "divider",
+  },
+  {
+    "divider": {},
+    "object": "block",
+    "type": "divider",
+  },
+]
+`;
+
+exports[`MarkdownParser refactor parity > should handle tables identically 1`] = `
+[
+  {
+    "object": "block",
+    "table": {
+      "children": [
+        {
+          "object": "block",
+          "table_row": {
+            "cells": [
+              [
+                {
+                  "annotations": {
+                    "bold": false,
+                    "code": false,
+                    "color": "default",
+                    "italic": false,
+                    "strikethrough": false,
+                    "underline": false,
+                  },
+                  "text": {
+                    "content": "a",
+                    "link": null,
+                  },
+                  "type": "text",
+                },
+              ],
+              [
+                {
+                  "annotations": {
+                    "bold": false,
+                    "code": false,
+                    "color": "default",
+                    "italic": false,
+                    "strikethrough": false,
+                    "underline": false,
+                  },
+                  "text": {
+                    "content": "b",
+                    "link": null,
+                  },
+                  "type": "text",
+                },
+              ],
+            ],
+          },
+          "type": "table_row",
+        },
+        {
+          "object": "block",
+          "table_row": {
+            "cells": [
+              [
+                {
+                  "annotations": {
+                    "bold": false,
+                    "code": false,
+                    "color": "default",
+                    "italic": false,
+                    "strikethrough": false,
+                    "underline": false,
+                  },
+                  "text": {
+                    "content": "1",
+                    "link": null,
+                  },
+                  "type": "text",
+                },
+              ],
+              [
+                {
+                  "annotations": {
+                    "bold": false,
+                    "code": false,
+                    "color": "default",
+                    "italic": false,
+                    "strikethrough": false,
+                    "underline": false,
+                  },
+                  "text": {
+                    "content": "2",
+                    "link": null,
+                  },
+                  "type": "text",
+                },
+              ],
+            ],
+          },
+          "type": "table_row",
+        },
+      ],
+      "has_column_header": true,
+      "has_row_header": false,
+      "table_width": 2,
+    },
+    "type": "table",
+  },
+]
+`;
+
+exports[`MarkdownParser refactor parity > should handle toggles identically 1`] = `
+[
+  {
+    "object": "block",
+    "toggle": {
+      "children": [
+        {
+          "object": "block",
+          "paragraph": {
+            "color": "default",
+            "rich_text": [
+              {
+                "annotations": {
+                  "bold": false,
+                  "code": false,
+                  "color": "default",
+                  "italic": false,
+                  "strikethrough": false,
+                  "underline": false,
+                },
+                "text": {
+                  "content": "content",
+                  "link": null,
+                },
+                "type": "text",
+              },
+            ],
+          },
+          "type": "paragraph",
+        },
+      ],
+      "color": "default",
+      "rich_text": [
+        {
+          "annotations": {
+            "bold": false,
+            "code": false,
+            "color": "default",
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+          },
+          "text": {
+            "content": "summary",
+            "link": null,
+          },
+          "type": "text",
+        },
+      ],
+    },
+    "type": "toggle",
+  },
+]
+`;
