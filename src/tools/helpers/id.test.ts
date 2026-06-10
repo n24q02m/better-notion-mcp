@@ -30,6 +30,13 @@ describe('normalizeId', () => {
     expect(normalizeId('-abc-')).toBe('abc')
     expect(normalizeId(' a - b ')).toBe(' a  b ')
   })
+  it('should preserve case', () => {
+    expect(normalizeId('AbC-DeF')).toBe('AbCDeF')
+  })
+
+  it('should handle tabs and newlines mixed with hyphens', () => {
+    expect(normalizeId('a\t-b\n')).toBe('a\tb\n')
+  })
 })
 
 describe('isValidNotionId', () => {
