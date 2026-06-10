@@ -393,3 +393,25 @@ describe('commentsManage', () => {
     })
   })
 })
+
+  describe('verifyBlockExists', () => {
+    it('should throw non-object_not_found errors during block retrieve', async () => {
+      const notFoundError = new Error('Not found')
+      ;(notFoundError as any).code = 'object_not_found'
+      mockNotion.comments.list.mockRejectedValue(notFoundError)
+
+      const rateLimitError = new Error('Rate limited')
+      ;(rateLimitError as any).code = 'rate_limited'
+      mockNotion.blocks.retrieve.mockRejectedValue(rateLimitError)
+
+      await expect(
+        commentsManage(mockNotion as any, {
+          action: 'list',
+          page_id: 'page-1'
+        })
+      ).rejects.toMatchObject({
+        code: 'RATE_LIMITED',
+        message: 'Too many requests to Notion API'
+      })
+    })
+  })
