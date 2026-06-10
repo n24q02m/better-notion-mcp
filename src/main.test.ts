@@ -34,7 +34,7 @@ vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => {
 })
 
 vi.mock('@notionhq/client', () => ({
-  Client: vi.fn().mockImplementation(() => ({}))
+  Client: vi.fn().mockImplementation(class {} as any)
 }))
 
 vi.mock('./tools/registry.js', () => ({
@@ -51,7 +51,8 @@ vi.mock('node:fs', async (importOriginal) => {
   const original = await importOriginal<typeof import('node:fs')>()
   return {
     ...original,
-    realpathSync: vi.fn(original.realpathSync)
+    realpathSync: vi.fn(original.realpathSync),
+    readFileSync: vi.fn(original.readFileSync)
   }
 })
 
@@ -83,7 +84,65 @@ describe('main.ts', () => {
     })
   })
 
+  describe('getPackageVersion', () => {
+    // This is a private function, but startServer calls it.
+    it('returns version from package.json', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      vi.mocked(fs.readFileSync).mockReturnValueOnce(JSON.stringify({ version: '1.2.3' }))
+      await startServer('stdio')
+      expect(stdioServerCtor).toHaveBeenCalledWith(expect.objectContaining({ version: '1.2.3' }), expect.any(Object))
+    })
+
+    it('returns 0.0.0 if version is missing', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      vi.mocked(fs.readFileSync).mockReturnValueOnce(JSON.stringify({}))
+      await startServer('stdio')
+      expect(stdioServerCtor).toHaveBeenCalledWith(expect.objectContaining({ version: '0.0.0' }), expect.any(Object))
+    })
+
+    it('returns 0.0.0 if readFileSync throws', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      vi.mocked(fs.readFileSync).mockImplementationOnce(() => {
+        throw new Error('Read error')
+      })
+      await startServer('stdio')
+      expect(stdioServerCtor).toHaveBeenCalledWith(expect.objectContaining({ version: '0.0.0' }), expect.any(Object))
+    })
+  })
+
+  describe('getPackageVersion', () => {
+    // This is a private function, but startServer calls it.
+    it('returns version from package.json', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      vi.mocked(fs.readFileSync).mockReturnValueOnce(JSON.stringify({ version: '1.2.3' }))
+      await startServer('stdio')
+      expect(stdioServerCtor).toHaveBeenCalledWith(expect.objectContaining({ version: '1.2.3' }), expect.any(Object))
+    })
+
+    it('returns 0.0.0 if version is missing', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      vi.mocked(fs.readFileSync).mockReturnValueOnce(JSON.stringify({}))
+      await startServer('stdio')
+      expect(stdioServerCtor).toHaveBeenCalledWith(expect.objectContaining({ version: '0.0.0' }), expect.any(Object))
+    })
+
+    it('returns 0.0.0 if readFileSync throws', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      vi.mocked(fs.readFileSync).mockImplementationOnce(() => {
+        throw new Error('Read error')
+      })
+      await startServer('stdio')
+      expect(stdioServerCtor).toHaveBeenCalledWith(expect.objectContaining({ version: '0.0.0' }), expect.any(Object))
+    })
+  })
+
   describe('isMain', () => {
+    it('verifies false when fileURLToPath throws (invalid URL)', () => {
+      expect(isMain('not-a-url')).toBe(false)
+    })
+    it('verifies false when fileURLToPath throws (invalid URL)', () => {
+      expect(isMain('not-a-url')).toBe(false)
+    })
     it('verifies true when process.argv[1] matches the file path', () => {
       const currentDir = dirname(fileURLToPath(import.meta.url))
       const mainPath = join(currentDir, 'main.ts')
@@ -160,6 +219,35 @@ describe('main.ts', () => {
   })
 
   describe('startServer', () => {
+    it('verifies notionClientFactory correctly creates Client', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      const { getNotionToken } = await import('./credential-state.js')
+      vi.mocked(getNotionToken).mockReturnValueOnce('ntn_test_token')
+
+      await startServer('stdio')
+
+      const factory = registerToolsMock.mock.calls[0][1]
+      expect(typeof factory).toBe('function')
+
+      factory()
+      const { Client } = await import('@notionhq/client')
+      expect(Client).toHaveBeenCalledWith({
+        auth: 'ntn_test_token',
+        notionVersion: '2025-09-03'
+      })
+    })
+
+    it('verifies notionClientFactory throws when token is missing', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      const { getNotionToken } = await import('./credential-state.js')
+      vi.mocked(getNotionToken).mockReturnValueOnce(null)
+
+      await startServer('stdio')
+
+      const factory = registerToolsMock.mock.calls[0][1]
+      expect(() => factory()).toThrow('Notion integration token not configured')
+    })
+
     it('verifies call to startHttp when mode is http', async () => {
       await startServer('http')
       expect(startHttpMock).toHaveBeenCalled()
@@ -230,6 +318,19 @@ describe('main.ts', () => {
       consoleSpy.mockRestore()
     })
 
+    it('verifies startup errors with non-Error object in bootstrap', async () => {
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      stdioConnectMock.mockRejectedValueOnce('String error')
+
+      await bootstrap('stdio')
+
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to start server:', 'String error')
+      expect(exitSpy).toHaveBeenCalledWith(1)
+
+      consoleSpy.mockRestore()
+    })
+
     it('verifies fork-bomb protection prevents multiple starts', async () => {
       process.env.NOTION_TOKEN = 'ntn_test_token'
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -252,6 +353,27 @@ describe('main.ts', () => {
       vi.resetModules()
       const { mode: newMode } = await import('./main.js')
       expect(newMode).toBe('http')
+    })
+
+    it('verifies bootstrap is called when imported as main module', async () => {
+      // Setup environment to simulate main entry point
+      process.env.NODE_ENV = 'production'
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+
+      const currentDir = dirname(fileURLToPath(import.meta.url))
+      const mainPath = join(currentDir, 'main.ts')
+      process.argv[1] = mainPath
+
+      vi.resetModules()
+
+      // When we import the module, it should execute the if (isMain...) block
+      await import('./main.js')
+
+      // bootstrap sets this env var
+      expect(process.env.BETTER_NOTION_MCP_BOOTSTRAPPED).toBe('true')
+      expect(stdioConnectMock).toHaveBeenCalled()
+
+      delete process.env.BETTER_NOTION_MCP_BOOTSTRAPPED
     })
   })
 })
