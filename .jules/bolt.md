@@ -20,7 +20,3 @@
 ## 2025-05-26 - Array.includes() vs Set.has() for O(1) Lookups
 **Learning:** Checking for membership in an array using `['a', 'b', ...].includes(value)` within hot paths requires an O(N) scan. This can become an issue when iterating or repeatedly checking values.
 **Action:** Replace `Array.includes()` with `Set.has()` by extracting the array into a module-level `Set`. This improves lookup times significantly to O(1).
-
-## 2025-06-08 - Array Allocation in Paginated Properties
-**Learning:** Using `array.map(fn).join('')` or `array.map(fn)` without pre-allocating the result array creates unnecessary intermediate array objects and incurs iterator overhead. This is particularly problematic in paginated result handlers (like `getPageProperty`) where the length of `allResults` can be large.
-**Action:** Replace `.map().join('')` with a `for` loop and direct string concatenation (`+=`). For object mapping, use a pre-allocated array (`new Array(len)`) and an indexed `for` loop to minimize allocation and garbage collection overhead.
