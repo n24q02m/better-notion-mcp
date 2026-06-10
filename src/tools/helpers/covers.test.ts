@@ -79,11 +79,23 @@ describe('formatCover', () => {
 
   describe('error handling', () => {
     it('should throw for unknown shorthand', () => {
-      expect(() => formatCover('nonexistent_cover')).toThrow('Unknown cover shorthand')
+      try {
+        formatCover('nonexistent_cover')
+        expect.fail('Should have thrown')
+      } catch (err) {
+        const error = err as NotionMCPError
+        expect(error.message).toContain('Unknown cover shorthand')
+        expect(error.code).toBe('VALIDATION_ERROR')
+        expect(error.suggestion).toContain('Provide a valid URL')
+      }
     })
 
     it('should include available covers in error message', () => {
       expect(() => formatCover('bogus')).toThrow('solid_red')
+    })
+
+    it('should not return prototype methods as URLs', () => {
+      expect(() => formatCover('toString')).toThrow('Unknown cover shorthand')
     })
   })
 
@@ -97,12 +109,37 @@ describe('formatCover', () => {
     })
 
     it('rejects unsafe http/https URLs', () => {
-      expect(() => formatCover('https://example.com/cover.jpg\n')).toThrow(NotionMCPError)
-      expect(() => formatCover('https://example.com/cover.jpg\n')).toThrow('Unsafe cover URL')
+      try {
+        formatCover('https://example.com/cover.jpg\n')
+        expect.fail('Should have thrown')
+      } catch (err) {
+        const error = err as NotionMCPError
+        expect(error.message).toContain('Unsafe cover URL')
+        expect(error.code).toBe('VALIDATION_ERROR')
+        expect(error.suggestion).toContain('Provide a valid http: or https: URL')
+      }
     })
 
     it('rejects vbscript: URLs', () => {
-      expect(() => formatCover('vbscript:msgbox(1)')).toThrow(NotionMCPError)
+      try {
+        formatCover('vbscript:msgbox(1)')
+        expect.fail('Should have thrown')
+      } catch (err) {
+        const error = err as NotionMCPError
+        expect(error.message).toContain('Unsafe cover URL')
+        expect(error.code).toBe('VALIDATION_ERROR')
+        expect(error.suggestion).toContain('Provide a valid http: or https: URL')
+      }
+    })
+  })
+
+  describe('edge cases', () => {
+    it('rejects empty strings', () => {
+      expect(() => formatCover('')).toThrow('Unknown cover shorthand')
+    })
+
+    it('rejects string with only spaces', () => {
+      expect(() => formatCover('   ')).toThrow('Unsafe cover URL')
     })
   })
 })
