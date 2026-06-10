@@ -49,4 +49,17 @@ describe('initServer', () => {
     await initServer()
     expect(startServerMock).toHaveBeenCalledWith('stdio')
   })
+
+  it('does not dispatch http for partial matches like --http-proxy', async () => {
+    process.argv = [process.argv[0], 'main.js', '--http-proxy']
+    const { initServer } = await import('./init-server.js')
+    await initServer()
+    expect(startServerMock).toHaveBeenCalledWith('stdio')
+  })
+
+  it('propagates errors from startServer', async () => {
+    startServerMock.mockRejectedValueOnce(new Error('Startup failed'))
+    const { initServer } = await import('./init-server.js')
+    await expect(initServer()).rejects.toThrow('Startup failed')
+  })
 })
