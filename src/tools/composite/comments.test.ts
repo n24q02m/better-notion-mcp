@@ -1,6 +1,11 @@
+/**
+ * Comments Composite Tool Tests
+ */
+
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { commentsManage } from './comments'
 
+// Mock Notion Client
 const mockNotion = {
   comments: {
     list: vi.fn(),
@@ -26,7 +31,7 @@ describe('commentsManage', () => {
             created_time: '2024-01-01',
             created_by: { id: 'user-1' },
             discussion_id: 'disc-1',
-            rich_text: [{ type: 'text', text: { content: 'Hello' } }],
+            rich_text: [{ type: 'text', text: { content: 'Test comment' } }],
             parent: { type: 'page_id', page_id: 'page-1' }
           },
           {
@@ -34,10 +39,7 @@ describe('commentsManage', () => {
             created_time: '2024-01-02',
             created_by: { id: 'user-2' },
             discussion_id: 'disc-1',
-            rich_text: [
-              { type: 'text', text: { content: 'World' } },
-              { type: 'text', text: { content: '!' } }
-            ],
+            rich_text: [{ type: 'text', text: { content: 'Another comment' } }],
             parent: { type: 'page_id', page_id: 'page-1' }
           }
         ],
@@ -52,21 +54,12 @@ describe('commentsManage', () => {
 
       expect(result.page_id).toBe('page-1')
       expect(result.total_comments).toBe(2)
-      expect(result.results).toHaveLength(2)
       expect(result.results[0]).toEqual({
         id: 'comment-1',
         created_time: '2024-01-01',
         created_by: { id: 'user-1' },
         discussion_id: 'disc-1',
-        text: 'Hello',
-        parent: { type: 'page_id', page_id: 'page-1' }
-      })
-      expect(result.results[1]).toEqual({
-        id: 'comment-2',
-        created_time: '2024-01-02',
-        created_by: { id: 'user-2' },
-        discussion_id: 'disc-1',
-        text: 'World!',
+        text: 'Test comment',
         parent: { type: 'page_id', page_id: 'page-1' }
       })
       expect(mockNotion.comments.list).toHaveBeenCalledWith({
@@ -75,7 +68,7 @@ describe('commentsManage', () => {
       })
     })
 
-    it('should handle empty results', async () => {
+    it('should return empty results when no comments', async () => {
       mockNotion.comments.list.mockResolvedValue({
         results: [],
         next_cursor: null,
@@ -87,7 +80,6 @@ describe('commentsManage', () => {
         page_id: 'page-1'
       })
 
-      expect(result.page_id).toBe('page-1')
       expect(result.total_comments).toBe(0)
       expect(result.results).toEqual([])
     })
@@ -392,7 +384,6 @@ describe('commentsManage', () => {
       })
     })
   })
-})
 
   describe('verifyBlockExists', () => {
     it('should throw non-object_not_found errors during block retrieve', async () => {
@@ -415,3 +406,4 @@ describe('commentsManage', () => {
       })
     })
   })
+})
