@@ -5,7 +5,7 @@
 
 import type { Client } from '@notionhq/client'
 import { formatCover } from '../helpers/covers.js'
-import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
+import { NotionMCPError, retryWithBackoff, withErrorHandling } from '../helpers/errors.js'
 import { formatIcon } from '../helpers/icons.js'
 import { normalizeId } from '../helpers/id.js'
 import { autoPaginate, processBatches } from '../helpers/pagination.js'
@@ -551,20 +551,26 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
     }
   }
 
-  const results = await processBatches(items, async (item) => {
-    const properties = convertToNotionProperties(item.properties, schema)
+  const results = await processBatches(
+    items,
+    async (item) => {
+      const properties = convertToNotionProperties(item.properties, schema)
 
-    const page = await notion.pages.create({
-      parent: { type: 'data_source_id', data_source_id: dataSourceId },
-      properties
-    } as any)
+      const page = await retryWithBackoff(async () =>
+        notion.pages.create({
+          parent: { type: 'data_source_id', data_source_id: dataSourceId },
+          properties
+        } as any)
+      )
 
-    return {
-      page_id: page.id,
-      url: (page as any).url,
-      created: true
-    }
-  })
+      return {
+        page_id: page.id,
+        url: (page as any).url,
+        created: true
+      }
+    },
+    { batchSize: 5, concurrency: 3 }
+  )
 
   return {
     action: 'create_page',
@@ -599,23 +605,29 @@ async function updateDatabasePages(notion: Client, input: DatabasesInput): Promi
     }
   }
 
-  const results = await processBatches(items, async (item) => {
-    if (!item.page_id) {
-      throw new NotionMCPError('page_id required for each item', 'VALIDATION_ERROR', 'Provide page_id')
-    }
+  const results = await processBatches(
+    items,
+    async (item) => {
+      if (!item.page_id) {
+        throw new NotionMCPError('page_id required for each item', 'VALIDATION_ERROR', 'Provide page_id')
+      }
 
-    const properties = convertToNotionProperties(item.properties)
+      const properties = convertToNotionProperties(item.properties)
 
-    await notion.pages.update({
-      page_id: item.page_id,
-      properties
-    })
+      await retryWithBackoff(async () =>
+        notion.pages.update({
+          page_id: item.page_id!,
+          properties
+        })
+      )
 
-    return {
-      page_id: item.page_id,
-      updated: true
-    }
-  })
+      return {
+        page_id: item.page_id,
+        updated: true
+      }
+    },
+    { batchSize: 5, concurrency: 3 }
+  )
 
   return {
     action: 'update_page',
@@ -650,10 +662,12 @@ async function deleteDatabasePages(notion: Client, input: DatabasesInput): Promi
   const results = await processBatches(
     pageIds,
     async (pageId) => {
-      await notion.pages.update({
-        page_id: pageId,
-        archived: true
-      })
+      await retryWithBackoff(async () =>
+        notion.pages.update({
+          page_id: pageId,
+          archived: true
+        })
+      )
 
       return {
         page_id: pageId,
