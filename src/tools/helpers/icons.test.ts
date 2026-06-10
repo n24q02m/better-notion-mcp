@@ -89,7 +89,7 @@ describe('formatIcon', () => {
 
   describe('empty string input', () => {
     it('throws NotionMCPError for empty string', () => {
-      expect(() => formatIcon('')).toThrow(/Icon value cannot be empty/)
+      expect(() => formatIcon('')).toThrow(/Icon value must be a non-empty string/)
     })
   })
 
@@ -120,6 +120,28 @@ describe('formatIcon', () => {
 
     it('treats a plain string as emoji', () => {
       expect(formatIcon('star')).toEqual({ type: 'emoji', emoji: 'star' })
+    })
+
+    it('handles multiple colons by taking the last part as color', () => {
+      expect(formatIcon('brand:logo:blue')).toEqual({
+        type: 'external',
+        external: { url: 'https://www.notion.so/icons/brand:logo_blue.svg' }
+      })
+    })
+
+    it('handles safe non-HTTP protocols as emoji (falling through)', () => {
+      expect(formatIcon('mailto:user@example.com')).toEqual({
+        type: 'emoji',
+        emoji: 'mailto:user@example.com'
+      })
+      expect(formatIcon('tel:+123456789')).toEqual({
+        type: 'emoji',
+        emoji: 'tel:+123456789'
+      })
+    })
+
+    it('throws NotionMCPError for non-string input', () => {
+      expect(() => formatIcon(123 as any)).toThrow(/Icon value must be a non-empty string/)
     })
   })
 })
