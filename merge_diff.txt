@@ -1,0 +1,48 @@
+<<<<<<< SEARCH
+/**
+ * Duplicate page
+ * Maps to: GET /v1/pages/{id} + POST /v1/pages + GET/PATCH /v1/blocks
+ */
+async function duplicatePage(notion: Client, input: PagesInput): Promise<DuplicatePageResult> {
+=======
+/**
+ * Strip read-only fields and null values from block data.
+ * Notion API rejects null where it expects an object or undefined.
+ */
+function stripNullValues(block: any): any {
+  const {
+    id,
+    parent,
+    created_time,
+    last_edited_time,
+    created_by,
+    last_edited_by,
+    has_children,
+    archived,
+    in_trash,
+    request_id,
+    object,
+    ...rest
+  } = block
+
+  const blockType = rest.type
+  if (blockType && rest[blockType] && typeof rest[blockType] === 'object') {
+    const data = rest[blockType]
+    const keys = Object.keys(data)
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i]
+      if (data[key] === null) {
+        delete data[key]
+      }
+    }
+  }
+
+  return rest
+}
+
+/**
+ * Duplicate page
+ * Maps to: GET /v1/pages/{id} + POST /v1/pages + GET/PATCH /v1/blocks
+ */
+async function duplicatePage(notion: Client, input: PagesInput): Promise<DuplicatePageResult> {
+>>>>>>> REPLACE
