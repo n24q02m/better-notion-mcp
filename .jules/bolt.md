@@ -20,3 +20,7 @@
 ## 2025-05-26 - Array.includes() vs Set.has() for O(1) Lookups
 **Learning:** Checking for membership in an array using `['a', 'b', ...].includes(value)` within hot paths requires an O(N) scan. This can become an issue when iterating or repeatedly checking values.
 **Action:** Replace `Array.includes()` with `Set.has()` by extracting the array into a module-level `Set`. This improves lookup times significantly to O(1).
+
+## 2025-05-15 - Suboptimal String Joining in Loop
+**Learning:** Using `.map().join('')` in a loop to join strings creates an intermediate array and multiple temporary strings, which can be inefficient for memory and performance, especially with many items or large text.
+**Action:** Use a `for...of` loop with direct string concatenation (`+=`) for joining strings in performance-critical paths or loops to minimize allocations and GC pressure.
