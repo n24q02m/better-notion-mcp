@@ -653,6 +653,40 @@ describe('databases', () => {
     it('should throw when no page ids provided', async () => {
       await expect(databases(notion, { action: 'delete_page' })).rejects.toThrow('page_id or page_ids required')
     })
+
+    it('should deduplicate page IDs', async () => {
+      mockNotion.pages.update.mockResolvedValue({})
+
+      const result = (await databases(notion, {
+        action: 'delete_page',
+        page_ids: ['page-1', 'page-1', 'page-2', 'page-2', 'page-2']
+      })) as DeleteDatabasePageResponse
+
+      expect(result.processed).toBe(2)
+      expect(mockNotion.pages.update).toHaveBeenCalledTimes(2)
+      expect(result.results).toEqual([
+        { page_id: 'page-1', deleted: true },
+        { page_id: 'page-2', deleted: true }
+      ])
+    })
+
+    it('should retry on transient failures using retryWithBackoff', async () => {
+      const error = new Error('Rate limited') as any
+      error.code = 'rate_limited'
+
+      mockNotion.pages.update
+        .mockRejectedValueOnce(error) // Fail once
+        .mockResolvedValueOnce({}) // Succeed on retry
+
+      const result = (await databases(notion, {
+        action: 'delete_page',
+        page_id: 'page-retry'
+      })) as DeleteDatabasePageResponse
+
+      expect(result.processed).toBe(1)
+      expect(mockNotion.pages.update).toHaveBeenCalledTimes(2)
+      expect(result.results[0]).toEqual({ page_id: 'page-retry', deleted: true })
+    })
   })
 
   describe('create_data_source', () => {

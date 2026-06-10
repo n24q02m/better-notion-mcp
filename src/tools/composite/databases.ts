@@ -5,7 +5,7 @@
 
 import type { Client } from '@notionhq/client'
 import { formatCover } from '../helpers/covers.js'
-import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
+import { NotionMCPError, retryWithBackoff, withErrorHandling } from '../helpers/errors.js'
 import { formatIcon } from '../helpers/icons.js'
 import { normalizeId } from '../helpers/id.js'
 import { autoPaginate, processBatches } from '../helpers/pagination.js'
@@ -647,12 +647,17 @@ async function deleteDatabasePages(notion: Client, input: DatabasesInput): Promi
     throw new NotionMCPError('page_id or page_ids required', 'VALIDATION_ERROR', 'Provide page IDs to delete')
   }
 
+  // Deduplicate page IDs
+  const uniquePageIds = [...new Set(pageIds)]
+
   const results = await processBatches(
-    pageIds,
+    uniquePageIds,
     async (pageId) => {
-      await notion.pages.update({
-        page_id: pageId,
-        archived: true
+      await retryWithBackoff(async () => {
+        await notion.pages.update({
+          page_id: pageId,
+          archived: true
+        })
       })
 
       return {
