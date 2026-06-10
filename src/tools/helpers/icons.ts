@@ -21,7 +21,6 @@ const NOTION_ICON_COLORS = new Set([
 
 /** Check if a string is a Notion built-in icon shorthand (e.g. "helm:blue") */
 function isNotionIconShorthand(value: string): boolean {
-  if (value.startsWith('http://') || value.startsWith('https://')) return false
   const colonIdx = value.lastIndexOf(':')
   if (colonIdx < 1) return false
   const color = value.slice(colonIdx + 1)
@@ -77,9 +76,9 @@ function formatEmojiIcon(value: string): { type: 'emoji'; emoji: string } {
  * - Notion built-in shorthand: "document:gray" -> { type: "external", external: { url: "https://www.notion.so/icons/document_gray.svg" } }
  */
 export function formatIcon(value: string): { type: string; [key: string]: any } {
-  if (!value) {
+  if (!value || typeof value !== 'string') {
     throw new NotionMCPError(
-      'Icon value cannot be empty. Provide an emoji, a valid URL, or a built-in shorthand (name:color).',
+      'Icon value must be a non-empty string. Provide an emoji, a valid URL, or a built-in shorthand (name:color).',
       'VALIDATION_ERROR',
       'Provide an emoji, an http/https URL, or a Notion icon shorthand like "document:gray"'
     )
