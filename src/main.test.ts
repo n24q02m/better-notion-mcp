@@ -257,7 +257,10 @@ describe('main.ts', () => {
     it('verifies notionClientFactory throws when token is missing', async () => {
       process.env.NOTION_TOKEN = 'ntn_test_token'
       const { getNotionToken } = await import('./credential-state.js')
-      vi.mocked(getNotionToken).mockReturnValueOnce(null)
+      // Persist the null return: the registerTools mock auto-invokes the
+      // factory once (swallowing the throw), so a one-shot mock would be
+      // consumed before this test's explicit factory() assertion below.
+      vi.mocked(getNotionToken).mockReturnValue(null)
 
       await startServer('stdio')
 
