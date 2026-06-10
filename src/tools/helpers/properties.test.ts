@@ -770,3 +770,63 @@ describe('extractPageProperties', () => {
     expect(extractPageProperties(props)).toEqual({ Window: '2026-01-01 to 2026-01-31' })
   })
 })
+
+
+describe('properties.ts additional coverage', () => {
+  it('convertToNotionProperties passes through unsupported types as-is (e.g. BigInt) (coverage for line 114)', () => {
+    const val = BigInt(9007199254740991)
+    const result = convertToNotionProperties({ val })
+    expect(result).toEqual({ val })
+  })
+
+  it('extractPageProperties handles formula with number', () => {
+    const props = {
+      Calc: {
+        type: 'formula',
+        formula: { type: 'number', number: 123 }
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Calc: 123 })
+  })
+
+  it('extractPageProperties handles formula with boolean', () => {
+    const props = {
+      Calc: {
+        type: 'formula',
+        formula: { type: 'boolean', boolean: true }
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Calc: true })
+  })
+
+  it('extractPageProperties handles formula with date', () => {
+    const dateVal = { start: '2025-01-01' }
+    const props = {
+      Calc: {
+        type: 'formula',
+        formula: { type: 'date', date: dateVal }
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Calc: dateVal })
+  })
+
+  it('extractPageProperties handles formula with missing value for type', () => {
+    const props = {
+      Calc: {
+        type: 'formula',
+        formula: { type: 'string' } // missing .string
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Calc: null })
+  })
+
+  it('extractPageProperties handles formula with unknown type', () => {
+    const props = {
+      Calc: {
+        type: 'formula',
+        formula: { type: 'magic' }
+      }
+    }
+    expect(extractPageProperties(props)).toEqual({ Calc: null })
+  })
+})
