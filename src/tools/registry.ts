@@ -98,23 +98,10 @@ const TOOLS = [
         content: { type: 'string', description: 'Markdown content' },
         append_content: { type: 'string', description: 'Markdown to append' },
         parent_id: { type: 'string', description: 'Parent page or database ID' },
-        properties: {
-          type: 'object',
-          description:
-            'Page properties (for database pages). Use simple values -- auto-converted to Notion format. String: title/rich_text/select/status. Number: number. Boolean: checkbox. String[]: multi_select. ISO date string: date. Object with Notion structure: pass through as-is.'
-        },
-        property_id: { type: 'string', description: 'Property ID (for get_property action)' },
-        icon: {
-          type: 'string',
-          description:
-            'Icon: emoji (e.g. "(icon)"), external URL (https://...), or built-in shorthand (name:color, e.g. "document:gray")'
-        },
-        cover: {
-          type: 'string',
-          description:
-            'Cover image: URL or built-in shorthand (gradient_1..11, solid_red/yellow/blue/beige, nasa_*, met_*, rijksmuseum_*, woodcuts_*)'
-        },
-        archived: { type: 'boolean', description: 'Archive status' }
+        properties: { type: 'object', description: 'Page properties (JSON)' },
+        icon: { type: 'string', description: 'Emoji or URL' },
+        cover: { type: 'string', description: 'Image URL' },
+        archived: { type: 'boolean', description: 'Set archived status' }
       },
       required: ['action']
     }
@@ -122,7 +109,7 @@ const TOOLS = [
   {
     name: 'databases',
     description:
-      'Database schema, query, and bulk row operations.\n\nActions (required params -> optional):\n- create (parent_id -> title, properties, is_inline, icon, cover)\n- get (database_id)\n- query (database_id -> filters, sorts, limit, search)\n- create_page (database_id, pages[{properties}])\n- update_page (database_id, page_id, page_properties)\n- delete_page (database_id, page_ids)\n- create_data_source / update_data_source / update_database / list_templates\n\nUse `pages` instead for single page CRUD. Accepts both database_id (from URL) and data_source_id (from workspace search) -- auto-resolved.',
+      'Database schema and row operations.\n\nActions (required params -> optional):\n- list (parent_id): list databases in a page\n- get (database_id): get schema\n- query (database_id -> filter, sorts, limit): find rows\n- create_pages (database_id, pages[]): bulk insert\n- update_pages (database_id, pages[]): bulk update\n- delete_pages (database_id, page_ids[]): bulk archive\n\nFilter/Sort follow Notion API format. For `query`, set `filter` to `{"property": "Name", "rich_text": {"contains": "test"}}`. Use `pages` tool for individual row CRUD.',
     annotations: {
       title: 'Databases',
       readOnlyHint: false,
@@ -135,49 +122,16 @@ const TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: [
-            'create',
-            'get',
-            'query',
-            'create_page',
-            'update_page',
-            'delete_page',
-            'create_data_source',
-            'update_data_source',
-            'update_database',
-            'list_templates'
-          ],
+          enum: ['list', 'get', 'query', 'create_pages', 'update_pages', 'delete_pages'],
           description: 'Action to perform'
         },
-        database_id: {
-          type: 'string',
-          description:
-            'Database ID (from Notion URL) or data_source_id (from workspace search). Auto-resolved for query/create_page/list_templates.'
-        },
-        data_source_id: { type: 'string', description: 'Data source ID (for update_data_source action)' },
-        parent_id: { type: 'string', description: 'Parent page ID (for create/update_database)' },
-        title: { type: 'string', description: 'Title (for database or data source)' },
-        description: { type: 'string', description: 'Description' },
-        properties: { type: 'object', description: 'Schema properties (for create/update data source)' },
-        is_inline: { type: 'boolean', description: 'Display as inline (for create/update_database)' },
-        icon: {
-          type: 'string',
-          description:
-            'Icon (for update_database): emoji (e.g. "(icon)"), external URL (https://...), or built-in shorthand (name:color, e.g. "document:gray")'
-        },
-        cover: {
-          type: 'string',
-          description:
-            'Cover image (for update_database): URL or built-in shorthand (gradient_1..11, solid_red/yellow/blue/beige, nasa_*, met_*, rijksmuseum_*, woodcuts_*)'
-        },
-        filters: { type: 'object', description: 'Query filters (for query action)' },
-        sorts: { type: 'array', items: { type: 'object' }, description: 'Query sorts' },
-        limit: { type: 'number', description: 'Max query results' },
-        search: { type: 'string', description: 'Smart search across text fields (for query)' },
-        page_id: { type: 'string', description: 'Single page ID (for update_page)' },
-        page_ids: { type: 'array', items: { type: 'string' }, description: 'Multiple page IDs (for delete_page)' },
-        page_properties: { type: 'object', description: 'Page properties to update (for update_page)' },
-        pages: { type: 'array', items: { type: 'object' }, description: 'Array of pages for bulk create/update' }
+        database_id: { type: 'string', description: 'Database ID' },
+        parent_id: { type: 'string', description: 'Parent page ID for list' },
+        filter: { type: 'object', description: 'Notion query filter' },
+        sorts: { type: 'array', items: { type: 'object' }, description: 'Notion query sorts' },
+        limit: { type: 'number', description: 'Max results' },
+        pages: { type: 'array', items: { type: 'object' }, description: 'Page data for bulk actions' },
+        page_ids: { type: 'array', items: { type: 'string' }, description: 'IDs for bulk delete' }
       },
       required: ['action']
     }
@@ -185,11 +139,11 @@ const TOOLS = [
   {
     name: 'blocks',
     description:
-      'Read and modify block-level content within pages.\n\nActions (required params -> optional):\n- get (block_id): retrieve single block\n- children (block_id): list child blocks\n- append (block_id, content -> position, after_block_id): add markdown content at position\n- update (block_id, content): replace text block content\n- delete (block_id): remove block\n\nUse `pages` for page metadata/properties. Page IDs are valid block IDs. update only works on text blocks (paragraph, headings, lists, quote, to_do, code). Image/file blocks contain signed URLs (1h expiry). append supports position: "start" (prepend), "end" (default), "after_block" (requires after_block_id).',
+      'Content management within pages (paragraphs, lists, headings, tables).\n\nActions:\n- get (block_id): get block details\n- children (block_id): list nested blocks\n- append (block_id, content): add markdown content\n- update (block_id, content): replace block content\n- delete (block_id): remove block',
     annotations: {
       title: 'Blocks',
       readOnlyHint: false,
-      destructiveHint: false,
+      destructiveHint: true,
       idempotentHint: false,
       openWorldHint: false
     },
@@ -202,22 +156,15 @@ const TOOLS = [
           description: 'Action to perform'
         },
         block_id: { type: 'string', description: 'Block ID' },
-        content: { type: 'string', description: 'Markdown content (for append/update)' },
-        position: {
-          type: 'string',
-          enum: ['start', 'end', 'after_block'],
-          description:
-            'Insert position for append: start (prepend), end (default), after_block (requires after_block_id)'
-        },
-        after_block_id: { type: 'string', description: 'Block ID to insert after (when position is after_block)' }
+        content: { type: 'string', description: 'Markdown content' }
       },
-      required: ['action', 'block_id']
+      required: ['action']
     }
   },
   {
     name: 'users',
     description:
-      'Get user information.\n\nActions (required params):\n- list: all workspace users (requires admin permissions)\n- get (user_id): single user info\n- me: current bot/integration user\n- from_workspace: extract users from accessible pages (use if list fails)',
+      'Retrieve user and bot information.\n\nActions:\n- list: all workspace users\n- get (user_id): specific user details\n- me: current integration bot info',
     annotations: {
       title: 'Users',
       readOnlyHint: true,
@@ -230,10 +177,10 @@ const TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['list', 'get', 'me', 'from_workspace'],
+          enum: ['list', 'get', 'me'],
           description: 'Action to perform'
         },
-        user_id: { type: 'string', description: 'User ID (for get action)' }
+        user_id: { type: 'string', description: 'User ID for get' }
       },
       required: ['action']
     }
@@ -241,7 +188,7 @@ const TOOLS = [
   {
     name: 'workspace',
     description:
-      'Search workspace and get workspace info.\n\nActions (required params -> optional):\n- info: workspace name, plan, and bot user\n- search (-> query, filter.object="page"|"data_source", sort, limit): find pages/databases shared with integration',
+      'Global workspace operations.\n\nActions:\n- search (query -> filter, sorts, limit): search pages and databases by title\n- info: get workspace name and integration limits',
     annotations: {
       title: 'Workspace',
       readOnlyHint: true,
@@ -254,27 +201,11 @@ const TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['info', 'search'],
+          enum: ['search', 'info'],
           description: 'Action to perform'
         },
         query: { type: 'string', description: 'Search query' },
-        filter: {
-          type: 'object',
-          properties: {
-            object: {
-              type: 'string',
-              enum: ['page', 'data_source'],
-              description: 'Filter by type: page or data_source (database)'
-            }
-          }
-        },
-        sort: {
-          type: 'object',
-          properties: {
-            direction: { type: 'string', enum: ['ascending', 'descending'] },
-            timestamp: { type: 'string', enum: ['last_edited_time', 'created_time'] }
-          }
-        },
+        filter: { type: 'object', description: 'Search filter (property: "object", value: "page"|"database")' },
         limit: { type: 'number', description: 'Max results' }
       },
       required: ['action']
@@ -283,7 +214,7 @@ const TOOLS = [
   {
     name: 'comments',
     description:
-      'Manage page comments.\n\nActions (required params -> optional):\n- list (page_id): all comments on a page\n- get (comment_id): single comment\n- create (content -> page_id for new discussion, discussion_id for reply)',
+      'Manage page and block comments.\n\nActions:\n- list (block_id): list comments on a page or block\n- create (block_id, content): add a new comment (markdown)',
     annotations: {
       title: 'Comments',
       readOnlyHint: false,
@@ -294,11 +225,13 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        action: { type: 'string', enum: ['list', 'get', 'create'], description: 'Action to perform' },
-        page_id: { type: 'string', description: 'Page ID' },
-        comment_id: { type: 'string', description: 'Comment ID (for get action)' },
-        discussion_id: { type: 'string', description: 'Discussion ID (for replies)' },
-        content: { type: 'string', description: 'Comment content (for create)' }
+        action: {
+          type: 'string',
+          enum: ['list', 'create'],
+          description: 'Action to perform'
+        },
+        block_id: { type: 'string', description: 'Page or Block ID' },
+        content: { type: 'string', description: 'Comment markdown' }
       },
       required: ['action']
     }
@@ -306,7 +239,7 @@ const TOOLS = [
   {
     name: 'content_convert',
     description:
-      'Convert between markdown and Notion block JSON. Directions: markdown-to-blocks (input: markdown string), blocks-to-markdown (input: JSON array of Notion blocks or JSON string). Most tools (pages, blocks) handle markdown automatically -- use this only for preview/validation. Supported markdown: headings, lists, to-do, code blocks, blockquotes, dividers, callouts (> [!NOTE]), toggles (<details>), tables, images, bookmarks, embeds, equations ($$), columns (:::columns), [toc], [breadcrumb]. Inline: **bold**, *italic*, `code`, ~~strike~~, [link](url).',
+      'Utility to convert between formats (no Notion API calls).\n\nDirections:\n- markdown-to-blocks: Markdown string -> Notion Block objects\n- blocks-to-markdown: Notion Block objects -> Markdown string',
     annotations: {
       title: 'Content Convert',
       readOnlyHint: true,
@@ -322,21 +255,22 @@ const TOOLS = [
           enum: ['markdown-to-blocks', 'blocks-to-markdown'],
           description: 'Conversion direction'
         },
-        content: { type: 'string', description: 'Content to convert (string or array/JSON string)' }
+        content: { type: 'string', description: 'Markdown content (for markdown-to-blocks)' },
+        blocks: { type: 'array', items: { type: 'object' }, description: 'Notion blocks (for blocks-to-markdown)' }
       },
-      required: ['direction', 'content']
+      required: ['direction']
     }
   },
   {
     name: 'file_uploads',
     description:
-      'Upload files to Notion.\n\nActions (required params -> optional):\n- create (filename -> content_type, mode="single"|"multi_part", number_of_parts)\n- send (file_upload_id, file_content -> part_number): base64-encoded content\n- complete (file_upload_id)\n- retrieve (file_upload_id)\n- list (-> limit)\n\nMax 20MB direct, multi-part for larger files.',
+      'Handle file uploads to Notion (images, PDFs, videos).\n\nProcess:\n1. create: get an upload ID\n2. send: upload base64 chunks\n3. complete: finalize and get the Notion URL\n\nSupports single-part and multi-part (up to 100MB). Use the returned URL in page/block properties.',
     annotations: {
       title: 'File Uploads',
       readOnlyHint: false,
       destructiveHint: false,
       idempotentHint: false,
-      openWorldHint: false
+      openWorldHint: true
     },
     inputSchema: {
       type: 'object',
@@ -443,17 +377,20 @@ const TOOLS = [
 // BOLT OPTIMIZATION: Use Set for O(1) lookups instead of dynamic array creation
 const VALID_HELP_TOOL_NAMES = new Set(TOOLS.map((t) => t.name).filter((name) => name !== 'help'))
 const VALID_HELP_TOOLS_STRING = Array.from(VALID_HELP_TOOL_NAMES).join(', ')
+
 /**
- * Register all tools with MCP server
- * @param notionClientFactory - Returns a Notion Client.
- *   Called per tool invocation to support both singleton (stdio) and per-request (HTTP) patterns.
+ * Register ListTools handler
  */
-export function registerTools(server: Server, notionClientFactory: () => Client) {
+function registerListTools(server: Server) {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: TOOLS
   }))
+}
 
-  // Resources handlers for full documentation
+/**
+ * Register Resources handlers for documentation
+ */
+function registerResources(server: Server) {
   server.setRequestHandler(ListResourcesRequestSchema, async () => ({
     resources: RESOURCES.map((r) => ({
       uri: r.uri,
@@ -483,7 +420,12 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
       throw new NotionMCPError(`Documentation not found for: ${resource.name}`, 'DOC_NOT_FOUND', 'Check resource URI')
     }
   })
+}
 
+/**
+ * Register CallTool handler for all composite tools
+ */
+function registerCallTool(server: Server, notionClientFactory: () => Client) {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params
 
@@ -499,11 +441,7 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
       }
     }
 
-    // Credential guard. In stdio mode the server exits at startup if
-    // NOTION_TOKEN is missing (see main.ts startServer('stdio')); reaching
-    // this branch means HTTP mode where the per-subject token store is
-    // empty for the current caller. help and content_convert work without
-    // a token.
+    // Credential guard
     if (!TOKEN_FREE_TOOLS.has(name)) {
       const credState = getState()
       if (credState !== 'configured') {
@@ -555,7 +493,6 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
           break
         case 'help': {
           const toolName = (args as { tool_name: string }).tool_name
-          // Security: validate tool_name against allowlist to prevent path traversal
           if (!VALID_HELP_TOOL_NAMES.has(toolName)) {
             throw new NotionMCPError(
               `Invalid tool name: ${toolName}`,
@@ -563,8 +500,6 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
               `Valid tools: ${VALID_HELP_TOOLS_STRING}`
             )
           }
-          // Security: Use basename() to ensure we only look for files directly inside DOCS_DIR,
-          // preventing path traversal even if the allowlist validation is bypassed or modified.
           const docFile = `${basename(toolName)}.md`
           const fullPath = join(DOCS_DIR, docFile)
           if (!fullPath.startsWith(DOCS_DIR)) {
@@ -617,4 +552,15 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
       }
     }
   })
+}
+
+/**
+ * Register all tools with MCP server
+ * @param notionClientFactory - Returns a Notion Client.
+ *   Called per tool invocation to support both singleton (stdio) and per-request (HTTP) patterns.
+ */
+export function registerTools(server: Server, notionClientFactory: () => Client) {
+  registerListTools(server)
+  registerResources(server)
+  registerCallTool(server, notionClientFactory)
 }
