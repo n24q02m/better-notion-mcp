@@ -57,101 +57,115 @@ const infoCache = new WeakMap<Client, { bot: any; expiresAt: number }>()
 const INFO_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 /**
+ * Handle workspace info action
+ * Maps to: GET /v1/users/me
+ */
+async function handleWorkspaceInfo(notion: Client): Promise<WorkspaceInfoResult> {
+  const cached = infoCache.get(notion)
+  if (cached && Date.now() < cached.expiresAt) {
+    return {
+      action: 'info' as const,
+      bot: cached.bot
+    }
+  }
+
+  const botUser = await notion.users.retrieve({ user_id: 'me' })
+  const bot = {
+    id: (botUser as any).id,
+    name: (botUser as any).name || 'Bot',
+    type: (botUser as any).type,
+    owner: (botUser as any).bot?.owner
+  }
+
+  infoCache.set(notion, {
+    bot,
+    expiresAt: Date.now() + INFO_CACHE_TTL
+  })
+
+  return {
+    action: 'info' as const,
+    bot
+  }
+}
+
+/**
+ * Handle workspace search action
+ * Maps to: POST /v1/search
+ */
+async function handleWorkspaceSearch(notion: Client, input: WorkspaceInput): Promise<WorkspaceSearchResult> {
+  // Query is optional - empty query returns all accessible pages
+  const searchParams: any = {
+    query: input.query || ''
+  }
+
+  if (input.filter?.object) {
+    searchParams.filter = {
+      value: input.filter.object,
+      property: 'object'
+    }
+  }
+
+  if (input.sort) {
+    searchParams.sort = {
+      direction: input.sort.direction || 'descending',
+      timestamp: input.sort.timestamp || 'last_edited_time'
+    }
+  }
+
+  // Fetch results with pagination
+  const results = await autoPaginate(
+    (cursor, pageSize) =>
+      notion.search({
+        ...searchParams,
+        start_cursor: cursor,
+        page_size: pageSize
+      }),
+    { limit: input.limit }
+  )
+
+  const formattedResults = new Array(results.length)
+  for (let i = 0; i < results.length; i++) {
+    const item: any = results[i]
+    const result: any = {
+      id: item.id,
+      object: item.object,
+      title:
+        item.object === 'page'
+          ? item.properties?.title?.title?.[0]?.plain_text ||
+            item.properties?.Name?.title?.[0]?.plain_text ||
+            'Untitled'
+          : item.title?.[0]?.plain_text || 'Untitled',
+      url: item.url,
+      last_edited_time: item.last_edited_time
+    }
+    // For data_source objects, include the parent database_id
+    // This lets callers use either ID with the databases tool
+    if (item.object === 'data_source' && item.parent?.database_id) {
+      result.database_id = item.parent.database_id
+    }
+    formattedResults[i] = result
+  }
+
+  return {
+    action: 'search' as const,
+    query: input.query,
+    total: results.length,
+    results: formattedResults
+  }
+}
+
+/**
  * Unified workspace tool
  * Maps to: GET /v1/users/me and POST /v1/search
  */
 export async function workspace(notion: Client, input: WorkspaceInput): Promise<WorkspaceResult> {
   return withErrorHandling(async () => {
     switch (input.action) {
-      case 'info': {
-        const cached = infoCache.get(notion)
-        if (cached && Date.now() < cached.expiresAt) {
-          return {
-            action: 'info' as const,
-            bot: cached.bot
-          }
-        }
+      case 'info':
+        return handleWorkspaceInfo(notion)
 
-        const botUser = await notion.users.retrieve({ user_id: 'me' })
-        const bot = {
-          id: (botUser as any).id,
-          name: (botUser as any).name || 'Bot',
-          type: (botUser as any).type,
-          owner: (botUser as any).bot?.owner
-        }
-
-        infoCache.set(notion, {
-          bot,
-          expiresAt: Date.now() + INFO_CACHE_TTL
-        })
-
-        return {
-          action: 'info' as const,
-          bot
-        }
-      }
-
-      case 'search': {
-        // Query is optional - empty query returns all accessible pages
-        const searchParams: any = {
-          query: input.query || ''
-        }
-
-        if (input.filter?.object) {
-          searchParams.filter = {
-            value: input.filter.object,
-            property: 'object'
-          }
-        }
-
-        if (input.sort) {
-          searchParams.sort = {
-            direction: input.sort.direction || 'descending',
-            timestamp: input.sort.timestamp || 'last_edited_time'
-          }
-        }
-
-        // Fetch results with pagination
-        const results = await autoPaginate(
-          (cursor, pageSize) =>
-            notion.search({
-              ...searchParams,
-              start_cursor: cursor,
-              page_size: pageSize
-            }),
-          { limit: input.limit }
-        )
-
-        const formattedResults = new Array(results.length)
-        for (let i = 0; i < results.length; i++) {
-          const item: any = results[i]
-          const result: any = {
-            id: item.id,
-            object: item.object,
-            title:
-              item.object === 'page'
-                ? item.properties?.title?.title?.[0]?.plain_text ||
-                  item.properties?.Name?.title?.[0]?.plain_text ||
-                  'Untitled'
-                : item.title?.[0]?.plain_text || 'Untitled',
-            url: item.url,
-            last_edited_time: item.last_edited_time
-          }
-          // For data_source objects, include the parent database_id
-          // This lets callers use either ID with the databases tool
-          if (item.object === 'data_source' && item.parent?.database_id) {
-            result.database_id = item.parent.database_id
-          }
-          formattedResults[i] = result
-        }
-
-        return {
-          action: 'search' as const,
-          query: input.query,
-          total: results.length,
-          results: formattedResults
-        }
-      }
+      case 'search':
+        return handleWorkspaceSearch(notion, input)
 
       default:
         throw new NotionMCPError(
