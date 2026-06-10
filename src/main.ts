@@ -56,8 +56,9 @@ export function isMain(importMetaUrl: string): boolean {
 /**
  * Validates and returns the transport mode from the environment.
  */
-export function getTransportMode(env: NodeJS.ProcessEnv = process.env): string {
-  return env.TRANSPORT_MODE ?? 'stdio'
+export function getTransportMode(env: NodeJS.ProcessEnv = process.env, argv: string[] = process.argv): string {
+  const isHttp = argv.includes('--http') || env.MCP_TRANSPORT === 'http' || env.TRANSPORT_MODE === 'http'
+  return isHttp ? 'http' : 'stdio'
 }
 
 /**

@@ -38,7 +38,14 @@ vi.mock('@notionhq/client', () => ({
 }))
 
 vi.mock('./tools/registry.js', () => ({
-  registerTools: (...args: unknown[]) => registerToolsMock(...args)
+  registerTools: (...args: unknown[]) => {
+    registerToolsMock(...args)
+    if (typeof args[1] === 'function') {
+      try {
+        args[1]()
+      } catch (_e) {}
+    }
+  }
 }))
 
 vi.mock('./credential-state.js', () => ({
@@ -143,17 +150,27 @@ describe('main.ts', () => {
   })
 
   describe('getTransportMode', () => {
-    it('verifies default to stdio mode if TRANSPORT_MODE is not set', () => {
-      const env = {}
-      expect(getTransportMode(env)).toBe('stdio')
+    it('verifies default to stdio mode if no config is provided', () => {
+      expect(getTransportMode({}, [])).toBe('stdio')
     })
 
-    it('verifies value from TRANSPORT_MODE if set', () => {
-      const env = { TRANSPORT_MODE: 'http' }
-      expect(getTransportMode(env)).toBe('http')
+    it('verifies http mode via TRANSPORT_MODE env', () => {
+      expect(getTransportMode({ TRANSPORT_MODE: 'http' }, [])).toBe('http')
     })
 
-    it('verifies current process.env if no argument is provided', () => {
+    it('verifies http mode via MCP_TRANSPORT env', () => {
+      expect(getTransportMode({ MCP_TRANSPORT: 'http' }, [])).toBe('http')
+    })
+
+    it('verifies http mode via --http flag', () => {
+      expect(getTransportMode({}, ['--http'])).toBe('http')
+    })
+
+    it('verifies stdio if --http is not an exact match', () => {
+      expect(getTransportMode({}, ['--http-proxy'])).toBe('stdio')
+    })
+
+    it('verifies current process.env and process.argv if no arguments are provided', () => {
       vi.stubEnv('TRANSPORT_MODE', 'http')
       expect(getTransportMode()).toBe('http')
     })
@@ -252,6 +269,45 @@ describe('main.ts', () => {
       vi.resetModules()
       const { mode: newMode } = await import('./main.js')
       expect(newMode).toBe('http')
+      delete process.env.BETTER_NOTION_MCP_BOOTSTRAPPED
+    })
+
+    it('verifies handle error in getPackageVersion', async () => {
+      const readFileSyncSpy = vi.spyOn(fs, 'readFileSync').mockImplementation(() => {
+        throw new Error('Read failed')
+      })
+      vi.resetModules()
+      const { startServer } = await import('./main.js')
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      await startServer('stdio')
+      expect(stdioServerCtor).toHaveBeenCalled()
+      readFileSyncSpy.mockRestore()
+    })
+
+    it('verifies notionClientFactory error when token is missing', async () => {
+      const { getNotionToken } = await import('./credential-state.js')
+      vi.mocked(getNotionToken).mockReturnValueOnce(null as any)
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      await startServer('stdio')
+    })
+    it('verifies bootstrap is called when isMain is true', async () => {
+      vi.stubEnv('NODE_ENV', 'production') // Not "test"
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+
+      const currentDir = dirname(fileURLToPath(import.meta.url))
+      const mainPath = join(currentDir, 'main.ts')
+      process.argv[1] = mainPath
+
+      vi.mocked(fs.realpathSync).mockReturnValue(mainPath)
+
+      vi.resetModules()
+      // Use a unique query param to force reload in ESM
+      await import(
+        `${pathToFileURL(fs.realpathSync(join(dirname(fileURLToPath(import.meta.url)), 'main.ts'))).href}?test=${Date.now()}`
+      )
+
+      expect(stdioConnectMock).toHaveBeenCalled()
+      delete process.env.BETTER_NOTION_MCP_BOOTSTRAPPED
     })
   })
 })

@@ -2,10 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const startServerMock = vi.fn()
 
-vi.mock('./main.js', () => ({
-  startServer: startServerMock
-}))
-
+vi.mock('./main.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./main.js')>()
+  return {
+    ...actual,
+    startServer: startServerMock
+  }
+})
 describe('initServer', () => {
   const originalEnv = process.env
   const originalArgv = process.argv
