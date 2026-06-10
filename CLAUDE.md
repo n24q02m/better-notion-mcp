@@ -1,6 +1,6 @@
 # better-notion-mcp
 
-TypeScript MCP Server cho Notion API. 10 composite tools (pages, databases, blocks, users, workspace, comments, content_convert, file_uploads, setup, help), dual-mode stdio/http.
+TypeScript MCP Server cho Notion API. 11 composite tools (pages, databases, blocks, users, workspace, comments, content_convert, file_uploads, config, config__open_relay, help), dual-mode stdio/http.
 Xem `AGENTS.md` va `README.md` de hieu architecture va OAuth flow.
 
 ## Cau truc

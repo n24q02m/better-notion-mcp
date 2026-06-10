@@ -8,8 +8,7 @@
  * token storage. Single-user paste-token relay form is no longer supported
  * here -- use stdio mode with NOTION_TOKEN env for single-user setups.
  *
- * Required env: NOTION_OAUTH_CLIENT_ID, NOTION_OAUTH_CLIENT_SECRET,
- * DCR_SERVER_SECRET (multi-user JWT signing).
+ * Required env: NOTION_OAUTH_CLIENT_ID, NOTION_OAUTH_CLIENT_SECRET.
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks'
