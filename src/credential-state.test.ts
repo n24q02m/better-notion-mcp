@@ -86,26 +86,25 @@ describe('credential-state', () => {
   describe('resetState', () => {
     it('resets all state and calls deleteConfig', () => {
       setState('configured')
+      setSubjectTokenResolver(() => 'custom-token')
       resetState()
       expect(getState()).toBe('awaiting_setup')
       expect(getNotionToken()).toBeNull()
+      expect(getSubjectToken()).toBeNull() // default resolver restored
       expect(deleteConfig).toHaveBeenCalledWith('better-notion-mcp')
     })
 
-    it('handles deleteConfig failure in resetState', () => {
+    it('handles deleteConfig failure in resetState', async () => {
       vi.mocked(deleteConfig).mockRejectedValue(new Error('delete failed') as never)
       resetState()
       expect(getState()).toBe('awaiting_setup')
       expect(deleteConfig).toHaveBeenCalled()
+      // Wait for microtasks to ensure catch block is covered
+      await new Promise((r) => setTimeout(r, 0))
     })
   })
 
   describe('subject token resolver', () => {
-    beforeEach(() => {
-      // Reset to default (module-global single-user fallback)
-      setSubjectTokenResolver(() => getNotionToken())
-    })
-
     it('defaults to single-user module global when no resolver injected', () => {
       setState('awaiting_setup')
       expect(getSubjectToken()).toBeNull()
