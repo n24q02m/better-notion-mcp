@@ -2,7 +2,7 @@
 
 mcp-name: io.github.n24q02m/better-notion-mcp
 
-**Markdown-first Notion API server for AI agents -- 11 composite tools replacing 28+ endpoint calls**
+**Markdown-first Notion for AI agents -- pages, databases, blocks, and comments in one call.**
 
 <!-- Badge Row 1: Status -->
 [![CI](https://github.com/n24q02m/better-notion-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/n24q02m/better-notion-mcp/actions/workflows/ci.yml)
