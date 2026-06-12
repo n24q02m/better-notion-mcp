@@ -422,7 +422,7 @@ const TOOLS = [
   {
     name: 'config__open_relay',
     description:
-      'Open the relay configuration form for better-notion-mcp in the user browser. Returns the relay URL, whether the browser launched, and the current credential state. Auto-respawns the daemon if it has died.',
+      'Open the relay configuration form for better-notion-mcp in the user browser. Returns the relay URL, whether the browser launched, and the current credential state.',
     annotations: {
       title: 'Open Relay',
       readOnlyHint: false,
