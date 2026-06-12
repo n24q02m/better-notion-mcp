@@ -31,16 +31,23 @@ export async function users(notion: Client, input: UsersInput): Promise<any> {
             { limit: input.limit }
           )
 
-          return {
-            action: 'list',
-            total: usersList.length,
-            users: usersList.map((user: any) => ({
+          // Bolt ⚡: Optimization - Pre-allocate array and use indexed loop to minimize GC pressure
+          const users = new Array(usersList.length)
+          for (let i = 0; i < usersList.length; i++) {
+            const user: any = usersList[i]
+            users[i] = {
               id: user.id,
               type: user.type,
               name: user.name || 'Unknown',
               avatar_url: user.avatar_url,
               email: user.type === 'person' ? user.person?.email : undefined
-            }))
+            }
+          }
+
+          return {
+            action: 'list',
+            total: usersList.length,
+            users
           }
         } catch (error: any) {
           // Auto-suggest from_workspace when permission denied

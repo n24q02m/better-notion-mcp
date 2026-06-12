@@ -24,3 +24,7 @@
 ## 2025-05-15 - Suboptimal String Joining in Loop
 **Learning:** Using `.map().join('')` in a loop to join strings creates an intermediate array and multiple temporary strings, which can be inefficient for memory and performance, especially with many items or large text.
 **Action:** Use a `for...of` loop with direct string concatenation (`+=`) for joining strings in performance-critical paths or loops to minimize allocations and GC pressure.
+
+## 2025-05-28 - Array Mapping Optimization
+**Learning:** Using `Array.prototype.map()` dynamically allocates arrays and involves iterator overhead. On hot paths involving large or paginated collections (like `usersList`), this generates unnecessary garbage collection pressure and intermediate allocations.
+**Action:** Replace dynamic `.map()` with a pre-allocated array (`new Array(len)`) and an indexed `for` loop to optimize object mapping over large or paginated data structures.
