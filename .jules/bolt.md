@@ -24,3 +24,7 @@
 ## 2025-05-15 - Suboptimal String Joining in Loop
 **Learning:** Using `.map().join('')` in a loop to join strings creates an intermediate array and multiple temporary strings, which can be inefficient for memory and performance, especially with many items or large text.
 **Action:** Use a `for...of` loop with direct string concatenation (`+=`) for joining strings in performance-critical paths or loops to minimize allocations and GC pressure.
+
+## 2026-06-13 - Standardizing on .join('') for String Concatenation in Loops
+**Learning:** While `+=` concatenation might perform well in some synthetic benchmarks, standardizing on pre-allocated arrays with `.join('')` for string concatenation in loops is preferred for idiomatic consistency and predictability across different JS engines. Specifically, for property extraction loops where the number of items is known, pre-allocating the array avoids dynamic resizing and reduces intermediate allocations.
+**Action:** Replace string concatenation (`+=`) in loops with a pre-allocated array and `.join('')` when the item count is known or can be estimated, ensuring consistent performance patterns across the codebase.
