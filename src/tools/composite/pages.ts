@@ -490,6 +490,107 @@ async function archivePage(notion: Client, input: PagesInput): Promise<ArchivePa
 }
 
 /**
+ * Sanitize parent object for creation/update
+ */
+function sanitizeParent(rawParent: any): any {
+  if (rawParent.type === 'data_source_id') {
+    return { type: 'data_source_id', data_source_id: rawParent.data_source_id }
+  }
+  if (rawParent.type === 'database_id') {
+    return { type: 'database_id', database_id: rawParent.database_id }
+  }
+  if (rawParent.type === 'page_id') {
+    return { type: 'page_id', page_id: rawParent.page_id }
+  }
+  return rawParent
+}
+
+/**
+ * Sanitize blocks for duplication by stripping read-only fields
+ */
+function sanitizeBlocks(blocks: any[]): any[] {
+  return blocks.map((block: any) => {
+    const {
+      id,
+      parent,
+      created_time,
+      last_edited_time,
+      created_by,
+      last_edited_by,
+      has_children,
+      archived,
+      in_trash,
+      request_id,
+      object,
+      ...rest
+    } = block
+
+    // Strip null values inside block type data (e.g., paragraph.icon: null)
+    // Notion API rejects null where it expects object or undefined
+    const blockType = rest.type
+    if (blockType && rest[blockType] && typeof rest[blockType] === 'object') {
+      for (const key of Object.keys(rest[blockType])) {
+        if (rest[blockType][key] === null) {
+          delete rest[blockType][key]
+        }
+      }
+    }
+    return rest
+  })
+}
+
+/**
+ * Logic to duplicate a single page and its content
+ */
+async function duplicateSinglePage(
+  notion: Client,
+  pageId: string
+): Promise<{ original_id: string; duplicate_id: string; url: string }> {
+  // Get original page and content in parallel
+  const [originalPage, originalBlocks] = await Promise.all([
+    retryWithBackoff(() => notion.pages.retrieve({ page_id: pageId }) as Promise<any>),
+    autoPaginate((cursor) =>
+      notion.blocks.children.list({
+        block_id: pageId,
+        start_cursor: cursor,
+        page_size: 100
+      })
+    )
+  ])
+
+  // Sanitize parent - API response may include extra fields that
+  // the create endpoint rejects (e.g. database_id in data_source parent)
+  const parent = sanitizeParent(originalPage.parent)
+
+  // Create duplicate
+  const duplicatedPage: any = await retryWithBackoff(() =>
+    notion.pages.create({
+      parent,
+      properties: originalPage.properties,
+      icon: originalPage.icon,
+      cover: originalPage.cover
+    })
+  )
+
+  // Copy content — strip read-only fields that the create endpoint rejects
+  if (originalBlocks.length > 0) {
+    const sanitizedBlocks = sanitizeBlocks(originalBlocks)
+    await retryWithBackoff(() =>
+      notion.blocks.children.append({
+        block_id: duplicatedPage.id,
+        children: sanitizedBlocks as any
+      })
+    )
+  }
+
+  return {
+    original_id: pageId,
+    duplicate_id: duplicatedPage.id,
+    url: duplicatedPage.url
+  }
+}
+
+/**
  * Duplicate page
  * Maps to: GET /v1/pages/{id} + POST /v1/pages + GET/PATCH /v1/blocks
  */
@@ -501,94 +602,10 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<Duplica
   }
 
   // Process duplicates in batches to improve performance while respecting rate limits
-  const results = await processBatches(
-    pageIds,
-    async (pageId) => {
-      // Get original page and content in parallel
-
-      const [originalPage, originalBlocks] = await Promise.all([
-        retryWithBackoff(() => notion.pages.retrieve({ page_id: pageId }) as Promise<any>),
-
-        autoPaginate((cursor) =>
-          notion.blocks.children.list({
-            block_id: pageId,
-
-            start_cursor: cursor,
-
-            page_size: 100
-          })
-        )
-      ])
-
-      // Sanitize parent - API response may include extra fields that
-      // the create endpoint rejects (e.g. database_id in data_source parent)
-      const rawParent = originalPage.parent
-      let parent: any
-      if (rawParent.type === 'data_source_id') {
-        parent = { type: 'data_source_id', data_source_id: rawParent.data_source_id }
-      } else if (rawParent.type === 'database_id') {
-        parent = { type: 'database_id', database_id: rawParent.database_id }
-      } else if (rawParent.type === 'page_id') {
-        parent = { type: 'page_id', page_id: rawParent.page_id }
-      } else {
-        parent = rawParent
-      }
-
-      // Create duplicate
-      const duplicatedPage: any = await retryWithBackoff(() =>
-        notion.pages.create({
-          parent,
-          properties: originalPage.properties,
-          icon: originalPage.icon,
-          cover: originalPage.cover
-        })
-      )
-
-      // Copy content — strip read-only fields that the create endpoint rejects
-      if (originalBlocks.length > 0) {
-        const sanitizedBlocks = originalBlocks.map((block: any) => {
-          const {
-            id,
-            parent,
-            created_time,
-            last_edited_time,
-            created_by,
-            last_edited_by,
-            has_children,
-            archived,
-            in_trash,
-            request_id,
-            object,
-            ...rest
-          } = block
-          // Strip null values inside block type data (e.g., paragraph.icon: null)
-          // Notion API rejects null where it expects object or undefined
-          const blockType = rest.type
-          if (blockType && rest[blockType] && typeof rest[blockType] === 'object') {
-            for (const key of Object.keys(rest[blockType])) {
-              if (rest[blockType][key] === null) {
-                delete rest[blockType][key]
-              }
-            }
-          }
-          return rest
-        })
-        await retryWithBackoff(() =>
-          notion.blocks.children.append({
-            block_id: duplicatedPage.id,
-            children: sanitizedBlocks as any
-          })
-        )
-      }
-
-      return {
-        original_id: pageId,
-        duplicate_id: duplicatedPage.id,
-        url: duplicatedPage.url
-      }
-    },
-    { batchSize: 5, concurrency: 3 }
-  )
+  const results = await processBatches(pageIds, (pageId) => duplicateSinglePage(notion, pageId), {
+    batchSize: 5,
+    concurrency: 3
+  })
 
   return {
     action: 'duplicate',
