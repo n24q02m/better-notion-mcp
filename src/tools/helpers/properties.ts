@@ -15,7 +15,7 @@ function extractPageId(value: any): string {
 }
 
 /** Convert a single string or array value to Notion relation format */
-function toRelation(value: any): { relation: { id: string }[] } {
+export function toRelation(value: any): { relation: { id: string }[] } {
   if (typeof value === 'string') {
     if (value === '') return { relation: [] }
     // Try parsing as JSON array (e.g. '["id1", "id2"]')
