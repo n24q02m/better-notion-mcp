@@ -58,8 +58,26 @@ describe('createMCPServer', () => {
     expect(server.serverInfo.version).toBe('0.0.0')
   })
 
+  it('should return default version 0.0.0 when readFileSync throws a non-Error object', () => {
+    vi.mocked(readFileSync).mockImplementationOnce(() => {
+      throw 'string error'
+    })
+    const factory = vi.fn()
+    const server = createMCPServer(factory) as any
+
+    expect(server.serverInfo.version).toBe('0.0.0')
+  })
+
   it('should return 0.0.0 if version is missing in package.json', () => {
     vi.mocked(readFileSync).mockImplementationOnce(() => JSON.stringify({}))
+    const factory = vi.fn()
+    const server = createMCPServer(factory) as any
+
+    expect(server.serverInfo.version).toBe('0.0.0')
+  })
+
+  it('should return 0.0.0 if version is null in package.json', () => {
+    vi.mocked(readFileSync).mockImplementationOnce(() => JSON.stringify({ version: null }))
     const factory = vi.fn()
     const server = createMCPServer(factory) as any
 
@@ -110,5 +128,15 @@ describe('createMCPServer', () => {
     const server2 = createMCPServer(factory)
 
     expect(server1).not.toBe(server2)
+  })
+
+  it('should propagate errors from registerTools', async () => {
+    const { registerTools } = await import('./tools/registry.js')
+    vi.mocked(registerTools).mockImplementationOnce(() => {
+      throw new Error('Registration failed')
+    })
+    const factory = vi.fn()
+
+    expect(() => createMCPServer(factory)).toThrow('Registration failed')
   })
 })
