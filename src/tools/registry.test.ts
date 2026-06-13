@@ -29,12 +29,29 @@ vi.mock('../credential-state.js', () => ({
   triggerRelaySetup: vi.fn()
 }))
 
+// Mock node:path to allow simulating path traversal by controlling join
+const { mockJoin } = vi.hoisted(() => ({
+  mockJoin: vi.fn((...args: string[]) => {
+    // Default implementation: simple join
+    return args.filter(Boolean).join('/')
+  })
+}))
+
+vi.mock('node:path', async () => {
+  const actual = await vi.importActual('node:path')
+  return {
+    ...actual,
+    join: mockJoin
+  }
+})
+
 // Mock node:fs
 vi.mock('node:fs/promises', () => ({
   readFile: vi.fn().mockResolvedValue('# Mock documentation content')
 }))
 
 import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { getState } from '../credential-state.js'
 import { blocks } from './composite/blocks.js'
 import { commentsManage } from './composite/comments.js'
@@ -92,10 +109,10 @@ function createMockServer() {
   }
 }
 
+const mockClientFactory = vi.hoisted(() => vi.fn(() => ({}) as any))
+
 describe('registerTools', () => {
   let server: ReturnType<typeof createMockServer>
-  const mockNotionClient = {} as any
-  const mockClientFactory = vi.fn(() => mockNotionClient)
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -262,7 +279,8 @@ describe('registerTools', () => {
       await expect(promise).rejects.toThrow(NotionMCPError)
       await expect(promise).rejects.toMatchObject({
         code: 'DOC_NOT_FOUND',
-        suggestion: expect.any(String)
+        message: 'Documentation not found for: Pages Tool Docs',
+        suggestion: 'Check resource URI'
       })
     })
 
@@ -529,6 +547,7 @@ describe('registerTools', () => {
       expect(result.content[0].text).toContain('Invalid tool name: help')
       expect(result.content[0].text).toContain('Valid tools:')
     })
+
     it('should prevent path traversal in help tool even if allowlist is bypassed', async () => {
       const handler = server.getHandler(3)
 
@@ -542,6 +561,37 @@ describe('registerTools', () => {
       expect(result.isError).toBe(true)
       // It should be caught by validation first
       expect(result.content[0].text).toContain('Invalid tool name')
+    })
+
+    it('should trigger security error for path traversal in help tool', async () => {
+      const handler = server.getHandler(3)
+
+      // Force join to return a path outside DOCS_DIR
+      vi.mocked(join).mockReturnValueOnce('/etc/passwd')
+
+      const result = await handler({
+        params: { name: 'help', arguments: { tool_name: 'pages' } }
+      })
+
+      expect(result.isError).toBe(true)
+      expect(result.content[0].text).toContain('Path traversal attempt detected')
+    })
+
+    it('should handle failure in notionClientFactory', async () => {
+      const handler = server.getHandler(3)
+      const factoryError = new Error('Factory failed')
+      mockClientFactory.mockImplementationOnce(() => {
+        throw factoryError
+      })
+
+      const result = await handler({
+        params: { name: 'pages', arguments: { action: 'list' } }
+      })
+
+      expect(result.isError).toBe(true)
+      expect(result.content[0].text).toContain('Error: Factory failed')
+      // enhancedError suggestion for generic error
+      expect(result.content[0].text).toContain('Check the error details')
     })
 
     it('should return error for unknown tool', async () => {
