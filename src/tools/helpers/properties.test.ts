@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { convertToNotionProperties, extractPageProperties } from './properties'
+import { describe, expect, it, vi } from 'vitest'
+import { convertToNotionProperties, extractPageProperties, toRelation } from './properties'
 
 const richText = (content: string) => ({
   type: 'text',
@@ -377,6 +377,51 @@ describe('convertToNotionProperties', () => {
         Project: { number: 123 }
       })
     })
+    it('handles rich_text with missing plain_text (line 149 coverage)', () => {
+      const props = {
+        Desc: {
+          type: 'rich_text',
+          rich_text: [{ annotations: {} }]
+        }
+      }
+      expect(extractPageProperties(props)).toEqual({ Desc: '' })
+    })
+
+    it('handles title with missing plain_text (line 144 coverage)', () => {
+      const props = {
+        Name: {
+          type: 'title',
+          title: [{ annotations: {} }]
+        }
+      }
+      expect(extractPageProperties(props)).toEqual({ Name: '' })
+    })
+    it('returns value as-is for non-string non-array inputs (line 39)', () => {
+      const result = toRelation(123)
+      expect(result).toBe(123)
+    })
+    it('converts relation array with mixed objects missing id', () => {
+      const result = convertToNotionProperties({ Projects: ['id1', { name: 'foo' }] }, { Projects: 'relation' })
+      expect(result).toEqual({
+        Projects: { relation: [{ id: 'id1' }, { id: '[object Object]' }] }
+      })
+    })
+  })
+
+  it('passes through unknown types at the end of convertToNotionProperties (line 120)', () => {
+    const result = convertToNotionProperties({ SymbolField: Symbol('foo') })
+    expect(typeof result.SymbolField).toBe('symbol')
+  })
+  it('handles JSON.parse error in toRelation (coverage for catch block)', () => {
+    const spy = vi.spyOn(JSON, 'parse').mockImplementation(() => {
+      throw new Error('Parse error')
+    })
+    try {
+      const result = toRelation('[valid-looking-but-will-fail]')
+      expect(result).toEqual({ relation: [{ id: '[valid-looking-but-will-fail]' }] })
+    } finally {
+      spy.mockRestore()
+    }
   })
 
   it('passes through unsupported types as-is (e.g. BigInt) (coverage for line 117)', () => {
