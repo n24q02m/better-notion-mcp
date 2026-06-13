@@ -1,8 +1,16 @@
-import { describe, expect, it } from 'vitest'
-import { contentConvert } from './content'
+import { describe, expect, it, vi } from 'vitest'
+import * as markdownHelpers from '../helpers/markdown.js'
+import { contentConvert } from './content.js'
 
-// Integration tests using real markdown helpers
-// We do not mock dependencies because we cannot reliably mock ESM imports in this environment without vitest runner.
+// Mock markdown helpers to test error paths
+vi.mock('../helpers/markdown.js', async () => {
+  const actual = (await vi.importActual('../helpers/markdown.js')) as any
+  return {
+    ...actual,
+    blocksToMarkdown: vi.fn(actual.blocksToMarkdown),
+    markdownToBlocks: vi.fn(actual.markdownToBlocks)
+  }
+})
 
 describe('contentConvert', () => {
   describe('markdown-to-blocks', () => {
@@ -21,12 +29,34 @@ describe('contentConvert', () => {
     })
 
     it('should throw error if content is not a string', async () => {
-      await expect(
-        contentConvert({
+      try {
+        await contentConvert({
           direction: 'markdown-to-blocks',
           content: ['not', 'a', 'string']
+        } as any)
+        fail('Should have thrown')
+      } catch (error: any) {
+        expect(error.message).toBe('Content must be a string for markdown-to-blocks')
+        expect(error.code).toBe('VALIDATION_ERROR')
+        expect(error.suggestion).toBe('Provide a string content')
+      }
+    })
+
+    it('should catch and enhance unexpected errors from markdownToBlocks', async () => {
+      vi.mocked(markdownHelpers.markdownToBlocks).mockImplementationOnce(() => {
+        throw new Error('Unexpected markdown error')
+      })
+
+      try {
+        await contentConvert({
+          direction: 'markdown-to-blocks',
+          content: 'some markdown'
         })
-      ).rejects.toThrow('Content must be a string for markdown-to-blocks')
+        fail('Should have thrown')
+      } catch (error: any) {
+        expect(error.message).toBe('Unexpected markdown error')
+        expect(error.code).toBe('UNKNOWN_ERROR')
+      }
     })
   })
 
@@ -100,49 +130,95 @@ describe('contentConvert', () => {
     })
 
     it('should throw error if content is invalid JSON string', async () => {
-      await expect(
-        contentConvert({
+      try {
+        await contentConvert({
           direction: 'blocks-to-markdown',
           content: '{ invalid json }'
         })
-      ).rejects.toThrow('Content must be a valid JSON array or array object for blocks-to-markdown')
+        fail('Should have thrown')
+      } catch (error: any) {
+        expect(error.message).toBe('Content must be a valid JSON array or array object for blocks-to-markdown')
+        expect(error.code).toBe('VALIDATION_ERROR')
+        expect(error.suggestion).toBe('Provide a valid JSON array or object')
+      }
     })
 
     it('should throw error if content is not an array (after parsing)', async () => {
       // Test direct non-array input
-      await expect(
-        contentConvert({
+      try {
+        await contentConvert({
           direction: 'blocks-to-markdown',
           content: { not: 'an array' } as any
         })
-      ).rejects.toThrow('Content must be an array for blocks-to-markdown')
+        fail('Should have thrown')
+      } catch (error: any) {
+        expect(error.message).toBe('Content must be an array for blocks-to-markdown')
+        expect(error.code).toBe('VALIDATION_ERROR')
+        expect(error.suggestion).toBe('Provide an array content')
+      }
 
       // Test JSON object that is not an array
-      await expect(
-        contentConvert({
+      try {
+        await contentConvert({
           direction: 'blocks-to-markdown',
           content: '{"not": "an array"}'
         })
-      ).rejects.toThrow('Content must be an array for blocks-to-markdown')
+        fail('Should have thrown')
+      } catch (error: any) {
+        expect(error.message).toBe('Content must be an array for blocks-to-markdown')
+        expect(error.code).toBe('VALIDATION_ERROR')
+        expect(error.suggestion).toBe('Provide an array content')
+      }
 
       // Test JSON array with non-object elements
-      await expect(
-        contentConvert({
+      try {
+        await contentConvert({
           direction: 'blocks-to-markdown',
           content: '[1, 2, 3]'
         })
-      ).rejects.toThrow('Content must be an array of objects for blocks-to-markdown')
+        fail('Should have thrown')
+      } catch (error: any) {
+        expect(error.message).toBe('Content must be an array of objects for blocks-to-markdown')
+        expect(error.code).toBe('VALIDATION_ERROR')
+        expect(error.suggestion).toBe('Provide an array of block objects')
+      }
+    })
+
+    it('should catch and enhance unexpected errors from blocksToMarkdown', async () => {
+      vi.mocked(markdownHelpers.blocksToMarkdown).mockImplementationOnce(() => {
+        throw new Error('Unexpected blocks error')
+      })
+
+      try {
+        await contentConvert({
+          direction: 'blocks-to-markdown',
+          content: [{ object: 'block', type: 'paragraph', paragraph: { rich_text: [] } }]
+        })
+        fail('Should have thrown')
+      } catch (error: any) {
+        expect(error.message).toBe('Unexpected blocks error')
+        expect(error.code).toBe('UNKNOWN_ERROR')
+      }
     })
   })
 
   describe('unsupported direction', () => {
     it('should throw error for invalid direction', async () => {
-      await expect(
-        contentConvert({
+      try {
+        await contentConvert({
           direction: 'invalid-direction' as any,
           content: 'some content'
         })
-      ).rejects.toThrow('Unsupported direction: invalid-direction')
+        fail('Should have thrown')
+      } catch (error: any) {
+        expect(error.message).toBe('Unsupported direction: invalid-direction')
+        expect(error.code).toBe('VALIDATION_ERROR')
+        expect(error.suggestion).toBe('Provide a valid direction')
+      }
     })
   })
 })
+
+function fail(message: string) {
+  throw new Error(message)
+}
