@@ -24,3 +24,8 @@
 ## 2025-05-15 - Suboptimal String Joining in Loop
 **Learning:** Using `.map().join('')` in a loop to join strings creates an intermediate array and multiple temporary strings, which can be inefficient for memory and performance, especially with many items or large text.
 **Action:** Use a `for...of` loop with direct string concatenation (`+=`) for joining strings in performance-critical paths or loops to minimize allocations and GC pressure.
+## 2025-01-20 - Refactored registry.ts to resolve Long Function issue
+
+**Learning:** Extracted tool definitions and resource handlers from a monolithic `registerTools` function into modular files (`definitions.ts`, `resources.ts`). This improves readability and maintainability of the core setup logic.
+
+**Action:** When a registration function exceeds ~100 lines and contains both data (schemas) and logic (handlers), consider extracting the data into a `definitions.ts` and the handlers into domain-specific modules.
