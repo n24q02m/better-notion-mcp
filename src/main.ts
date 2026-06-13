@@ -137,7 +137,6 @@ export async function bootstrap(selectedMode: string = mode) {
     process.exit(1)
   }
 }
-// Rebuild target: mcp-core 1.11.5 (P0 fork-bomb fix)
 
 // Only execute bootstrap if we're the main module and not in a test environment.
 if (isMain(import.meta.url) && process.env.NODE_ENV !== 'test') {
