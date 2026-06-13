@@ -122,6 +122,85 @@ export function convertToNotionProperties(
 }
 
 /**
+ * Internal formatters for Notion property types.
+ * Optimized for performance and readability.
+ */
+const PROPERTY_FORMATTERS: Record<string, (p: any) => any> = {
+  title: (p) => {
+    if (!p.title) return undefined
+    let str = ''
+    const title = p.title
+    for (let j = 0; j < title.length; j++) str += title[j].plain_text || ''
+    return str
+  },
+  rich_text: (p) => {
+    if (!p.rich_text) return undefined
+    let str = ''
+    const richText = p.rich_text
+    for (let j = 0; j < richText.length; j++) str += richText[j].plain_text || ''
+    return str
+  },
+  select: (p) => (p.select ? p.select.name : undefined),
+  multi_select: (p) => {
+    if (!p.multi_select) return undefined
+    const ms = p.multi_select
+    const arr = new Array(ms.length)
+    for (let j = 0; j < ms.length; j++) arr[j] = ms[j].name
+    return arr
+  },
+  number: (p) => p.number,
+  checkbox: (p) => p.checkbox,
+  url: (p) => p.url,
+  email: (p) => p.email,
+  phone_number: (p) => p.phone_number,
+  date: (p) => {
+    if (!p.date) return undefined
+    const d = p.date
+    return d.start + (d.end ? ` to ${d.end}` : '')
+  },
+  relation: (p) => {
+    if (!p.relation) return undefined
+    const rel = p.relation
+    const arr = new Array(rel.length)
+    for (let j = 0; j < rel.length; j++) arr[j] = rel[j].id
+    return arr
+  },
+  rollup: (p) => p.rollup || undefined,
+  people: (p) => {
+    if (!p.people) return undefined
+    const ppl = p.people
+    const arr = new Array(ppl.length)
+    for (let j = 0; j < ppl.length; j++) arr[j] = ppl[j].name || ppl[j].id
+    return arr
+  },
+  files: (p) => {
+    if (!p.files) return undefined
+    const files = p.files
+    const arr = new Array(files.length)
+    for (let j = 0; j < files.length; j++) {
+      const f = files[j]
+      arr[j] = f.file?.url || f.external?.url || f.name
+    }
+    return arr
+  },
+  formula: (p) => {
+    if (!p.formula) return undefined
+    const f = p.formula
+    return f.type ? (f[f.type] ?? null) : null
+  },
+  created_time: (p) => p.created_time,
+  last_edited_time: (p) => p.last_edited_time,
+  created_by: (p) => (p.created_by ? p.created_by.name || p.created_by.id : undefined),
+  last_edited_by: (p) => (p.last_edited_by ? p.last_edited_by.name || p.last_edited_by.id : undefined),
+  status: (p) => (p.status ? p.status.name : undefined),
+  unique_id: (p) => {
+    if (!p.unique_id) return undefined
+    const u = p.unique_id
+    return u.prefix ? `${u.prefix}-${u.number}` : u.number
+  }
+}
+
+/**
  * Highly optimized extraction of properties from a Notion page response.
  * Uses direct string building and fixed-length arrays to avoid
  * creating thousands of intermediate arrays during large `.map()` chains.
@@ -134,76 +213,15 @@ export function extractPageProperties(pageProperties: any): any {
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i]
     const p = pageProperties[key] as any
-    // Cache p.type once per iteration -- avoids ~20 redundant property
-    // lookups in the if/else-if chain on every Notion page row.
     const type = p.type as string | undefined
+    if (!type) continue
 
-    if (type === 'title' && p.title) {
-      let str = ''
-      const title = p.title
-      for (let j = 0; j < title.length; j++) str += title[j].plain_text || ''
-      properties[key] = str
-    } else if (type === 'rich_text' && p.rich_text) {
-      let str = ''
-      const richText = p.rich_text
-      for (let j = 0; j < richText.length; j++) str += richText[j].plain_text || ''
-      properties[key] = str
-    } else if (type === 'select' && p.select) {
-      properties[key] = p.select.name
-    } else if (type === 'multi_select' && p.multi_select) {
-      const ms = p.multi_select
-      const arr = new Array(ms.length)
-      for (let j = 0; j < ms.length; j++) arr[j] = ms[j].name
-      properties[key] = arr
-    } else if (type === 'number') {
-      properties[key] = p.number
-    } else if (type === 'checkbox') {
-      properties[key] = p.checkbox
-    } else if (type === 'url') {
-      properties[key] = p.url
-    } else if (type === 'email') {
-      properties[key] = p.email
-    } else if (type === 'phone_number') {
-      properties[key] = p.phone_number
-    } else if (type === 'date' && p.date) {
-      const d = p.date
-      properties[key] = d.start + (d.end ? ` to ${d.end}` : '')
-    } else if (type === 'relation' && p.relation) {
-      const rel = p.relation
-      const arr = new Array(rel.length)
-      for (let j = 0; j < rel.length; j++) arr[j] = rel[j].id
-      properties[key] = arr
-    } else if (type === 'rollup' && p.rollup) {
-      properties[key] = p.rollup
-    } else if (type === 'people' && p.people) {
-      const ppl = p.people
-      const arr = new Array(ppl.length)
-      for (let j = 0; j < ppl.length; j++) arr[j] = ppl[j].name || ppl[j].id
-      properties[key] = arr
-    } else if (type === 'files' && p.files) {
-      const files = p.files
-      const arr = new Array(files.length)
-      for (let j = 0; j < files.length; j++) {
-        const f = files[j]
-        arr[j] = f.file?.url || f.external?.url || f.name
+    const formatter = PROPERTY_FORMATTERS[type]
+    if (formatter) {
+      const val = formatter(p)
+      if (val !== undefined) {
+        properties[key] = val
       }
-      properties[key] = arr
-    } else if (type === 'formula' && p.formula) {
-      const f = p.formula
-      properties[key] = f.type ? (f[f.type] ?? null) : null
-    } else if (type === 'created_time') {
-      properties[key] = p.created_time
-    } else if (type === 'last_edited_time') {
-      properties[key] = p.last_edited_time
-    } else if (type === 'created_by' && p.created_by) {
-      properties[key] = p.created_by?.name || p.created_by?.id
-    } else if (type === 'last_edited_by' && p.last_edited_by) {
-      properties[key] = p.last_edited_by?.name || p.last_edited_by?.id
-    } else if (type === 'status' && p.status) {
-      properties[key] = p.status?.name
-    } else if (type === 'unique_id' && p.unique_id) {
-      const u = p.unique_id
-      properties[key] = u.prefix ? `${u.prefix}-${u.number}` : u.number
     }
   }
   return properties
