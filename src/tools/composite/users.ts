@@ -44,7 +44,7 @@ export async function users(notion: Client, input: UsersInput): Promise<any> {
           }
         } catch (error: any) {
           // Auto-suggest from_workspace when permission denied
-          if (error.code === 'restricted_resource' || error.code === 'RESTRICTED_RESOURCE') {
+          if (error?.code === 'restricted_resource' || error?.code === 'RESTRICTED_RESOURCE') {
             throw new NotionMCPError(
               'Integration does not have permission to list users',
               'RESTRICTED_RESOURCE',

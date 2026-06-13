@@ -128,6 +128,23 @@ describe('users', () => {
 
       expect(result.users[0].name).toBe('Unknown')
     })
+    it('should handle null errors in list action', async () => {
+      mockNotion.users.list.mockRejectedValue(null)
+
+      await expect(users(mockNotion as any, { action: 'list' })).rejects.toMatchObject({
+        code: 'UNKNOWN_ERROR',
+        message: 'Unknown error occurred'
+      })
+    })
+
+    it('should handle string errors in list action', async () => {
+      mockNotion.users.list.mockRejectedValue('something went wrong')
+
+      await expect(users(mockNotion as any, { action: 'list' })).rejects.toMatchObject({
+        code: 'UNKNOWN_ERROR',
+        message: 'Unknown error occurred'
+      })
+    })
   })
 
   describe('get', () => {
