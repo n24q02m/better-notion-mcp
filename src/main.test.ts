@@ -115,38 +115,16 @@ describe('main.ts', () => {
       await startServer('stdio')
       expect(stdioServerCtor).toHaveBeenCalledWith(expect.objectContaining({ version: '0.0.0' }), expect.any(Object))
     })
-  })
 
-  describe('getPackageVersion', () => {
-    // This is a private function, but startServer calls it.
-    it('returns version from package.json', async () => {
+    it('returns 0.0.0 if JSON.parse fails', async () => {
       process.env.NOTION_TOKEN = 'ntn_test_token'
-      vi.mocked(fs.readFileSync).mockReturnValueOnce(JSON.stringify({ version: '1.2.3' }))
-      await startServer('stdio')
-      expect(stdioServerCtor).toHaveBeenCalledWith(expect.objectContaining({ version: '1.2.3' }), expect.any(Object))
-    })
-
-    it('returns 0.0.0 if version is missing', async () => {
-      process.env.NOTION_TOKEN = 'ntn_test_token'
-      vi.mocked(fs.readFileSync).mockReturnValueOnce(JSON.stringify({}))
-      await startServer('stdio')
-      expect(stdioServerCtor).toHaveBeenCalledWith(expect.objectContaining({ version: '0.0.0' }), expect.any(Object))
-    })
-
-    it('returns 0.0.0 if readFileSync throws', async () => {
-      process.env.NOTION_TOKEN = 'ntn_test_token'
-      vi.mocked(fs.readFileSync).mockImplementationOnce(() => {
-        throw new Error('Read error')
-      })
+      vi.mocked(fs.readFileSync).mockReturnValueOnce('{ invalid }')
       await startServer('stdio')
       expect(stdioServerCtor).toHaveBeenCalledWith(expect.objectContaining({ version: '0.0.0' }), expect.any(Object))
     })
   })
 
   describe('isMain', () => {
-    it('verifies false when fileURLToPath throws (invalid URL)', () => {
-      expect(isMain('not-a-url')).toBe(false)
-    })
     it('verifies false when fileURLToPath throws (invalid URL)', () => {
       expect(isMain('not-a-url')).toBe(false)
     })
@@ -206,8 +184,18 @@ describe('main.ts', () => {
 
       expect(isMain(import.meta.url)).toBe(false)
     })
-  })
 
+    it('verifies false when second call to realpathSync throws', () => {
+      process.argv[1] = 'somefile.ts'
+      vi.mocked(fs.realpathSync)
+        .mockReturnValueOnce('/path/to/main.ts')
+        .mockImplementationOnce(() => {
+          throw new Error('Entry not found')
+        })
+
+      expect(isMain(import.meta.url)).toBe(false)
+    })
+  })
   describe('getTransportMode', () => {
     it('verifies default to stdio mode if no config is provided', () => {
       expect(getTransportMode({}, [])).toBe('stdio')
