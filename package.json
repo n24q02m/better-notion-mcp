@@ -65,10 +65,10 @@
     "esbuild"
   ],
   "devDependencies": {
-    "@biomejs/biome": "^2.4.16",
-    "@types/node": "^24.13.1",
+    "@biomejs/biome": "^2.5.0",
+    "@types/node": "^24.13.2",
     "@vitest/coverage-v8": "^4.1.8",
-    "esbuild": "^0.28.0",
+    "esbuild": "^0.28.1",
     "tsx": "^4.22.4",
     "typescript": "^5.9.3",
     "vitest": "^4.1.8"
