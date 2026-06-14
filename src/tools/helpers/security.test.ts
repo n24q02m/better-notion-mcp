@@ -134,7 +134,7 @@ describe('Security Utilities', () => {
       const result = wrapToolResult('pages', maliciousJsonText)
 
       expect(result).not.toContain('</untrusted_notion_content >')
-      expect(result).toContain('<_/untrusted_notion_content>')
+      expect(result).toContain('<_/untrusted_notion_content >')
     })
 
     it('should sanitize XPIA breakout tags with attributes', () => {
@@ -142,7 +142,7 @@ describe('Security Utilities', () => {
       const result = wrapToolResult('pages', maliciousJsonText)
 
       expect(result).not.toContain('</untrusted_notion_content exploit="1">')
-      expect(result).toContain('<_/untrusted_notion_content>')
+      expect(result).toContain('<_/untrusted_notion_content exploit=\\"1\\">')
     })
 
     it('should wrap file_uploads output with safety markers (XPIA defense)', () => {
