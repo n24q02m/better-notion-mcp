@@ -24,3 +24,7 @@
 ## 2025-05-15 - Suboptimal String Joining in Loop
 **Learning:** Using `.map().join('')` in a loop to join strings creates an intermediate array and multiple temporary strings, which can be inefficient for memory and performance, especially with many items or large text.
 **Action:** Use a `for...of` loop with direct string concatenation (`+=`) for joining strings in performance-critical paths or loops to minimize allocations and GC pressure.
+
+## 2026-06-15 - Switch Statements and Array Joining in Hot Paths
+**Learning:** Long `if/else if` chains evaluating the same variable are sub-optimal as they require sequential evaluation. Replacing them with `switch` statements allows JavaScript engines to optimize routing (often O(1)). Additionally, while direct `+=` string concatenation avoids intermediate arrays, in very tight loops and large data processing paths (like properties extraction), using pre-allocated fixed-size arrays (`new Array(len)`) and `.join('')` exhibits better memory and performance characteristics than repeated string re-allocation.
+**Action:** Use `switch` statements over long `if/else if` chains when checking the same value. Standardize string concatenation in large data collection loops using pre-allocated arrays and `.join('')`.
