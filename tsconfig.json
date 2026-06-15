@@ -20,5 +20,6 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["test/**/*.ts", "scripts/**/*.ts", "src/**/*.ts"]
+  "include": ["test/**/*.ts", "scripts/**/*.ts", "src/**/*.ts"],
+  "exclude": ["src/worker.ts"]
 }
