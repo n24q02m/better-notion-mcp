@@ -343,8 +343,15 @@ describe('registerTools', () => {
 
     it('should route blocks tool correctly', async () => {
       const handler = server.getHandler(3)
-      const mockResult = { action: 'get', block_id: 'block-1', type: 'paragraph' }
-      vi.mocked(blocks).mockResolvedValue(mockResult)
+      const mockResult = {
+        action: 'get',
+        block_id: 'block-1',
+        type: 'paragraph',
+        has_children: false,
+        archived: false,
+        block: {}
+      }
+      vi.mocked(blocks).mockResolvedValue(mockResult as any)
 
       const result = await handler({
         params: { name: 'blocks', arguments: { action: 'get', block_id: 'block-1' } }
