@@ -15,7 +15,8 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { runHttpServer } from '@n24q02m/mcp-core'
 import { Client } from '@notionhq/client'
-import { NotionTokenStore } from '../auth/notion-token-store.js'
+import { NotionTokenStore, type NotionTokenStoreLike } from '../auth/notion-token-store.js'
+import { KvNotionTokenStore } from '../auth/notion-token-store-kv.js'
 import { createMCPServer } from '../create-server.js'
 import { resolveCredentialState, setState, setSubjectTokenResolver } from '../credential-state.js'
 import { NotionMCPError } from '../tools/helpers/errors.js'
@@ -24,10 +25,24 @@ const SERVER_NAME = 'better-notion-mcp'
 
 export const subjectContext = new AsyncLocalStorage<{ sub: string }>()
 
+/**
+ * Select the per-sub Notion token store. The cf-kv backend -> KV write-through
+ * (durable across container recreate; the Cloudflare deployment store). Any other
+ * backend (stdio / local single-process) -> in-memory store. Read once at
+ * startup; on CF, MCP_STORAGE_BACKEND=cf-kv is set by wrangler vars, so the
+ * durable KV store is always selected there.
+ */
+export function selectTokenStore(): NotionTokenStoreLike {
+  if ((process.env.MCP_STORAGE_BACKEND ?? '').toLowerCase() === 'cf-kv') {
+    return new KvNotionTokenStore()
+  }
+  return new NotionTokenStore()
+}
+
 export async function startHttp(): Promise<void> {
   await resolveCredentialState()
 
-  const tokenStore = new NotionTokenStore()
+  const tokenStore = selectTokenStore()
 
   const notionClientFactory = () => {
     const ctx = subjectContext.getStore()
@@ -57,6 +72,14 @@ export async function startHttp(): Promise<void> {
   // separate channel (e.g. NOTION_TOKEN env var resolved by tokenStore default).
   const authDisabled = process.env.MCP_AUTH_DISABLE === '1'
 
+  // CF deploy requirement (P3-03): CREDENTIAL_SECRET MUST be set in the
+  // container env (wrangler secret put). When set, mcp-core's JWTIssuer derives
+  // a deterministic Ed25519 (EdDSA) signing key via HKDF-SHA256 with no disk I/O.
+  // Without it, JWTIssuer falls back to RS256 keys persisted to disk on the
+  // EPHEMERAL container FS, so OAuth identity breaks on every container recreate.
+  // Setting CREDENTIAL_SECRET is the must-do CF fix; no code change is needed
+  // here because runHttpServer/createDelegatedOAuthApp already read it from env.
+
   const handle = await runHttpServer(() => createMCPServer(notionClientFactory) as unknown as McpServer, {
     serverName: SERVER_NAME,
     port,
@@ -74,7 +97,10 @@ export async function startHttp(): Promise<void> {
       onTokenReceived: (tokens: Record<string, unknown>) => {
         const accessToken = String(tokens.access_token ?? '')
         const sub = String((tokens as { owner_user_id?: string }).owner_user_id ?? 'default')
-        if (accessToken) tokenStore.save(sub, accessToken)
+        // save() may be async on the KV store; the cache is set synchronously
+        // inside it before the awaited KV write, so the immediately-following
+        // factory read hits the warm cache. Fire-and-forget the durable write.
+        if (accessToken) void tokenStore.save(sub, accessToken)
         // Return sub so mcp-core (>=1.6.2) propagates it into the bearer
         // JWT's `sub` claim, which `authScope` below then matches back
         // to the stored Notion token.

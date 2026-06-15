@@ -1,0 +1,49 @@
+// wrangler.jsonc - better-notion-mcp Cloudflare Worker + Container + KV.
+// Resource ID is a placeholder created out-of-band (wrangler kv namespace create)
+// and filled in at deploy time, not committed as a live ID.
+//
+// notion is KV-only: no D1 (no docs DB) and no Vectorize (no embeddings) blocks,
+// unlike the wet template this is copied from.
+{
+  "name": "better-notion-mcp-worker",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-06-14",
+  "containers": [
+    {
+      "name": "better-notion-mcp-worker",
+      "class_name": "NotionContainer",
+      // CF Containers pull ONLY from the Cloudflare managed registry (an external
+      // ghcr.io ref fails IMAGE_REGISTRY_NOT_CONFIGURED). Push the pre-built http
+      // image first: `docker pull ghcr.io/n24q02m/better-notion-mcp:beta &&
+      // docker tag ... better-notion-mcp:beta && wrangler containers push
+      // better-notion-mcp:beta`, then fill <YOUR_ACCOUNT_ID>. Re-pushing the same
+      // tag does NOT roll a running instance -> delete the container by ID
+      // (`wrangler containers list` -> ID) + `wrangler deploy` to recreate.
+      "image": "registry.cloudflare.com/<YOUR_ACCOUNT_ID>/better-notion-mcp:beta",
+      "instance_type": "standard-1",
+      "max_instances": 100
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "NOTION", "class_name": "NotionContainer" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["NotionContainer"] }],
+  "kv_namespaces": [{ "binding": "KV", "id": "<better-notion-kv-namespace-id>" }],
+  // Non-secret container config (forwarded into the container by
+  // NotionContainer.envVars). Secrets via `wrangler secret put`:
+  // CREDENTIAL_SECRET (-> JWTIssuer EdDSA HKDF, no-disk, survives recreate),
+  // NOTION_OAUTH_CLIENT_ID, NOTION_OAUTH_CLIENT_SECRET.
+  //
+  // MCP_AUTH_DISABLE is intentionally ABSENT: enabling it would collapse every
+  // JWT sub into the 'default' token bucket (http.ts) -> silent per-sub
+  // isolation loss. Never set auth-bypass on shared infra.
+  "vars": {
+    "MCP_TRANSPORT": "http",
+    "PORT": "8080",
+    "PUBLIC_URL": "https://better-notion-mcp.n24q02m.com",
+    "MCP_STORAGE_BACKEND": "cf-kv",
+    "MCP_KV_BASE_URL": "http://kv.internal"
+  },
+  "routes": [{ "pattern": "better-notion-mcp.n24q02m.com", "custom_domain": true }],
+  "observability": { "enabled": true }
+}

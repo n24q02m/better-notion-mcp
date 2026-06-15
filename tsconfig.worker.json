@@ -1,0 +1,27 @@
+// Isolated type-check for the Cloudflare Worker entrypoint (src/worker.ts).
+//
+// src/worker.ts targets the workerd runtime: it imports `@cloudflare/containers`
+// (which pulls the `cloudflare:workers` ambient module) and uses Worker globals
+// (Request/Response/atob/URL/crypto). Those are provided by
+// `@cloudflare/workers-types`, NOT by `@types/node`. The main tsconfig.json keeps
+// `types: ["node"]` for the rest of the server (which uses node globals), and
+// excludes src/worker.ts, so this file type-checks the worker in isolation with
+// the workers type set. Both run in the `type-check` script.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "types": ["@cloudflare/workers-types"],
+    // @cloudflare/containers' .d.ts does `import { DurableObject } from
+    // 'cloudflare:workers'`, an `export =` (CommonJS-namespace) module from
+    // workers-types. esModuleInterop lets that named import resolve so the
+    // Container base (and its inherited protected `env`) is visible to tsc.
+    "esModuleInterop": true,
+    "noEmit": true
+  },
+  "include": ["src/worker.ts"],
+  "exclude": []
+}
