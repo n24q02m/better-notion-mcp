@@ -39,3 +39,7 @@
 **Vulnerability:** N/A (Testing Task)
 **Learning:** `normalizeId` is a stable utility used for ID comparison. Comprehensive testing should verify that it only removes hyphens and does not affect case or other whitespace characters (tabs, newlines), ensuring consistency across the MCP server.
 **Prevention:** Always verify that utility functions have tests covering not just the happy path but also the preservation of non-target characters like case and whitespace.
+## 2026-06-13 - Prevent greedy regex data loss in XPIA wrapper sanitization
+**Vulnerability:** The previous `wrapToolResult` regex `/<\/untrusted_notion_content[^>]*>/gi` used a greedy `[^>]*` match to handle malformed tags, which caused severe data loss regressions when applied to JSON payloads containing tags without a closing `>` bracket.
+**Learning:** When writing sanitization regular expressions to strip or neutralize HTML/XML-like tags in unparsed JSON payloads, greedy wildcard patterns like `[^>]*` or `.*` must be avoided as they can consume all trailing characters, effectively destroying the JSON structure.
+**Prevention:** Match exact tag prefixes instead (e.g., `/<[/]?untrusted_notion_content/gi`) to safely neutralize tags without risking over-consumption.
