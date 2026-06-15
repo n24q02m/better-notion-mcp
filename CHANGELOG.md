@@ -2,6 +2,116 @@
 
 <!-- version list -->
 
+## v2.35.0-beta.1 (2026-06-15)
+
+### Bug Fixes
+
+- Bump mcp-core to 1.18.0-beta.7 for storage barrel subpath export
+  ([#973](https://github.com/n24q02m/better-notion-mcp/pull/973),
+  [`6ad49e0`](https://github.com/n24q02m/better-notion-mcp/commit/6ad49e06e201cf10f5ea5f1881082ec0c2208bbf))
+
+- Bump node alpine base image digest
+  ([`18f5b53`](https://github.com/n24q02m/better-notion-mcp/commit/18f5b53a0de971a8f2a6261380e162b0e1b10ad1))
+
+- Correct action count to 45 and drop stale daemon-respawn wording
+  ([#940](https://github.com/n24q02m/better-notion-mcp/pull/940),
+  [`64aa22a`](https://github.com/n24q02m/better-notion-mcp/commit/64aa22a76a0226fd1fe7a3f46fc6e91a2eae0a06))
+
+- Correct action count, drop daemon-respawn wording, remove v<auto> placeholder
+  ([#940](https://github.com/n24q02m/better-notion-mcp/pull/940),
+  [`64aa22a`](https://github.com/n24q02m/better-notion-mcp/commit/64aa22a76a0226fd1fe7a3f46fc6e91a2eae0a06))
+
+- Correct stdio config path and live deployment host in docs
+  ([`a2baa17`](https://github.com/n24q02m/better-notion-mcp/commit/a2baa17531f82eb993b9541654d0299b317c522d))
+
+- Cover tool-registry path-traversal and factory error guards
+  ([`45df13b`](https://github.com/n24q02m/better-notion-mcp/commit/45df13b1de10df63c845e928fb61e0e4fd49cfc4))
+
+- Guard error mapping against non-object thrown values
+  ([`7774db4`](https://github.com/n24q02m/better-notion-mcp/commit/7774db4f6c63c32579e69d00e3b10c7f08e15eb6))
+
+- Isolate CF worker type-check with workers-types and esModuleInterop
+  ([#973](https://github.com/n24q02m/better-notion-mcp/pull/973),
+  [`6ad49e0`](https://github.com/n24q02m/better-notion-mcp/commit/6ad49e06e201cf10f5ea5f1881082ec0c2208bbf))
+
+- Redact unsanitized input echoed in validation error path
+  ([`46fd6c8`](https://github.com/n24q02m/better-notion-mcp/commit/46fd6c84eee662a2114ba7f7bfc8ee4ab9c75294))
+
+- Refresh lock file for transitive dependency maintenance
+  ([`1706bf2`](https://github.com/n24q02m/better-notion-mcp/commit/1706bf2a8d02f6319a698ebfc4033ccc9760d6c0))
+
+- Remove literal v<auto> placeholder from stabilization note
+  ([#940](https://github.com/n24q02m/better-notion-mcp/pull/940),
+  [`64aa22a`](https://github.com/n24q02m/better-notion-mcp/commit/64aa22a76a0226fd1fe7a3f46fc6e91a2eae0a06))
+
+- Remove orphaned Qodo pr-agent config
+  ([#938](https://github.com/n24q02m/better-notion-mcp/pull/938),
+  [`aef33cf`](https://github.com/n24q02m/better-notion-mcp/commit/aef33cf4cdae1d37cb00e6c9e40232a0e9a9487f))
+
+- Restore PSR changelog generation and backfill version history
+  ([#939](https://github.com/n24q02m/better-notion-mcp/pull/939),
+  [`9152b2a`](https://github.com/n24q02m/better-notion-mcp/commit/9152b2ac954e46c4eab84b289e13252d145f63ca))
+
+- Sync README tagline to current capability description
+  ([#942](https://github.com/n24q02m/better-notion-mcp/pull/942),
+  [`02b96e8`](https://github.com/n24q02m/better-notion-mcp/commit/02b96e8643d972a02c6f04d22a6379652267df3c))
+
+- Update non-major dev dependencies
+  ([`80781d5`](https://github.com/n24q02m/better-notion-mcp/commit/80781d5b22989e37a7aa1940765379a3f30cb516))
+
+### Features
+
+- Add @cloudflare/containers dependency for CF worker
+  ([#973](https://github.com/n24q02m/better-notion-mcp/pull/973),
+  [`6ad49e0`](https://github.com/n24q02m/better-notion-mcp/commit/6ad49e06e201cf10f5ea5f1881082ec0c2208bbf))
+
+- Add CF worker fronting per-sub Notion container with KV outbound
+  ([#973](https://github.com/n24q02m/better-notion-mcp/pull/973),
+  [`6ad49e0`](https://github.com/n24q02m/better-notion-mcp/commit/6ad49e06e201cf10f5ea5f1881082ec0c2208bbf))
+
+- Add Cloudflare deploy template and README section
+  ([#973](https://github.com/n24q02m/better-notion-mcp/pull/973),
+  [`6ad49e0`](https://github.com/n24q02m/better-notion-mcp/commit/6ad49e06e201cf10f5ea5f1881082ec0c2208bbf))
+
+- Add KV write-through Notion token store via PerPluginStore
+  ([#973](https://github.com/n24q02m/better-notion-mcp/pull/973),
+  [`6ad49e0`](https://github.com/n24q02m/better-notion-mcp/commit/6ad49e06e201cf10f5ea5f1881082ec0c2208bbf))
+
+- Add NotionTokenStoreLike interface for interchangeable token stores
+  ([#973](https://github.com/n24q02m/better-notion-mcp/pull/973),
+  [`6ad49e0`](https://github.com/n24q02m/better-notion-mcp/commit/6ad49e06e201cf10f5ea5f1881082ec0c2208bbf))
+
+- Add wrangler config with KV-only bindings and EdDSA secret wiring
+  ([#973](https://github.com/n24q02m/better-notion-mcp/pull/973),
+  [`6ad49e0`](https://github.com/n24q02m/better-notion-mcp/commit/6ad49e06e201cf10f5ea5f1881082ec0c2208bbf))
+
+- Bump mcp-core to 1.18.0-beta.5 floor for CfKv and EdDSA seam
+  ([#973](https://github.com/n24q02m/better-notion-mcp/pull/973),
+  [`6ad49e0`](https://github.com/n24q02m/better-notion-mcp/commit/6ad49e06e201cf10f5ea5f1881082ec0c2208bbf))
+
+- Cloudflare serverless migration (Worker + Container + KV write-through)
+  ([#973](https://github.com/n24q02m/better-notion-mcp/pull/973),
+  [`6ad49e0`](https://github.com/n24q02m/better-notion-mcp/commit/6ad49e06e201cf10f5ea5f1881082ec0c2208bbf))
+
+- Document and verify CREDENTIAL_SECRET EdDSA signing for CF deploy
+  ([#973](https://github.com/n24q02m/better-notion-mcp/pull/973),
+  [`6ad49e0`](https://github.com/n24q02m/better-notion-mcp/commit/6ad49e06e201cf10f5ea5f1881082ec0c2208bbf))
+
+- Regression-guard per-sub isolation and eviction-safe lock refresh
+  ([#973](https://github.com/n24q02m/better-notion-mcp/pull/973),
+  [`6ad49e0`](https://github.com/n24q02m/better-notion-mcp/commit/6ad49e06e201cf10f5ea5f1881082ec0c2208bbf))
+
+- Select KV token store for cf-kv backend in http transport
+  ([#973](https://github.com/n24q02m/better-notion-mcp/pull/973),
+  [`6ad49e0`](https://github.com/n24q02m/better-notion-mcp/commit/6ad49e06e201cf10f5ea5f1881082ec0c2208bbf))
+
+- Split block handlers into typed helpers with discriminated-union returns
+  ([`7d4d2ad`](https://github.com/n24q02m/better-notion-mcp/commit/7d4d2ad78df7c1bc8f39807f5750ccebf175c580))
+
+- Sync cross-promo section ([#943](https://github.com/n24q02m/better-notion-mcp/pull/943),
+  [`7c56493`](https://github.com/n24q02m/better-notion-mcp/commit/7c56493eb60af7d8c2e9d0306b649e96ddcabcc7))
+
+
 ## v2.34.8-beta.3 (2026-06-10)
 
 ### Bug Fixes

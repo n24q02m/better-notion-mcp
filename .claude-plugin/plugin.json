@@ -1,7 +1,7 @@
 {
   "name": "better-notion-mcp",
   "description": "Comprehensive Notion API integration — 11 composite tools, ~95% coverage",
-  "version": "2.34.8-beta.3",
+  "version": "2.35.0-beta.1",
   "userConfig": {
     "NOTION_TOKEN": {
       "type": "string",
