@@ -1,39 +1,50 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as markdown from '../helpers/markdown.js'
-import { blocks } from './blocks'
+import { blocks } from './blocks.js'
 
-const mockNotion = {
-  blocks: {
-    retrieve: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-    children: {
-      list: vi.fn(),
-      append: vi.fn()
-    }
+vi.mock('../helpers/markdown.js', async (importOriginal) => {
+  const actual: any = await importOriginal()
+  return {
+    ...actual,
+    blocksToMarkdown: vi.fn().mockImplementation(actual.blocksToMarkdown),
+    markdownToBlocks: vi.fn().mockImplementation(actual.markdownToBlocks)
   }
-}
+})
 
-describe('blocks', () => {
+describe('Blocks Tool', () => {
+  let mockNotion: any
+
   beforeEach(() => {
+    mockNotion = {
+      blocks: {
+        retrieve: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+        children: {
+          list: vi.fn(),
+          append: vi.fn()
+        }
+      }
+    }
     vi.clearAllMocks()
   })
 
   describe('validation', () => {
-    it('should throw without block_id', async () => {
-      await expect(blocks(mockNotion as any, { action: 'get', block_id: '' })).rejects.toThrow('block_id required')
+    it('should throw if block_id is missing', async () => {
+      await expect(blocks(mockNotion as any, { action: 'get' } as any)).rejects.toThrow('block_id required')
     })
   })
 
   describe('get', () => {
-    it('should return block info', async () => {
-      mockNotion.blocks.retrieve.mockResolvedValue({
+    it('should retrieve a block', async () => {
+      const mockBlock = {
         id: 'block-1',
         type: 'paragraph',
         has_children: false,
         archived: false,
         paragraph: { rich_text: [] }
-      })
+      }
+      mockNotion.blocks.retrieve.mockResolvedValue(mockBlock)
 
       const result = await blocks(mockNotion as any, { action: 'get', block_id: 'block-1' })
 
@@ -43,13 +54,7 @@ describe('blocks', () => {
         type: 'paragraph',
         has_children: false,
         archived: false,
-        block: {
-          id: 'block-1',
-          type: 'paragraph',
-          has_children: false,
-          archived: false,
-          paragraph: { rich_text: [] }
-        }
+        block: mockBlock
       })
       expect(mockNotion.blocks.retrieve).toHaveBeenCalledWith({ block_id: 'block-1' })
     })
@@ -63,7 +68,7 @@ describe('blocks', () => {
           rich_text: [
             {
               type: 'text',
-              text: { content: 'Hello' },
+              text: { content: 'Hello', link: null },
               annotations: {
                 bold: false,
                 italic: false,
@@ -71,7 +76,9 @@ describe('blocks', () => {
                 underline: false,
                 code: false,
                 color: 'default'
-              }
+              },
+              plain_text: 'Hello',
+              href: null
             }
           ]
         }
@@ -87,9 +94,9 @@ describe('blocks', () => {
 
       expect(result.action).toBe('children')
       expect(result.block_id).toBe('block-1')
-      expect(result.total_children).toBe(1)
-      expect(result.markdown).toBe('Hello')
-      expect(result.blocks).toHaveLength(1)
+      expect((result as any).total_children).toBe(1)
+      expect((result as any).markdown).toBe('Hello')
+      expect((result as any).blocks).toHaveLength(1)
       expect(mockNotion.blocks.children.list).toHaveBeenCalledWith({
         block_id: 'block-1',
         start_cursor: undefined,
@@ -108,9 +115,9 @@ describe('blocks', () => {
 
       expect(result.action).toBe('children')
       expect(result.block_id).toBe('block-1')
-      expect(result.total_children).toBe(0)
-      expect(result.markdown).toBe('')
-      expect(result.blocks).toHaveLength(0)
+      expect((result as any).total_children).toBe(0)
+      expect((result as any).markdown).toBe('')
+      expect((result as any).blocks).toHaveLength(0)
     })
   })
 
@@ -126,7 +133,7 @@ describe('blocks', () => {
 
       expect(result.action).toBe('append')
       expect(result.block_id).toBe('block-1')
-      expect(result.appended_count).toBe(1)
+      expect((result as any).appended_count).toBe(1)
       expect(mockNotion.blocks.children.append).toHaveBeenCalledWith({
         block_id: 'block-1',
         children: expect.any(Array)

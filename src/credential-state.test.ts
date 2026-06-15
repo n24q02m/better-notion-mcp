@@ -88,6 +88,22 @@ describe('credential-state', () => {
       const state = await resolveCredentialState()
       expect(state).toBe('awaiting_setup')
     })
+    it('clears notion token when resolveCredentialState falls back to awaiting_setup', async () => {
+      // 1. Setup a configured state
+      process.env.NOTION_TOKEN = 'initial-token'
+      await resolveCredentialState()
+      expect(getState()).toBe('configured')
+      expect(getNotionToken()).toBe('initial-token')
+
+      // 2. Remove env var and make resolveConfig fail
+      delete process.env.NOTION_TOKEN
+      vi.mocked(resolveConfig).mockRejectedValue(new Error('read error') as never)
+
+      // 3. Resolve again
+      const state = await resolveCredentialState()
+      expect(state).toBe('awaiting_setup')
+      expect(getNotionToken()).toBeNull()
+    })
   })
 
   describe('resetState', () => {

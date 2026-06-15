@@ -240,6 +240,34 @@ describe('enhanceError', () => {
       expect(enhanced.details.config).toBeUndefined()
       expect(enhanced.details.request).toBeUndefined()
     })
+
+    it('should redact sensitive information in validation_error path', () => {
+      const sensitiveError = {
+        code: 'validation_error',
+        message: 'Invalid request',
+        body: {
+          message: 'Invalid value',
+          path: 'properties.Password.text[0].text.content:secret-token'
+        }
+      }
+
+      const enhanced = enhanceError(sensitiveError)
+      expect(enhanced.details.path).not.toContain('secret-token')
+    })
+
+    it('should allow safe paths in validation_error', () => {
+      const safeError = {
+        code: 'validation_error',
+        message: 'Invalid request',
+        body: {
+          message: 'Invalid value',
+          path: 'properties.Name.title[0]'
+        }
+      }
+
+      const enhanced = enhanceError(safeError)
+      expect(enhanced.details.path).toBe('properties.Name.title[0]')
+    })
   })
 })
 

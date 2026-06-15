@@ -98,6 +98,7 @@ export async function resolveCredentialState(): Promise<CredentialState> {
   }
 
   // 3. Nothing found
+  _notionToken = null
   _state = 'awaiting_setup'
   return _state
 }

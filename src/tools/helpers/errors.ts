@@ -35,7 +35,15 @@ function sanitizeValidationBody(body: any): any {
 
   for (const field of safeFields) {
     if (field in body) {
-      safe[field] = body[field]
+      if (field === 'path' && typeof body[field] === 'string') {
+        // Sanitize path: allow only alphanumeric, dots, brackets, underscores, hyphens, spaces, and slashes.
+        // We truncate at the first "unsafe" character to avoid leaking potentially sensitive
+        // values that might have been appended (e.g. by a proxy or if Notion includes values in paths).
+        const match = body[field].match(/^[a-zA-Z0-9.[\]_ /-]*/)
+        safe[field] = match ? match[0] : ''
+      } else {
+        safe[field] = body[field]
+      }
     }
   }
 
@@ -127,6 +135,7 @@ function stripSensitiveFields(obj: any, seen = new WeakSet()): void {
  * Map network-related errors
  */
 function mapNetworkError(error: any): NotionMCPError | null {
+  if (!error || typeof error !== 'object') return null
   if (error.message?.includes('ECONNREFUSED') || error.message?.includes('ENOTFOUND')) {
     return new NotionMCPError(
       'Cannot connect to Notion API',
@@ -141,6 +150,7 @@ function mapNetworkError(error: any): NotionMCPError | null {
  * Handle validation_error separately as it has dynamic suggestions
  */
 function mapValidationError(error: any): NotionMCPError | null {
+  if (!error || typeof error !== 'object') return null
   if (error.code !== 'validation_error') return null
 
   const bodyMessage: string = error.body?.message || ''
@@ -206,6 +216,7 @@ const NOTION_ERROR_MAP: Record<string, { message: string; code: string; suggesti
  * Map Notion API errors
  */
 function mapNotionError(error: any): NotionMCPError | null {
+  if (!error || typeof error !== 'object') return null
   if (!error.code) return null
 
   const validationError = mapValidationError(error)
@@ -226,6 +237,9 @@ function mapNotionError(error: any): NotionMCPError | null {
  * Map all other errors
  */
 function mapGenericError(error: any): NotionMCPError {
+  if (!error || typeof error !== 'object') {
+    return new NotionMCPError('Unknown error occurred', 'UNKNOWN_ERROR', 'Please check your request and try again')
+  }
   return new NotionMCPError(
     error.message || 'Unknown error occurred',
     'UNKNOWN_ERROR',
