@@ -65,13 +65,13 @@
     "esbuild"
   ],
   "devDependencies": {
-    "@biomejs/biome": "^2.4.16",
-    "@types/node": "^24.13.1",
-    "@vitest/coverage-v8": "^4.1.8",
-    "esbuild": "^0.28.0",
+    "@biomejs/biome": "^2.5.0",
+    "@types/node": "^24.13.2",
+    "@vitest/coverage-v8": "^4.1.9",
+    "esbuild": "^0.28.1",
     "tsx": "^4.22.4",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   },
   "description": "Better MCP server for Notion API with composite tools optimized for AI agents",
   "main": "build/src/init-server.js",
