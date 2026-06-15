@@ -405,5 +405,21 @@ describe('commentsManage', () => {
         message: 'Too many requests to Notion API'
       })
     })
+
+    it('should throw generic errors during block retrieve', async () => {
+      const notFoundError = new Error('Not found')
+      ;(notFoundError as any).code = 'object_not_found'
+      mockNotion.comments.list.mockRejectedValue(notFoundError)
+
+      const genericError = new Error('Generic error')
+      mockNotion.blocks.retrieve.mockRejectedValue(genericError)
+
+      await expect(
+        commentsManage(mockNotion as any, {
+          action: 'list',
+          page_id: 'page-1'
+        })
+      ).rejects.toThrow('Generic error')
+    })
   })
 })
