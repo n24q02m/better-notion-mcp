@@ -15,6 +15,11 @@
     "declarationMap": false,
     "sourceMap": false,
     "types": ["@cloudflare/workers-types"],
+    // @cloudflare/containers' .d.ts does `import { DurableObject } from
+    // 'cloudflare:workers'`, an `export =` (CommonJS-namespace) module from
+    // workers-types. esModuleInterop lets that named import resolve so the
+    // Container base (and its inherited protected `env`) is visible to tsc.
+    "esModuleInterop": true,
     "noEmit": true
   },
   "include": ["src/worker.ts"],
