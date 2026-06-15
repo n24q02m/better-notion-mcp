@@ -163,6 +163,39 @@ docker run -p 8080:8080 \
   n24q02m/better-notion-mcp:latest
 ```
 
+## Deploy to Cloudflare
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/n24q02m/better-notion-mcp)
+
+Run your own multi-user better-notion-mcp serverless on Cloudflare (Worker + Container + KV).
+
+**Prerequisites:** a Cloudflare account on the Workers Paid plan and the `wrangler` CLI.
+
+1. `git clone https://github.com/n24q02m/better-notion-mcp && cd better-notion-mcp`
+2. `wrangler login`
+3. Provision the KV namespace and paste its id into `wrangler.jsonc`:
+   ```
+   wrangler kv namespace create better-notion-kv
+   ```
+4. Set secrets:
+   ```
+   wrangler secret put CREDENTIAL_SECRET
+   wrangler secret put NOTION_OAUTH_CLIENT_ID
+   wrangler secret put NOTION_OAUTH_CLIENT_SECRET
+   ```
+   `CREDENTIAL_SECRET` is REQUIRED: it derives a deterministic OAuth signing key so
+   user identity survives container recreation.
+5. Push the http image to the CF managed registry and deploy:
+   ```
+   wrangler containers push better-notion-mcp:beta
+   wrangler deploy
+   ```
+6. Complete the Notion OAuth flow in the browser at your Worker domain.
+
+Per-user Notion access tokens are encrypted into KV (`MCP_STORAGE_BACKEND=cf-kv`),
+so they survive scale-to-zero. Do NOT set `MCP_AUTH_DISABLE` on a shared/public
+deployment — it collapses all users into a single token bucket.
+
 ## Comparison
 
 How better-notion-mcp stacks up against direct competitors in each pillar:

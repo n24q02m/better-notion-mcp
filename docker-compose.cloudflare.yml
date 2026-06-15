@@ -1,0 +1,16 @@
+# Cloudflare emulation overlay: run `wrangler dev --local --port 8787` separately,
+# then layer this overlay onto docker-compose.http.yml. The container reaches KV
+# via the host-mapped wrangler dev worker (kv.internal -> host gateway).
+services:
+  better-notion-mcp:
+    environment:
+      - MCP_TRANSPORT=http
+      - PORT=8080
+      - MCP_STORAGE_BACKEND=cf-kv
+      - MCP_KV_BASE_URL=http://host.docker.internal:8787
+      - PUBLIC_URL=http://localhost:8787
+      - CREDENTIAL_SECRET=${CREDENTIAL_SECRET}
+      - NOTION_OAUTH_CLIENT_ID=${NOTION_OAUTH_CLIENT_ID}
+      - NOTION_OAUTH_CLIENT_SECRET=${NOTION_OAUTH_CLIENT_SECRET}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
