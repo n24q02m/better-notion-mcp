@@ -57,6 +57,14 @@ export async function startHttp(): Promise<void> {
   // separate channel (e.g. NOTION_TOKEN env var resolved by tokenStore default).
   const authDisabled = process.env.MCP_AUTH_DISABLE === '1'
 
+  // CF deploy requirement (P3-03): CREDENTIAL_SECRET MUST be set in the
+  // container env (wrangler secret put). When set, mcp-core's JWTIssuer derives
+  // a deterministic Ed25519 (EdDSA) signing key via HKDF-SHA256 with no disk I/O.
+  // Without it, JWTIssuer falls back to RS256 keys persisted to disk on the
+  // EPHEMERAL container FS, so OAuth identity breaks on every container recreate.
+  // Setting CREDENTIAL_SECRET is the must-do CF fix; no code change is needed
+  // here because runHttpServer/createDelegatedOAuthApp already read it from env.
+
   const handle = await runHttpServer(() => createMCPServer(notionClientFactory) as unknown as McpServer, {
     serverName: SERVER_NAME,
     port,
