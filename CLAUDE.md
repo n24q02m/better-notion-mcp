@@ -96,7 +96,7 @@ Two transports, selected in `init-server.ts:14-15` (delegated to `main.ts`). The
 
 ## Config storage path
 
-TS servers dùng `$APPDATA\mcp\Config\config.enc` (khác Python servers `$LOCALAPPDATA\mcp\config.enc`). Khi debug, clean cả 2 paths nếu need reset state.
+TS servers (gồm better-notion-mcp) dùng `$APPDATA\mcp\Config\config.enc` — single shared encrypted store (`servers.<name>` section, machine-bound key) qua `@n24q02m/mcp-core/storage` `resolveConfig`/`deleteConfig`. Python servers (wet/mnemo/crg/imagine) dùng PerPluginStore `~/.<plugin>-mcp/config.json` (config.enc là legacy). Khi debug reset state, xóa `config.enc` của TS server.
 
 ## E2E
 
@@ -108,7 +108,7 @@ cd ../mcp-core && uv run --project scripts/e2e python -m e2e.driver <config-id>
 
 Configs for this repo: `notion-paste-token`.
 
-Note: ``notion-oauth`` reclassified out of T2 matrix 2026-04-27 — verify post-deploy via manual smoke against ``notion-mcp.n24q02m.com`` only.
+Note: ``notion-oauth`` reclassified out of T2 matrix 2026-04-27 — verify post-deploy via manual smoke against ``better-notion-mcp.n24q02m.com`` only.
 
 Tier policy:
 

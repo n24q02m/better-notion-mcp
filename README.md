@@ -201,7 +201,7 @@ This plugin implements **TC-NearZK** (in-memory, ephemeral). See [the trust mode
 |---|---|---|---|
 | HTTP n24q02m-hosted (default) | In-memory `Map<sub, OAuthToken>` | In-process only | Server process (cleared on restart) |
 | HTTP self-host | Same as hosted | Same | Only you (admin = user) |
-| stdio proxy | `~/.better-notion-mcp/config.json` | AES-GCM, machine-bound key | Only your OS user (file perm 0600) |
+| stdio (local) | `config.enc` in the OS config dir (`%APPDATA%\mcp\Config\config.enc` on Windows, `~/.config/mcp/config.enc` on Linux/macOS) | AES-GCM, machine-bound key | Only your OS user |
 
 ## License
 
