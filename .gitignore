@@ -44,3 +44,6 @@ package-lock.json
 *.bak
 /*.patch
 /*.diff
+
+# cf_full_flow.py per-run OAuth state (PKCE verifier + bearer JWT) — never commit
+scripts/.notion_cf_token*
