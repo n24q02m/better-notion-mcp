@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import worker, { NotionContainer, OUTBOUND_BY_HOST } from '../src/worker'
+import worker, { CONTAINER_ENV_KEYS, CONTAINER_PING_ENDPOINT, NotionContainer, OUTBOUND_BY_HOST } from '../src/worker'
 
 function fakeEnv() {
   const kv = new Map<string, ArrayBuffer>()
@@ -67,6 +67,23 @@ describe('outbound handlers', () => {
   })
 })
 
+describe('CF container readiness (TS-on-CF regressions)', () => {
+  // mcp-core core-ts binds 127.0.0.1 by default (local-server.ts). HOST must be
+  // forwarded so the container binds 0.0.0.0:8080 and CF can reach it
+  // (otherwise: "container is not listening in the TCP address 10.0.0.1:8080").
+  it('forwards HOST into the container env', () => {
+    expect(CONTAINER_ENV_KEYS).toContain('HOST')
+  })
+
+  // The default Container ping ('/') redirect-chains through delegated Notion
+  // OAuth to an external https URL, which the redirect-following readiness probe
+  // cannot connect to. Probe a static, non-redirecting 200 instead.
+  it('pings a non-redirecting well-known doc, not the default "/"', () => {
+    expect(CONTAINER_PING_ENDPOINT).toContain('.well-known/oauth-protected-resource')
+    expect(CONTAINER_PING_ENDPOINT).not.toBe('ping')
+  })
+})
+
 describe('public fetch entrypoint does NOT expose outbound handlers (security)', () => {
   it('a public request with an internal hostname is NOT serviced by a handler', async () => {
     const env = fakeEnv() // no NOTION binding -> DO routing path returns 404
@@ -97,7 +114,7 @@ describe('single-user DO contract + per-sub routing (E.2)', () => {
 
   it('no Bearer token -> routes to the "default" DO', async () => {
     const { calls, env } = envWithDoSpy()
-    const res = await worker.fetch(new Request('https://better-notion-mcp.n24q02m.com/mcp'), env as never)
+    const res = await worker.fetch(new Request('https://notion.n24q02m.com/mcp'), env as never)
     expect(res.status).toBe(200)
     expect(await res.text()).toBe('do-hit')
     expect(calls).toEqual(['default'])
@@ -107,7 +124,7 @@ describe('single-user DO contract + per-sub routing (E.2)', () => {
     const { calls, env } = envWithDoSpy()
     const jwt = `h.${btoa(JSON.stringify({ aud: 'x' }))}.s`
     await worker.fetch(
-      new Request('https://better-notion-mcp.n24q02m.com/mcp', { headers: { authorization: `Bearer ${jwt}` } }),
+      new Request('https://notion.n24q02m.com/mcp', { headers: { authorization: `Bearer ${jwt}` } }),
       env as never
     )
     expect(calls).toEqual(['default'])
@@ -117,7 +134,7 @@ describe('single-user DO contract + per-sub routing (E.2)', () => {
     const { calls, env } = envWithDoSpy()
     const jwt = `h.${btoa(JSON.stringify({ sub: 'user-123' }))}.s`
     await worker.fetch(
-      new Request('https://better-notion-mcp.n24q02m.com/mcp', { headers: { authorization: `Bearer ${jwt}` } }),
+      new Request('https://notion.n24q02m.com/mcp', { headers: { authorization: `Bearer ${jwt}` } }),
       env as never
     )
     expect(calls).toEqual(['user-123'])

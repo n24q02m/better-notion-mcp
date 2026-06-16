@@ -65,7 +65,7 @@ mise run fix                # bun run check:fix
 - CD: workflow_dispatch, chon beta/stable
 - Pipeline: PSR v10 -> npm publish (`@n24q02m/better-notion-mcp`) -> Docker multi-arch (amd64 + arm64) -> DockerHub + GHCR -> MCP Registry
 - OCI VM deploy: Docker Compose + Watchtower. Prod `:latest` 0.125G, Staging `:beta` 0.0625G
-- Domain: `better-notion-mcp.n24q02m.com` (prod), `better-notion-mcp-staging.n24q02m.com` (staging)
+- Cloudflare deploy (canonical, manual via wrangler): `notion.n24q02m.com` (Worker + Container + KV). Legacy OCI VM: `better-notion-mcp.n24q02m.com` (prod) / `better-notion-mcp-staging.n24q02m.com` (staging) — fallback until decommission.
 
 ## Pre-commit hooks
 
@@ -92,7 +92,7 @@ mise run fix                # bun run check:fix
 Two transports, selected in `init-server.ts:14-15` (delegated to `main.ts`). There is no `MCP_MODE` env var; the old `local-relay` / `remote-oauth` distinction was removed (see `transports/http.ts:4-9`).
 
 - **stdio (default)**: MCP SDK `StdioServerTransport` directly. Single-user; requires `NOTION_TOKEN`. Fails fast with a stderr message if the token is unset (`main.ts:76-91`). No local relay spawn.
-- **http (opt-in)**: enabled via `--http`, `MCP_TRANSPORT=http`, or `TRANSPORT_MODE=http`. Always delegated OAuth 2.1 redirect flow to Notion at `https://api.notion.com/v1/oauth/authorize`. Requires `NOTION_OAUTH_CLIENT_ID` + `NOTION_OAUTH_CLIENT_SECRET`. Per-user access token stored in-process keyed by JWT `sub` (`auth/notion-token-store.ts`, in-memory `Map`). Multi-user. Deploy at `https://better-notion-mcp.n24q02m.com`.
+- **http (opt-in)**: enabled via `--http`, `MCP_TRANSPORT=http`, or `TRANSPORT_MODE=http`. Always delegated OAuth 2.1 redirect flow to Notion at `https://api.notion.com/v1/oauth/authorize`. Requires `NOTION_OAUTH_CLIENT_ID` + `NOTION_OAUTH_CLIENT_SECRET`. Per-user access token stored in-process keyed by JWT `sub` (`auth/notion-token-store.ts`, in-memory `Map`). Multi-user. Deploy at `https://notion.n24q02m.com` (Cloudflare Worker + Container; legacy OCI VM at `https://better-notion-mcp.n24q02m.com`).
 
 ## Config storage path
 
@@ -108,7 +108,7 @@ cd ../mcp-core && uv run --project scripts/e2e python -m e2e.driver <config-id>
 
 Configs for this repo: `notion-paste-token`.
 
-Note: ``notion-oauth`` reclassified out of T2 matrix 2026-04-27 — verify post-deploy via manual smoke against ``better-notion-mcp.n24q02m.com`` only.
+Note: ``notion-oauth`` reclassified out of T2 matrix 2026-04-27 — verify post-deploy via manual smoke against ``notion.n24q02m.com`` (Cloudflare) only.
 
 Tier policy:
 

@@ -45,7 +45,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://better-notion-mcp.n24q02m.com/mcp"
+      "url": "https://notion.n24q02m.com/mcp"
     }
   ]
 }

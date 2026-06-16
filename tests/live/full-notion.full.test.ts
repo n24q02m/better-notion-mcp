@@ -19,7 +19,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 // ---------------------------------------------------------------------------
 
 const NOTION_TOKEN = process.env.NOTION_TOKEN ?? ''
-const PUBLIC_URL = 'https://better-notion-mcp.n24q02m.com'
+const PUBLIC_URL = 'https://notion.n24q02m.com'
 
 const TOOL_NAMES = [
   'pages',

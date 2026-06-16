@@ -35,6 +35,11 @@ export interface Env {
   MCP_KV_BASE_URL: string
   PUBLIC_URL: string
   PORT: string
+  // mcp-core core-ts defaults the listen host to 127.0.0.1 (local-server.ts).
+  // The CF container is reachable only when the server binds 0.0.0.0:8080, so
+  // HOST=0.0.0.0 is forwarded (matching the OCI VM compose). Without it the
+  // container "is not listening in the TCP address 10.0.0.1:8080".
+  HOST: string
   CREDENTIAL_SECRET: string
   NOTION_OAUTH_CLIENT_ID: string
   NOTION_OAUTH_CLIENT_SECRET: string
@@ -42,17 +47,26 @@ export interface Env {
 
 // Keys forwarded from the Worker env (wrangler vars + secrets) into the container
 // process. Unset/empty values are dropped so an unused optional secret never
-// injects a blank.
-const CONTAINER_ENV_KEYS = [
+// injects a blank. Exported for the env-forwarding regression test (HOST must
+// stay in the list or the container binds 127.0.0.1 and CF can't reach it).
+export const CONTAINER_ENV_KEYS = [
   'MCP_TRANSPORT',
   'MCP_STORAGE_BACKEND',
   'MCP_KV_BASE_URL',
   'PUBLIC_URL',
   'PORT',
+  'HOST',
   'CREDENTIAL_SECRET',
   'NOTION_OAUTH_CLIENT_ID',
   'NOTION_OAUTH_CLIENT_SECRET'
 ] as const
+
+// CF Containers readiness-probe target (NotionContainer.pingEndpoint). The
+// default 'ping' hits path '/', which the delegated-OAuth server 302-redirects
+// through /authorize to api.notion.com (https) — the redirect-following probe
+// then dies on the https hop. The well-known doc answers 200 with no redirect.
+// Exported so the regression test pins it away from the default.
+export const CONTAINER_PING_ENDPOINT = 'ping/.well-known/oauth-protected-resource'
 
 function pickContainerEnv(env: Env): Record<string, string> {
   const out: Record<string, string> = {}
@@ -150,6 +164,10 @@ function extractUserId(request: Request): string {
 export class NotionContainer extends Container<Env> {
   defaultPort = 8080
   sleepAfter = '1h'
+  // Readiness-probe path override (see CONTAINER_PING_ENDPOINT): the default
+  // 'ping' redirect-chains through delegated Notion OAuth to an external https
+  // URL and breaks the CF container health check.
+  pingEndpoint = CONTAINER_PING_ENDPOINT
   // The container reaches api.notion.com over the public internet; kv.internal
   // stays intercepted (see outboundByHost).
   enableInternet = true

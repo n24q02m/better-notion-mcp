@@ -40,10 +40,14 @@
   "vars": {
     "MCP_TRANSPORT": "http",
     "PORT": "8080",
-    "PUBLIC_URL": "https://better-notion-mcp.n24q02m.com",
+    // mcp-core core-ts binds 127.0.0.1 by default; the CF container is only
+    // reachable when the http server binds 0.0.0.0:8080 (same as the OCI VM
+    // compose). Without HOST the container "is not listening on 10.0.0.1:8080".
+    "HOST": "0.0.0.0",
+    "PUBLIC_URL": "https://notion.n24q02m.com",
     "MCP_STORAGE_BACKEND": "cf-kv",
     "MCP_KV_BASE_URL": "http://kv.internal"
   },
-  "routes": [{ "pattern": "better-notion-mcp.n24q02m.com", "custom_domain": true }],
+  "routes": [{ "pattern": "notion.n24q02m.com", "custom_domain": true }],
   "observability": { "enabled": true }
 }

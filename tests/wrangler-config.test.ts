@@ -30,13 +30,17 @@ describe('wrangler.jsonc', () => {
     expect(cfg.vars.MCP_KV_BASE_URL).toBe('http://kv.internal')
   })
 
+  it('binds the container to 0.0.0.0 (TS mcp-core defaults to 127.0.0.1, unreachable on CF)', () => {
+    expect(cfg.vars.HOST).toBe('0.0.0.0')
+  })
+
   it('pulls the image from the CF managed registry (not ghcr.io)', () => {
     expect(cfg.containers[0].image).toContain('registry.cloudflare.com/')
     expect(cfg.containers[0].image).not.toContain('ghcr.io')
   })
 
   it('routes the production custom domain', () => {
-    expect(cfg.routes[0].pattern).toBe('better-notion-mcp.n24q02m.com')
+    expect(cfg.routes[0].pattern).toBe('notion.n24q02m.com')
     expect(cfg.routes[0].custom_domain).toBe(true)
   })
 
