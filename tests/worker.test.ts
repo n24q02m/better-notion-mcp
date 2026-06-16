@@ -75,6 +75,13 @@ describe('CF container readiness (TS-on-CF regressions)', () => {
     expect(CONTAINER_ENV_KEYS).toContain('HOST')
   })
 
+  // Gate A (shared relay-password). Dropping it from the forwarded env turns the
+  // deployed server into an open self-service relay -- /authorize stops gating
+  // behind /login even though the OAuth step is delegated to Notion.
+  it('forwards MCP_RELAY_PASSWORD (Gate A) into the container env', () => {
+    expect(CONTAINER_ENV_KEYS).toContain('MCP_RELAY_PASSWORD')
+  })
+
   // The default Container ping ('/') redirect-chains through delegated Notion
   // OAuth to an external https URL, which the redirect-following readiness probe
   // cannot connect to. Probe a static, non-redirecting 200 instead.

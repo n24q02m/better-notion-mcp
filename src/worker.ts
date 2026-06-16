@@ -41,6 +41,10 @@ export interface Env {
   // container "is not listening in the TCP address 10.0.0.1:8080".
   HOST: string
   CREDENTIAL_SECRET: string
+  // Gate A (shared relay-password front door). Forwarding it gates /authorize
+  // behind /login like the OCI VM; omitting it leaves an open self-service relay
+  // even though the OAuth step itself is delegated to Notion.
+  MCP_RELAY_PASSWORD: string
   NOTION_OAUTH_CLIENT_ID: string
   NOTION_OAUTH_CLIENT_SECRET: string
 }
@@ -57,6 +61,7 @@ export const CONTAINER_ENV_KEYS = [
   'PORT',
   'HOST',
   'CREDENTIAL_SECRET',
+  'MCP_RELAY_PASSWORD',
   'NOTION_OAUTH_CLIENT_ID',
   'NOTION_OAUTH_CLIENT_SECRET'
 ] as const
