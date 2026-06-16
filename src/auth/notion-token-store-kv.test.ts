@@ -69,4 +69,24 @@ describe('KvNotionTokenStore', () => {
     const cold = new KvNotionTokenStore({ http })
     expect(await cold.getAsync('alice')).toBeUndefined()
   })
+
+  it('ready() resolves when the kv.internal outbound path is reachable', async () => {
+    process.env.CREDENTIAL_SECRET = 'test-secret'
+    const store = new KvNotionTokenStore({ http: new FakeKvHttp() })
+    // A reachable backend (200/404 both count as "answered") -> no throw.
+    await expect(store.ready()).resolves.toBeUndefined()
+  })
+
+  it('ready() rejects when the container -> Worker outbound is not wired', async () => {
+    process.env.CREDENTIAL_SECRET = 'test-secret'
+    // Simulate broken outbound interception: the fetch to kv.internal fails at
+    // the transport layer (NXDOMAIN / connection refused) instead of answering.
+    const brokenHttp = {
+      async request(): Promise<{ status: number; body: Uint8Array }> {
+        throw new Error('getaddrinfo ENOTFOUND kv.internal')
+      }
+    }
+    const store = new KvNotionTokenStore({ http: brokenHttp })
+    await expect(store.ready()).rejects.toThrow(/kv\.internal/)
+  })
 })

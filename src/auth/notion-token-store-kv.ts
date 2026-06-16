@@ -90,4 +90,14 @@ export class KvNotionTokenStore implements NotionTokenStoreLike {
     // already scoped to this sub via storeFor) and removes the (plugin, sub) blob.
     await this.storeFor(sub).clear()
   }
+
+  // Startup readiness probe: confirm the container -> Worker `kv.internal`
+  // outbound path is wired BEFORE the first credential write. Hits the Worker's
+  // kvOutbound `__ready` branch (reserved key, returns 200) via the backend; a
+  // broken outbound interception makes the underlying fetch to kv.internal fail
+  // (NXDOMAIN / connection refused) and this throws, so the HTTP transport can
+  // log it loudly at startup instead of losing the first token write silently.
+  async ready(): Promise<void> {
+    await this.backend.get('__ready')
+  }
 }

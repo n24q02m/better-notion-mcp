@@ -39,10 +39,50 @@ export function selectTokenStore(): NotionTokenStoreLike {
   return new NotionTokenStore()
 }
 
+/**
+ * Derive the JWT subject from the upstream Notion token response.
+ *
+ * Notion's OAuth token payload identifies the authorizing principal by
+ * ``owner.user.id`` (user-level integrations) and ALWAYS carries
+ * ``workspace_id`` + ``bot_id``. There is NO ``owner_user_id`` field. Prefer the
+ * human user id for per-user isolation, then fall back to the workspace, then
+ * the bot, so the JWT ``sub`` (and thus the per-sub Durable Object + KV token
+ * bucket) is a stable real identity rather than the shared ``'default'`` bucket
+ * — collapsing every caller onto ``'default'`` would silently break multi-user
+ * isolation. ``'default'`` is reserved for a malformed response only.
+ */
+export function deriveSubject(tokens: Record<string, unknown>): string {
+  const owner = tokens.owner as { user?: { id?: unknown } } | undefined
+  const userId = owner?.user?.id
+  if (typeof userId === 'string' && userId) return userId
+  const workspaceId = tokens.workspace_id
+  if (typeof workspaceId === 'string' && workspaceId) return workspaceId
+  const botId = tokens.bot_id
+  if (typeof botId === 'string' && botId) return botId
+  return 'default'
+}
+
 export async function startHttp(): Promise<void> {
   await resolveCredentialState()
 
   const tokenStore = selectTokenStore()
+
+  // Self-validating deploy: when the durable KV store is selected (Cloudflare),
+  // confirm the container -> Worker `kv.internal` outbound path is wired at
+  // startup. If it is NOT, the fire path of the first token write would vanish
+  // silently and the token would never survive a container recreate. Log the
+  // outcome loudly; non-fatal so /authorize still runs, but a broken outbound
+  // path is now visible in `wrangler tail` instead of being invisible.
+  if (tokenStore.ready) {
+    try {
+      await tokenStore.ready()
+      console.error(`[${SERVER_NAME}] durable KV store reachable (kv.internal outbound wired)`)
+    } catch (err) {
+      console.error(
+        `[${SERVER_NAME}] durable KV store UNREACHABLE at startup: ${err instanceof Error ? err.message : String(err)}`
+      )
+    }
+  }
 
   const notionClientFactory = () => {
     const ctx = subjectContext.getStore()
@@ -94,16 +134,23 @@ export async function startHttp(): Promise<void> {
         clientSecret,
         scopes: []
       },
-      onTokenReceived: (tokens: Record<string, unknown>) => {
+      onTokenReceived: async (tokens: Record<string, unknown>) => {
         const accessToken = String(tokens.access_token ?? '')
-        const sub = String((tokens as { owner_user_id?: string }).owner_user_id ?? 'default')
-        // save() may be async on the KV store; the cache is set synchronously
-        // inside it before the awaited KV write, so the immediately-following
-        // factory read hits the warm cache. Fire-and-forget the durable write.
-        if (accessToken) void tokenStore.save(sub, accessToken)
-        // Return sub so mcp-core (>=1.6.2) propagates it into the bearer
-        // JWT's `sub` claim, which `authScope` below then matches back
-        // to the stored Notion token.
+        const sub = deriveSubject(tokens)
+        // Structural breadcrumb (KEY NAMES + derived sub only, NEVER token
+        // values) so the Notion token response shape is verifiable in deploy
+        // logs without leaking the access token.
+        console.error(`[${SERVER_NAME}] onTokenReceived keys=[${Object.keys(tokens).join(',')}] sub=${sub}`)
+        // AWAIT the durable write (do not fire-and-forget). The KV store sets
+        // its in-memory cache synchronously before the awaited KV PUT, so the
+        // same-request factory read still hits the warm cache. mcp-core wraps
+        // this callback in try/catch and returns a 500 "Failed to persist
+        // tokens" to the browser if it throws — so a broken KV write surfaces
+        // at auth time instead of silently losing the token once the in-memory
+        // cache evaporates on container recreate.
+        if (accessToken) await tokenStore.save(sub, accessToken)
+        // Return sub so mcp-core propagates it into the bearer JWT's `sub`
+        // claim, which `authScope` below then matches back to the stored token.
         return sub
       }
     },
@@ -111,6 +158,18 @@ export async function startHttp(): Promise<void> {
       // Anonymous caller (auth-disabled mode behind gateway): use 'default'
       // bucket so a single deployment can serve one Notion token via env.
       const sub = claims.anonymous === true ? 'default' : typeof claims.sub === 'string' ? claims.sub : 'default'
+      // Warm the per-sub cache from the durable store (KV) BEFORE the tool
+      // dispatch reads it synchronously via the factory/resolver. After a
+      // container delete+recreate the in-memory cache is empty; without this a
+      // freshly-recreated container would report no token (forcing needless
+      // re-auth) even though the encrypted token is still in KV. No-op for the
+      // in-memory store. A KV read failure is treated as a cache miss (re-auth)
+      // and never blocks the request.
+      try {
+        await tokenStore.getAsync(sub)
+      } catch {
+        // durable read failed -> fall through to cache-miss handling downstream
+      }
       await subjectContext.run({ sub }, next)
     }
   })

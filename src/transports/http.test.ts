@@ -12,6 +12,7 @@ vi.mock('@n24q02m/mcp-core', () => ({
 
 const mockTokenStoreInstance = {
   get: vi.fn(),
+  getAsync: vi.fn().mockResolvedValue(undefined),
   save: vi.fn(),
   clear: vi.fn()
 }
@@ -223,26 +224,35 @@ describe('startHttp', () => {
     const onTokenReceived = options.delegatedOAuth?.onTokenReceived
     const authScope = options.authScope
 
-    // Test onTokenReceived - success
-    const sub = onTokenReceived!({ access_token: 'new-token', owner_user_id: 'user2' })
+    // Test onTokenReceived - success. Notion's token response identifies the
+    // user by owner.user.id (NOT owner_user_id), so the derived sub is that id.
+    const sub = await onTokenReceived!({ access_token: 'new-token', owner: { user: { id: 'user2' } } })
     expect(sub).toBe('user2')
     expect(mockTokenStoreInstance.save).toHaveBeenCalledWith('user2', 'new-token')
 
     // Test onTokenReceived - missing access_token (should not save)
     mockTokenStoreInstance.save.mockClear()
-    const sub2 = onTokenReceived!({ owner_user_id: 'user3' })
+    const sub2 = await onTokenReceived!({ owner: { user: { id: 'user3' } } })
     expect(sub2).toBe('user3')
     expect(mockTokenStoreInstance.save).not.toHaveBeenCalled()
 
-    // Test onTokenReceived - missing owner_user_id (should default to 'default')
-    const sub3 = onTokenReceived!({ access_token: 'token-3' })
-    expect(sub3).toBe('default')
-    expect(mockTokenStoreInstance.save).toHaveBeenCalledWith('default', 'token-3')
+    // Test onTokenReceived - no owner: fall back to workspace_id, then bot_id.
+    const sub3 = await onTokenReceived!({ access_token: 'token-3', workspace_id: 'ws-9' })
+    expect(sub3).toBe('ws-9')
+    expect(mockTokenStoreInstance.save).toHaveBeenCalledWith('ws-9', 'token-3')
 
-    // Test authScope - normal
+    // Test onTokenReceived - malformed (no identity field) -> 'default'
+    mockTokenStoreInstance.save.mockClear()
+    const sub3b = await onTokenReceived!({ access_token: 'token-4' })
+    expect(sub3b).toBe('default')
+    expect(mockTokenStoreInstance.save).toHaveBeenCalledWith('default', 'token-4')
+
+    // Test authScope - normal + warms the per-sub cache from the durable store
     const next = vi.fn().mockResolvedValue(undefined)
+    mockTokenStoreInstance.getAsync.mockClear()
     await authScope!({ sub: 'user3' }, next)
     expect(next).toHaveBeenCalled()
+    expect(mockTokenStoreInstance.getAsync).toHaveBeenCalledWith('user3')
 
     // Test authScope - captured sub
     let capturedSub: string | undefined
