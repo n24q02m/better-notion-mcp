@@ -271,6 +271,21 @@ describe('registerTools', () => {
       })
     })
 
+    it('should trigger security error for path traversal in resource uri', async () => {
+      const handler = server.getHandler(2)
+
+      // Force join to return a path outside DOCS_DIR
+      vi.mocked(join).mockReturnValueOnce('/etc/passwd')
+
+      const promise = handler({ params: { uri: 'notion://docs/pages' } })
+
+      await expect(promise).rejects.toThrow(NotionMCPError)
+      await expect(promise).rejects.toMatchObject({
+        code: 'SECURITY_ERROR',
+        message: 'Path traversal attempt detected'
+      })
+    })
+
     it('should throw NotionMCPError with DOC_NOT_FOUND when readFile throws', async () => {
       const handler = server.getHandler(2)
       vi.mocked(readFile).mockRejectedValue(new Error('ENOENT: no such file or directory'))
