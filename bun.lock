@@ -7,13 +7,13 @@
       "dependencies": {
         "@cloudflare/containers": "^0.3.7",
         "@modelcontextprotocol/sdk": "^1.29.0",
-        "@n24q02m/mcp-core": "^1.18.0-beta.7",
+        "@n24q02m/mcp-core": "^1.18.0-beta.9",
         "@notionhq/client": "^5.22.0",
         "zod": "^4.4.3",
       },
       "devDependencies": {
         "@biomejs/biome": "^2.5.0",
-        "@cloudflare/workers-types": "^4.20260615.1",
+        "@cloudflare/workers-types": "^4.20260617.1",
         "@types/node": "^24.13.2",
         "@vitest/coverage-v8": "^4.1.9",
         "esbuild": "^0.28.1",
@@ -57,7 +57,7 @@
 
     "@cloudflare/containers": ["@cloudflare/containers@0.3.7", "", {}, "sha512-DM9dm3FnIBSyiSJ1FLavKwl/lk3oAmTaynCzZQ9pZR0ncRPquSxkxd8Nu2MFILxmDDsPkxKsSNEh9mHHMty4Fw=="],
 
-    "@cloudflare/workers-types": ["@cloudflare/workers-types@4.20260615.1", "", {}, "sha512-fGOiTwoLj/8bU8mj3VAfa1EULx4ceZhDwnjvY+afDBlSXI9pvY7PE9t62rGEhJjbAOGd7i5WUDun0eZCWBDrzg=="],
+    "@cloudflare/workers-types": ["@cloudflare/workers-types@4.20260617.1", "", {}, "sha512-HdbP3CNcdMZBwegitFDjWvzv+6wPkFXvV9gBXMnf6RjV2Cy3W8TJL3IhSEGul0S6F1DHjnucP7lrpIsvkzNEjA=="],
 
     "@emnapi/core": ["@emnapi/core@1.10.0", "", { "dependencies": { "@emnapi/wasi-threads": "1.2.1", "tslib": "^2.4.0" } }, "sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw=="],
 
@@ -127,7 +127,7 @@
 
     "@modelcontextprotocol/sdk": ["@modelcontextprotocol/sdk@1.29.0", "", { "dependencies": { "@hono/node-server": "^1.19.9", "ajv": "^8.17.1", "ajv-formats": "^3.0.1", "content-type": "^1.0.5", "cors": "^2.8.5", "cross-spawn": "^7.0.5", "eventsource": "^3.0.2", "eventsource-parser": "^3.0.0", "express": "^5.2.1", "express-rate-limit": "^8.2.1", "hono": "^4.11.4", "jose": "^6.1.3", "json-schema-typed": "^8.0.2", "pkce-challenge": "^5.0.0", "raw-body": "^3.0.0", "zod": "^3.25 || ^4.0", "zod-to-json-schema": "^3.25.1" }, "peerDependencies": { "@cfworker/json-schema": "^4.1.1" }, "optionalPeers": ["@cfworker/json-schema"] }, "sha512-zo37mZA9hJWpULgkRpowewez1y6ML5GsXJPY8FI0tBBCd77HEvza4jDqRKOXgHNn867PVGCyTdzqpz0izu5ZjQ=="],
 
-    "@n24q02m/mcp-core": ["@n24q02m/mcp-core@1.18.0-beta.7", "", { "dependencies": { "@modelcontextprotocol/sdk": "^1.29.0", "better-sqlite3": "^12.10.0", "env-paths": "^4.0.0", "jose": "^6.2.3" } }, "sha512-cknl8FfEh79ifca/aLC8UTDb/c7HDP/6bGKgxyRevBbG48m8CN4sPYUeh+GffAjFtNHIE5PC61YHv2rHgg2pMw=="],
+    "@n24q02m/mcp-core": ["@n24q02m/mcp-core@1.18.0-beta.9", "", { "dependencies": { "@modelcontextprotocol/sdk": "^1.29.0", "better-sqlite3": "^12.10.0", "env-paths": "^4.0.0", "jose": "^6.2.3" } }, "sha512-+cJdNJqcgU08cRJInJpRldmDVVx+7DFrgHnRKMEm//GQP54V5SbEHsgIFfDIZdZq+aodSwIfpLGAMRsKr5ko5A=="],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.5", "", { "dependencies": { "@tybys/wasm-util": "^0.10.2" }, "peerDependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1" } }, "sha512-AWPoBRJ9tsnVhor4sjO7rkni+7p+2IAEFj6cx06UgP10jkQHqay/36uRV/bFkgrh18D9vb4cr8Q0Pthskgzy+Q=="],
 
