@@ -43,3 +43,7 @@
 **Vulnerability:** The previous `wrapToolResult` regex `/<\/untrusted_notion_content[^>]*>/gi` used a greedy `[^>]*` match to handle malformed tags, which caused severe data loss regressions when applied to JSON payloads containing tags without a closing `>` bracket.
 **Learning:** When writing sanitization regular expressions to strip or neutralize HTML/XML-like tags in unparsed JSON payloads, greedy wildcard patterns like `[^>]*` or `.*` must be avoided as they can consume all trailing characters, effectively destroying the JSON structure.
 **Prevention:** Match exact tag prefixes instead (e.g., `/<[/]?untrusted_notion_content/gi`) to safely neutralize tags without risking over-consumption.
+## 2026-06-21 - Path Traversal via basename('..')
+**Vulnerability:** The `ReadResourceRequestSchema` handler relied on `basename(resource.file)` to prevent path traversal when reading files from `DOCS_DIR`. However, `basename('..')` evaluates to `'..'`, meaning `join(DOCS_DIR, basename('..'))` resolved to the parent directory, allowing an attacker to escape the intended directory boundary.
+**Learning:** `path.basename` is insufficient on its own for sanitizing file paths to prevent traversal because it passes `'..'` through unmodified.
+**Prevention:** To prevent path traversal in Node.js file operations, always explicitly verify that the final joined path falls within the intended base directory using `fullPath.startsWith(BASE_DIR)` after resolving it.
