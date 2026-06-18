@@ -43,6 +43,7 @@ protocol round-trip (self-auth + setup + tool calls) stays in
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import re
 import subprocess
@@ -56,10 +57,8 @@ from pathlib import Path
 # emoji. Make our own prints utf-8-safe so a captured status line can never crash
 # the deploy on the encode side (the decode side is handled per-subprocess).
 for _stream in (sys.stdout, sys.stderr):
-    try:
+    with contextlib.suppress(AttributeError, ValueError):
         _stream.reconfigure(encoding="utf-8", errors="replace")
-    except (AttributeError, ValueError):
-        pass
 
 DEPLOY_CONFIG = "wrangler.deploy.jsonc"
 
