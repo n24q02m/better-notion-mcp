@@ -46,7 +46,10 @@ import sys
 import urllib.parse
 from pathlib import Path
 
-DEFAULT_ENDPOINT = "https://notion.n24q02m.com"
+# No hardcoded host: set CF_ENDPOINT or pass --endpoint https://<your-worker-domain>.
+# This self-tests YOUR deployed CF server; creds come from env (MCP_RELAY_PASSWORD +
+# provider keys) -- the maintainer injects them via skret, but any export works.
+DEFAULT_ENDPOINT = os.environ.get("CF_ENDPOINT", "")
 CLIENT_ID = "local-browser"
 
 
@@ -88,12 +91,20 @@ def bootstrap(endpoint: str, token_file: str) -> None:
             },
         )
     if r.status_code != 302:
-        raise SystemExit(f"bootstrap: expected 302 from /authorize, got {r.status_code}: {r.text[:300]}")
+        raise SystemExit(
+            f"bootstrap: expected 302 from /authorize, got {r.status_code}: {r.text[:300]}"
+        )
     notion_url = r.headers.get("location", "")
     if "api.notion.com" not in notion_url:
-        raise SystemExit(f"bootstrap: /authorize did not redirect to Notion, got: {notion_url[:300]}")
+        raise SystemExit(
+            f"bootstrap: /authorize did not redirect to Notion, got: {notion_url[:300]}"
+        )
 
-    _pkce_path(token_file).write_text(_json.dumps({"verifier": verifier, "state": state, "redirect_uri": redirect_uri}))
+    _pkce_path(token_file).write_text(
+        _json.dumps(
+            {"verifier": verifier, "state": state, "redirect_uri": redirect_uri}
+        )
+    )
     print("=" * 70)
     print("OPEN THIS URL AND APPROVE IN NOTION:")
     print(notion_url)
@@ -144,19 +155,26 @@ def recreate_verify(endpoint: str, token_file: str) -> None:
     jwt = _token_path(token_file).read_text().strip()
     print(f"Reusing JWT sub={_sub_of(jwt)} (no re-auth) after container recreate...")
     _run_session(endpoint, jwt, expect_has_token=True, probe_me=True)
-    print("RECREATE-VERIFY PASS: JWT identity + Notion token survived recreate via KV (no re-auth).")
+    print(
+        "RECREATE-VERIFY PASS: JWT identity + Notion token survived recreate via KV (no re-auth)."
+    )
 
 
-def _run_session(endpoint: str, jwt: str, *, expect_has_token: bool, probe_me: bool) -> None:
+def _run_session(
+    endpoint: str, jwt: str, *, expect_has_token: bool, probe_me: bool
+) -> None:
     import anyio
 
     async def _go() -> None:
         from mcp import ClientSession
         from mcp.client.streamable_http import streamablehttp_client
 
-        async with streamablehttp_client(
-            f"{endpoint}/mcp", headers={"Authorization": f"Bearer {jwt}"}
-        ) as (r, w, _), ClientSession(r, w) as s:
+        async with (
+            streamablehttp_client(
+                f"{endpoint}/mcp", headers={"Authorization": f"Bearer {jwt}"}
+            ) as (r, w, _),
+            ClientSession(r, w) as s,
+        ):
             await s.initialize()
             tools = await s.list_tools()
             print("TOOLS:", [t.name for t in tools.tools])
@@ -180,11 +198,21 @@ def _run_session(endpoint: str, jwt: str, *, expect_has_token: bool, probe_me: b
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="CF better-notion-mcp live OAuth full-flow harness")
+    ap = argparse.ArgumentParser(
+        description="CF better-notion-mcp live OAuth full-flow harness"
+    )
     ap.add_argument("mode", choices=["bootstrap", "exchange", "recreate-verify"])
     ap.add_argument("--endpoint", default=DEFAULT_ENDPOINT)
-    ap.add_argument("--landing", default="", help="the /callback-done URL (or bare code) for `exchange`")
-    ap.add_argument("--token-file", default=".notion_cf_token", help="per-sub token state file (use 2 for isolation)")
+    ap.add_argument(
+        "--landing",
+        default="",
+        help="the /callback-done URL (or bare code) for `exchange`",
+    )
+    ap.add_argument(
+        "--token-file",
+        default=".notion_cf_token",
+        help="per-sub token state file (use 2 for isolation)",
+    )
     a = ap.parse_args()
 
     if a.mode == "bootstrap":

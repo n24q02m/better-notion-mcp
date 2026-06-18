@@ -8,17 +8,20 @@ managed registry, deploys, waits for the container rollout to finish
 (STATE=ready) so you never verify against a half-rolled old image, then runs a
 **credential-free canary gate** and **auto-rolls-back** if it fails.
 
-Run from the repo root, with the CF dev token injected by skret:
+Set CLOUDFLARE_API_TOKEN in the environment (any secret manager works), then run
+from the repo root:
 
-    MSYS_NO_PATHCONV=1 skret run -e dev --path=/n24q02m/dev -- \\
-        python scripts/deploy_cf.py            # tag defaults to b-<short-sha>
-    ... python scripts/deploy_cf.py --tag b10-abc1234   # explicit tag
-    ... python scripts/deploy_cf.py --skip-build         # reuse a built image
-    ... python scripts/deploy_cf.py --dry-run            # print the plan only
-    ... python scripts/deploy_cf.py --no-canary          # skip the post-deploy gate
+    export CLOUDFLARE_API_TOKEN=...                       # however you store secrets
+    python scripts/deploy_cf.py                           # tag defaults to b-<short-sha>
+    ... python scripts/deploy_cf.py --tag b10-abc1234     # explicit tag
+    ... python scripts/deploy_cf.py --skip-build          # reuse a built image
+    ... python scripts/deploy_cf.py --dry-run             # print the plan only
+    ... python scripts/deploy_cf.py --no-canary           # skip the post-deploy gate
 
-Requires: CLOUDFLARE_API_TOKEN in env (skret /n24q02m/dev CF_DEV_TOKEN ->
-export CLOUDFLARE_API_TOKEN), docker, and ``bunx wrangler``. The CF container
+The maintainer injects the token via ``skret`` (one option), e.g.:
+    MSYS_NO_PATHCONV=1 skret run -e dev --path=/n24q02m/dev -- python scripts/deploy_cf.py
+
+Requires: CLOUDFLARE_API_TOKEN in env, docker, and ``bunx wrangler``. The CF container
 registry only pulls from registry.cloudflare.com/<account>/... (not ghcr), so the
 local image is tagged to that path before ``wrangler containers push``.
 
