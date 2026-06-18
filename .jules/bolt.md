@@ -24,3 +24,6 @@
 ## 2025-05-15 - Suboptimal String Joining in Loop
 **Learning:** Using `.map().join('')` in a loop to join strings creates an intermediate array and multiple temporary strings, which can be inefficient for memory and performance, especially with many items or large text.
 **Action:** Use a `for...of` loop with direct string concatenation (`+=`) for joining strings in performance-critical paths or loops to minimize allocations and GC pressure.
+## 2025-06-18 - Avoid String Concatenation and if/else Chains in Property Extraction
+**Learning:** In hot paths like Notion property extraction (`extractPageProperties`), deep `if/else if` chains evaluating the same `type` variable cause redundant property lookups. Furthermore, repeated string concatenation (`str += item`) for `title` and `rich_text` types creates significant garbage collection pressure due to string immutability, which contradicts memory guidelines favoring pre-allocated arrays and `.join('')`.
+**Action:** Consolidate `if/else if` chains checking a single discriminator into `switch (type)` statements for O(1) branch dispatch. Standardize string building in high-frequency loops to use pre-allocated arrays (`new Array(len)`) and indexed loops followed by `.join('')` to minimize GC overhead.

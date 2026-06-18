@@ -293,11 +293,11 @@ async function getPageProperty(notion: Client, input: PagesInput): Promise<GetPa
   switch (propertyType) {
     case 'title':
     case 'rich_text': {
-      let str = ''
-      for (const item of allResults as any[]) {
-        str += item[propertyType]?.plain_text || ''
+      const arr = new Array(allResults.length)
+      for (let i = 0; i < allResults.length; i++) {
+        arr[i] = (allResults[i] as any)[propertyType]?.plain_text || ''
       }
-      value = str
+      value = arr.join('')
       break
     }
     case 'relation': {
