@@ -52,6 +52,15 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+# Windows consoles default to cp1252; wrangler emits box-drawing chars (│) and
+# emoji. Make our own prints utf-8-safe so a captured status line can never crash
+# the deploy on the encode side (the decode side is handled per-subprocess).
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
 DEPLOY_CONFIG = "wrangler.deploy.jsonc"
 
 
@@ -80,6 +89,8 @@ def _short_sha(repo: Path) -> str:
         ["git", "-C", str(repo), "rev-parse", "--short", "HEAD"],
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         check=True,
     ).stdout.strip()
 
@@ -136,11 +147,16 @@ def _wait_ready(worker: str, *, dry: bool, timeout_s: int = 600) -> None:
         return
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
-        out = subprocess.run(
-            ["bunx", "wrangler", "containers", "list"],
-            capture_output=True,
-            text=True,
-        ).stdout
+        out = (
+            subprocess.run(
+                ["bunx", "wrangler", "containers", "list"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            ).stdout
+            or ""
+        )
         line = next((ln for ln in out.splitlines() if worker in ln), "")
         print(f"  [rollout] {line.strip() or '(no row yet)'}")
         if line and "provisioning" not in line.lower():
@@ -197,13 +213,16 @@ def _gate_b(public_url: str) -> bool:
 
 
 def _jwks_kid(public_url: str) -> str | None:
+    # Single fetch WITH a User-Agent: a bare urlopen (no UA) gets challenged by
+    # Cloudflare in front of the Worker and fails, which previously made this
+    # return None even though the endpoint serves a valid kid.
     try:
-        status, _, _ = _get(f"{public_url}/.well-known/jwks.json")
-        if status != 200:
-            return None
-        with urllib.request.urlopen(
-            f"{public_url}/.well-known/jwks.json", timeout=12
-        ) as resp:
+        req = urllib.request.Request(
+            f"{public_url}/.well-known/jwks.json", headers={"User-Agent": "cf-canary"}
+        )
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            if resp.status != 200:
+                return None
             data = json.loads(resp.read().decode("utf-8"))
         keys = data.get("keys") or []
         return keys[0].get("kid") if keys else None
@@ -211,13 +230,30 @@ def _jwks_kid(public_url: str) -> str | None:
         return None
 
 
-def _gate_kid_stable(public_url: str) -> bool:
+def _gate_kid_stable(public_url: str, *, tries: int = 10, delay: int = 6) -> bool:
     """jwks kid must be identical across requests; a varying kid means ephemeral
-    per-instance signing keys (/token signs with A, /mcp verifies with B -> 401)."""
-    kids = {_jwks_kid(public_url) for _ in range(3)}
-    ok = len(kids) == 1 and None not in kids
-    detail = "OK" if ok else "FAIL: kid varies/absent -> ephemeral per-instance keys"
-    print(f"  [canary] JWKS    kid -> {kids}  {detail}")
+    per-instance signing keys (/token signs with A, /mcp verifies with B -> 401).
+
+    A just-rolled container may not serve jwks for a few seconds, so collect over
+    a settle window: need >=3 successful reads (all identical = stable). All-None
+    after the window = the endpoint genuinely never served a key."""
+    kids: list[str] = []
+    for _ in range(tries):
+        k = _jwks_kid(public_url)
+        if k is not None:
+            kids.append(k)
+            if len(kids) >= 3:
+                break
+        time.sleep(delay)
+    uniq = set(kids)
+    ok = len(kids) >= 3 and len(uniq) == 1
+    if not kids:
+        detail = "FAIL: jwks served no kid after settle window (endpoint down?)"
+    elif len(uniq) > 1:
+        detail = "FAIL: kid varies -> ephemeral per-instance keys"
+    else:
+        detail = "OK"
+    print(f"  [canary] JWKS    kid -> {uniq or '{}'}  {detail}")
     return ok
 
 
