@@ -139,15 +139,15 @@ export function extractPageProperties(pageProperties: any): any {
     const type = p.type as string | undefined
 
     if (type === 'title' && p.title) {
-      let str = ''
       const title = p.title
-      for (let j = 0; j < title.length; j++) str += title[j].plain_text || ''
-      properties[key] = str
+      const arr = new Array(title.length)
+      for (let j = 0; j < title.length; j++) arr[j] = title[j].plain_text || ''
+      properties[key] = arr.join('')
     } else if (type === 'rich_text' && p.rich_text) {
-      let str = ''
       const richText = p.rich_text
-      for (let j = 0; j < richText.length; j++) str += richText[j].plain_text || ''
-      properties[key] = str
+      const arr = new Array(richText.length)
+      for (let j = 0; j < richText.length; j++) arr[j] = richText[j].plain_text || ''
+      properties[key] = arr.join('')
     } else if (type === 'select' && p.select) {
       properties[key] = p.select.name
     } else if (type === 'multi_select' && p.multi_select) {
