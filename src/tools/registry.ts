@@ -4,7 +4,7 @@
  */
 
 import { readFile } from 'node:fs/promises'
-import { basename, dirname, join } from 'node:path'
+import { basename, dirname, join, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import {
@@ -475,7 +475,7 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
     }
 
     const fullPath = join(DOCS_DIR, basename(resource.file))
-    if (!fullPath.startsWith(DOCS_DIR)) {
+    if (!fullPath.startsWith(DOCS_DIR + sep)) {
       throw new NotionMCPError('Path traversal attempt detected', 'SECURITY_ERROR', 'Invalid resource URI')
     }
 
@@ -572,7 +572,7 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
           // preventing path traversal even if the allowlist validation is bypassed or modified.
           const docFile = `${basename(toolName)}.md`
           const fullPath = join(DOCS_DIR, docFile)
-          if (!fullPath.startsWith(DOCS_DIR)) {
+          if (!fullPath.startsWith(DOCS_DIR + sep)) {
             throw new NotionMCPError('Path traversal attempt detected', 'SECURITY_ERROR', 'Invalid tool_name')
           }
 
