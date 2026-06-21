@@ -168,7 +168,7 @@ function extractUserId(request: Request): string {
 // (Dockerfile http target: PORT=8080 + EXPOSE 8080).
 export class NotionContainer extends Container<Env> {
   defaultPort = 8080
-  sleepAfter = '1h'
+  sleepAfter = '5m'
   // Readiness-probe path override (see CONTAINER_PING_ENDPOINT): the default
   // 'ping' redirect-chains through delegated Notion OAuth to an external https
   // URL and breaks the CF container health check.

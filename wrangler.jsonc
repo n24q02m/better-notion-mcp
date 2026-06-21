@@ -20,8 +20,8 @@
       // tag does NOT roll a running instance -> delete the container by ID
       // (`wrangler containers list` -> ID) + `wrangler deploy` to recreate.
       "image": "registry.cloudflare.com/<YOUR_ACCOUNT_ID>/better-notion-mcp:beta",
-      "instance_type": "standard-1",
-      "max_instances": 100
+      "instance_type": "basic",
+      "max_instances": 10
     }
   ],
   "durable_objects": {

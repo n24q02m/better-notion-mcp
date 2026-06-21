@@ -95,15 +95,15 @@ describe('deriveSubject (Notion token response -> JWT sub, per-sub isolation)', 
 })
 
 describe('sleepAfter eviction vs lock-refresh interval (CRITIC)', () => {
-  it('the worker DO sets sleepAfter=1h (eviction is safe; worker adds no own timer)', () => {
+  it('the worker DO sets sleepAfter=5m (eviction is safe; worker adds no own timer)', () => {
     // A slept DO stops the mcp-core lock-refresh timer, which is safe because
     // (a) mcp-core unref()s it so it never blocks, and (b) the lock file is
     // ephemeral and re-swept on next boot. Assert the worker does not try to
-    // defeat eviction with its own timer, and keeps the 1h sleep window.
+    // defeat eviction with its own timer, and keeps the 5m sleep window.
     // (worker.ts is excluded from the main tsconfig project, so assert against
     // its source text rather than importing it across the project boundary.)
     const src = readFileSync('src/worker.ts', 'utf-8')
     expect(src).not.toContain('setInterval')
-    expect(src).toContain("sleepAfter = '1h'")
+    expect(src).toContain("sleepAfter = '5m'")
   })
 })
