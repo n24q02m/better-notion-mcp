@@ -30,18 +30,26 @@ vi.mock('../credential-state.js', () => ({
 }))
 
 // Mock node:path to allow simulating path traversal by controlling join
-const { mockJoin } = vi.hoisted(() => ({
+const { mockJoin, mockRelative, mockIsAbsolute } = vi.hoisted(() => ({
   mockJoin: vi.fn((...args: string[]) => {
     // Default implementation: simple join
     return args.filter(Boolean).join('/')
-  })
+  }),
+  mockRelative: vi.fn((_from: string, to: string) => {
+    // Default implementation: return the last path segment of 'to' (a clean,
+    // contained relative path with no separator) so happy-path reads pass on any OS
+    return to.split('/').pop() || ''
+  }),
+  mockIsAbsolute: vi.fn(() => false)
 }))
 
 vi.mock('node:path', async () => {
   const actual = await vi.importActual('node:path')
   return {
     ...actual,
-    join: mockJoin
+    join: mockJoin,
+    relative: mockRelative,
+    isAbsolute: mockIsAbsolute
   }
 })
 
@@ -51,7 +59,7 @@ vi.mock('node:fs/promises', () => ({
 }))
 
 import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { relative, sep } from 'node:path'
 import { getState } from '../credential-state.js'
 import { blocks } from './composite/blocks.js'
 import { commentsManage } from './composite/comments.js'
@@ -274,8 +282,23 @@ describe('registerTools', () => {
     it('should trigger security error for path traversal in resource uri', async () => {
       const handler = server.getHandler(2)
 
-      // Force join to return a path outside DOCS_DIR
-      vi.mocked(join).mockReturnValueOnce('/etc/passwd')
+      // Force relative to return a path starting with .. (OS-correct separator)
+      vi.mocked(relative).mockReturnValueOnce(['..', '..', 'etc', 'passwd'].join(sep))
+
+      const promise = handler({ params: { uri: 'notion://docs/pages' } })
+
+      await expect(promise).rejects.toThrow(NotionMCPError)
+      await expect(promise).rejects.toMatchObject({
+        code: 'SECURITY_ERROR',
+        message: 'Path traversal attempt detected'
+      })
+    })
+
+    it('should throw NotionMCPError for adjacent directory path traversal (e.g. DOCS_DIR-hacked)', async () => {
+      const handler = server.getHandler(2)
+
+      // Force relative to return a path starting with .. (OS-correct separator)
+      vi.mocked(relative).mockReturnValueOnce(['..', 'docs-hacked', 'pages.md'].join(sep))
 
       const promise = handler({ params: { uri: 'notion://docs/pages' } })
 
@@ -588,8 +611,22 @@ describe('registerTools', () => {
     it('should trigger security error for path traversal in help tool', async () => {
       const handler = server.getHandler(3)
 
-      // Force join to return a path outside DOCS_DIR
-      vi.mocked(join).mockReturnValueOnce('/etc/passwd')
+      // Force relative to return a path starting with .. (OS-correct separator)
+      vi.mocked(relative).mockReturnValueOnce(['..', '..', 'etc', 'passwd'].join(sep))
+
+      const result = await handler({
+        params: { name: 'help', arguments: { tool_name: 'pages' } }
+      })
+
+      expect(result.isError).toBe(true)
+      expect(result.content[0].text).toContain('Path traversal attempt detected')
+    })
+
+    it('should throw error for adjacent directory path traversal in help tool', async () => {
+      const handler = server.getHandler(3)
+
+      // Force relative to return a path starting with .. (OS-correct separator)
+      vi.mocked(relative).mockReturnValueOnce(['..', 'docs-hacked', 'pages.md'].join(sep))
 
       const result = await handler({
         params: { name: 'help', arguments: { tool_name: 'pages' } }
