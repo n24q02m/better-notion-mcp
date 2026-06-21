@@ -46,10 +46,12 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 ## Table of contents
 
 - [Features](#features)
+- [Install](#install)
 - [Status](#status)
 - [Documentation](#documentation)
 - [Tools](#tools)
 - [Configuration](#configuration)
+- [Deploy to Cloudflare](#deploy-to-cloudflare)
 - [Comparison](#comparison)
 - [Security](#security)
 - [Build from Source](#build-from-source)
@@ -65,10 +67,35 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 ## Features
 
 - **Markdown in, Markdown out** -- human-readable content instead of raw JSON blocks
-- **11 composite tools** with 45 actions -- one call instead of chaining 2+ atomic endpoints
+- **8 composite tools, 39 actions** -- one call instead of chaining 2+ atomic Notion endpoints (plus `config`, `help`, and a relay-setup tool)
 - **Auto-pagination and bulk operations** -- no manual cursor handling or looping
 - **Tiered token optimization** -- ~77% reduction via compressed descriptions + on-demand `help` tool
-- **Dual transport** -- local stdio (token) or remote HTTP (OAuth 2.1, no token needed)
+- **Dual transport** -- local stdio (integration token) or remote HTTP (OAuth 2.1, no token to paste)
+
+## Install
+
+Run with `npx` (Node.js >= 24) and a Notion integration token from <https://www.notion.so/my-integrations> (starts with `ntn_`):
+
+```jsonc
+// MCP client config (e.g. .mcp.json / Claude Code / Cursor)
+{
+  "mcpServers": {
+    "better-notion-mcp": {
+      "command": "npx",
+      "args": ["--yes", "@n24q02m/better-notion-mcp@latest"],
+      "env": { "NOTION_TOKEN": "ntn_your_token_here" }
+    }
+  }
+}
+```
+
+Or run the published Docker image (stdio):
+
+```bash
+docker run --rm -i -e NOTION_TOKEN=ntn_your_token_here n24q02m/better-notion-mcp:latest
+```
+
+See the [Documentation](#documentation) section for per-client setup (Claude Code, Codex, Gemini CLI, Cursor, Windsurf) and HTTP/OAuth mode.
 
 ## Status
 
@@ -94,8 +121,8 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 Full docs at **[mcp.n24q02m.com/servers/better-notion-mcp/](https://mcp.n24q02m.com/servers/better-notion-mcp/)**:
 
 - [Setup](https://mcp.n24q02m.com/servers/better-notion-mcp/setup/) -- install methods for Claude Code, Codex, Gemini CLI, Cursor, Windsurf, mcp.json
-- [Modes overview](https://mcp.n24q02m.com/get-started/modes-overview/) -- stdio / local-relay / remote-relay / remote-oauth
-- [Multi-user setup](https://mcp.n24q02m.com/get-started/multi-user/) -- per-JWT-sub credential model
+- [Modes overview](https://mcp.n24q02m.com/get-started/modes-overview/) -- stdio (local, integration token) and HTTP (remote, OAuth 2.1)
+- [Multi-user setup](https://mcp.n24q02m.com/get-started/multi-user/) -- per-JWT-sub credential model (HTTP mode)
 
 **Install with AI agent** -- paste this to your AI coding agent:
 
@@ -104,6 +131,8 @@ Full docs at **[mcp.n24q02m.com/servers/better-notion-mcp/](https://mcp.n24q02m.
 
 ## Tools
 
+Eight composite Notion tools (39 actions) plus three infrastructure tools (`config`, `config__open_relay`, `help`):
+
 | Tool | Actions | Description |
 |:-----|:--------|:------------|
 | `pages` | `create`, `get`, `get_property`, `update`, `move`, `archive`, `restore`, `duplicate` | Create, read, update, and organize pages |
@@ -111,12 +140,12 @@ Full docs at **[mcp.n24q02m.com/servers/better-notion-mcp/](https://mcp.n24q02m.
 | `blocks` | `get`, `children`, `append`, `update`, `delete` | Read and manipulate block content |
 | `users` | `list`, `get`, `me`, `from_workspace` | List and retrieve user information |
 | `workspace` | `info`, `search` | Workspace metadata and cross-workspace search |
-| `comments` | `list`, `get`, `create` | Page and block comments |
-| `content_convert` | `markdown-to-blocks`, `blocks-to-markdown` | Convert between Markdown and Notion blocks |
-| `file_uploads` | `create`, `send`, `complete`, `retrieve`, `list` | Upload files to Notion |
-| `config` | `status`, `setup_start`, `setup_reset`, `setup_complete`, `set`, `cache_clear` | Manage server configuration and credential state via browser relay |
+| `comments` | `list`, `get`, `create` | Page comments and discussion replies |
+| `content_convert` | `markdown-to-blocks`, `blocks-to-markdown` | Convert between Markdown and Notion blocks (uses a `direction` parameter) |
+| `file_uploads` | `create`, `send`, `complete`, `retrieve`, `list` | Upload files to Notion (single or multi-part) |
+| `config` | `status`, `setup_start`, `setup_reset`, `setup_complete`, `set`, `cache_clear` | Inspect and manage credential state and configuration lifecycle |
 | `config__open_relay` | - | Open the relay configuration form in the browser and return the relay URL + credential state |
-| `help` | - | Get full documentation for any tool |
+| `help` | - | Get full documentation for any composite tool (`tool_name` parameter) |
 
 ### MCP Resources
 
@@ -136,7 +165,7 @@ Full docs at **[mcp.n24q02m.com/servers/better-notion-mcp/](https://mcp.n24q02m.
 | Variable | Required | Default | Description |
 |:---------|:---------|:--------|:------------|
 | `NOTION_TOKEN` | Yes (stdio) | - | Notion integration token |
-| `TRANSPORT_MODE` | No | `stdio` | Set to `http` for remote mode |
+| `TRANSPORT_MODE` / `MCP_TRANSPORT` | No | `stdio` | Set either to `http` for remote mode (or pass `--http`) |
 | `PUBLIC_URL` | No (http) | - | Server's public URL for OAuth redirect links |
 | `NOTION_OAUTH_CLIENT_ID` | Yes (http) | - | Notion Public Integration client ID |
 | `NOTION_OAUTH_CLIENT_SECRET` | Yes (http) | - | Notion Public Integration client secret |
@@ -203,7 +232,7 @@ How better-notion-mcp stacks up against direct competitors in each pillar:
 | Capability | better-notion-mcp | makenotion/notion-mcp-server | suekou/mcp-notion-server | awkoy/notion-mcp-server |
 |---|---|---|---|---|
 | Markdown in / out | Yes (round-trip on pages + blocks) | No (raw Notion JSON) | partial (experimental, append + opt-in convert) | Yes (round-trip + GFM) |
-| Composite tool design | Yes (11 tools, 45 actions) | No (22 endpoint-mapped tools) | partial (simplified + raw JSON tools) | Yes (2 dispatch tools, 35+ ops) |
+| Composite tool design | Yes (8 composite tools, 39 actions) | No (22 endpoint-mapped tools) | partial (simplified + raw JSON tools) | Yes (2 dispatch tools, 35+ ops) |
 | File uploads to Notion | Yes (`file_uploads`, single + multi-part) | No | No | Yes (`upload_file`, single + multi-part) |
 | Comments | Yes (`comments`: list/get/create) | Yes | Yes | Yes |
 | Remote HTTP + OAuth 2.1 transport | Yes (per-JWT-sub multi-user) | partial (HTTP + bearer token, no OAuth) | No (stdio token only) | No (stdio token only) |

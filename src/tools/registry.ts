@@ -1,5 +1,5 @@
 /**
- * Tool Registry - 10 Composite Tools
+ * Tool Registry - 8 composite Notion tools + 3 infra tools (config, config__open_relay, help)
  * Consolidated registration for maximum coverage with minimal tools
  */
 
@@ -63,7 +63,8 @@ const RESOURCES = [
 ]
 
 /**
- * 10 Tools covering ~95% of Official Notion API
+ * 11 registered tools (8 composite Notion tools + config + config__open_relay + help)
+ * covering ~95% of the official Notion API.
  * Compressed descriptions for token optimization (~77% reduction)
  *
  * Decision tree for LLMs:
