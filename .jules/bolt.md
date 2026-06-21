@@ -24,3 +24,6 @@
 ## 2025-05-15 - Suboptimal String Joining in Loop
 **Learning:** Using `.map().join('')` in a loop to join strings creates an intermediate array and multiple temporary strings, which can be inefficient for memory and performance, especially with many items or large text.
 **Action:** Use a `for...of` loop with direct string concatenation (`+=`) for joining strings in performance-critical paths or loops to minimize allocations and GC pressure.
+## 2024-11-20 - Optimize property extraction hot paths
+**Learning:** Large `if/else if` chains checking a single string discriminator (e.g., `type === 'title'`, `type === 'rich_text'`) prevent JavaScript engines like V8 from using optimized O(1) jump tables, resulting in O(N) linear lookups on every iteration. Additionally, repeated string concatenation (`str +=`) within loops causes excessive garbage collection pressure due to string reallocation.
+**Action:** When evaluating a single string discriminator, use `switch (type)` statements. For string building, particularly when extracting property values in hot paths, use pre-allocated arrays (`new Array(len)`) combined with `.join('')` to minimize memory overhead.
