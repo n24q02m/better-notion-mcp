@@ -73,17 +73,14 @@ const resolved = src
   .replace(/^\{\s*$/m, '{\n  "workers_dev": false,\n  "preview_urls": false,')
 
 if (dryRun) {
-  console.log(
-    `cf:dryrun -> would write ${DEPLOY_CONFIG} and run: bunx wrangler deploy --config ${DEPLOY_CONFIG} (account ${accountId})`
-  )
-  console.log('--- resolved wrangler config ---')
-  console.log(resolved)
+  console.log(`cf:dryrun -> would write ${DEPLOY_CONFIG} and run: bunx wrangler deploy --config ${DEPLOY_CONFIG}`)
+  console.log('--- resolved wrangler config suppressed (contains live resource IDs) ---')
   process.exit(0)
 }
 
 writeFileSync(DEPLOY_CONFIG, resolved, 'utf8')
 try {
-  console.log(`cf:deploy -> bunx wrangler deploy --config ${DEPLOY_CONFIG} (account ${accountId})`)
+  console.log(`cf:deploy -> bunx wrangler deploy --config ${DEPLOY_CONFIG}`)
   // wrangler is not a direct dependency; bunx resolves/fetches it (matches
   // scripts/deploy_cf.py). `shell:true` is needed on Windows to launch bunx.
   const r = spawnSync('bunx', ['wrangler', 'deploy', '--config', DEPLOY_CONFIG], {
