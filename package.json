@@ -68,7 +68,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.0",
     "@cloudflare/workers-types": "^4.20260621.1",
-    "@types/node": "^24.13.2",
+    "@types/node": "^26.0.0",
     "@vitest/coverage-v8": "^4.1.9",
     "esbuild": "^0.28.1",
     "tsx": "^4.22.4",
