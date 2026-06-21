@@ -47,3 +47,6 @@ package-lock.json
 
 # cf_full_flow.py per-run OAuth state (PKCE verifier + bearer JWT) — never commit
 scripts/.notion_cf_token*
+
+# Deploy-time wrangler config with REAL account/KV IDs (cf:deploy, deploy_cf.py)
+wrangler.deploy.jsonc
