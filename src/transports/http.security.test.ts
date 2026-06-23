@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import * as mcpCore from '@n24q02m/mcp-core'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { startHttp, subjectContext } from './http.js'
 
 vi.mock('@n24q02m/mcp-core', async () => {
-  const actual = await vi.importActual('@n24q02m/mcp-core') as any
+  const actual = (await vi.importActual('@n24q02m/mcp-core')) as any
   return {
     ...actual,
     runHttpServer: vi.fn(),
