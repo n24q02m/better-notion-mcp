@@ -40,11 +40,7 @@ export async function contentConvert(input: ContentConvertInput): Promise<any> {
           try {
             content = JSON.parse(content)
           } catch {
-            throw new NotionMCPError(
-              'Content must be a valid JSON array or array object for blocks-to-markdown',
-              'VALIDATION_ERROR',
-              'Provide a valid JSON array or object'
-            )
+            // Keep as string if it's not valid JSON
           }
         }
         if (!Array.isArray(content)) {

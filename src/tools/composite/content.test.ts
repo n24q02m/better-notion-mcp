@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { contentConvert } from './content'
+import { contentConvert } from './content.js'
 
 // Integration tests using real markdown helpers
 // We do not mock dependencies because we cannot reliably mock ESM imports in this environment without vitest runner.
@@ -99,13 +99,14 @@ describe('contentConvert', () => {
       expect(result.markdown).toBe('Parsed JSON')
     })
 
-    it('should throw error if content is invalid JSON string', async () => {
+    it('should treat invalid JSON string as raw string and eventually throw array error', async () => {
+      // If it's invalid JSON, it stays as string, then fails the Array.isArray check
       await expect(
         contentConvert({
           direction: 'blocks-to-markdown',
           content: '{ invalid json }'
         })
-      ).rejects.toThrow('Content must be a valid JSON array or array object for blocks-to-markdown')
+      ).rejects.toThrow('Content must be an array for blocks-to-markdown')
     })
 
     it('should throw error if content is not an array (after parsing)', async () => {
