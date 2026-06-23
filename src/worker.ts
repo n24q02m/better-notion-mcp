@@ -13,6 +13,7 @@
 // notion is KV-only: it has no docs DB and no vectors, so the d1.internal /
 // vectorize.internal handlers from the wet template are intentionally dropped.
 import { Container, ContainerProxy, type OutboundHandler } from '@cloudflare/containers'
+import { JWTIssuer } from '@n24q02m/mcp-core'
 
 // ContainerProxy must be re-exported from the Worker entrypoint: the containers
 // runtime discovers it via `ctx.exports.ContainerProxy` to route the container's
@@ -142,7 +143,7 @@ export default {
     // registry below; unit tests call the handlers directly via the
     // OUTBOUND_BY_HOST export.
     if (env.NOTION) {
-      const userId = extractUserId(request)
+      const userId = await extractUserId(request, env)
       const stub = env.NOTION.get(env.NOTION.idFromName(userId))
       return stub.fetch(request)
     }
@@ -150,7 +151,7 @@ export default {
   }
 }
 
-function extractUserId(request: Request): string {
+async function extractUserId(request: Request, env: Env): Promise<string> {
   // JWT sub from the Bearer token (verified by mcp-core OAuth middleware in the
   // container). SINGLE-USER CONTRACT (E.2): no token or no `sub` -> the reserved
   // id "default", so setup and serving collapse onto ONE Durable Object id and
@@ -159,8 +160,22 @@ function extractUserId(request: Request): string {
   const auth = request.headers.get('authorization') ?? ''
   const m = auth.match(/^Bearer\s+(.+)$/)
   if (!m) return 'default'
+
+  const jwt = m[1]
   try {
-    const payload = JSON.parse(atob(m[1].split('.')[1] ?? ''))
+    // If CREDENTIAL_SECRET is set, we MUST verify the signature. mcp-core's
+    // JWTIssuer handles the EdDSA verification when provided with the secret.
+    // (Without a secret, it falls back to RS256; on CF, a missing secret means
+    // it can't verify the deterministic EdDSA tokens it issued previously.)
+    if (env.CREDENTIAL_SECRET) {
+      const issuer = new JWTIssuer('better-notion-mcp', undefined, env.CREDENTIAL_SECRET)
+      await issuer.init()
+      const claims = await issuer.verifyAccessToken(jwt)
+      return typeof claims.sub === 'string' ? claims.sub : 'default'
+    }
+
+    // Fallback for local development or setups without a secret: unverified extraction.
+    const payload = JSON.parse(atob(jwt.split('.')[1] ?? ''))
     return typeof payload.sub === 'string' ? payload.sub : 'default'
   } catch {
     return 'default'
