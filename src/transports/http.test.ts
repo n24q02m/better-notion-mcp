@@ -1,13 +1,16 @@
 import * as mcpCore from '@n24q02m/mcp-core'
 import { Client } from '@notionhq/client'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMCPServer } from '../create-server.js'
+import * as createServer from '../create-server.js'
 import * as credentialState from '../credential-state.js'
 import { startHttp, subjectContext } from './http.js'
 
 vi.mock('@n24q02m/mcp-core', () => ({
   runHttpServer: vi.fn(),
-  deleteConfig: vi.fn()
+  backendFromEnv: vi.fn(),
+  CfKvBackend: vi.fn(),
+  PerPluginStore: vi.fn(),
+  resolveConfig: vi.fn()
 }))
 
 const mockTokenStoreInstance = {
@@ -52,8 +55,7 @@ describe('startHttp', () => {
       NOTION_OAUTH_CLIENT_ID: 'id',
       NOTION_OAUTH_CLIENT_SECRET: 'secret',
       PORT: undefined,
-      HOST: undefined,
-      MCP_AUTH_DISABLE: undefined
+      HOST: undefined
     }
     // Prevent logs during tests
     vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -148,35 +150,6 @@ describe('startHttp', () => {
     await startPromise
   })
 
-  it('uses MCP_AUTH_DISABLE environment variable', async () => {
-    process.env.MCP_AUTH_DISABLE = '1'
-
-    vi.mocked(mcpCore.runHttpServer).mockResolvedValue({
-      host: 'localhost',
-      port: 3000,
-      close: vi.fn().mockResolvedValue(undefined)
-    } as any)
-
-    const handlers: Record<string, (...args: any[]) => any> = {}
-    vi.spyOn(process, 'once').mockImplementation((event, handler) => {
-      handlers[event as string] = handler as (...args: any[]) => any
-      return process
-    })
-
-    const startPromise = startHttp()
-    await new Promise((resolve) => setTimeout(resolve, 50))
-
-    expect(mcpCore.runHttpServer).toHaveBeenCalledWith(
-      expect.any(Function),
-      expect.objectContaining({
-        authDisabled: true
-      })
-    )
-
-    if (handlers.SIGINT) await handlers.SIGINT()
-    await startPromise
-  })
-
   it('verifies callbacks and factory with edge cases', async () => {
     const closeMock = vi.fn().mockResolvedValue(undefined)
     vi.mocked(mcpCore.runHttpServer).mockImplementation(async (factory: any) => {
@@ -198,8 +171,8 @@ describe('startHttp', () => {
     await new Promise((resolve) => setTimeout(resolve, 50))
 
     // 1. Verify Notion Client Factory
-    expect(createMCPServer).toHaveBeenCalled()
-    const factory = vi.mocked(createMCPServer).mock.calls[0][0] as () => Client
+    expect(createServer.createMCPServer).toHaveBeenCalled()
+    const factory = vi.mocked(createServer.createMCPServer).mock.calls[0][0] as () => Client
 
     // Test factory without context
     expect(() => factory()).toThrow('Notion access token not present')
@@ -260,12 +233,6 @@ describe('startHttp', () => {
       capturedSub = subjectContext.getStore()?.sub
     })
     expect(capturedSub).toBe('user4')
-
-    // Test authScope - anonymous
-    await authScope!({ anonymous: true }, async () => {
-      capturedSub = subjectContext.getStore()?.sub
-    })
-    expect(capturedSub).toBe('default')
 
     // Test authScope - invalid sub type
     await authScope!({ sub: 123 }, async () => {

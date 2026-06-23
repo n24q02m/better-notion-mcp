@@ -2,9 +2,9 @@
  * HTTP Transport -- single remote-oauth multi-user mode.
  *
  * Post stdio-pure + http-multi-user split (2026-05-01): the MCP_MODE flavor
- * (``local-relay`` vs ``remote-oauth``) is gone. HTTP mode is always
+ * (local-relay vs remote-oauth) is gone. HTTP mode is always
  * delegated OAuth 2.1 redirect flow to Notion at
- * ``https://api.notion.com/v1/oauth/authorize`` with per-JWT-sub Notion
+ * https://api.notion.com/v1/oauth/authorize with per-JWT-sub Notion
  * token storage. Single-user paste-token relay form is no longer supported
  * here -- use stdio mode with NOTION_TOKEN env for single-user setups.
  *
@@ -47,8 +47,8 @@ export function selectTokenStore(): NotionTokenStoreLike {
  * ``workspace_id`` + ``bot_id``. There is NO ``owner_user_id`` field. Prefer the
  * human user id for per-user isolation, then fall back to the workspace, then
  * the bot, so the JWT ``sub`` (and thus the per-sub Durable Object + KV token
- * bucket) is a stable real identity rather than the shared ``'default'`` bucket
- * — collapsing every caller onto ``'default'`` would silently break multi-user
+ * bucket) is a stable real identity rather than the shared ``'default'``
+ * bucket — collapsing every caller onto ``'default'`` would silently break multi-user
  * isolation. ``'default'`` is reserved for a malformed response only.
  */
 export function deriveSubject(tokens: Record<string, unknown>): string {
@@ -106,12 +106,6 @@ export async function startHttp(): Promise<void> {
     throw new Error('NOTION_OAUTH_CLIENT_ID and NOTION_OAUTH_CLIENT_SECRET are required for http mode.')
   }
 
-  // MCP_AUTH_DISABLE=1 skips Bearer JWT verification — for deployments behind
-  // an external auth boundary (reverse proxy, API gateway like agentgateway).
-  // Caller is responsible for upstream auth + providing Notion token via a
-  // separate channel (e.g. NOTION_TOKEN env var resolved by tokenStore default).
-  const authDisabled = process.env.MCP_AUTH_DISABLE === '1'
-
   // CF deploy requirement (P3-03): CREDENTIAL_SECRET MUST be set in the
   // container env (wrangler secret put). When set, mcp-core's JWTIssuer derives
   // a deterministic Ed25519 (EdDSA) signing key via HKDF-SHA256 with no disk I/O.
@@ -124,7 +118,7 @@ export async function startHttp(): Promise<void> {
     serverName: SERVER_NAME,
     port,
     host,
-    authDisabled,
+    authDisabled: false,
     delegatedOAuth: {
       flow: 'redirect',
       upstream: {
@@ -155,9 +149,7 @@ export async function startHttp(): Promise<void> {
       }
     },
     authScope: async (claims: { sub?: unknown; anonymous?: unknown }, next: () => Promise<void>) => {
-      // Anonymous caller (auth-disabled mode behind gateway): use 'default'
-      // bucket so a single deployment can serve one Notion token via env.
-      const sub = claims.anonymous === true ? 'default' : typeof claims.sub === 'string' ? claims.sub : 'default'
+      const sub = typeof claims.sub === 'string' ? claims.sub : 'default'
       // Warm the per-sub cache from the durable store (KV) BEFORE the tool
       // dispatch reads it synchronously via the factory/resolver. After a
       // container delete+recreate the in-memory cache is empty; without this a

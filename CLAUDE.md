@@ -55,7 +55,6 @@ mise run fix                # bun run check:fix
 ## Env vars
 
 - **stdio mode** (default): `NOTION_TOKEN` (bat buoc; stdio fails fast if unset, see `main.ts:76`)
-- **http mode** (opt-in via `--http`, `MCP_TRANSPORT=http`, or `TRANSPORT_MODE=http`): `NOTION_OAUTH_CLIENT_ID` + `NOTION_OAUTH_CLIENT_SECRET` (bat buoc, validated `transports/http.ts:51-53`), `PUBLIC_URL` (OAuth redirect URLs), `MCP_AUTH_DISABLE=1` (optional, skip Bearer JWT verification behind external gateway)
 - `PORT` (default `0` = OS-assigned random port), `HOST` (optional bind address)
 - Secrets: skret SSM namespace `/better-notion-mcp/prod` (region `ap-southeast-1`)
 

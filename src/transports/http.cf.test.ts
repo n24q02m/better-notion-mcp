@@ -40,11 +40,9 @@ describe('per-sub token isolation (anonymous-bucket-collapse guard)', () => {
     expect(store.get('alice')).not.toBe(store.get('bob'))
   })
 
-  it('the wrangler deploy config never enables MCP_AUTH_DISABLE on shared infra', () => {
+  it('the wrangler deploy config never enables MCP_AUTH_DISABLE (removed feature)', () => {
     const raw = readFileSync('wrangler.jsonc', 'utf-8')
-    // The guard is a literal absence: MCP_AUTH_DISABLE must not appear as an
-    // enabled var. (If ever needed for a private self-host, it is the operator's
-    // opt-in, never on *.n24q02m.com.)
+    expect(raw).toContain('MCP_AUTH_DISABLE is REMOVED')
     expect(/"MCP_AUTH_DISABLE"\s*:\s*"1"/.test(raw)).toBe(false)
   })
 })
@@ -96,12 +94,6 @@ describe('deriveSubject (Notion token response -> JWT sub, per-sub isolation)', 
 
 describe('sleepAfter eviction vs lock-refresh interval (CRITIC)', () => {
   it('the worker DO sets sleepAfter=5m (eviction is safe; worker adds no own timer)', () => {
-    // A slept DO stops the mcp-core lock-refresh timer, which is safe because
-    // (a) mcp-core unref()s it so it never blocks, and (b) the lock file is
-    // ephemeral and re-swept on next boot. Assert the worker does not try to
-    // defeat eviction with its own timer, and keeps the 5m sleep window.
-    // (worker.ts is excluded from the main tsconfig project, so assert against
-    // its source text rather than importing it across the project boundary.)
     const src = readFileSync('src/worker.ts', 'utf-8')
     expect(src).not.toContain('setInterval')
     expect(src).toContain("sleepAfter = '5m'")
