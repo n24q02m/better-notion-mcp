@@ -525,9 +525,9 @@ describe('markdownToBlocks', () => {
   })
 
   describe('images', () => {
-    it("should handle malformed URLs gracefully in images", () => {
-      const blocks = markdownToBlocks("![alt](http://[)")
-      expect(blocks[0].type).toBe("paragraph")
+    it('should handle malformed URLs gracefully in images', () => {
+      const blocks = markdownToBlocks('![alt](http://[)')
+      expect(blocks[0].type).toBe('paragraph')
     })
 
     it('should parse image with alt text', () => {
@@ -547,9 +547,9 @@ describe('markdownToBlocks', () => {
   })
 
   describe('bookmarks', () => {
-    it("should handle malformed URLs gracefully in bookmarks", () => {
-      const blocks = markdownToBlocks("[bookmark](http://[)")
-      expect(blocks[0].type).toBe("paragraph")
+    it('should handle malformed URLs gracefully in bookmarks', () => {
+      const blocks = markdownToBlocks('[bookmark](http://[)')
+      expect(blocks[0].type).toBe('paragraph')
     })
 
     it('should parse bookmark link', () => {
@@ -561,9 +561,9 @@ describe('markdownToBlocks', () => {
   })
 
   describe('embeds', () => {
-    it("should handle malformed URLs gracefully in embeds", () => {
-      const blocks = markdownToBlocks("[embed](http://[)")
-      expect(blocks[0].type).toBe("paragraph")
+    it('should handle malformed URLs gracefully in embeds', () => {
+      const blocks = markdownToBlocks('[embed](http://[)')
+      expect(blocks[0].type).toBe('paragraph')
     })
 
     it('should parse embed link', () => {
@@ -1547,14 +1547,14 @@ describe('parseRichText', () => {
     expect(strikePart!.text.content).toBe('deleted')
   })
 
-  it("should handle URLs with control characters gracefully", () => {
-    const result = parseRichText("[link](https://example.com/\n)")
+  it('should handle URLs with control characters gracefully', () => {
+    const result = parseRichText('[link](https://example.com/\n)')
     expect(result[0].text.link).toBeNull()
   })
 
-  it("should handle malformed URLs gracefully in links", () => {
-    const result = parseRichText("[link](http://[)")
-    expect(result[0].text.content).toBe("link")
+  it('should handle malformed URLs gracefully in links', () => {
+    const result = parseRichText('[link](http://[)')
+    expect(result[0].text.content).toBe('link')
     expect(result[0].text.link).toBeNull()
   })
 
