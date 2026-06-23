@@ -10,12 +10,21 @@ vi.mock('@n24q02m/mcp-core', () => ({
   deleteConfig: vi.fn()
 }))
 
-const mockTokenStoreInstance = {
+const mockTokenStoreInstance: any = {
+  ready: undefined,
   get: vi.fn(),
   getAsync: vi.fn().mockResolvedValue(undefined),
   save: vi.fn(),
   clear: vi.fn()
 }
+
+vi.mock('../auth/notion-token-store-kv.js', () => ({
+  KvNotionTokenStore: class {
+    constructor() {
+      Object.assign(this, mockTokenStoreInstance)
+    }
+  }
+}))
 
 vi.mock('../auth/notion-token-store.js', () => {
   return {
@@ -47,6 +56,7 @@ describe('startHttp', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockTokenStoreInstance.ready = undefined
     process.env = {
       ...originalEnv,
       NOTION_OAUTH_CLIENT_ID: 'id',
@@ -298,6 +308,62 @@ describe('startHttp', () => {
     await subjectContext.run({ sub: 'user-no-token' }, () => {
       expect(resolver()).toBeNull()
     })
+
+    if (handlers.SIGINT) await handlers.SIGINT()
+    await startPromise
+  })
+
+  it('logs success when durable KV store is reachable at startup', async () => {
+    process.env.MCP_STORAGE_BACKEND = 'cf-kv'
+    mockTokenStoreInstance.ready = vi.fn().mockResolvedValue(undefined)
+    const errorSpy = vi.spyOn(console, 'error')
+
+    vi.mocked(mcpCore.runHttpServer).mockResolvedValue({
+      host: 'localhost',
+      port: 3000,
+      close: vi.fn().mockResolvedValue(undefined)
+    } as any)
+
+    const handlers: Record<string, (...args: any[]) => any> = {}
+    vi.spyOn(process, 'once').mockImplementation((event, handler) => {
+      handlers[event as string] = handler as (...args: any[]) => any
+      return process
+    })
+
+    const startPromise = startHttp()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(mockTokenStoreInstance.ready).toHaveBeenCalled()
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('durable KV store reachable'))
+
+    if (handlers.SIGINT) await handlers.SIGINT()
+    await startPromise
+  })
+
+  it('logs failure when durable KV store is UNREACHABLE at startup', async () => {
+    process.env.MCP_STORAGE_BACKEND = 'cf-kv'
+    mockTokenStoreInstance.ready = vi.fn().mockRejectedValue(new Error('Connection refused'))
+    const errorSpy = vi.spyOn(console, 'error')
+
+    vi.mocked(mcpCore.runHttpServer).mockResolvedValue({
+      host: 'localhost',
+      port: 3000,
+      close: vi.fn().mockResolvedValue(undefined)
+    } as any)
+
+    const handlers: Record<string, (...args: any[]) => any> = {}
+    vi.spyOn(process, 'once').mockImplementation((event, handler) => {
+      handlers[event as string] = handler as (...args: any[]) => any
+      return process
+    })
+
+    const startPromise = startHttp()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(mockTokenStoreInstance.ready).toHaveBeenCalled()
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('durable KV store UNREACHABLE at startup: Connection refused')
+    )
 
     if (handlers.SIGINT) await handlers.SIGINT()
     await startPromise
