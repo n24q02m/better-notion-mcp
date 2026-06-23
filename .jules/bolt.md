@@ -27,3 +27,6 @@
 ## 2024-11-20 - Optimize property extraction hot paths
 **Learning:** Large `if/else if` chains checking a single string discriminator (e.g., `type === 'title'`, `type === 'rich_text'`) prevent JavaScript engines like V8 from using optimized O(1) jump tables, resulting in O(N) linear lookups on every iteration. Additionally, repeated string concatenation (`str +=`) within loops causes excessive garbage collection pressure due to string reallocation.
 **Action:** When evaluating a single string discriminator, use `switch (type)` statements. For string building, particularly when extracting property values in hot paths, use pre-allocated arrays (`new Array(len)`) combined with `.join('')` to minimize memory overhead.
+## 2025-05-27 - Request Handler Hot Paths
+**Learning:** Request handlers that execute on every MCP interaction (like listing resources or checking unknown tool requests) incur measurable garbage collection overhead if they dynamically map objects (`.map()`) and join strings (`.join()`) that are actually constant for the lifetime of the process.
+**Action:** Extract maps, joined strings, and lookup maps to pre-computed module-level constants. Replace array `find` with a pre-computed `Map.get` for O(1) lookups on constant resource arrays.
