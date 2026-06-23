@@ -1,16 +1,22 @@
 import * as mcpCore from '@n24q02m/mcp-core'
 import { Client } from '@notionhq/client'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMCPServer } from '../create-server.js'
 import * as credentialState from '../credential-state.js'
-import { startHttp, subjectContext } from './http.js'
+import { deriveSubject, selectTokenStore, startHttp, subjectContext } from './http.js'
 
 vi.mock('@n24q02m/mcp-core', () => ({
   runHttpServer: vi.fn(),
   deleteConfig: vi.fn()
 }))
 
-const mockTokenStoreInstance = {
+const mockTokenStoreInstance: {
+  get: any
+  getAsync: any
+  save: any
+  clear: any
+  ready?: any
+} = {
   get: vi.fn(),
   getAsync: vi.fn().mockResolvedValue(undefined),
   save: vi.fn(),
@@ -301,5 +307,158 @@ describe('startHttp', () => {
 
     if (handlers.SIGINT) await handlers.SIGINT()
     await startPromise
+  })
+})
+
+describe('deriveSubject', () => {
+  it('returns user id if present', () => {
+    const tokens = { owner: { user: { id: 'user-123' } } }
+    expect(deriveSubject(tokens)).toBe('user-123')
+  })
+
+  it('returns workspace id if user id is missing', () => {
+    const tokens = { workspace_id: 'ws-123' }
+    expect(deriveSubject(tokens)).toBe('ws-123')
+  })
+
+  it('returns bot id if user and workspace ids are missing', () => {
+    const tokens = { bot_id: 'bot-123' }
+    expect(deriveSubject(tokens)).toBe('bot-123')
+  })
+
+  it('returns "default" if all ids are missing', () => {
+    const tokens = {}
+    expect(deriveSubject(tokens)).toBe('default')
+  })
+
+  it('returns "default" if user id is not a string', () => {
+    const tokens = { owner: { user: { id: 123 } } }
+    expect(deriveSubject(tokens)).toBe('default')
+  })
+
+  it('returns "default" if user id is an empty string', () => {
+    const tokens = { owner: { user: { id: '' } } }
+    expect(deriveSubject(tokens)).toBe('default')
+  })
+
+  it('falls back to workspace_id if user id is invalid', () => {
+    const tokens = { owner: { user: { id: '' } }, workspace_id: 'ws-123' }
+    expect(deriveSubject(tokens)).toBe('ws-123')
+  })
+
+  it('falls back to bot_id if user and workspace ids are invalid', () => {
+    const tokens = {
+      owner: { user: { id: null } },
+      workspace_id: '',
+      bot_id: 'bot-123'
+    }
+    expect(deriveSubject(tokens)).toBe('bot-123')
+  })
+})
+
+describe('selectTokenStore', () => {
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    process.env = { ...originalEnv }
+    // Required when MCP_STORAGE_BACKEND=cf-kv
+    process.env.MCP_KV_BASE_URL = 'http://kv.internal'
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  it('returns KvNotionTokenStore when MCP_STORAGE_BACKEND is cf-kv', () => {
+    process.env.MCP_STORAGE_BACKEND = 'cf-kv'
+    const store = selectTokenStore()
+    expect(store.constructor.name).toBe('KvNotionTokenStore')
+  })
+
+  it('returns KvNotionTokenStore when MCP_STORAGE_BACKEND is CF-KV (case insensitive)', () => {
+    process.env.MCP_STORAGE_BACKEND = 'CF-KV'
+    const store = selectTokenStore()
+    expect(store.constructor.name).toBe('KvNotionTokenStore')
+  })
+
+  it('returns NotionTokenStore when MCP_STORAGE_BACKEND is not cf-kv', () => {
+    process.env.MCP_STORAGE_BACKEND = 'memory'
+    const store = selectTokenStore()
+    expect(store.constructor.name).toBe('NotionTokenStore')
+  })
+
+  it('returns NotionTokenStore when MCP_STORAGE_BACKEND is missing', () => {
+    delete process.env.MCP_STORAGE_BACKEND
+    const store = selectTokenStore()
+    expect(store.constructor.name).toBe('NotionTokenStore')
+  })
+})
+
+describe('startHttp - tokenStore.ready', () => {
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    process.env = {
+      ...originalEnv,
+      NOTION_OAUTH_CLIENT_ID: 'id',
+      NOTION_OAUTH_CLIENT_SECRET: 'secret'
+    }
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    // Default mock for runHttpServer to avoid long hangs
+    vi.mocked(mcpCore.runHttpServer).mockResolvedValue({
+      host: 'localhost',
+      port: 3000,
+      close: vi.fn().mockResolvedValue(undefined)
+    } as any)
+    // Mock SIGINT to shutdown immediately
+    vi.spyOn(process, 'once').mockImplementation((event, handler) => {
+      if (event === 'SIGINT') {
+        setTimeout(() => (handler as any)(), 10)
+      }
+      return process
+    })
+  })
+
+  it('logs success when tokenStore.ready() succeeds', async () => {
+    mockTokenStoreInstance.ready = vi.fn().mockResolvedValue(undefined)
+
+    await startHttp()
+
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('durable KV store reachable'))
+  })
+
+  it('logs failure when tokenStore.ready() fails', async () => {
+    mockTokenStoreInstance.ready = vi.fn().mockRejectedValue(new Error('KV failure'))
+
+    await startHttp()
+
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('durable KV store UNREACHABLE'))
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('KV failure'))
+  })
+
+  it('handles non-Error objects in tokenStore.ready() failure', async () => {
+    mockTokenStoreInstance.ready = vi.fn().mockRejectedValue('string error')
+
+    await startHttp()
+
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('durable KV store UNREACHABLE'))
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('string error'))
+  })
+
+  it('skips logging if tokenStore.ready is missing', async () => {
+    // This is tricky because selectTokenStore is what provides the store.
+    // We already mock NotionTokenStore and KvNotionTokenStore via the factory.
+    // Let's modify the mock instance for this test.
+    const originalReady = mockTokenStoreInstance.ready
+    delete (mockTokenStoreInstance as any).ready
+
+    await startHttp()
+
+    expect(console.error).not.toHaveBeenCalledWith(expect.stringContaining('durable KV store reachable'))
+    expect(console.error).not.toHaveBeenCalledWith(expect.stringContaining('durable KV store UNREACHABLE'))
+
+    // Restore for other tests
+    mockTokenStoreInstance.ready = originalReady
   })
 })
