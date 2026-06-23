@@ -525,6 +525,11 @@ describe('markdownToBlocks', () => {
   })
 
   describe('images', () => {
+    it("should handle malformed URLs gracefully in images", () => {
+      const blocks = markdownToBlocks("![alt](http://[)")
+      expect(blocks[0].type).toBe("paragraph")
+    })
+
     it('should parse image with alt text', () => {
       const blocks = markdownToBlocks('![A cat](https://example.com/cat.png)')
       expect(blocks).toHaveLength(1)
@@ -542,6 +547,11 @@ describe('markdownToBlocks', () => {
   })
 
   describe('bookmarks', () => {
+    it("should handle malformed URLs gracefully in bookmarks", () => {
+      const blocks = markdownToBlocks("[bookmark](http://[)")
+      expect(blocks[0].type).toBe("paragraph")
+    })
+
     it('should parse bookmark link', () => {
       const blocks = markdownToBlocks('[bookmark](https://example.com)')
       expect(blocks).toHaveLength(1)
@@ -551,6 +561,11 @@ describe('markdownToBlocks', () => {
   })
 
   describe('embeds', () => {
+    it("should handle malformed URLs gracefully in embeds", () => {
+      const blocks = markdownToBlocks("[embed](http://[)")
+      expect(blocks[0].type).toBe("paragraph")
+    })
+
     it('should parse embed link', () => {
       const blocks = markdownToBlocks('[embed](https://youtube.com/watch?v=abc)')
       expect(blocks).toHaveLength(1)
@@ -1530,6 +1545,17 @@ describe('parseRichText', () => {
     const strikePart = result.find((rt) => rt.annotations.strikethrough)
     expect(strikePart).toBeDefined()
     expect(strikePart!.text.content).toBe('deleted')
+  })
+
+  it("should handle URLs with control characters gracefully", () => {
+    const result = parseRichText("[link](https://example.com/\n)")
+    expect(result[0].text.link).toBeNull()
+  })
+
+  it("should handle malformed URLs gracefully in links", () => {
+    const result = parseRichText("[link](http://[)")
+    expect(result[0].text.content).toBe("link")
+    expect(result[0].text.link).toBeNull()
   })
 
   it('should parse link', () => {
