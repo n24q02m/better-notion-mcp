@@ -137,10 +137,6 @@ export async function startHttp(): Promise<void> {
       onTokenReceived: async (tokens: Record<string, unknown>) => {
         const accessToken = String(tokens.access_token ?? '')
         const sub = deriveSubject(tokens)
-        // Structural breadcrumb (KEY NAMES + derived sub only, NEVER token
-        // values) so the Notion token response shape is verifiable in deploy
-        // logs without leaking the access token.
-        console.error(`[${SERVER_NAME}] onTokenReceived keys=[${Object.keys(tokens).join(',')}] sub=${sub}`)
         // AWAIT the durable write (do not fire-and-forget). The KV store sets
         // its in-memory cache synchronously before the awaited KV PUT, so the
         // same-request factory read still hits the warm cache. mcp-core wraps
