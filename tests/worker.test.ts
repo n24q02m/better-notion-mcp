@@ -146,4 +146,26 @@ describe('single-user DO contract + per-sub routing (E.2)', () => {
     )
     expect(calls).toEqual(['user-123'])
   })
+
+  it('Bearer token with malformed base64 payload -> defaults to "default" DO', async () => {
+    const { calls, env } = envWithDoSpy()
+    // atob('!!!') will throw in most environments, or split('.')[1] might be weird.
+    // Actually, atob() in Node/Bun is quite permissive but we can provide something that definitely fails or results in garbage.
+    // In many JS environments atob("!!!") throws.
+    await worker.fetch(
+      new Request('https://notion.n24q02m.com/mcp', { headers: { authorization: 'Bearer h.!!!.s' } }),
+      env as never
+    )
+    expect(calls).toEqual(['default'])
+  })
+
+  it('Bearer token with valid base64 but malformed JSON -> defaults to "default" DO', async () => {
+    const { calls, env } = envWithDoSpy()
+    const malformedJsonB64 = btoa('{"sub": "missing-quote')
+    await worker.fetch(
+      new Request('https://notion.n24q02m.com/mcp', { headers: { authorization: `Bearer h.${malformedJsonB64}.s` } }),
+      env as never
+    )
+    expect(calls).toEqual(['default'])
+  })
 })
