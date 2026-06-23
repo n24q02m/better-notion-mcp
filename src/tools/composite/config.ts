@@ -4,11 +4,12 @@
  * Does NOT require a Notion client -- works independently.
  */
 
+import { resolveConfig } from '@n24q02m/mcp-core/storage'
 import { getState, getSubjectToken, resetState, resolveCredentialState } from '../../credential-state.js'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 
 export interface ConfigInput {
-  action: 'status' | 'setup_start' | 'setup_reset' | 'setup_complete' | 'set' | 'cache_clear'
+  action: 'get' | 'status' | 'setup_start' | 'setup_reset' | 'setup_complete' | 'set' | 'cache_clear'
   force?: boolean
   key?: string
   value?: string
@@ -20,6 +21,9 @@ export interface ConfigInput {
 export async function config(input: ConfigInput): Promise<any> {
   return withErrorHandling(async () => {
     switch (input.action) {
+      case 'get':
+        return await resolveConfig('better-notion-mcp', [])
+
       case 'status': {
         const state = getState()
         const token = getSubjectToken()
@@ -100,7 +104,7 @@ export async function config(input: ConfigInput): Promise<any> {
         throw new NotionMCPError(
           `Unsupported action: ${(input as any).action}`,
           'VALIDATION_ERROR',
-          'Valid actions: status, setup_start, setup_reset, setup_complete, set, cache_clear'
+          'Valid actions: get, status, setup_start, setup_reset, setup_complete, set, cache_clear'
         )
     }
   })()

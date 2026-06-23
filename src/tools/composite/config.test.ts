@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+vi.mock('@n24q02m/mcp-core/storage', () => ({
+  resolveConfig: vi.fn()
+}))
+
 vi.mock('../../credential-state.js', () => ({
   getState: vi.fn(() => 'awaiting_setup'),
   getNotionToken: vi.fn(() => null),
@@ -9,6 +13,7 @@ vi.mock('../../credential-state.js', () => ({
   resolveCredentialState: vi.fn()
 }))
 
+import { resolveConfig } from '@n24q02m/mcp-core/storage'
 import {
   getNotionToken,
   getState,
@@ -34,6 +39,18 @@ describe('config', () => {
   afterEach(() => {
     if (originalPublicUrl !== undefined) process.env.PUBLIC_URL = originalPublicUrl
     else delete process.env.PUBLIC_URL
+  })
+
+  describe('get action', () => {
+    it('should call resolveConfig and return the result', async () => {
+      const mockResult = { config: { NOTION_TOKEN: 'test' }, source: 'file' }
+      vi.mocked(resolveConfig).mockResolvedValue(mockResult as any)
+
+      const result = await config({ action: 'get' })
+
+      expect(resolveConfig).toHaveBeenCalledWith('better-notion-mcp', [])
+      expect(result).toEqual(mockResult)
+    })
   })
 
   describe('status action', () => {
