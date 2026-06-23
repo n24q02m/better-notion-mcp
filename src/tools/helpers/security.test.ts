@@ -49,6 +49,25 @@ describe('Security Utilities', () => {
       expect(isSafeUrl('mailto:user@\texample.com')).toBe(false)
     })
 
+    it('should reject URLs with extensive control/format characters (security fix)', () => {
+      // C1 Controls
+      expect(isSafeUrl('java\u0080script:alert(1)')).toBe(false)
+      expect(isSafeUrl('java\u009Fscript:alert(1)')).toBe(false)
+      // Soft Hyphen
+      expect(isSafeUrl('java\u00ADscript:alert(1)')).toBe(false)
+      // Zero Width characters
+      expect(isSafeUrl('java\u200Bscript:alert(1)')).toBe(false)
+      expect(isSafeUrl('java\u200Cscript:alert(1)')).toBe(false)
+      expect(isSafeUrl('java\u200Dscript:alert(1)')).toBe(false)
+      expect(isSafeUrl('java\u200Escript:alert(1)')).toBe(false)
+      expect(isSafeUrl('java\u200Fscript:alert(1)')).toBe(false)
+      // Directional formatting
+      expect(isSafeUrl('java\u202Ascript:alert(1)')).toBe(false)
+      expect(isSafeUrl('java\u202Escript:alert(1)')).toBe(false)
+      // Byte Order Mark
+      expect(isSafeUrl('java\uFEFFscript:alert(1)')).toBe(false)
+    })
+
     it('should allow valid relative or absolute URLs that fail parsing but are not dangerous', () => {
       // These fail new URL() parsing but don't match the dangerous protocol checks
       expect(isSafeUrl('/relative/path')).toBe(true)
