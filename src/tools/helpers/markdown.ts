@@ -472,142 +472,157 @@ class InlineParser {
   constructor(private readonly text: string) {}
 
   private flushCurrent(): void {
-    if (this.current) {
-      this.richText.push(
-        createRichText(this.current, {
-          bold: this.bold,
-          italic: this.italic,
-          code: this.code,
-          strikethrough: this.strikethrough
-        })
-      )
-      this.current = ''
-    }
+    if (!this.current) return
+    this.richText.push(
+      createRichText(this.current, {
+        bold: this.bold,
+        italic: this.italic,
+        code: this.code,
+        strikethrough: this.strikethrough
+      })
+    )
+    this.current = ''
   }
 
+  /**
+   * Page mention @[Title](page-id-or-url) — must come before link handling
+   * ⚡ Bolt: Added algorithmic short-circuiting to prevent O(N^2) lookaheads on pathological inputs
+   * with many `@[` but no `]`.
+   */
   private tryParseMention(): boolean {
-    const char = this.text[this.i]
-    const next = this.text[this.i + 1]
+    if (this.text[this.i] !== '@' || this.text[this.i + 1] !== '[' || this.noMoreMentionCloseBrackets) return false
 
-    // Page mention @[Title](page-id-or-url) — must come before link handling
-    // ⚡ Bolt: Added algorithmic short-circuiting to prevent O(N^2) lookaheads on pathological inputs
-    // with many `@[` but no `]`.
-    if (char === '@' && next === '[' && !this.noMoreMentionCloseBrackets) {
-      const closeBracket = this.text.indexOf(']', this.i + 2)
-      if (closeBracket === -1) {
-        this.noMoreMentionCloseBrackets = true
-      } else if (closeBracket + 1 < this.text.length && this.text[closeBracket + 1] === '(') {
-        const closeParen = this.text.indexOf(')', closeBracket + 2)
-        if (closeParen !== -1) {
-          this.flushCurrent()
-
-          const mentionTitle = this.text.slice(this.i + 2, closeBracket)
-          const mentionTarget = this.text.slice(closeBracket + 2, closeParen)
-
-          // Extract 32-char hex page ID from Notion URL or use as-is
-          const idMatch = mentionTarget.match(/([a-f0-9]{32})/)
-          const pageId = idMatch ? idMatch[1] : mentionTarget
-
-          this.richText.push(
-            createMention({ page: { id: pageId } }, mentionTitle, {
-              bold: this.bold,
-              italic: this.italic,
-              code: this.code,
-              strikethrough: this.strikethrough
-            })
-          )
-
-          this.i = closeParen
-          return true
-        }
-      }
+    const closeBracket = this.text.indexOf(']', this.i + 2)
+    if (closeBracket === -1) {
+      this.noMoreMentionCloseBrackets = true
+      return false
     }
-    return false
+
+    if (this.text[closeBracket + 1] !== '(') return false
+
+    const closeParen = this.text.indexOf(')', closeBracket + 2)
+    if (closeParen === -1) return false
+
+    this.flushCurrent()
+
+    const mentionTitle = this.text.slice(this.i + 2, closeBracket)
+    const mentionTarget = this.text.slice(closeBracket + 2, closeParen)
+
+    // Extract 32-char hex page ID from Notion URL or use as-is
+    const idMatch = mentionTarget.match(/([a-f0-9]{32})/)
+    const pageId = idMatch ? idMatch[1] : mentionTarget
+
+    this.richText.push(
+      createMention({ page: { id: pageId } }, mentionTitle, {
+        bold: this.bold,
+        italic: this.italic,
+        code: this.code,
+        strikethrough: this.strikethrough
+      })
+    )
+
+    this.i = closeParen
+    return true
   }
 
+  /**
+   * Link [text](url) — optimized to avoid O(N²) on pathological inputs
+   */
   private tryParseLink(): boolean {
-    const char = this.text[this.i]
+    if (this.text[this.i] !== '[' || this.noMoreCloseBrackets) return false
 
-    // Link [text](url) — optimized to avoid O(N²) on pathological inputs
-    if (char === '[' && !this.noMoreCloseBrackets) {
-      const closeBracket = this.text.indexOf(']', this.i + 1)
-      if (closeBracket === -1) {
-        // No more ] in the rest of the string, skip future indexOf calls
-        this.noMoreCloseBrackets = true
-      } else if (closeBracket + 1 < this.text.length && this.text[closeBracket + 1] === '(') {
-        const closeParen = this.text.indexOf(')', closeBracket + 2)
-
-        if (closeParen !== -1) {
-          this.flushCurrent()
-
-          const linkText = this.text.slice(this.i + 1, closeBracket)
-          const linkUrl = this.text.slice(closeBracket + 2, closeParen)
-          const isSafe = isSafeUrl(linkUrl)
-
-          this.richText.push({
-            type: 'text',
-            text: { content: linkText, link: isSafe ? { url: linkUrl } : null },
-            annotations: {
-              bold: this.bold,
-              italic: this.italic,
-              strikethrough: this.strikethrough,
-              underline: false,
-              code: this.code,
-              color: 'default'
-            }
-          })
-
-          this.i = closeParen
-          return true
-        }
-      }
+    const closeBracket = this.text.indexOf(']', this.i + 1)
+    if (closeBracket === -1) {
+      // No more ] in the rest of the string, skip future indexOf calls
+      this.noMoreCloseBrackets = true
+      return false
     }
-    return false
+
+    if (this.text[closeBracket + 1] !== '(') return false
+
+    const closeParen = this.text.indexOf(')', closeBracket + 2)
+    if (closeParen === -1) return false
+
+    this.flushCurrent()
+
+    const linkText = this.text.slice(this.i + 1, closeBracket)
+    const linkUrl = this.text.slice(closeBracket + 2, closeParen)
+    const isSafe = isSafeUrl(linkUrl)
+
+    this.richText.push({
+      type: 'text',
+      text: { content: linkText, link: isSafe ? { url: linkUrl } : null },
+      annotations: {
+        bold: this.bold,
+        italic: this.italic,
+        strikethrough: this.strikethrough,
+        underline: false,
+        code: this.code,
+        color: 'default'
+      }
+    })
+
+    this.i = closeParen
+    return true
   }
 
-  private tryParseFormatting(): boolean {
-    const char = this.text[this.i]
-    const next = this.text[this.i + 1]
-
-    // Bold **text**
-    if (char === '*' && next === '*') {
-      this.flushCurrent()
+  /**
+   * Bold **text** or Italic *text*
+   */
+  private tryParseAsterisk(): boolean {
+    if (this.text[this.i] !== '*') return false
+    this.flushCurrent()
+    if (this.text[this.i + 1] === '*') {
       this.bold = !this.bold
       this.i++ // Skip next *
-      return true
-    }
-    // Italic *text*
-    if (char === '*' && next !== '*') {
-      this.flushCurrent()
+    } else {
       this.italic = !this.italic
-      return true
     }
-    // Code `text`
-    if (char === '`') {
-      this.flushCurrent()
-      this.code = !this.code
-      return true
-    }
-    // Strikethrough ~~text~~
-    if (char === '~' && next === '~') {
-      this.flushCurrent()
-      this.strikethrough = !this.strikethrough
-      this.i++ // Skip next ~
-      return true
-    }
+    return true
+  }
 
-    return false
+  /**
+   * Code `text`
+   */
+  private tryParseCode(): boolean {
+    if (this.text[this.i] !== '`') return false
+    this.flushCurrent()
+    this.code = !this.code
+    return true
+  }
+
+  /**
+   * Strikethrough ~~text~~
+   */
+  private tryParseStrikethrough(): boolean {
+    if (this.text[this.i] !== '~' || this.text[this.i + 1] !== '~') return false
+    this.flushCurrent()
+    this.strikethrough = !this.strikethrough
+    this.i++ // Skip next ~
+    return true
   }
 
   public parse(): RichText[] {
-    for (this.i = 0; this.i < this.text.length; this.i++) {
+    const len = this.text.length
+    for (this.i = 0; this.i < len; this.i++) {
       const char = this.text[this.i]
 
-      // Fast path: skip parsing functions if character isn't a potential formatting trigger
-      if (char === '@' || char === '[' || char === '*' || char === '`' || char === '~') {
-        if (this.tryParseMention()) continue
-        if (this.tryParseLink()) continue
-        if (this.tryParseFormatting()) continue
+      switch (char) {
+        case '@':
+          if (this.tryParseMention()) continue
+          break
+        case '[':
+          if (this.tryParseLink()) continue
+          break
+        case '*':
+          if (this.tryParseAsterisk()) continue
+          break
+        case '`':
+          if (this.tryParseCode()) continue
+          break
+        case '~':
+          if (this.tryParseStrikethrough()) continue
+          break
       }
 
       this.current += char
