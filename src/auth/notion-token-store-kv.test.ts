@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { PerPluginStore } from '@n24q02m/mcp-core/storage'
 import { KvNotionTokenStore } from './notion-token-store-kv.js'
 
 // Injectable fake http matching mcp-core CfKvBackend's Http contract:
@@ -88,5 +89,19 @@ describe('KvNotionTokenStore', () => {
     }
     const store = new KvNotionTokenStore({ http: brokenHttp })
     await expect(store.ready()).rejects.toThrow(/kv\.internal/)
+  })
+
+  it('getAsync returns undefined and does not throw when PerPluginStore.load fails', async () => {
+    process.env.CREDENTIAL_SECRET = 'test-secret'
+    const store = new KvNotionTokenStore({ http: new FakeKvHttp() })
+
+    // Rationale: Testing this requires mocking the internal PerPluginStore load method to throw
+    const loadSpy = vi.spyOn(PerPluginStore.prototype, 'load').mockRejectedValue(new Error('corrupt blob'))
+
+    const result = await store.getAsync('alice')
+    expect(result).toBeUndefined()
+    expect(loadSpy).toHaveBeenCalled()
+
+    loadSpy.mockRestore()
   })
 })
