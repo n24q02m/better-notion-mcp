@@ -48,27 +48,24 @@ function buildSearchFilter(properties: any, search: string): any | null {
   if (!properties) return null
 
   const keys = Object.keys(properties)
-  const textProps: string[] = []
+  const or: any[] = []
+
   for (let i = 0; i < keys.length; i++) {
     const name = keys[i]
     const type = properties[name].type
-    if (type === 'title' || type === 'rich_text') {
-      textProps.push(name)
+
+    switch (type) {
+      case 'title':
+      case 'rich_text':
+        or.push({
+          property: name,
+          rich_text: { contains: search }
+        })
+        break
     }
   }
 
-  if (textProps.length > 0) {
-    const or = new Array(textProps.length)
-    for (let i = 0; i < textProps.length; i++) {
-      or[i] = {
-        property: textProps[i],
-        rich_text: { contains: search }
-      }
-    }
-    return { or }
-  }
-
-  return null
+  return or.length > 0 ? { or } : null
 }
 
 /**
