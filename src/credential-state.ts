@@ -88,7 +88,7 @@ export async function resolveCredentialState(): Promise<CredentialState> {
   // here without env, see main.ts startServer('stdio') guard).
   try {
     const result = await resolveConfig(SERVER_NAME, REQUIRED_FIELDS)
-    if (result.config !== null) {
+    if (result.config !== null && result.config[CREDENTIAL_KEY]) {
       _notionToken = result.config[CREDENTIAL_KEY]
       _state = 'configured'
       return _state

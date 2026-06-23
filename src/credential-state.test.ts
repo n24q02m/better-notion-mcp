@@ -88,6 +88,17 @@ describe('credential-state', () => {
       const state = await resolveCredentialState()
       expect(state).toBe('awaiting_setup')
     })
+
+    it('stays in awaiting_setup when config file exists but is missing NOTION_TOKEN', async () => {
+      vi.mocked(resolveConfig).mockResolvedValue({
+        config: {}, // Missing NOTION_TOKEN
+        source: 'file'
+      } as never)
+      const state = await resolveCredentialState()
+      expect(state).toBe('awaiting_setup')
+      expect(getNotionToken()).toBeNull()
+    })
+
     it('clears notion token when resolveCredentialState falls back to awaiting_setup', async () => {
       // 1. Setup a configured state
       process.env.NOTION_TOKEN = 'initial-token'
