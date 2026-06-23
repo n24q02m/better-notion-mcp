@@ -440,9 +440,14 @@ const TOOLS = [
   }
 ]
 
+// Pre-compute valid tool names to avoid allocations on every call
+// BOLT OPTIMIZATION: Cache tool name list and string representation
+const ALL_TOOL_NAMES = TOOLS.map((t) => t.name)
+const ALL_TOOL_NAMES_STRING = ALL_TOOL_NAMES.join(', ')
+
 // Pre-compute valid tool names for the help endpoint to avoid allocations on every call
 // BOLT OPTIMIZATION: Use Set for O(1) lookups instead of dynamic array creation
-const VALID_HELP_TOOL_NAMES = new Set(TOOLS.map((t) => t.name).filter((name) => name !== 'help'))
+const VALID_HELP_TOOL_NAMES = new Set(ALL_TOOL_NAMES.filter((name) => name !== 'help'))
 const VALID_HELP_TOOLS_STRING = Array.from(VALID_HELP_TOOL_NAMES).join(', ')
 /**
  * Register all tools with MCP server
@@ -588,13 +593,12 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
           break
         }
         default: {
-          const validTools = TOOLS.map((t) => t.name)
-          const closest = findClosestMatch(name, validTools)
+          const closest = findClosestMatch(name, ALL_TOOL_NAMES)
           const suggestion = closest ? ` Did you mean '${closest}'?` : ''
           throw new NotionMCPError(
             `Unknown tool: ${name}.${suggestion}`,
             'UNKNOWN_TOOL',
-            `Available tools: ${validTools.join(', ')}`
+            `Available tools: ${ALL_TOOL_NAMES_STRING}`
           )
         }
       }
