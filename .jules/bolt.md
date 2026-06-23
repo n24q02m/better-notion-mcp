@@ -27,3 +27,6 @@
 ## 2024-11-20 - Optimize property extraction hot paths
 **Learning:** Large `if/else if` chains checking a single string discriminator (e.g., `type === 'title'`, `type === 'rich_text'`) prevent JavaScript engines like V8 from using optimized O(1) jump tables, resulting in O(N) linear lookups on every iteration. Additionally, repeated string concatenation (`str +=`) within loops causes excessive garbage collection pressure due to string reallocation.
 **Action:** When evaluating a single string discriminator, use `switch (type)` statements. For string building, particularly when extracting property values in hot paths, use pre-allocated arrays (`new Array(len)`) combined with `.join('')` to minimize memory overhead.
+## 2025-05-14 - Suboptimal Array Search in Resource Lookups
+**Learning:** Using `.find()` on a static array for resource lookups in an MCP server can be optimized to O(1) using a `Map`. Pre-calculating error strings also reduces allocation overhead on failure paths.
+**Action:** Always prefer `Map` or `Set` for lookup-heavy static datasets.

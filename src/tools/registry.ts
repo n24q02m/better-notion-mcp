@@ -62,6 +62,10 @@ const RESOURCES = [
   { uri: 'notion://docs/file_uploads', name: 'File Uploads Tool Docs', file: 'file_uploads.md' }
 ]
 
+// BOLT OPTIMIZATION: Use Map for O(1) resource lookups and pre-calculate URI string
+const RESOURCE_MAP = new Map(RESOURCES.map((r) => [r.uri, r]))
+const AVAILABLE_RESOURCE_URIS = RESOURCES.map((r) => r.uri).join(', ')
+
 /**
  * 11 registered tools (8 composite Notion tools + config + config__open_relay + help)
  * covering ~95% of the official Notion API.
@@ -465,13 +469,13 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
 
   server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     const { uri } = request.params
-    const resource = RESOURCES.find((r) => r.uri === uri)
+    const resource = RESOURCE_MAP.get(uri)
 
     if (!resource) {
       throw new NotionMCPError(
         `Resource not found: ${uri}`,
         'RESOURCE_NOT_FOUND',
-        `Available: ${RESOURCES.map((r) => r.uri).join(', ')}`
+        `Available: ${AVAILABLE_RESOURCE_URIS}`
       )
     }
 
