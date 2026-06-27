@@ -27,3 +27,6 @@
 ## 2024-11-20 - Optimize property extraction hot paths
 **Learning:** Large `if/else if` chains checking a single string discriminator (e.g., `type === 'title'`, `type === 'rich_text'`) prevent JavaScript engines like V8 from using optimized O(1) jump tables, resulting in O(N) linear lookups on every iteration. Additionally, repeated string concatenation (`str +=`) within loops causes excessive garbage collection pressure due to string reallocation.
 **Action:** When evaluating a single string discriminator, use `switch (type)` statements. For string building, particularly when extracting property values in hot paths, use pre-allocated arrays (`new Array(len)`) combined with `.join('')` to minimize memory overhead.
+## 2025-02-12 - Caching Map results on hot paths
+**Learning:** Calling `.map` or `.join` dynamically in request handlers, especially in `default` cases for error fallbacks or for providing static list endpoints, introduces unnecessary array allocation and O(N) mapping operations on every single invocation.
+**Action:** When a static list like `TOOLS` or `RESOURCES` is mapped to derive strings or stripped-down objects for an endpoint response, precalculate these results as module-level constants (e.g. `const ALL_TOOL_NAMES = TOOLS.map(t => t.name)`) to convert O(N) operations into O(1) constant lookups.
