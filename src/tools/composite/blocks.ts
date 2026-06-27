@@ -4,7 +4,7 @@
  */
 
 import type { Client } from '@notionhq/client'
-import { commitReceipt, guardReceipt } from '../../receipt-guard.js'
+import { runBlockDeleteGuarded } from '../../receipt-guard.js'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate, populateDeepChildren } from '../helpers/pagination.js'
@@ -278,21 +278,23 @@ async function updateBlock(notion: Client, input: BlocksInput): Promise<UpdateBl
  * recorded as consumed -- a transient delete failure leaves the approval usable.
  */
 async function deleteBlock(notion: Client, input: BlocksInput): Promise<DeleteBlockResult | ReceiptRequiredResult> {
-  const action = `notion.block.delete:${input.block_id}`
-  const guard = guardReceipt(action, input.authorization_receipt)
+  // The gate verifies+reserves the receipt (bound to this exact block), runs the
+  // irreversible delete, then consumes the receipt only AFTER it succeeds -- a
+  // transient Notion failure releases the reservation and leaves the approval
+  // usable. A missing/invalid/replayed/cross-block receipt yields a sanitized
+  // Receipt Required challenge instead of deleting.
+  const guard = await runBlockDeleteGuarded(input.block_id, input.authorization_receipt, () =>
+    notion.blocks.delete({ block_id: input.block_id }).then(() => undefined)
+  )
   if (!guard.ok) {
     return {
       action: 'delete',
       block_id: input.block_id,
       deleted: false,
-      challenge: guard.challenge
+      challenge: guard.body
     }
   }
 
-  // Run the irreversible delete first; only consume the receipt once it succeeds
-  // so a transient Notion failure does not burn a valid approval.
-  await notion.blocks.delete({ block_id: input.block_id })
-  commitReceipt(guard.receiptId)
   return {
     action: 'delete',
     block_id: input.block_id,

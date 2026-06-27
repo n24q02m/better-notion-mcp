@@ -6,7 +6,7 @@
       "name": "@n24q02m/better-notion-mcp",
       "dependencies": {
         "@cloudflare/containers": "^0.3.7",
-        "@emilia-protocol/require-receipt": "^0.3.0",
+        "@emilia-protocol/require-receipt": "^0.4.0",
         "@modelcontextprotocol/sdk": "^1.29.0",
         "@n24q02m/mcp-core": "^1.18.0-beta.19",
         "@notionhq/client": "^5.22.0",
@@ -60,7 +60,7 @@
 
     "@cloudflare/workers-types": ["@cloudflare/workers-types@4.20260621.1", "", {}, "sha512-c4xrf4shZdDOK1ihh1UKzlS/3MDYiGThT/Oqr4Y3qR9NLCSNzHB7rt+Vk/LOp0ZSNjA+7WNJEQsOhpiQtpT2GA=="],
 
-    "@emilia-protocol/require-receipt": ["@emilia-protocol/require-receipt@0.3.0", "", {}, "sha512-uvYFxfek1qnVI4oIKwlBDps7+Pj58npHpeS8MB+FhE6t7IVpdHodE9Z99yg/Wtscr0qiSGSLs0/b7jridMMcsw=="],
+    "@emilia-protocol/require-receipt": ["@emilia-protocol/require-receipt@0.4.0", "", {}, "sha512-ECl95tEF3LFPAfXyQb1BrcvoRF/oVXyu4TKAsFGE2g3axnuFoOpvio5Y6KgObajWqi2sevmrU8MEcDd04DFWdg=="],
 
     "@emnapi/core": ["@emnapi/core@1.10.0", "", { "dependencies": { "@emnapi/wasi-threads": "1.2.1", "tslib": "^2.4.0" } }, "sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw=="],
 

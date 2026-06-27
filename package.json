@@ -59,7 +59,7 @@
   ],
   "dependencies": {
     "@cloudflare/containers": "^0.3.7",
-    "@emilia-protocol/require-receipt": "^0.3.0",
+    "@emilia-protocol/require-receipt": "^0.4.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@n24q02m/mcp-core": "^1.18.0-beta.19",
     "@notionhq/client": "^5.22.0",

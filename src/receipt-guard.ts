@@ -7,19 +7,18 @@
  * for their own liability -- necessary, not sufficient. It sits alongside the
  * Notion token/scopes on the destructive path; it does not replace them.
  *
- * Verification is offline Ed25519 over canonical JSON (zero network).
+ * The hardening (per-target binding, offline Ed25519 verification, replay
+ * refusal, consume-after-success, sanitized { reason } rejections) lives in the
+ * canonical makeReceiptGate from @emilia-protocol/require-receipt; this module
+ * is a thin wrapper that builds the block-delete gate and exposes its `run`
+ * orchestration (verify+reserve -> act -> commit on success / release on failure).
  */
 
-import { RECEIPT_REQUIRED_STATUS, receiptChallenge, verifyEmiliaReceipt } from '@emilia-protocol/require-receipt'
-import type { ChallengeOptions, VerifyResult } from '@emilia-protocol/require-receipt'
+import { makeReceiptGate } from '@emilia-protocol/require-receipt'
+import type { ReceiptGate, RunResult } from '@emilia-protocol/require-receipt'
 
 // Reject receipts older than this when verifying (seconds).
 const MAX_AGE_SEC = 900
-
-// One-time consumption: receipt_ids consumed by this process cannot be replayed.
-// In-memory and per-process; back it with shared storage if you run multiple
-// instances.
-const consumedReceiptIds = new Set<string>()
 
 // Optional production hardening: comma-separated base64url SPKI-DER issuer keys.
 // When set, only receipts signed by these keys are accepted and the receipt's
@@ -31,71 +30,31 @@ const trustedKeys = (process.env.EMILIA_TRUSTED_KEYS ?? '')
   .map((k) => k.trim())
   .filter((k) => k.length > 0)
 
-export type GuardResult = { ok: true; receiptId: string } | { ok: false; challenge: Record<string, unknown> }
+// One gate for the irreversible block-delete path. `action` is a function so the
+// receipt is bound to THIS exact block: a receipt minted for another block id is
+// refused. The consumed-receipt store is in-memory and per-process; back the gate
+// with a shared store if you run multiple instances.
+const useTrustedKeys = trustedKeys.length > 0
+const blockDeleteGate: ReceiptGate = makeReceiptGate({
+  action: (blockId: string) => `notion.block.delete:${blockId}`,
+  trustedKeys: useTrustedKeys ? trustedKeys : undefined,
+  allowInlineKey: !useTrustedKeys,
+  maxAgeSec: MAX_AGE_SEC
+})
 
 /**
- * Verify (but do NOT consume) a receipt for an irreversible action.
- *
- * Checks signature, freshness, action-binding, and that the receipt id has not
- * already been consumed by this process. Returns the verified receipt id on
- * success, or a machine-readable Receipt Required challenge (HTTP 428 shape) the
- * agent can act on -- the MCP tool-result equivalent of answering 428.
- *
- * Replay protection is enforced here (not-already-consumed check); the caller
- * must call {@link commitReceipt} ONLY after the irreversible action succeeds,
- * so a transient failure does not burn a valid approval.
+ * Verify + reserve a receipt for deleting THIS block, run the irreversible
+ * `fn`, then consume the receipt only AFTER it succeeds (gate.run releases the
+ * reservation if `fn` throws, so a transient Notion failure does not burn a
+ * valid approval). On success returns `{ ok: true, receiptId, ... }`; on a
+ * missing/invalid/replayed/cross-target receipt returns `{ ok: false, status,
+ * body }` where `body` is a sanitized Receipt Required challenge (HTTP 428
+ * shape, `{ rejected: { reason } }`). `fn` failures propagate by throwing.
  */
-export function guardReceipt(action: string, receipt: unknown): GuardResult {
-  const challengeOpts: ChallengeOptions = {
-    status: RECEIPT_REQUIRED_STATUS,
-    maxAgeSec: MAX_AGE_SEC
-  }
-
-  if (!receipt) {
-    return {
-      ok: false,
-      challenge: receiptChallenge(action, 'No EMILIA receipt presented.', challengeOpts)
-    }
-  }
-
-  // Pin trustedKeys when EMILIA_TRUSTED_KEYS is set; otherwise accept the
-  // receipt's own inline key (demo fallback -- proves integrity, not trust).
-  const useTrustedKeys = trustedKeys.length > 0
-  const verified: VerifyResult = verifyEmiliaReceipt(receipt, {
-    trustedKeys: useTrustedKeys ? trustedKeys : undefined,
-    allowInlineKey: !useTrustedKeys,
-    action,
-    maxAgeSec: MAX_AGE_SEC
-  })
-
-  if (!verified.ok || !verified.receipt_id) {
-    return {
-      ok: false,
-      challenge: {
-        ...receiptChallenge(action, `Receipt rejected: ${verified.reason}.`, challengeOpts),
-        rejected: { reason: verified.reason }
-      }
-    }
-  }
-
-  if (consumedReceiptIds.has(verified.receipt_id)) {
-    return {
-      ok: false,
-      challenge: {
-        ...receiptChallenge(action, 'Receipt already consumed (replay refused).', challengeOpts),
-        rejected: { reason: 'receipt_replayed' }
-      }
-    }
-  }
-
-  return { ok: true, receiptId: verified.receipt_id }
-}
-
-/**
- * Record a verified receipt id as consumed, AFTER the irreversible action has
- * succeeded. Marks the receipt single-use so it cannot be replayed. Call this
- * only on success -- on failure, skip it so the approval can be retried.
- */
-export function commitReceipt(receiptId: string): void {
-  consumedReceiptIds.add(receiptId)
+export function runBlockDeleteGuarded(
+  blockId: string,
+  receipt: unknown,
+  fn: () => Promise<void>
+): Promise<RunResult> {
+  return blockDeleteGate.run(receipt, { target: blockId }, fn)
 }
