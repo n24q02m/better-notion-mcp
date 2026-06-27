@@ -1,6 +1,13 @@
-// Minimal local type declarations for @emilia-protocol/require-receipt (^0.3.0).
-// The published package ships no .d.ts, so we declare only the surface we use.
-// See: https://www.emiliaprotocol.ai/agent-guard
+/**
+ * Minimal local type declarations for `@emilia-protocol/require-receipt` (^0.3.0).
+ *
+ * The published package ships no `.d.ts`, so this module declares only the
+ * surface the Receipt Required delete guard uses: the verify/challenge
+ * functions, their option/result shapes, and the Receipt Required status
+ * constant. Keep it in sync with the installed package version.
+ *
+ * See: https://www.emiliaprotocol.ai/agent-guard
+ */
 
 declare module '@emilia-protocol/require-receipt' {
   export const RECEIPT_REQUIRED_STATUS: number

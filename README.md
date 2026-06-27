@@ -255,6 +255,24 @@ bun install
 bun run dev
 ```
 
+## Receipt Required (irreversible delete guard)
+
+The `blocks` `delete` action is gated by an optional **Receipt Required** guard. A
+missing or invalid EMILIA authorization receipt (EP-RECEIPT-v1) returns a
+structured Receipt Required challenge (HTTP 428 shape) as the tool result instead
+of deleting. A valid receipt -- bound to the exact `block_id` -- runs the delete
+once; only after the delete succeeds is the receipt recorded as consumed
+(single-use, replay-refused). Verification is offline Ed25519 over canonical JSON
+(no network, no backend).
+
+**Production note:** by default the guard accepts the receipt's own inline key
+(proves integrity, not trust) and tracks consumed receipt ids in-memory
+per-process. For production, set `EMILIA_TRUSTED_KEYS` to a comma-separated list
+of base64url SPKI-DER issuer public keys you trust -- the guard then pins those
+keys and stops accepting inline keys. If you run multiple instances, back the
+consumed-id set with shared storage. See
+[the agent guard reference](https://www.emiliaprotocol.ai/agent-guard).
+
 ## Trust Model
 
 This plugin implements **TC-NearZK** (in-memory, ephemeral). See [the trust model reference](https://mcp.n24q02m.com/servers/mcp-core/trust-model/) for full classification.

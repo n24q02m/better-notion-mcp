@@ -186,7 +186,15 @@ const TOOLS = [
   {
     name: 'blocks',
     description:
-      'Read and modify block-level content within pages.\n\nActions (required params -> optional):\n- get (block_id): retrieve single block\n- children (block_id): list child blocks\n- append (block_id, content -> position, after_block_id): add markdown content at position\n- update (block_id, content): replace text block content\n- delete (block_id -> authorization_receipt): remove block (irreversible; requires a Receipt Required authorization_receipt)\n\nUse `pages` for page metadata/properties. Page IDs are valid block IDs. update only works on text blocks (paragraph, headings, lists, quote, to_do, code). Image/file blocks contain signed URLs (1h expiry). append supports position: "start" (prepend), "end" (default), "after_block" (requires after_block_id).',
+      'Read and modify block-level content within pages.\n\nActions (required params -> optional):\n' +
+      '- get (block_id): retrieve single block\n- children (block_id): list child blocks\n' +
+      '- append (block_id, content -> position, after_block_id): add markdown content at position\n' +
+      '- update (block_id, content): replace text block content\n' +
+      '- delete (block_id -> authorization_receipt): remove block ' +
+      '(irreversible; requires a Receipt Required authorization_receipt)\n\n' +
+      'Use `pages` for page metadata/properties. Page IDs are valid block IDs. update only works on text blocks ' +
+      '(paragraph, headings, lists, quote, to_do, code). Image/file blocks contain signed URLs (1h expiry). ' +
+      'append supports position: "start" (prepend), "end" (default), "after_block" (requires after_block_id).',
     annotations: {
       title: 'Blocks',
       readOnlyHint: false,
@@ -214,7 +222,9 @@ const TOOLS = [
         authorization_receipt: {
           type: 'object',
           description:
-            'EMILIA authorization receipt (EP-RECEIPT-v1) proving a named human approved this exact deletion. Required to execute the irreversible delete action. Optional in the schema so a missing receipt returns a structured Receipt Required challenge instead of a schema error.',
+            'EMILIA authorization receipt (EP-RECEIPT-v1) proving a named human approved this exact deletion. ' +
+            'Required to execute the irreversible delete action. Optional in the schema so a missing receipt ' +
+            'returns a structured Receipt Required challenge instead of a schema error.',
           additionalProperties: true
         }
       },

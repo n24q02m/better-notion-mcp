@@ -4,7 +4,7 @@
  */
 
 import type { Client } from '@notionhq/client'
-import { guardReceipt } from '../../receipt-guard.js'
+import { commitReceipt, guardReceipt } from '../../receipt-guard.js'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate, populateDeepChildren } from '../helpers/pagination.js'
@@ -271,11 +271,15 @@ async function updateBlock(notion: Client, input: BlocksInput): Promise<UpdateBl
  * Maps to: DELETE /v1/blocks/{id}
  *
  * Gated by Receipt Required: a missing or invalid receipt returns a structured
- * Receipt Required challenge (HTTP 428 shape) instead of deleting. A valid,
- * action-bound receipt runs the delete once and records its receipt id.
+ * Receipt Required challenge (HTTP 428 shape) instead of deleting. The receipt
+ * is bound to this exact block (action `notion.block.delete:<block_id>`), so a
+ * receipt minted for another block is refused. A valid, action-bound receipt is
+ * verified first, the delete runs, and only on success is the receipt id
+ * recorded as consumed -- a transient delete failure leaves the approval usable.
  */
 async function deleteBlock(notion: Client, input: BlocksInput): Promise<DeleteBlockResult | ReceiptRequiredResult> {
-  const guard = guardReceipt('notion.block.delete', input.authorization_receipt)
+  const action = `notion.block.delete:${input.block_id}`
+  const guard = guardReceipt(action, input.authorization_receipt)
   if (!guard.ok) {
     return {
       action: 'delete',
@@ -285,7 +289,10 @@ async function deleteBlock(notion: Client, input: BlocksInput): Promise<DeleteBl
     }
   }
 
+  // Run the irreversible delete first; only consume the receipt once it succeeds
+  // so a transient Notion failure does not burn a valid approval.
   await notion.blocks.delete({ block_id: input.block_id })
+  commitReceipt(guard.receiptId)
   return {
     action: 'delete',
     block_id: input.block_id,
