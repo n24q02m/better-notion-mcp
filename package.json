@@ -49,7 +49,7 @@
     "better-notion-mcp": "bin/cli.mjs"
   },
   "engines": {
-    "node": ">=24.17.0"
+    "node": ">=24.18.0"
   },
   "files": [
     "build/",
@@ -60,7 +60,7 @@
   "dependencies": {
     "@cloudflare/containers": "^0.3.7",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@n24q02m/mcp-core": "^1.18.0-beta.19",
+    "@n24q02m/mcp-core": "^1.18.0-beta.20",
     "@notionhq/client": "^5.22.0",
     "zod": "^4.4.3"
   },
@@ -68,9 +68,9 @@
     "esbuild"
   ],
   "devDependencies": {
-    "@biomejs/biome": "^2.5.0",
-    "@cloudflare/workers-types": "^4.20260621.1",
-    "@types/node": "^26.0.0",
+    "@biomejs/biome": "^2.5.1",
+    "@cloudflare/workers-types": "^4.20260629.1",
+    "@types/node": "^26.0.1",
     "@vitest/coverage-v8": "^4.1.9",
     "esbuild": "^0.28.1",
     "tsx": "^4.22.4",
