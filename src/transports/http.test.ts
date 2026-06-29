@@ -425,7 +425,8 @@ describe('startHttp - tokenStore.ready', () => {
 
     await startHttp()
 
-    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('durable KV store reachable'))
+    // No success log for reachable, only for the server start itself
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('http mode on'))
   })
 
   it('logs failure when tokenStore.ready() fails', async () => {
