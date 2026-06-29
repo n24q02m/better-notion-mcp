@@ -421,7 +421,7 @@ describe('registerTools', () => {
     it('should route users tool correctly', async () => {
       const handler = server.getHandler(3)
       const mockResult = { action: 'me', user: { id: 'user-1' } }
-      vi.mocked(users).mockResolvedValue(mockResult)
+      vi.mocked(users).mockResolvedValue(mockResult as any)
 
       const result = await handler({
         params: { name: 'users', arguments: { action: 'me' } }

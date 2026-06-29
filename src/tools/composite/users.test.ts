@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { users } from './users.js'
+import { type FromWorkspaceResult, type GetMeResult, type GetUserResult, type ListUsersResult, users } from './users.js'
 
 const mockNotion = {
   users: {
@@ -36,7 +36,7 @@ describe('users', () => {
         has_more: false
       })
 
-      const result = await users(mockNotion as any, { action: 'list' })
+      const result = (await users(mockNotion as any, { action: 'list' })) as ListUsersResult
 
       expect(result.action).toBe('list')
       expect(result.total).toBe(2)
@@ -64,7 +64,7 @@ describe('users', () => {
         has_more: false
       })
 
-      const result = await users(mockNotion as any, { action: 'list' })
+      const result = (await users(mockNotion as any, { action: 'list' })) as ListUsersResult
 
       expect(result.action).toBe('list')
       expect(result.total).toBe(0)
@@ -124,7 +124,7 @@ describe('users', () => {
         has_more: false
       })
 
-      const result = await users(mockNotion as any, { action: 'list' })
+      const result = (await users(mockNotion as any, { action: 'list' })) as ListUsersResult
 
       expect(result.users[0].name).toBe('Unknown')
     })
@@ -157,7 +157,7 @@ describe('users', () => {
         person: { email: 'alice@example.com' }
       })
 
-      const result = await users(mockNotion as any, { action: 'get', user_id: 'user-1' })
+      const result = (await users(mockNotion as any, { action: 'get', user_id: 'user-1' })) as GetUserResult
 
       expect(result.action).toBe('get')
       expect(result.id).toBe('user-1')
@@ -175,7 +175,7 @@ describe('users', () => {
         avatar_url: null
       })
 
-      const result = await users(mockNotion as any, { action: 'get', user_id: 'bot-1' })
+      const result = (await users(mockNotion as any, { action: 'get', user_id: 'bot-1' })) as GetUserResult
 
       expect(result.email).toBeUndefined()
     })
@@ -188,7 +188,7 @@ describe('users', () => {
         person: {}
       })
 
-      const result = await users(mockNotion as any, { action: 'get', user_id: 'user-1' })
+      const result = (await users(mockNotion as any, { action: 'get', user_id: 'user-1' })) as GetUserResult
 
       expect(result.name).toBe('Unknown')
     })
@@ -218,7 +218,7 @@ describe('users', () => {
         bot: { owner: { type: 'workspace', workspace: true } }
       })
 
-      const result = await users(mockNotion as any, { action: 'me' })
+      const result = (await users(mockNotion as any, { action: 'me' })) as GetMeResult
 
       expect(result.action).toBe('me')
       expect(result.id).toBe('bot-1')
@@ -235,7 +235,7 @@ describe('users', () => {
         bot: {}
       })
 
-      const result = await users(mockNotion as any, { action: 'me' })
+      const result = (await users(mockNotion as any, { action: 'me' })) as GetMeResult
 
       expect(result.name).toBe('Bot')
     })
@@ -266,7 +266,7 @@ describe('users', () => {
         has_more: false
       })
 
-      const result = await users(mockNotion as any, { action: 'from_workspace' })
+      const result = (await users(mockNotion as any, { action: 'from_workspace' })) as FromWorkspaceResult
 
       expect(result.action).toBe('from_workspace')
       expect(result.total).toBe(3)
@@ -286,7 +286,7 @@ describe('users', () => {
         has_more: false
       })
 
-      const result = await users(mockNotion as any, { action: 'from_workspace' })
+      const result = (await users(mockNotion as any, { action: 'from_workspace' })) as FromWorkspaceResult
 
       expect(result.total).toBe(1)
     })
@@ -298,7 +298,7 @@ describe('users', () => {
         has_more: false
       })
 
-      const result = await users(mockNotion as any, { action: 'from_workspace' })
+      const result = (await users(mockNotion as any, { action: 'from_workspace' })) as FromWorkspaceResult
 
       expect(result.total).toBe(1)
     })
@@ -310,7 +310,7 @@ describe('users', () => {
         has_more: false
       })
 
-      const result = await users(mockNotion as any, { action: 'from_workspace' })
+      const result = (await users(mockNotion as any, { action: 'from_workspace' })) as FromWorkspaceResult
 
       expect(result.total).toBe(0)
       expect(result.users).toEqual([])
@@ -348,7 +348,7 @@ describe('from_workspace with pagination', () => {
         has_more: false
       })
 
-    const result = await users(mockNotion as any, { action: 'from_workspace', limit: 2 })
+    const result = (await users(mockNotion as any, { action: 'from_workspace', limit: 2 })) as FromWorkspaceResult
 
     expect(result.total).toBe(2)
     expect(result.users).toContainEqual(expect.objectContaining({ id: 'user-1' }))
