@@ -159,7 +159,28 @@ async function extractUserId(request: Request, env: Env): Promise<string> {
   // their own isolated DO (multi-user). Downstream servers MUST keep this.
   const auth = request.headers.get('authorization') ?? ''
   const m = auth.match(/^Bearer\s+(.+)$/)
-  if (!m) return 'default'
+  if (!m) {
+    // OAuth POST /token refresh carries no Bearer but the refresh_token IS a
+    // self-contained JWT with `sub`, and rotation is stateless -> route it to
+    // that sub's already-warm DO instead of "default" so a refresh while the
+    // sub container is warm does not need to spawn a 2nd container (under
+    // max_instances=1 that spawn 500s -> refresh fails -> server unusable).
+    // See wet PR#1452. Read the body off a clone so the forward is untouched.
+    try {
+      const url = new URL(request.url)
+      if (request.method === 'POST' && url.pathname === '/token') {
+        const form = await request.clone().formData()
+        if (form.get('grant_type') === 'refresh_token') {
+          const rt = String(form.get('refresh_token') ?? '')
+          const p = JSON.parse(atob(rt.split('.')[1] ?? ''))
+          if (typeof p.sub === 'string') return p.sub
+        }
+      }
+    } catch {
+      /* fall through to default */
+    }
+    return 'default'
+  }
 
   const jwt = m[1]
   try {
