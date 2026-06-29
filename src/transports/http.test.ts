@@ -420,12 +420,12 @@ describe('startHttp - tokenStore.ready', () => {
     })
   })
 
-  it('logs success when tokenStore.ready() succeeds', async () => {
+  it('logs startup info when startHttp is called', async () => {
     mockTokenStoreInstance.ready = vi.fn().mockResolvedValue(undefined)
 
     await startHttp()
 
-    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('durable KV store reachable'))
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('http mode on http://localhost:3000/mcp'))
   })
 
   it('logs failure when tokenStore.ready() fails', async () => {

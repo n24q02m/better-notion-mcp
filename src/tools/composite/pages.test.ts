@@ -833,6 +833,55 @@ describe('pages', () => {
       })
     })
 
+    it('strips null values from block type data during duplication', async () => {
+      mockNotion.pages.retrieve.mockResolvedValue({
+        id: 'orig-nulls',
+        parent: { type: 'page_id', page_id: 'parent-1' },
+        properties: { title: { title: [{ plain_text: 'Null Test' }] } },
+        icon: null,
+        cover: null
+      })
+      mockNotion.blocks.children.list.mockResolvedValue({
+        results: [
+          {
+            id: 'block-null',
+            type: 'paragraph',
+            paragraph: {
+              rich_text: [{ type: 'text', text: { content: 'Hello' } }],
+              color: 'default',
+              children: null // This null should be stripped
+            }
+          }
+        ],
+        next_cursor: null,
+        has_more: false
+      })
+      mockNotion.pages.create.mockResolvedValue({
+        id: 'dup-nulls',
+        url: 'https://notion.so/dup-nulls'
+      })
+      mockNotion.blocks.children.append.mockResolvedValue({ results: [] })
+
+      await pages(mockNotion as any, {
+        action: 'duplicate',
+        page_id: 'orig-nulls'
+      })
+
+      expect(mockNotion.blocks.children.append).toHaveBeenCalledWith({
+        block_id: 'dup-nulls',
+        children: [
+          {
+            type: 'paragraph',
+            paragraph: {
+              rich_text: [{ type: 'text', text: { content: 'Hello' } }],
+              color: 'default'
+              // children: null should be gone
+            }
+          }
+        ]
+      })
+    })
+
     it('skips block append when original has no blocks', async () => {
       mockNotion.pages.retrieve.mockResolvedValue({
         id: 'orig-2',
