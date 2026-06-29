@@ -2,9 +2,9 @@
  * HTTP Transport -- single remote-oauth multi-user mode.
  *
  * Post stdio-pure + http-multi-user split (2026-05-01): the MCP_MODE flavor
- * (``local-relay`` vs ``remote-oauth``) is gone. HTTP mode is always
+ * ("local-relay" vs "remote-oauth") is gone. HTTP mode is always
  * delegated OAuth 2.1 redirect flow to Notion at
- * ``https://api.notion.com/v1/oauth/authorize`` with per-JWT-sub Notion
+ * "https://api.notion.com/v1/oauth/authorize" with per-JWT-sub Notion
  * token storage. Single-user paste-token relay form is no longer supported
  * here -- use stdio mode with NOTION_TOKEN env for single-user setups.
  *
@@ -62,11 +62,36 @@ export function deriveSubject(tokens: Record<string, unknown>): string {
   return 'default'
 }
 
-export async function startHttp(): Promise<void> {
-  await resolveCredentialState()
+/**
+ * Retrieve and validate HTTP server configuration from environment variables.
+ */
+function getHttpConfig() {
+  const port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 0
+  const host = process.env.HOST
 
-  const tokenStore = selectTokenStore()
+  const clientId = process.env.NOTION_OAUTH_CLIENT_ID
+  const clientSecret = process.env.NOTION_OAUTH_CLIENT_SECRET
+  if (!clientId || !clientSecret) {
+    throw new Error('NOTION_OAUTH_CLIENT_ID and NOTION_OAUTH_CLIENT_SECRET are required for http mode.')
+  }
 
+  const authDisabled = process.env.MCP_AUTH_DISABLE === '1'
+
+  // CF deploy requirement (P3-03): CREDENTIAL_SECRET MUST be set in the
+  // container env (wrangler secret put). When set, mcp-core's JWTIssuer derives
+  // a deterministic Ed25519 (EdDSA) signing key via HKDF-SHA256 with no disk I/O.
+  // Without it, JWTIssuer falls back to RS256 keys persisted to disk on the
+  // EPHEMERAL container FS, so OAuth identity breaks on every container recreate.
+  // Setting CREDENTIAL_SECRET is the must-do CF fix; no code change is needed
+  // here because runHttpServer/createDelegatedOAuthApp already read it from env.
+
+  return { port, host, clientId, clientSecret, authDisabled }
+}
+
+/**
+ * Validate the token store readiness and log the outcome.
+ */
+async function validateTokenStore(tokenStore: NotionTokenStoreLike) {
   // Self-validating deploy: when the durable KV store is selected (Cloudflare),
   // confirm the container -> Worker `kv.internal` outbound path is wired at
   // startup. If it is NOT, the fire path of the first token write would vanish
@@ -76,14 +101,20 @@ export async function startHttp(): Promise<void> {
   if (tokenStore.ready) {
     try {
       await tokenStore.ready()
+      console.error(`[${SERVER_NAME}] durable KV store reachable at startup`)
     } catch (err) {
       console.error(
         `[${SERVER_NAME}] durable KV store UNREACHABLE at startup: ${err instanceof Error ? err.message : String(err)}`
       )
     }
   }
+}
 
-  const notionClientFactory = () => {
+/**
+ * Create a factory function for Notion clients.
+ */
+function createNotionClientFactory(tokenStore: NotionTokenStoreLike) {
+  return () => {
     const ctx = subjectContext.getStore()
     const token = ctx ? tokenStore.get(ctx.sub) : undefined
     if (!token) {
@@ -95,78 +126,95 @@ export async function startHttp(): Promise<void> {
     }
     return new Client({ auth: token, notionVersion: '2025-09-03' })
   }
+}
 
-  const port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 0
-  const host = process.env.HOST
-
-  const clientId = process.env.NOTION_OAUTH_CLIENT_ID
-  const clientSecret = process.env.NOTION_OAUTH_CLIENT_SECRET
-  if (!clientId || !clientSecret) {
-    throw new Error('NOTION_OAUTH_CLIENT_ID and NOTION_OAUTH_CLIENT_SECRET are required for http mode.')
+/**
+ * Create the OAuth token received callback.
+ */
+function createOnTokenReceived(tokenStore: NotionTokenStoreLike) {
+  return async (tokens: Record<string, unknown>) => {
+    const accessToken = String(tokens.access_token ?? '')
+    const sub = deriveSubject(tokens)
+    // AWAIT the durable write (do not fire-and-forget). The KV store sets
+    // its in-memory cache synchronously before the awaited KV PUT, so the
+    // same-request factory read still hits the warm cache. mcp-core wraps
+    // this callback in try/catch and returns a 500 "Failed to persist
+    // tokens" to the browser if it throws — so a broken KV write surfaces
+    // at auth time instead of silently losing the token once the in-memory
+    // cache evaporates on container recreate.
+    if (accessToken) await tokenStore.save(sub, accessToken)
+    // Return sub so mcp-core propagates it into the bearer JWT's `sub`
+    // claim, which `authScope` below then matches back to the stored token.
+    return sub
   }
+}
 
-  // MCP_AUTH_DISABLE=1 skips Bearer JWT verification — for deployments behind
-  // an external auth boundary (reverse proxy, API gateway like agentgateway).
-  // Caller is responsible for upstream auth + providing Notion token via a
-  // separate channel (e.g. NOTION_TOKEN env var resolved by tokenStore default).
-  const authDisabled = process.env.MCP_AUTH_DISABLE === '1'
+/**
+ * Create the authentication scope middleware.
+ */
+function createAuthScope(tokenStore: NotionTokenStoreLike) {
+  return async (claims: { sub?: unknown; anonymous?: unknown }, next: () => Promise<void>) => {
+    // Anonymous caller (auth-disabled mode behind gateway): use 'default'
+    // bucket so a single deployment can serve one Notion token via env.
+    const sub = claims.anonymous === true ? 'default' : typeof claims.sub === 'string' ? claims.sub : 'default'
+    // Warm the per-sub cache from the durable store (KV) BEFORE the tool
+    // dispatch reads it synchronously via the factory/resolver. After a
+    // container delete+recreate the in-memory cache is empty; without this a
+    // freshly-recreated container would report no token (forcing needless
+    // re-auth) even though the encrypted token is still in KV. No-op for the
+    // in-memory store. A KV read failure is treated as a cache miss (re-auth)
+    // and never blocks the request.
+    try {
+      await tokenStore.getAsync(sub)
+    } catch {
+      // durable read failed -> fall through to cache-miss handling downstream
+    }
+    await subjectContext.run({ sub }, next)
+  }
+}
 
-  // CF deploy requirement (P3-03): CREDENTIAL_SECRET MUST be set in the
-  // container env (wrangler secret put). When set, mcp-core's JWTIssuer derives
-  // a deterministic Ed25519 (EdDSA) signing key via HKDF-SHA256 with no disk I/O.
-  // Without it, JWTIssuer falls back to RS256 keys persisted to disk on the
-  // EPHEMERAL container FS, so OAuth identity breaks on every container recreate.
-  // Setting CREDENTIAL_SECRET is the must-do CF fix; no code change is needed
-  // here because runHttpServer/createDelegatedOAuthApp already read it from env.
+/**
+ * Wait for a shutdown signal and close the server handle.
+ */
+async function handleShutdown(handle: { close: () => Promise<void>; host: string; port: number }) {
+  console.error(`[${SERVER_NAME}] http mode on http://${handle.host}:${handle.port}/mcp`)
+
+  await new Promise<void>((resolve) => {
+    const shutdown = async (): Promise<void> => {
+      await handle.close()
+      resolve()
+    }
+    process.once('SIGINT', shutdown)
+    process.once('SIGTERM', shutdown)
+  })
+}
+
+export async function startHttp(): Promise<void> {
+  await resolveCredentialState()
+
+  const tokenStore = selectTokenStore()
+  await validateTokenStore(tokenStore)
+
+  const config = getHttpConfig()
+  const notionClientFactory = createNotionClientFactory(tokenStore)
 
   const handle = await runHttpServer(() => createMCPServer(notionClientFactory) as unknown as McpServer, {
     serverName: SERVER_NAME,
-    port,
-    host,
-    authDisabled,
+    port: config.port,
+    host: config.host,
+    authDisabled: config.authDisabled,
     delegatedOAuth: {
       flow: 'redirect',
       upstream: {
         authorizeUrl: 'https://api.notion.com/v1/oauth/authorize',
         tokenUrl: 'https://api.notion.com/v1/oauth/token',
-        clientId,
-        clientSecret,
+        clientId: config.clientId,
+        clientSecret: config.clientSecret,
         scopes: []
       },
-      onTokenReceived: async (tokens: Record<string, unknown>) => {
-        const accessToken = String(tokens.access_token ?? '')
-        const sub = deriveSubject(tokens)
-        // AWAIT the durable write (do not fire-and-forget). The KV store sets
-        // its in-memory cache synchronously before the awaited KV PUT, so the
-        // same-request factory read still hits the warm cache. mcp-core wraps
-        // this callback in try/catch and returns a 500 "Failed to persist
-        // tokens" to the browser if it throws — so a broken KV write surfaces
-        // at auth time instead of silently losing the token once the in-memory
-        // cache evaporates on container recreate.
-        if (accessToken) await tokenStore.save(sub, accessToken)
-        // Return sub so mcp-core propagates it into the bearer JWT's `sub`
-        // claim, which `authScope` below then matches back to the stored token.
-        return sub
-      }
+      onTokenReceived: createOnTokenReceived(tokenStore)
     },
-    authScope: async (claims: { sub?: unknown; anonymous?: unknown }, next: () => Promise<void>) => {
-      // Anonymous caller (auth-disabled mode behind gateway): use 'default'
-      // bucket so a single deployment can serve one Notion token via env.
-      const sub = claims.anonymous === true ? 'default' : typeof claims.sub === 'string' ? claims.sub : 'default'
-      // Warm the per-sub cache from the durable store (KV) BEFORE the tool
-      // dispatch reads it synchronously via the factory/resolver. After a
-      // container delete+recreate the in-memory cache is empty; without this a
-      // freshly-recreated container would report no token (forcing needless
-      // re-auth) even though the encrypted token is still in KV. No-op for the
-      // in-memory store. A KV read failure is treated as a cache miss (re-auth)
-      // and never blocks the request.
-      try {
-        await tokenStore.getAsync(sub)
-      } catch {
-        // durable read failed -> fall through to cache-miss handling downstream
-      }
-      await subjectContext.run({ sub }, next)
-    }
+    authScope: createAuthScope(tokenStore)
   })
 
   // The server is fully configured once OAuth client credentials are
@@ -181,14 +229,6 @@ export async function startHttp(): Promise<void> {
     const ctx = subjectContext.getStore()
     return ctx ? (tokenStore.get(ctx.sub) ?? null) : null
   })
-  console.error(`[${SERVER_NAME}] http mode on http://${handle.host}:${handle.port}/mcp`)
 
-  await new Promise<void>((resolve) => {
-    const shutdown = async (): Promise<void> => {
-      await handle.close()
-      resolve()
-    }
-    process.once('SIGINT', shutdown)
-    process.once('SIGTERM', shutdown)
-  })
+  await handleShutdown(handle)
 }
