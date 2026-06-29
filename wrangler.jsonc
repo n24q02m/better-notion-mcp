@@ -8,6 +8,7 @@
   "name": "better-notion-mcp-worker",
   "main": "src/worker.ts",
   "compatibility_date": "2026-06-14",
+  "compatibility_flags": ["nodejs_compat"],
   "containers": [
     {
       "name": "better-notion-mcp-worker",
