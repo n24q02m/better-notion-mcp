@@ -121,6 +121,59 @@ export function convertToNotionProperties(
   return converted
 }
 
+/** Extract plain text from title or rich_text property */
+function extractText(items: any[]): string {
+  const len = items.length
+  const arr = new Array(len)
+  for (let j = 0; j < len; j++) arr[j] = items[j].plain_text || ''
+  return arr.join('')
+}
+
+/** Extract names from multi_select property */
+function extractMultiSelect(items: any[]): string[] {
+  const len = items.length
+  const arr = new Array(len)
+  for (let j = 0; j < len; j++) arr[j] = items[j].name
+  return arr
+}
+
+/** Extract IDs from relation property */
+function extractRelation(items: any[]): string[] {
+  const len = items.length
+  const arr = new Array(len)
+  for (let j = 0; j < len; j++) arr[j] = items[j].id
+  return arr
+}
+
+/** Extract names or IDs from people property */
+function extractPeople(items: any[]): string[] {
+  const len = items.length
+  const arr = new Array(len)
+  for (let j = 0; j < len; j++) arr[j] = items[j].name || items[j].id
+  return arr
+}
+
+/** Extract URLs or names from files property */
+function extractFiles(items: any[]): string[] {
+  const len = items.length
+  const arr = new Array(len)
+  for (let j = 0; j < len; j++) {
+    const f = items[j]
+    arr[j] = f.file?.url || f.external?.url || f.name
+  }
+  return arr
+}
+
+/** Extract value from formula property */
+function extractFormula(formula: any): any {
+  return formula.type ? (formula[formula.type] ?? null) : null
+}
+
+/** Extract value from unique_id property */
+function extractUniqueId(uid: any): string | number {
+  return uid.prefix ? `${uid.prefix}-${uid.number}` : uid.number
+}
+
 /**
  * Highly optimized extraction of properties from a Notion page response.
  * Uses direct string building and fixed-length arrays to avoid
@@ -139,140 +192,72 @@ export function extractPageProperties(pageProperties: any): any {
     const type = p.type as string | undefined
 
     switch (type) {
-      case 'title': {
-        if (p.title) {
-          const title = p.title
-          const len = title.length
-          const arr = new Array(len)
-          for (let j = 0; j < len; j++) arr[j] = title[j].plain_text || ''
-          properties[key] = arr.join('')
-        }
+      case 'title':
+        if (p.title) properties[key] = extractText(p.title)
         break
-      }
-      case 'rich_text': {
-        if (p.rich_text) {
-          const richText = p.rich_text
-          const len = richText.length
-          const arr = new Array(len)
-          for (let j = 0; j < len; j++) arr[j] = richText[j].plain_text || ''
-          properties[key] = arr.join('')
-        }
+      case 'rich_text':
+        if (p.rich_text) properties[key] = extractText(p.rich_text)
         break
-      }
-      case 'select': {
+      case 'select':
         if (p.select) properties[key] = p.select.name
         break
-      }
-      case 'multi_select': {
-        if (p.multi_select) {
-          const ms = p.multi_select
-          const arr = new Array(ms.length)
-          for (let j = 0; j < ms.length; j++) arr[j] = ms[j].name
-          properties[key] = arr
-        }
+      case 'multi_select':
+        if (p.multi_select) properties[key] = extractMultiSelect(p.multi_select)
         break
-      }
-      case 'number': {
+      case 'number':
         properties[key] = p.number
         break
-      }
-      case 'checkbox': {
+      case 'checkbox':
         properties[key] = p.checkbox
         break
-      }
-      case 'url': {
+      case 'url':
         properties[key] = p.url
         break
-      }
-      case 'email': {
+      case 'email':
         properties[key] = p.email
         break
-      }
-      case 'phone_number': {
+      case 'phone_number':
         properties[key] = p.phone_number
         break
-      }
-      case 'date': {
+      case 'date':
         if (p.date) {
           const d = p.date
           properties[key] = d.start + (d.end ? ` to ${d.end}` : '')
         }
         break
-      }
-      case 'relation': {
-        if (p.relation) {
-          const rel = p.relation
-          const arr = new Array(rel.length)
-          for (let j = 0; j < rel.length; j++) arr[j] = rel[j].id
-          properties[key] = arr
-        }
+      case 'relation':
+        if (p.relation) properties[key] = extractRelation(p.relation)
         break
-      }
-      case 'rollup': {
+      case 'rollup':
         if (p.rollup) properties[key] = p.rollup
         break
-      }
-      case 'people': {
-        if (p.people) {
-          const ppl = p.people
-          const arr = new Array(ppl.length)
-          for (let j = 0; j < ppl.length; j++) arr[j] = ppl[j].name || ppl[j].id
-          properties[key] = arr
-        }
+      case 'people':
+        if (p.people) properties[key] = extractPeople(p.people)
         break
-      }
-      case 'files': {
-        if (p.files) {
-          const files = p.files
-          const arr = new Array(files.length)
-          for (let j = 0; j < files.length; j++) {
-            const f = files[j]
-            arr[j] = f.file?.url || f.external?.url || f.name
-          }
-          properties[key] = arr
-        }
+      case 'files':
+        if (p.files) properties[key] = extractFiles(p.files)
         break
-      }
-      case 'formula': {
-        if (p.formula) {
-          const f = p.formula
-          properties[key] = f.type ? (f[f.type] ?? null) : null
-        }
+      case 'formula':
+        if (p.formula) properties[key] = extractFormula(p.formula)
         break
-      }
-      case 'created_time': {
+      case 'created_time':
         properties[key] = p.created_time
         break
-      }
-      case 'last_edited_time': {
+      case 'last_edited_time':
         properties[key] = p.last_edited_time
         break
-      }
-      case 'created_by': {
-        if (p.created_by) {
-          properties[key] = p.created_by?.name || p.created_by?.id
-        }
+      case 'created_by':
+        if (p.created_by) properties[key] = p.created_by.name || p.created_by.id
         break
-      }
-      case 'last_edited_by': {
-        if (p.last_edited_by) {
-          properties[key] = p.last_edited_by?.name || p.last_edited_by?.id
-        }
+      case 'last_edited_by':
+        if (p.last_edited_by) properties[key] = p.last_edited_by.name || p.last_edited_by.id
         break
-      }
-      case 'status': {
-        if (p.status) {
-          properties[key] = p.status?.name
-        }
+      case 'status':
+        if (p.status) properties[key] = p.status.name
         break
-      }
-      case 'unique_id': {
-        if (p.unique_id) {
-          const u = p.unique_id
-          properties[key] = u.prefix ? `${u.prefix}-${u.number}` : u.number
-        }
+      case 'unique_id':
+        if (p.unique_id) properties[key] = extractUniqueId(p.unique_id)
         break
-      }
     }
   }
   return properties
