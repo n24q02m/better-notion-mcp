@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import worker, {
-  CONTAINER_ENV_KEYS,
-  CONTAINER_PING_ENDPOINT,
-  OUTBOUND_BY_HOST,
-} from './worker.js'
+import worker, { CONTAINER_PING_ENDPOINT, OUTBOUND_BY_HOST } from './worker.js'
 
 // Mock JWTIssuer from @n24q02m/mcp-core
 vi.mock('@n24q02m/mcp-core', async () => {
@@ -23,7 +19,7 @@ vi.mock('@n24q02m/mcp-core', async () => {
         if (token === 'no-sub-jwt') return {}
         throw new Error('invalid token')
       }
-    },
+    }
   }
 })
 
@@ -36,7 +32,7 @@ vi.mock('@cloudflare/containers', () => {
         this.env = env
       }
     },
-    ContainerProxy: {},
+    ContainerProxy: {}
   }
 })
 
@@ -46,11 +42,11 @@ function fakeEnv() {
     KV: {
       get: async (k: string, _type?: 'arrayBuffer') => (kv.has(k) ? kv.get(k)! : null),
       put: async (k: string, v: ArrayBuffer) => void kv.set(k, v),
-      delete: async (k: string) => void kv.delete(k),
+      delete: async (k: string) => void kv.delete(k)
     },
     MCP_TRANSPORT: 'http',
     HOST: '0.0.0.0',
-    CREDENTIAL_SECRET: 'test-secret',
+    CREDENTIAL_SECRET: 'test-secret'
   }
 }
 
@@ -116,7 +112,7 @@ describe('NotionContainer', () => {
       ...fakeEnv(),
       EXTRA: 'ignored',
       EMPTY: '',
-      PORT: 8080 as any, // Not a string
+      PORT: 8080 as any // Not a string
     }
     const container = new NotionContainer(env as any)
     expect(container.defaultPort).toBe(8080)
@@ -126,7 +122,7 @@ describe('NotionContainer', () => {
     expect(container.envVars).toEqual({
       MCP_TRANSPORT: 'http',
       HOST: '0.0.0.0',
-      CREDENTIAL_SECRET: 'test-secret',
+      CREDENTIAL_SECRET: 'test-secret'
     })
   })
 })
@@ -142,10 +138,10 @@ describe('extractUserId', () => {
             calls.push(n)
             return { name: n }
           },
-          get: (_id: unknown) => ({ fetch: async () => new Response('do-hit', { status: 200 }) }),
+          get: (_id: unknown) => ({ fetch: async () => new Response('do-hit', { status: 200 }) })
         },
-        CREDENTIAL_SECRET: secret,
-      },
+        CREDENTIAL_SECRET: secret
+      }
     }
   }
 
@@ -217,9 +213,9 @@ describe('single-user DO contract + per-sub routing (E.2)', () => {
             calls.push(n)
             return { name: n }
           },
-          get: (_id: unknown) => ({ fetch: async () => new Response('do-hit', { status: 200 }) }),
-        },
-      },
+          get: (_id: unknown) => ({ fetch: async () => new Response('do-hit', { status: 200 }) })
+        }
+      }
     }
   }
 
