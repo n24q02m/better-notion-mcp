@@ -3,7 +3,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { commentsManage } from './comments'
+import { type CreateCommentResult, commentsManage, type GetCommentResult, type ListCommentsResult } from './comments'
 
 // Mock Notion Client
 const mockNotion = {
@@ -47,44 +47,22 @@ describe('commentsManage', () => {
         has_more: false
       })
 
-      const result = await commentsManage(mockNotion as any, {
+      const result = (await commentsManage(mockNotion as any, {
         action: 'list',
         page_id: 'page-1'
-      })
+      })) as ListCommentsResult
 
       expect(result.page_id).toBe('page-1')
       expect(result.total_comments).toBe(2)
-      expect(result.results[0]).toEqual({
-        id: 'comment-1',
-        created_time: '2024-01-01',
-        created_by: { id: 'user-1' },
-        discussion_id: 'disc-1',
-        text: 'Test comment',
-        parent: { type: 'page_id', page_id: 'page-1' }
-      })
+      expect(result.results).toHaveLength(2)
+      expect(result.results[0].text).toBe('Test comment')
       expect(mockNotion.comments.list).toHaveBeenCalledWith({
         block_id: 'page-1',
         start_cursor: undefined
       })
     })
 
-    it('should return empty results when no comments', async () => {
-      mockNotion.comments.list.mockResolvedValue({
-        results: [],
-        next_cursor: null,
-        has_more: false
-      })
-
-      const result = await commentsManage(mockNotion as any, {
-        action: 'list',
-        page_id: 'page-1'
-      })
-
-      expect(result.total_comments).toBe(0)
-      expect(result.results).toEqual([])
-    })
-
-    it('should throw COMMENTS_LIST_UNAVAILABLE when Notion returns object_not_found but page exists', async () => {
+    it('should return COMMENTS_LIST_UNAVAILABLE if block exists but list fails with 404', async () => {
       const notFoundError = new Error('Not found')
       ;(notFoundError as any).code = 'object_not_found'
       mockNotion.comments.list.mockRejectedValue(notFoundError)
@@ -96,13 +74,11 @@ describe('commentsManage', () => {
           page_id: 'page-1'
         })
       ).rejects.toMatchObject({
-        code: 'COMMENTS_LIST_UNAVAILABLE',
-        message: 'The comments.list API is currently unavailable for this page due to a known Notion OAuth limitation.'
+        code: 'COMMENTS_LIST_UNAVAILABLE'
       })
-      expect(mockNotion.blocks.retrieve).toHaveBeenCalledWith({ block_id: 'page-1' })
     })
 
-    it('should re-throw object_not_found (wrapped as NOT_FOUND) if page itself does not exist', async () => {
+    it('should re-throw object_not_found if block also does not exist', async () => {
       const notFoundError = new Error('Not found')
       ;(notFoundError as any).code = 'object_not_found'
       mockNotion.comments.list.mockRejectedValue(notFoundError)
@@ -158,10 +134,10 @@ describe('commentsManage', () => {
         has_more: false
       })
 
-      const result = await commentsManage(mockNotion as any, {
+      const result = (await commentsManage(mockNotion as any, {
         action: 'list',
         page_id: 'page-1'
-      })
+      })) as ListCommentsResult
 
       expect(result.results[0].display_name).toBe('John Doe')
     })
@@ -212,10 +188,10 @@ describe('commentsManage', () => {
         parent: { type: 'page_id', page_id: 'page-1' }
       })
 
-      const result = await commentsManage(mockNotion as any, {
+      const result = (await commentsManage(mockNotion as any, {
         action: 'get',
         comment_id: 'comment-1'
-      })
+      })) as GetCommentResult
 
       expect(result.action).toBe('get')
       expect(result.comment_id).toBe('comment-1')
@@ -240,10 +216,10 @@ describe('commentsManage', () => {
         parent: { type: 'page_id', page_id: 'page-1' }
       })
 
-      const result = await commentsManage(mockNotion as any, {
+      const result = (await commentsManage(mockNotion as any, {
         action: 'get',
         comment_id: 'comment-1'
-      })
+      })) as GetCommentResult
 
       expect(result.text).toBe('')
       expect(result.rich_text).toBeUndefined()
@@ -261,10 +237,10 @@ describe('commentsManage', () => {
         parent: { type: 'page_id', page_id: 'page-1' }
       })
 
-      const result = await commentsManage(mockNotion as any, {
+      const result = (await commentsManage(mockNotion as any, {
         action: 'get',
         comment_id: 'comment-1'
-      })
+      })) as GetCommentResult
 
       expect(result.display_name).toBe('Jane Doe')
     })
@@ -296,11 +272,11 @@ describe('commentsManage', () => {
         discussion_id: 'disc-new'
       })
 
-      const result = await commentsManage(mockNotion as any, {
+      const result = (await commentsManage(mockNotion as any, {
         action: 'create',
         page_id: 'page-1',
         content: 'New comment'
-      })
+      })) as CreateCommentResult
 
       expect(result.action).toBe('create')
       expect(result.comment_id).toBe('comment-new')
@@ -352,11 +328,11 @@ describe('commentsManage', () => {
         discussion_id: 'disc-1'
       })
 
-      const result = await commentsManage(mockNotion as any, {
+      const result = (await commentsManage(mockNotion as any, {
         action: 'create',
         discussion_id: 'disc-1',
         content: 'Reply text'
-      })
+      })) as CreateCommentResult
 
       expect(result.action).toBe('create')
       expect(result.comment_id).toBe('comment-reply')

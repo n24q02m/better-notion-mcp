@@ -448,7 +448,7 @@ describe('registerTools', () => {
 
     it('should route comments tool correctly', async () => {
       const handler = server.getHandler(3)
-      const mockResult = { action: 'list', comments: [] }
+      const mockResult = { page_id: 'page-1', total_comments: 0, results: [] }
       vi.mocked(commentsManage).mockResolvedValue(mockResult)
 
       const result = await handler({
