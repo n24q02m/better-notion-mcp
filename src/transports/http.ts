@@ -76,6 +76,7 @@ export async function startHttp(): Promise<void> {
   if (tokenStore.ready) {
     try {
       await tokenStore.ready()
+      console.error(`[${SERVER_NAME}] durable KV store reachable`)
     } catch (err) {
       console.error(
         `[${SERVER_NAME}] durable KV store UNREACHABLE at startup: ${err instanceof Error ? err.message : String(err)}`
