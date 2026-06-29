@@ -1,17 +1,3 @@
-// src/worker.ts
-// Worker fronting the better-notion-mcp container Durable Object.
-//
-// Two distinct request paths:
-//  - INBOUND: requests on the custom domain hit the default export `fetch`,
-//    which routes them to the per-user NotionContainer Durable Object.
-//  - OUTBOUND: the container calls http://kv.internal/... which is intercepted
-//    by the `@cloudflare/containers` proxy and dispatched to the
-//    `NotionContainer.outboundByHost` handlers below, serviced from the Worker's
-//    KV binding. enableInternet=true lets every OTHER host (api.notion.com)
-//    reach the public internet.
-//
-// notion is KV-only: it has no docs DB and no vectors, so the d1.internal /
-// vectorize.internal handlers from the wet template are intentionally dropped.
 import { Container, ContainerProxy, type OutboundHandler } from '@cloudflare/containers'
 import { JWTIssuer } from '@n24q02m/mcp-core'
 
@@ -28,7 +14,7 @@ export interface Env {
     put(k: string, v: string | ArrayBuffer): Promise<void>
     delete(k: string): Promise<void>
   }
-  NOTION?: { idFromName(n: string): unknown; get(id: unknown): { fetch(r: Request): Promise<Response> } }
+  NOTION?: { idFromName(n: string): { toString(): string }; get(id: unknown): { fetch(r: Request): Promise<Response> } }
   // Container config (wrangler.jsonc `vars`) + secrets (`wrangler secret put`),
   // forwarded into the container process via NotionContainer.envVars.
   MCP_TRANSPORT: string
@@ -91,17 +77,41 @@ function pickContainerEnv(env: Env): Record<string, string> {
 // define-semantics, bypass the setter, and silently fall through to the public
 // internet (kv.internal -> NXDOMAIN).
 
-const kvOutbound: OutboundHandler<Env> = async (request, env) => {
+const kvOutbound: OutboundHandler<Env> = async (request, env, ctx) => {
   const url = new URL(request.url)
   const key = decodeURIComponent(url.pathname.replace(/^\//, ''))
+
+  // Security (Sentinel): robust KV key validation and isolation (E.3).
+  // Directly mapping untrusted paths to KV keys is a vulnerability.
+  if (key !== '__ready') {
+    // 1. Length check (KV limit is 512 bytes)
+    if (key.length > 512) {
+      return new Response('forbidden: KV key too long', { status: 403 })
+    }
+    // 2. Character validation (allow: a-z A-Z 0-9 - _ / .)
+    if (!/^[a-zA-Z0-9\-_/.]+$/.test(key)) {
+      return new Response('forbidden: invalid characters in KV key', { status: 403 })
+    }
+    // 3. Namespace and traversal check
+    if (!key.startsWith('better-notion/') || key.includes('/../') || key.includes('/..')) {
+      return new Response('forbidden: invalid KV key prefix or path traversal', { status: 403 })
+    }
+    // 4. Cross-container isolation
+    // Keys follow better-notion/subs/<sub>/config pattern. Verify the 'sub'
+    // in the key matches the calling container's identity.
+    const m = key.match(/^better-notion\/subs\/([^/]+)\//)
+    if (m && env.NOTION) {
+      const sub = m[1]
+      const expectedContainerId = env.NOTION.idFromName(sub).toString()
+      if (!ctx || ctx.containerId !== expectedContainerId) {
+        return new Response('forbidden: cross-user KV access', { status: 403 })
+      }
+    }
+  }
+
   // Readiness probe (E.1): once this handler answers, outbound interception is
   // wired, so the container's first credential PUT is safe. Reserved key,
   // checked before the normal key lookup so it never shadows a real KV key.
-  // Security (Sentinel): restrict KV access to the app's own namespace.
-  // Directly mapping untrusted paths to KV keys is a vulnerability (E.3).
-  if (key !== '__ready' && (!key.startsWith('better-notion/') || key.includes('/../') || key.includes('/..'))) {
-    return new Response('forbidden: invalid KV key prefix', { status: 403 })
-  }
   if (request.method === 'GET' && key === '__ready') {
     return Response.json({ ready: true })
   }

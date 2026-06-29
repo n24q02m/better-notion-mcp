@@ -57,3 +57,7 @@
 **Vulnerability:** Direct path-to-key mapping in a KV outbound handler allowed potentially unauthorized access to the KV namespace from the container.
 **Learning:** Even internal interception layers should validate their inputs (like KV keys) against an allowed namespace or prefix, as the "path" part of the URL is often directly derived from untrusted application-level data.
 **Prevention:** Enforce strict key prefix validation and reject directory traversal sequences (e.g., `/../`) in any handler that maps URLs to a flat key-value store.
+## 2026-06-15 - Direct KV Mapping in Cloudflare Worker Proxy
+**Vulnerability:** Direct mapping of untrusted paths to KV keys in the outbound handler of the Cloudflare Worker proxy.
+**Learning:** Outbound handlers in @cloudflare/containers intercept traffic from the container to the Worker. If these handlers map request paths directly to KV keys without validation, a compromised container could access any key in the KV namespace, potentially bypassing user isolation.
+**Prevention:** Always validate KV keys for length, allowed characters, and namespace prefixes. Implement cross-container isolation by verifying the `ctx.containerId` against the user identifier in the KV key path.

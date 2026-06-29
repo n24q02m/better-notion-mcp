@@ -75,6 +75,7 @@ export async function startHttp(): Promise<void> {
   // path is now visible in `wrangler tail` instead of being invisible.
   if (tokenStore.ready) {
     try {
+      console.error(`[${SERVER_NAME}] durable KV store reachable at startup`)
       await tokenStore.ready()
     } catch (err) {
       console.error(
