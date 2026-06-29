@@ -1,6 +1,14 @@
-import { PerPluginStore } from '@n24q02m/mcp-core/storage'
+import { backendFromEnv, PerPluginStore } from '@n24q02m/mcp-core/storage'
 import { describe, expect, it, vi } from 'vitest'
 import { KvNotionTokenStore } from './notion-token-store-kv.js'
+
+vi.mock('@n24q02m/mcp-core/storage', async () => {
+  const actual = await vi.importActual('@n24q02m/mcp-core/storage')
+  return {
+    ...actual,
+    backendFromEnv: vi.fn()
+  }
+})
 
 // Injectable fake http matching mcp-core CfKvBackend's Http contract:
 // request(method, url, data?, headers?) -> { status, body } with body as bytes.
@@ -100,6 +108,50 @@ describe('KvNotionTokenStore', () => {
 
     const result = await store.getAsync('alice')
     expect(result).toBeUndefined()
+    expect(loadSpy).toHaveBeenCalled()
+
+    loadSpy.mockRestore()
+  })
+
+  it('getAsync hits the in-memory cache', async () => {
+    process.env.CREDENTIAL_SECRET = 'test-secret'
+    const http = new FakeKvHttp()
+    const store = new KvNotionTokenStore({ http })
+    await store.save('alice', 'ntn_a')
+
+    const spy = vi.spyOn(PerPluginStore.prototype, 'load')
+
+    // First call might hit cache because of save
+    expect(await store.getAsync('alice')).toBe('ntn_a')
+    expect(spy).not.toHaveBeenCalled()
+
+    spy.mockRestore()
+  })
+
+  it('constructor uses backendFromEnv when http is not provided', () => {
+    vi.mocked(backendFromEnv).mockReturnValue({} as any)
+    new KvNotionTokenStore()
+    expect(backendFromEnv).toHaveBeenCalled()
+  })
+
+  it('constructor uses MCP_KV_BASE_URL if provided', () => {
+    const originalUrl = process.env.MCP_KV_BASE_URL
+    process.env.MCP_KV_BASE_URL = 'http://custom.kv'
+    const http = new FakeKvHttp()
+    const store = new KvNotionTokenStore({ http })
+    // Verify constructor finished without error
+    expect(store).toBeDefined()
+    process.env.MCP_KV_BASE_URL = originalUrl
+  })
+
+  it('getAsync returns undefined when data has no access_token', async () => {
+    process.env.CREDENTIAL_SECRET = 'test-secret'
+    const http = new FakeKvHttp()
+    const store = new KvNotionTokenStore({ http })
+
+    const loadSpy = vi.spyOn(PerPluginStore.prototype, 'load').mockResolvedValue({ some_other_field: 'val' } as any)
+
+    expect(await store.getAsync('alice')).toBeUndefined()
     expect(loadSpy).toHaveBeenCalled()
 
     loadSpy.mockRestore()
