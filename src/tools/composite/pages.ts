@@ -302,14 +302,7 @@ async function getPageProperty(notion: Client, input: PagesInput): Promise<GetPa
       break
     }
     case 'relation': {
-      const relationIds: string[] = []
-      for (const item of allResults as any[]) {
-        const id = item.relation?.id
-        if (id) {
-          relationIds.push(id)
-        }
-      }
-      value = relationIds
+      value = (allResults as any[]).map((item) => item.relation?.id).filter(Boolean)
       break
     }
     case 'rollup':

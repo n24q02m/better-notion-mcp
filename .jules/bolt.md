@@ -1,3 +1,6 @@
 ## $(date +%Y-%m-%d) - Precompute array derivations to avoid O(N) penalties
 **Learning:** In hot paths (like incoming MCP requests in `registry.ts`), repeatedly mapping over static arrays (`RESOURCES`, `TOOLS`) to generate response objects or lookup arrays causes unnecessary O(N) CPU allocations and GC overhead.
 **Action:** Always precompute derivations of static lists at the module level (e.g., using `new Map()` for O(1) lookups or caching `.map()` outputs) rather than computing them on-the-fly per request.
+## 2026-06-29 - Use functional array methods for data extraction
+**Learning:** Functional approaches like `.map()` and `.filter()` are generally cleaner and can be better optimized by modern JS engines compared to manual loops with `.push()`.
+**Action:** Replace manual extraction loops with functional chains when processing API results to improve maintainability and performance.
