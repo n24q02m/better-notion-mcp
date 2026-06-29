@@ -6,10 +6,7 @@
 import { readFile } from 'node:fs/promises'
 import { basename, isAbsolute, join, relative, sep } from 'node:path'
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema
-} from '@modelcontextprotocol/sdk/types.js'
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import { buildOpenRelayHandler } from '@n24q02m/mcp-core'
 import type { Client } from '@notionhq/client'
 import { getState } from '../credential-state.js'
@@ -65,16 +62,7 @@ const TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: [
-            'create',
-            'get',
-            'get_property',
-            'update',
-            'move',
-            'archive',
-            'restore',
-            'duplicate'
-          ],
+          enum: ['create', 'get', 'get_property', 'update', 'move', 'archive', 'restore', 'duplicate'],
           description: 'Action to perform'
         },
         page_id: { type: 'string', description: 'Target Page or Row ID' },
