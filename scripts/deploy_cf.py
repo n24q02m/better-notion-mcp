@@ -259,6 +259,22 @@ def _gate_kid_stable(public_url: str, *, tries: int = 10, delay: int = 6) -> boo
     return ok
 
 
+def _retry_gate(fn, public_url: str, *, tries: int = 10, delay: int = 6) -> bool:
+    """Poll a boolean gate until it passes or the settle window is exhausted.
+
+    STATE=ready means the Durable Object is provisioned, NOT that the in-container
+    app is already serving. A heavy Python container (cryptg/telethon/uvicorn)
+    needs ~10-15s after ready before /authorize fronts /login, so a single
+    check-once gate false-fails and triggers an unnecessary rollback. Mirror the
+    settle-window approach _gate_kid_stable already uses."""
+    for i in range(tries):
+        if fn(public_url):
+            return True
+        if i < tries - 1:
+            time.sleep(delay)
+    return False
+
+
 def _canary(public_url: str, *, dry: bool) -> bool:
     if dry:
         print(
@@ -268,8 +284,8 @@ def _canary(public_url: str, *, dry: bool) -> bool:
         return True
     print(f"Canary gate against {public_url} (credential-free):")
     results = [
-        _gate_a(public_url),
-        _gate_b(public_url),
+        _retry_gate(_gate_a, public_url),
+        _retry_gate(_gate_b, public_url),
         _gate_kid_stable(public_url),
     ]
     return all(results)
