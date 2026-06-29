@@ -86,9 +86,31 @@ const COVER_CATALOG: Record<string, string> = Object.assign(Object.create(null),
  * Accepts:
  * - Full URL (http/https) -> external cover
  * - Shorthand name (e.g., "gradient_8", "solid_blue") -> resolved to Notion CDN URL
+ * - JSON-encoded cover object -> returned if valid and safe
  */
 export function formatCover(value: string): { type: 'external'; external: { url: string } } {
-  // Full URL (with safety check against javascript:, data:, etc.)
+  // 1. Try JSON parsing if it looks like JSON
+  if (value.startsWith('{')) {
+    let parsed: any
+    try {
+      parsed = JSON.parse(value)
+    } catch {
+      // not valid JSON, fall through
+    }
+
+    if (parsed && parsed.type === 'external' && typeof parsed.external?.url === 'string') {
+      if (!isSafeUrl(parsed.external.url)) {
+        throw new NotionMCPError(
+          `Unsafe cover URL in JSON: "${parsed.external.url}". Use http: or https: URLs only.`,
+          'VALIDATION_ERROR',
+          'Provide a valid http: or https: URL for the cover image'
+        )
+      }
+      return parsed
+    }
+  }
+
+  // 2. Full URL (with safety check against javascript:, data:, etc.)
   if (value.startsWith('http://') || value.startsWith('https://')) {
     if (!isSafeUrl(value)) {
       throw new NotionMCPError(
@@ -100,7 +122,13 @@ export function formatCover(value: string): { type: 'external'; external: { url:
     return { type: 'external', external: { url: value } }
   }
 
-  // Reject dangerous URL schemes before shorthand lookup
+  // 3. Shorthand lookup
+  const url = COVER_CATALOG[value]
+  if (url) {
+    return { type: 'external', external: { url } }
+  }
+
+  // 4. Reject dangerous URL schemes or malformed strings before falling through
   if (!isSafeUrl(value)) {
     throw new NotionMCPError(
       `Unsafe cover URL: "${value}". Use http: or https: URLs only.`,
@@ -109,10 +137,9 @@ export function formatCover(value: string): { type: 'external'; external: { url:
     )
   }
 
-  // Shorthand lookup
-  const url = COVER_CATALOG[value]
-  if (url) {
-    return { type: 'external', external: { url } }
+  // 5. Robust fallback: Treat as external URL string if it looks like a URL (contains dot or slash)
+  if (value.includes('.') || value.includes('/')) {
+    return { type: 'external', external: { url: value } }
   }
 
   // Unknown shorthand

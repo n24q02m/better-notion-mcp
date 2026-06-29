@@ -13,6 +13,34 @@ describe('formatCover', () => {
       const result = formatCover('http://example.com/cover.jpg')
       expect(result).toEqual({ type: 'external', external: { url: 'http://example.com/cover.jpg' } })
     })
+
+    it('should fall back to treating non-shorthand with dot/slash as external URL', () => {
+      const result = formatCover('example.com/image.png')
+      expect(result).toEqual({ type: 'external', external: { url: 'example.com/image.png' } })
+    })
+  })
+
+  describe('JSON input', () => {
+    it('should parse a valid stringified JSON cover object', () => {
+      const json = JSON.stringify({ type: 'external', external: { url: 'https://example.com/cover.jpg' } })
+      const result = formatCover(json)
+      expect(result).toEqual({ type: 'external', external: { url: 'https://example.com/cover.jpg' } })
+    })
+
+    it('should throw if JSON is valid but not a cover object', () => {
+      const json = JSON.stringify({ foo: 'bar' })
+      expect(() => formatCover(json)).toThrow('Unsafe cover URL')
+    })
+
+    it('should throw if JSON is malformed and fails safety check', () => {
+      const malformed = '{"type": "external", "url": "example.com/foo.jpg"' // Missing closing }
+      expect(() => formatCover(malformed)).toThrow('Unsafe cover URL')
+    })
+
+    it('should throw if JSON contains an unsafe URL', () => {
+      const json = JSON.stringify({ type: 'external', external: { url: 'javascript:alert(1)' } })
+      expect(() => formatCover(json)).toThrow('Unsafe cover URL in JSON')
+    })
   })
 
   describe('solid colors', () => {
