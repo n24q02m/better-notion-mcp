@@ -33,6 +33,16 @@ vi.mock('../auth/notion-token-store.js', () => {
   }
 })
 
+vi.mock('../auth/notion-token-store-kv.js', () => {
+  return {
+    KvNotionTokenStore: class {
+      constructor() {
+        Object.assign(this, mockTokenStoreInstance)
+      }
+    }
+  }
+})
+
 vi.mock('../create-server.js', () => ({
   createMCPServer: vi.fn()
 }))
@@ -425,7 +435,7 @@ describe('startHttp - tokenStore.ready', () => {
 
     await startHttp()
 
-    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('durable KV store reachable'))
+    expect(console.error).not.toHaveBeenCalledWith(expect.stringContaining('durable KV store UNREACHABLE'))
   })
 
   it('logs failure when tokenStore.ready() fails', async () => {

@@ -57,3 +57,8 @@
 **Vulnerability:** Direct path-to-key mapping in a KV outbound handler allowed potentially unauthorized access to the KV namespace from the container.
 **Learning:** Even internal interception layers should validate their inputs (like KV keys) against an allowed namespace or prefix, as the "path" part of the URL is often directly derived from untrusted application-level data.
 **Prevention:** Enforce strict key prefix validation and reject directory traversal sequences (e.g., `/../`) in any handler that maps URLs to a flat key-value store.
+
+## 2026-06-29 - Mocked KvNotionTokenStore in http transport tests
+**Vulnerability:** Incomplete mocking of dependencies in tests could lead to the execution of real, environment-dependent constructors (like `KvNotionTokenStore`), potentially leaking environment variables or hitting real network/storage backends during testing.
+**Learning:** Factory functions like `selectTokenStore` branch based on environment variables. If only one branch's result is mocked, the other branch might instantiate a real object.
+**Prevention:** Explicitly mock all possible return types of a factory or selection function to maintain strict test isolation.
