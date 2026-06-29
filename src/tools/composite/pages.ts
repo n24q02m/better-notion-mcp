@@ -377,6 +377,8 @@ async function updatePage(notion: Client, input: PagesInput): Promise<UpdatePage
   // Handle content updates
   if (input.content || input.append_content) {
     if (input.content) {
+      const operations: Promise<any>[] = []
+
       // Delete existing content only if replace: true is explicitly set
       if (input.replace) {
         // Optimized: Fetch all blocks using autoPaginate, then delete them in batches.
@@ -389,22 +391,30 @@ async function updatePage(notion: Client, input: PagesInput): Promise<UpdatePage
         )
 
         if (existingBlocks.length > 0) {
-          await processBatches(
-            existingBlocks,
-            async (block) => {
-              await retryWithBackoff(() => notion.blocks.delete({ block_id: block.id }))
-            },
-            { batchSize: 5, concurrency: 3 }
+          operations.push(
+            processBatches(
+              existingBlocks,
+              async (block) => {
+                await retryWithBackoff(() => notion.blocks.delete({ block_id: block.id }))
+              },
+              { batchSize: 5, concurrency: 3 }
+            )
           )
         }
       }
 
       const newBlocks = markdownToBlocks(input.content)
       if (newBlocks.length > 0) {
-        await notion.blocks.children.append({
-          block_id: input.page_id,
-          children: newBlocks as any
-        })
+        operations.push(
+          notion.blocks.children.append({
+            block_id: input.page_id,
+            children: newBlocks as any
+          })
+        )
+      }
+
+      if (operations.length > 0) {
+        await Promise.all(operations)
       }
     } else if (input.append_content) {
       const blocks = markdownToBlocks(input.append_content)
