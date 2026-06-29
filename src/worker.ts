@@ -96,6 +96,11 @@ const kvOutbound: OutboundHandler<Env> = async (request, env) => {
   // Readiness probe (E.1): once this handler answers, outbound interception is
   // wired, so the container's first credential PUT is safe. Reserved key,
   // checked before the normal key lookup so it never shadows a real KV key.
+  // Security (Sentinel): restrict KV access to the app's own namespace.
+  // Directly mapping untrusted paths to KV keys is a vulnerability (E.3).
+  if (key !== '__ready' && (!key.startsWith('better-notion/') || key.includes('/../') || key.includes('/..'))) {
+    return new Response('forbidden: invalid KV key prefix', { status: 403 })
+  }
   if (request.method === 'GET' && key === '__ready') {
     return Response.json({ ready: true })
   }

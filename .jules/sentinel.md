@@ -52,3 +52,8 @@
 **Vulnerability:** The `startsWith(DOCS_DIR)` containment check in the documentation resource and help-tool handlers had two flaws: (1) without a trailing separator it permitted access to adjacent directories sharing the prefix (e.g. `DOCS_DIR` `/app/docs` matched `/app/docs-hacked/`); (2) string-prefix checks are separator-sensitive, so a naive `startsWith(DOCS_DIR + sep)` fix rejected legitimate reads on Windows where the path separator differs from forward-slash mocks/resolved paths.
 **Learning:** String-prefix comparison is the wrong primitive for directory containment. It conflates lexical prefixes with directory boundaries and is inherently OS-separator-sensitive.
 **Prevention:** Compute `const rel = relative(DOCS_DIR, fullPath)` and reject when `rel === '..' || rel.startsWith('..' + sep) || isAbsolute(rel)`. This is separator-agnostic (uses `path` internals), correctly rejects adjacent and parent directories, and passes uniformly across Linux, macOS, and Windows.
+
+## 2025-05-22 - Direct KV Mapping in Cloudflare Worker Proxy
+**Vulnerability:** Direct path-to-key mapping in a KV outbound handler allowed potentially unauthorized access to the KV namespace from the container.
+**Learning:** Even internal interception layers should validate their inputs (like KV keys) against an allowed namespace or prefix, as the "path" part of the URL is often directly derived from untrusted application-level data.
+**Prevention:** Enforce strict key prefix validation and reject directory traversal sequences (e.g., `/../`) in any handler that maps URLs to a flat key-value store.

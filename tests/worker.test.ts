@@ -147,3 +147,31 @@ describe('single-user DO contract + per-sub routing (E.2)', () => {
     expect(calls).toEqual(['user-123'])
   })
 })
+
+describe('KV security (Sentinel)', () => {
+  it('allows keys with better-notion/ prefix', async () => {
+    const env = fakeEnv()
+    const res = await kvH(new Request('http://kv.internal/better-notion/config'), env as never)
+    // 404 means it passed the prefix check and hit the missing KV key
+    expect(res.status).toBe(404)
+  })
+
+  it('allows the __ready reserved key', async () => {
+    const env = fakeEnv()
+    const res = await kvH(new Request('http://kv.internal/__ready'), env as never)
+    expect(res.status).toBe(200)
+  })
+
+  it('rejects keys without better-notion/ prefix (403)', async () => {
+    const env = fakeEnv()
+    const res = await kvH(new Request('http://kv.internal/other-plugin/config'), env as never)
+    expect(res.status).toBe(403)
+    expect(await res.text()).toContain('forbidden')
+  })
+
+  it('rejects path traversal attempts that try to escape the prefix (403)', async () => {
+    const env = fakeEnv()
+    const res = await kvH(new Request('http://kv.internal/better-notion/../secret'), env as never)
+    expect(res.status).toBe(403)
+  })
+})
