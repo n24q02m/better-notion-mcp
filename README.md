@@ -169,7 +169,6 @@ Eight composite Notion tools (39 actions) plus three infrastructure tools (`conf
 | `PUBLIC_URL` | No (http) | - | Server's public URL for OAuth redirect links |
 | `NOTION_OAUTH_CLIENT_ID` | Yes (http) | - | Notion Public Integration client ID |
 | `NOTION_OAUTH_CLIENT_SECRET` | Yes (http) | - | Notion Public Integration client secret |
-| `MCP_AUTH_DISABLE` | No (http) | - | Set to `1` to skip Bearer JWT verification when behind an external auth gateway |
 | `PORT` | No | `0` (OS-assigned) | Server port; set explicitly (e.g. `8080`) to bind a fixed port |
 | `HOST` | No | - | Bind address (http mode) |
 
@@ -222,7 +221,6 @@ Run your own multi-user better-notion-mcp serverless on Cloudflare (Worker + Con
 6. Complete the Notion OAuth flow in the browser at your Worker domain.
 
 Per-user Notion access tokens are encrypted into KV (`MCP_STORAGE_BACKEND=cf-kv`),
-so they survive scale-to-zero. Do NOT set `MCP_AUTH_DISABLE` on a shared/public
 deployment — it collapses all users into a single token bucket.
 
 ## Comparison
