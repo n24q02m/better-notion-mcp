@@ -354,6 +354,21 @@ describe('deriveSubject', () => {
     }
     expect(deriveSubject(tokens)).toBe('bot-123')
   })
+
+  it('returns "default" if workspace_id is not a string', () => {
+    const tokens = { workspace_id: 123 }
+    expect(deriveSubject(tokens)).toBe('default')
+  })
+
+  it('returns "default" if bot_id is not a string', () => {
+    const tokens = { bot_id: 123 }
+    expect(deriveSubject(tokens)).toBe('default')
+  })
+
+  it('returns "default" if owner is present but user is missing', () => {
+    const tokens = { owner: {} }
+    expect(deriveSubject(tokens)).toBe('default')
+  })
 })
 
 describe('selectTokenStore', () => {
