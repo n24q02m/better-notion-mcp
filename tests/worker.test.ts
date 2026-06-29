@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { JWTIssuer } from '@n24q02m/mcp-core'
 import worker, { CONTAINER_ENV_KEYS, CONTAINER_PING_ENDPOINT, NotionContainer, OUTBOUND_BY_HOST } from '../src/worker'
 
 function fakeEnv() {
@@ -103,11 +104,12 @@ describe('public fetch entrypoint does NOT expose outbound handlers (security)',
 })
 
 describe('single-user DO contract + per-sub routing (E.2)', () => {
-  function envWithDoSpy() {
+  function envWithDoSpy(secret?: string) {
     const calls: string[] = []
     return {
       calls,
       env: {
+        CREDENTIAL_SECRET: secret,
         NOTION: {
           idFromName: (n: string) => {
             calls.push(n)
@@ -127,19 +129,30 @@ describe('single-user DO contract + per-sub routing (E.2)', () => {
     expect(calls).toEqual(['default'])
   })
 
-  it('Bearer token without sub -> routes to the "default" DO', async () => {
-    const { calls, env } = envWithDoSpy()
-    const jwt = `h.${btoa(JSON.stringify({ aud: 'x' }))}.s`
+  it('Bearer token without sub -> routes to the "default" DO (verification fails or missing claim)', async () => {
+    const { calls, env } = envWithDoSpy('test-secret')
+    const issuer = new JWTIssuer('better-notion-mcp', undefined, 'test-secret')
+    await issuer.init()
+    const jwt = await issuer.issueAccessToken('usr-123')
+    // modify it to have no sub
+    const [h, p, s] = jwt.split('.')
+    const payload = JSON.parse(atob(p))
+    delete payload.sub
+    const jwtNoSub = `${h}.${btoa(JSON.stringify(payload))}.${s}`
+
     await worker.fetch(
-      new Request('https://notion.n24q02m.com/mcp', { headers: { authorization: `Bearer ${jwt}` } }),
+      new Request('https://notion.n24q02m.com/mcp', { headers: { authorization: `Bearer ${jwtNoSub}` } }),
       env as never
     )
     expect(calls).toEqual(['default'])
   })
 
   it('Bearer token with sub -> routes to that sub DO (per-user isolation)', async () => {
-    const { calls, env } = envWithDoSpy()
-    const jwt = `h.${btoa(JSON.stringify({ sub: 'user-123' }))}.s`
+    const { calls, env } = envWithDoSpy('test-secret')
+    const issuer = new JWTIssuer('better-notion-mcp', undefined, 'test-secret')
+    await issuer.init()
+    const jwt = await issuer.issueAccessToken('user-123')
+
     await worker.fetch(
       new Request('https://notion.n24q02m.com/mcp', { headers: { authorization: `Bearer ${jwt}` } }),
       env as never
@@ -147,11 +160,22 @@ describe('single-user DO contract + per-sub routing (E.2)', () => {
     expect(calls).toEqual(['user-123'])
   })
 
+  it('UNVERIFIED Bearer token (wrong secret) -> routes to "default" DO (security fix verification)', async () => {
+    const { calls, env } = envWithDoSpy('correct-secret')
+    const maliciousIssuer = new JWTIssuer('better-notion-mcp', undefined, 'wrong-secret')
+    await maliciousIssuer.init()
+    const spoofedJwt = await maliciousIssuer.issueAccessToken('admin-user')
+
+    await worker.fetch(
+      new Request('https://notion.n24q02m.com/mcp', { headers: { authorization: `Bearer ${spoofedJwt}` } }),
+      env as never
+    )
+    // Should NOT route to admin-user because signature verification failed
+    expect(calls).toEqual(['default'])
+  })
+
   it('Bearer token with malformed base64 payload -> defaults to "default" DO', async () => {
     const { calls, env } = envWithDoSpy()
-    // atob('!!!') will throw in most environments, or split('.')[1] might be weird.
-    // Actually, atob() in Node/Bun is quite permissive but we can provide something that definitely fails or results in garbage.
-    // In many JS environments atob("!!!") throws.
     await worker.fetch(
       new Request('https://notion.n24q02m.com/mcp', { headers: { authorization: 'Bearer h.!!!.s' } }),
       env as never

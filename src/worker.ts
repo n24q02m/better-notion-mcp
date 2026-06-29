@@ -1,7 +1,6 @@
-// src/worker.ts
-// Worker fronting the better-notion-mcp container Durable Object.
+// wrangler.jsonc binds NOTION to this class and runs the container.
 //
-// Two distinct request paths:
+// notion has two main request paths:
 //  - INBOUND: requests on the custom domain hit the default export `fetch`,
 //    which routes them to the per-user NotionContainer Durable Object.
 //  - OUTBOUND: the container calls http://kv.internal/... which is intercepted
@@ -163,20 +162,14 @@ async function extractUserId(request: Request, env: Env): Promise<string> {
 
   const jwt = m[1]
   try {
-    // If CREDENTIAL_SECRET is set, we MUST verify the signature. mcp-core's
-    // JWTIssuer handles the EdDSA verification when provided with the secret.
-    // (Without a secret, it falls back to RS256; on CF, a missing secret means
-    // it can't verify the deterministic EdDSA tokens it issued previously.)
-    if (env.CREDENTIAL_SECRET) {
-      const issuer = new JWTIssuer('better-notion-mcp', undefined, env.CREDENTIAL_SECRET)
-      await issuer.init()
-      const claims = await issuer.verifyAccessToken(jwt)
-      return typeof claims.sub === 'string' ? claims.sub : 'default'
-    }
-
-    // Fallback for local development or setups without a secret: unverified extraction.
-    const payload = JSON.parse(atob(jwt.split('.')[1] ?? ''))
-    return typeof payload.sub === 'string' ? payload.sub : 'default'
+    // Identity extraction MUST always verify signatures. mcp-core's JWTIssuer
+    // handles the EdDSA verification when provided with the secret (preferred
+    // for CF), or falls back to RS256. Unverified extraction is insecure and
+    // must never be used.
+    const issuer = new JWTIssuer('better-notion-mcp', undefined, env.CREDENTIAL_SECRET || null)
+    await issuer.init()
+    const claims = await issuer.verifyAccessToken(jwt)
+    return typeof claims.sub === 'string' ? claims.sub : 'default'
   } catch {
     return 'default'
   }
