@@ -25,6 +25,13 @@ describe('text', () => {
     expect(result.text.content).toBe('')
     expect(result.annotations).toEqual(DEFAULT_ANNOTATIONS)
   })
+
+  it('should handle large strings (e.g., 2000+ characters)', () => {
+    const largeContent = 'a'.repeat(2001)
+    const result = RichText.text(largeContent)
+    expect(result.text.content).toBe(largeContent)
+    expect(result.text.content.length).toBe(2001)
+  })
 })
 
 describe('bold', () => {
