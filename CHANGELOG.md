@@ -2,6 +2,51 @@
 
 <!-- version list -->
 
+## v2.35.0-beta.7 (2026-06-30)
+
+### Bug Fixes
+
+- Add missing import os to cf_full_flow.py
+  ([#1061](https://github.com/n24q02m/better-notion-mcp/pull/1061),
+  [`dc0a5a5`](https://github.com/n24q02m/better-notion-mcp/commit/dc0a5a5407cee90c5e4361e2363ecf0f9757f468))
+
+- Add nodejs_compat flag for CF worker bundle
+  ([#1055](https://github.com/n24q02m/better-notion-mcp/pull/1055),
+  [`b8d41fb`](https://github.com/n24q02m/better-notion-mcp/commit/b8d41fbf3b290996102c796c63df87f1f3250c44))
+
+- Add richtext large-string test
+  ([`5da5b45`](https://github.com/n24q02m/better-notion-mcp/commit/5da5b450c29e26ffb31ff1890a52b8c3beb8df3f))
+
+- Bump @n24q02m/mcp-core beta.21 + cloudflare types
+  ([`2c1f563`](https://github.com/n24q02m/better-notion-mcp/commit/2c1f5639e4cb2c08cf12ae88777d6d345b2e96d1))
+
+- Cache base64 validation regex at module level
+  ([`d6022fc`](https://github.com/n24q02m/better-notion-mcp/commit/d6022fc0e1665fab772d1f7639189c3245cede74))
+
+- Canary Gate-A/B settle-retry to avoid false-fail on slow container startup
+  ([#1054](https://github.com/n24q02m/better-notion-mcp/pull/1054),
+  [`361a3a0`](https://github.com/n24q02m/better-notion-mcp/commit/361a3a0d7e0549d5a93acc1d938469dd910b8a3a))
+
+- Collapse OAuth + per-sub routing to one DO (resolve max_instances=1 deadlock)
+  ([#1060](https://github.com/n24q02m/better-notion-mcp/pull/1060),
+  [`b57628c`](https://github.com/n24q02m/better-notion-mcp/commit/b57628c0be4cbdc5af9a9ec55821ae2591ff4d80))
+
+- Correct http transport token-store selection
+  ([`a6498a0`](https://github.com/n24q02m/better-notion-mcp/commit/a6498a08bba863722b4fca2d41202eba032400cb))
+
+- Green notion main — single-DO worker test + symmetric KV-ready log
+  ([#1063](https://github.com/n24q02m/better-notion-mcp/pull/1063),
+  [`bef1cc4`](https://github.com/n24q02m/better-notion-mcp/commit/bef1cc45936c869adb87af6e09a3295bf6687a24))
+
+- Notion cf_full_flow bootstrap passes Gate A relay-login
+  ([#1062](https://github.com/n24q02m/better-notion-mcp/pull/1062),
+  [`f20dbb3`](https://github.com/n24q02m/better-notion-mcp/commit/f20dbb39eacdc6c6733264fc4a07fef2f9fa28b0))
+
+- Route OAuth /token refresh to the sub's DO to avoid max_instances=1 deadlock
+  ([#1056](https://github.com/n24q02m/better-notion-mcp/pull/1056),
+  [`6c64194`](https://github.com/n24q02m/better-notion-mcp/commit/6c64194d00810d8d1fc28dfad6e643f9cdc3f539))
+
+
 ## v2.35.0-beta.6 (2026-06-29)
 
 ### Bug Fixes
