@@ -41,6 +41,7 @@ import argparse
 import base64
 import hashlib
 import json as _json
+import os
 import secrets
 import sys
 import urllib.parse
