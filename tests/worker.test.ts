@@ -137,14 +137,14 @@ describe('single-user DO contract + per-sub routing (E.2)', () => {
     expect(calls).toEqual(['default'])
   })
 
-  it('Bearer token with sub -> routes to that sub DO (per-user isolation)', async () => {
+  it('Bearer token with sub -> still routes to the single "default" DO (single-DO collapse)', async () => {
     const { calls, env } = envWithDoSpy()
     const jwt = `h.${btoa(JSON.stringify({ sub: 'user-123' }))}.s`
     await worker.fetch(
       new Request('https://notion.n24q02m.com/mcp', { headers: { authorization: `Bearer ${jwt}` } }),
       env as never
     )
-    expect(calls).toEqual(['user-123'])
+    expect(calls).toEqual(['default'])
   })
 
   it('Bearer token with malformed base64 payload -> defaults to "default" DO', async () => {
