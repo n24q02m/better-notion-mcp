@@ -143,7 +143,7 @@ export default {
     // registry below; unit tests call the handlers directly via the
     // OUTBOUND_BY_HOST export.
     if (env.NOTION) {
-      const userId = await extractUserId(request, env)
+      const userId = await extractUserId()
       const stub = env.NOTION.get(env.NOTION.idFromName(userId))
       return stub.fetch(request)
     }
@@ -151,56 +151,18 @@ export default {
   }
 }
 
-async function extractUserId(request: Request, env: Env): Promise<string> {
-  // JWT sub from the Bearer token (verified by mcp-core OAuth middleware in the
-  // container). SINGLE-USER CONTRACT (E.2): no token or no `sub` -> the reserved
-  // id "default", so setup and serving collapse onto ONE Durable Object id and
-  // the credential write+read avoid a cross-colo KV hop. Per-`sub` tokens get
-  // their own isolated DO (multi-user). Downstream servers MUST keep this.
-  const auth = request.headers.get('authorization') ?? ''
-  const m = auth.match(/^Bearer\s+(.+)$/)
-  if (!m) {
-    // OAuth POST /token refresh carries no Bearer but the refresh_token IS a
-    // self-contained JWT with `sub`, and rotation is stateless -> route it to
-    // that sub's already-warm DO instead of "default" so a refresh while the
-    // sub container is warm does not need to spawn a 2nd container (under
-    // max_instances=1 that spawn 500s -> refresh fails -> server unusable).
-    // See wet PR#1452. Read the body off a clone so the forward is untouched.
-    try {
-      const url = new URL(request.url)
-      if (request.method === 'POST' && url.pathname === '/token') {
-        const form = await request.clone().formData()
-        if (form.get('grant_type') === 'refresh_token') {
-          const rt = String(form.get('refresh_token') ?? '')
-          const p = JSON.parse(atob(rt.split('.')[1] ?? ''))
-          if (typeof p.sub === 'string') return p.sub
-        }
-      }
-    } catch {
-      /* fall through to default */
-    }
-    return 'default'
-  }
-
-  const jwt = m[1]
-  try {
-    // If CREDENTIAL_SECRET is set, we MUST verify the signature. mcp-core's
-    // JWTIssuer handles the EdDSA verification when provided with the secret.
-    // (Without a secret, it falls back to RS256; on CF, a missing secret means
-    // it can't verify the deterministic EdDSA tokens it issued previously.)
-    if (env.CREDENTIAL_SECRET) {
-      const issuer = new JWTIssuer('better-notion-mcp', undefined, env.CREDENTIAL_SECRET)
-      await issuer.init()
-      const claims = await issuer.verifyAccessToken(jwt)
-      return typeof claims.sub === 'string' ? claims.sub : 'default'
-    }
-
-    // Fallback for local development or setups without a secret: unverified extraction.
-    const payload = JSON.parse(atob(jwt.split('.')[1] ?? ''))
-    return typeof payload.sub === 'string' ? payload.sub : 'default'
-  } catch {
-    return 'default'
-  }
+async function extractUserId(): Promise<string> {
+  // SINGLE-DO COLLAPSE (2026-06-30): route EVERY request (OAuth /authorize,
+  // /token, /.well-known AND every sub's /mcp) to the one reserved "default"
+  // Durable Object. Under max_instances=1 (locked solo-dev cost rule) the prior
+  // per-sub-DO routing DEADLOCKED: the OAuth flow (no Bearer) warmed DO "default"
+  // while the first /mcp (Bearer sub) needed DO "<sub>" -- a 2nd container that
+  // cannot spawn under max=1 ("Maximum number of running container instances
+  // exceeded" 500). Safe: the container is STATELESS -- per-sub data is
+  // externalised (D1 sub-column / Vectorize sub-filter / KV) keyed by the Bearer
+  // JWT sub, so one container serves all subs with no leakage. (Trade-off: one
+  // shared container for all subs; fine for solo / low concurrency.)
+  return 'default'
 }
 
 // Per-user container Durable Object. wrangler.jsonc binds NOTION to this class
