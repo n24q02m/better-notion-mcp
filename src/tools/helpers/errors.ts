@@ -1,6 +1,8 @@
 /**
  * Custom error class for Notion MCP operations
  */
+const SAFE_STRING_REGEX = /^[a-zA-Z0-9.[\]_ /-]*/
+
 export class NotionMCPError extends Error {
   constructor(
     public message: string,
@@ -39,7 +41,7 @@ function sanitizeValidationBody(body: any): any {
         // Sanitize path: allow only alphanumeric, dots, brackets, underscores, hyphens, spaces, and slashes.
         // We truncate at the first "unsafe" character to avoid leaking potentially sensitive
         // values that might have been appended (e.g. by a proxy or if Notion includes values in paths).
-        const match = body[field].match(/^[a-zA-Z0-9.[\]_ /-]*/)
+        const match = body[field].match(SAFE_STRING_REGEX)
         safe[field] = match ? match[0] : ''
       } else {
         safe[field] = body[field]

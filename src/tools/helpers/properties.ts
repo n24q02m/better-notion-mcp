@@ -5,10 +5,12 @@
 
 import * as RichText from './richtext.js'
 
+const PAGE_ID_REGEX = /([a-f0-9]{32})/
+
 /** Extract a 32-char hex page ID from a Notion URL, or return the input as-is if it's already a raw ID */
 function extractPageId(value: any): string {
   if (typeof value !== 'string') return String(value)
-  const match = value.match(/([a-f0-9]{32})/)
+  const match = value.match(PAGE_ID_REGEX)
   if (match) return match[1]
   // Also accept hyphenated UUIDs as-is
   return value
