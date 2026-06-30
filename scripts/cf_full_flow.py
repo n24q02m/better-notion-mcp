@@ -79,26 +79,38 @@ def bootstrap(endpoint: str, token_file: str) -> None:
     state = _b64url(secrets.token_bytes(16))
     redirect_uri = f"{endpoint}/callback-done"
 
+    relay_pw = os.environ.get("RELAY_PW") or os.environ.get("MCP_RELAY_PASSWORD")
+    params = {
+        "client_id": CLIENT_ID,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "state": state,
+        "code_challenge": challenge,
+        "code_challenge_method": "S256",
+    }
     with httpx.Client(timeout=60, follow_redirects=False) as c:
-        r = c.get(
-            f"{endpoint}/authorize",
-            params={
-                "client_id": CLIENT_ID,
-                "redirect_uri": redirect_uri,
-                "response_type": "code",
-                "state": state,
-                "code_challenge": challenge,
-                "code_challenge_method": "S256",
-            },
-        )
-    if r.status_code != 302:
-        raise SystemExit(
-            f"bootstrap: expected 302 from /authorize, got {r.status_code}: {r.text[:300]}"
-        )
-    notion_url = r.headers.get("location", "")
+        r = c.get(f"{endpoint}/authorize", params=params)
+        # Gate A: a relay-password-gated deploy 302s /authorize -> /login?next=...
+        # POST the relay password (cookie persists in the Client), then follow the
+        # redirect chain back through /authorize until it lands on Notion's OAuth.
+        loc = r.headers.get("location", "")
+        if r.status_code == 302 and "/login" in loc:
+            if not relay_pw:
+                raise SystemExit("bootstrap: Gate A active but MCP_RELAY_PASSWORD/RELAY_PW unset")
+            nxt = urllib.parse.parse_qs(urllib.parse.urlparse(loc).query).get("next", [""])[0]
+            lg = c.post(f"{endpoint}/login", data={"next": nxt, "password": relay_pw})
+            loc = lg.headers.get("location", "")
+            hops = 0
+            while loc and "api.notion.com" not in loc and hops < 5:
+                nr = c.get(loc if loc.startswith("http") else f"{endpoint}{loc}")
+                if nr.status_code != 302:
+                    break
+                loc = nr.headers.get("location", "")
+                hops += 1
+        notion_url = loc
     if "api.notion.com" not in notion_url:
         raise SystemExit(
-            f"bootstrap: /authorize did not redirect to Notion, got: {notion_url[:300]}"
+            f"bootstrap: did not reach Notion OAuth, got: {notion_url[:300]}"
         )
 
     _pkce_path(token_file).write_text(
