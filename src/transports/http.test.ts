@@ -33,6 +33,29 @@ vi.mock('../auth/notion-token-store.js', () => {
   }
 })
 
+const mockKvTokenStoreInstance = {
+  get: vi.fn(),
+  getAsync: vi.fn().mockResolvedValue(undefined),
+  save: vi.fn(),
+  clear: vi.fn(),
+  // Resolves instantly (unlike the real KvNotionTokenStore.ready(), which does
+  // a live fetch to kv.internal) -- a real network call here would make
+  // startHttp()'s completion timing nondeterministic against tests' fixed
+  // setTimeout wait, flaking whichever assertion runs after it.
+  ready: vi.fn().mockResolvedValue(undefined)
+}
+
+vi.mock('../auth/notion-token-store-kv.js', () => {
+  return {
+    KvNotionTokenStore: class {
+      constructor() {
+        Object.assign(this, mockKvTokenStoreInstance)
+      }
+    },
+    PLUGIN_NAME: 'better-notion'
+  }
+})
+
 vi.mock('../create-server.js', () => ({
   createMCPServer: vi.fn()
 }))
@@ -49,7 +72,11 @@ vi.mock('@notionhq/client', () => ({
 }))
 
 describe('startHttp', () => {
-  const originalEnv = process.env
+  // A real copy, not a reference -- `process.env` is a live mutable object, so
+  // `const originalEnv = process.env` would alias it: a test setting
+  // `process.env.MCP_STORAGE_BACKEND` mutates this "original" too, leaking into
+  // every later test's `{...originalEnv, ...}` reset below.
+  const originalEnv = { ...process.env }
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -61,6 +88,13 @@ describe('startHttp', () => {
       HOST: undefined,
       MCP_AUTH_DISABLE: undefined
     }
+    // `{KEY: undefined}` in the reassignment above does not reliably delete the
+    // key (process.env coerces undefined to the string "undefined" in some
+    // runtimes) -- delete explicitly so a leftover MCP_STORAGE_BACKEND=cf-kv
+    // from another test file's mutation of the shared process.env can never
+    // leak into these tests and silently switch sessionKvForDeploy's branch.
+    delete process.env.MCP_STORAGE_BACKEND
+    delete process.env.MCP_KV_BASE_URL
     // Prevent logs during tests
     vi.spyOn(console, 'error').mockImplementation(() => {})
   })
@@ -178,6 +212,58 @@ describe('startHttp', () => {
         authDisabled: true
       })
     )
+
+    if (handlers.SIGINT) await handlers.SIGINT()
+    await startPromise
+  })
+
+  it('wires a durable sessionKv into delegatedOAuth when MCP_STORAGE_BACKEND=cf-kv', async () => {
+    process.env.MCP_STORAGE_BACKEND = 'cf-kv'
+    process.env.MCP_KV_BASE_URL = 'http://kv.internal'
+
+    vi.mocked(mcpCore.runHttpServer).mockResolvedValue({
+      host: 'localhost',
+      port: 3000,
+      close: vi.fn().mockResolvedValue(undefined)
+    } as any)
+
+    const handlers: Record<string, (...args: any[]) => any> = {}
+    vi.spyOn(process, 'once').mockImplementation((event, handler) => {
+      handlers[event as string] = handler as (...args: any[]) => any
+      return process
+    })
+
+    const startPromise = startHttp()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    const options = vi.mocked(mcpCore.runHttpServer).mock.calls[0][1] as any
+    // Must be the durable KV-backed store (not undefined -> in-memory fallback),
+    // so the OAuth handshake state survives a container cold-start between
+    // /authorize and /callback -- the exact regression this wiring fixes.
+    expect(options.delegatedOAuth?.sessionKv).toBeDefined()
+
+    if (handlers.SIGINT) await handlers.SIGINT()
+    await startPromise
+  })
+
+  it('leaves sessionKv undefined (in-memory fallback) when MCP_STORAGE_BACKEND is not cf-kv', async () => {
+    vi.mocked(mcpCore.runHttpServer).mockResolvedValue({
+      host: 'localhost',
+      port: 3000,
+      close: vi.fn().mockResolvedValue(undefined)
+    } as any)
+
+    const handlers: Record<string, (...args: any[]) => any> = {}
+    vi.spyOn(process, 'once').mockImplementation((event, handler) => {
+      handlers[event as string] = handler as (...args: any[]) => any
+      return process
+    })
+
+    const startPromise = startHttp()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    const options = vi.mocked(mcpCore.runHttpServer).mock.calls[0][1] as any
+    expect(options.delegatedOAuth?.sessionKv).toBeUndefined()
 
     if (handlers.SIGINT) await handlers.SIGINT()
     await startPromise

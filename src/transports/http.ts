@@ -14,14 +14,31 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { runHttpServer } from '@n24q02m/mcp-core'
+import { type SessionKv, wrapKvBackendAsSessionKv } from '@n24q02m/mcp-core/auth'
+import { backendFromEnv } from '@n24q02m/mcp-core/storage'
 import { Client } from '@notionhq/client'
 import { NotionTokenStore, type NotionTokenStoreLike } from '../auth/notion-token-store.js'
-import { KvNotionTokenStore } from '../auth/notion-token-store-kv.js'
+import { KvNotionTokenStore, PLUGIN_NAME } from '../auth/notion-token-store-kv.js'
 import { createMCPServer } from '../create-server.js'
 import { resolveCredentialState, setState, setSubjectTokenResolver } from '../credential-state.js'
 import { NotionMCPError } from '../tools/helpers/errors.js'
 
 const SERVER_NAME = 'better-notion-mcp'
+
+/**
+ * Durable KV for the delegated-OAuth handshake state (pending sessions +
+ * issued auth codes), so it survives a container cold-start/restart between
+ * /authorize and /callback. Keyed under the SAME `better-notion/` namespace
+ * as the token store (`PLUGIN_NAME`) -- the Worker's kv.internal outbound
+ * handler allowlists keys by that exact prefix (src/worker.ts); any other
+ * prefix is rejected with 403. undefined outside the cf-kv deploy (stdio /
+ * local single-process) -- the session store then falls back to an
+ * in-process map, correct for that single-request-context case.
+ */
+function sessionKvForDeploy(): SessionKv | undefined {
+  if ((process.env.MCP_STORAGE_BACKEND ?? '').toLowerCase() !== 'cf-kv') return undefined
+  return wrapKvBackendAsSessionKv(backendFromEnv(), `${PLUGIN_NAME}/delegated-oauth:`)
+}
 
 export const subjectContext = new AsyncLocalStorage<{ sub: string }>()
 
@@ -127,6 +144,7 @@ export async function startHttp(): Promise<void> {
     authDisabled,
     delegatedOAuth: {
       flow: 'redirect',
+      sessionKv: sessionKvForDeploy(),
       upstream: {
         authorizeUrl: 'https://api.notion.com/v1/oauth/authorize',
         tokenUrl: 'https://api.notion.com/v1/oauth/token',
