@@ -15,7 +15,10 @@
 import { backendFromEnv, CfKvBackend, PerPluginStore } from '@n24q02m/mcp-core/storage'
 import type { NotionTokenStoreLike } from './notion-token-store.js'
 
-const PLUGIN_NAME = 'better-notion'
+// Exported so other CF-KV consumers (the delegated-OAuth session store) key
+// into the SAME Worker-enforced namespace -- the kv.internal outbound handler
+// (src/worker.ts) allowlists KV keys by this exact prefix.
+export const PLUGIN_NAME = 'better-notion'
 
 // Minimal structural shape of mcp-core's injectable Http (storage/backends.ts):
 // request(method, url, data?, headers?) -> { status, body }. Declared locally so
