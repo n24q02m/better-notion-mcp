@@ -100,15 +100,14 @@ import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 
 ```
 src/
-  main.ts                     # Entry point — selects transport by TRANSPORT_MODE
-  init-server.ts              # Deprecated re-export of transports/stdio
+  init-server.ts              # Entry point — imports main.ts (startServer/getTransportMode)
+  main.ts                     # Transport selection; stdio (NOTION_TOKEN) handled directly
   create-server.ts            # Shared MCP Server factory
-  auth/                       # OAuth 2.1 + PKCE, DCR, session management
-    notion-oauth-provider.ts  # Notion OAuth callback relay + token storage
-    stateless-client-store.ts # Stateless HMAC-based DCR store
+  auth/                       # Per-JWT-sub Notion access token stores (http mode)
+    notion-token-store.ts     # In-memory per-sub token map + NotionTokenStoreLike iface
+    notion-token-store-kv.ts  # KV write-through token store (Cloudflare deploy)
   transports/
-    stdio.ts                  # Local mode (NOTION_TOKEN)
-    http.ts                   # Remote mode (Express + OAuth 2.1)
+    http.ts                   # Remote mode (Express + OAuth 2.1, multi-user)
   docs/                       # Markdown docs served as MCP resources
   tools/
     registry.ts               # Tool registration + routing
