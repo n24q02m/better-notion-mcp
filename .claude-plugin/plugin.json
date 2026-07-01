@@ -1,7 +1,7 @@
 {
   "name": "better-notion-mcp",
   "description": "Markdown-first Notion API integration — 8 composite tools, ~95% coverage",
-  "version": "2.35.0-beta.8",
+  "version": "2.35.0-beta.9",
   "userConfig": {
     "NOTION_TOKEN": {
       "type": "string",

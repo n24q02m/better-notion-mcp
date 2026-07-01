@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v2.35.0-beta.9 (2026-07-01)
+
+### Bug Fixes
+
+- Wire durable KV-backed sessionKv for delegated OAuth on CF deploy
+  ([#1069](https://github.com/n24q02m/better-notion-mcp/pull/1069),
+  [`fd29c2a`](https://github.com/n24q02m/better-notion-mcp/commit/fd29c2adbdeb49a8993c84749f355cbc06fc1ec3))
+
+
 ## v2.35.0-beta.8 (2026-07-01)
 
 ### Bug Fixes
