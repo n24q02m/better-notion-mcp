@@ -62,18 +62,23 @@ if (!dryRun && !process.env.CLOUDFLARE_API_TOKEN) {
   console.error('CLOUDFLARE_API_TOKEN is required (wrangler auth).')
   process.exit(1)
 }
-const publicUrl = process.env.PUBLIC_URL
-if (!publicUrl) {
-  console.error('PUBLIC_URL is required (substituted for <YOUR_PUBLIC_URL>).')
-  process.exit(1)
-}
 const kvNamespaceId = process.env.CF_KV_NAMESPACE_ID || DEFAULT_KV_NAMESPACE_ID
 
 const src = readFileSync('wrangler.jsonc', 'utf8')
+
+// PUBLIC_URL is required only while the committed config still carries the
+// <YOUR_PUBLIC_URL> placeholder; a BYO fork that hardcodes vars.PUBLIC_URL
+// needs no env.
+const publicUrl = process.env.PUBLIC_URL
+if (src.includes('<YOUR_PUBLIC_URL>') && !publicUrl) {
+  console.error('PUBLIC_URL is not set (base wrangler.jsonc uses <YOUR_PUBLIC_URL>).')
+  process.exit(1)
+}
+
 const resolved = src
   .replaceAll('<YOUR_ACCOUNT_ID>', accountId)
   .replaceAll('<better-notion-kv-namespace-id>', kvNamespaceId)
-  .replaceAll('<YOUR_PUBLIC_URL>', publicUrl)
+  .replaceAll('<YOUR_PUBLIC_URL>', publicUrl ?? '')
   // Drop the single-line `"routes": [...],` block: the custom domain is already
   // attached, and this also strips the <YOUR_WORKER_DOMAIN> placeholder so it
   // never reaches wrangler.
@@ -84,7 +89,7 @@ const resolved = src
 
 if (dryRun) {
   console.log(`cf:dryrun -> would write ${DEPLOY_CONFIG} and run: bunx wrangler deploy --config ${DEPLOY_CONFIG}`)
-  console.log(`cf:dryrun -> PUBLIC_URL resolved to ${publicUrl}`)
+  if (publicUrl) console.log(`cf:dryrun -> PUBLIC_URL resolved to ${publicUrl}`)
   // Fail loudly if any placeholder survived substitution: an unsubstituted
   // <...> token would otherwise ship literally into the deployed config.
   const leftover = [...new Set(resolved.match(/<[A-Za-z0-9_-]+>/g) ?? [])]
