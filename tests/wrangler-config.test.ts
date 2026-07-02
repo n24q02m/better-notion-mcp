@@ -39,8 +39,8 @@ describe('wrangler.jsonc', () => {
     expect(cfg.containers[0].image).not.toContain('ghcr.io')
   })
 
-  it('routes the production custom domain', () => {
-    expect(cfg.routes[0].pattern).toBe('notion.n24q02m.com')
+  it('keeps the route as a BYO placeholder (never hardcodes a real custom domain)', () => {
+    expect(cfg.routes[0].pattern).toBe('<YOUR_WORKER_DOMAIN>')
     expect(cfg.routes[0].custom_domain).toBe(true)
   })
 
