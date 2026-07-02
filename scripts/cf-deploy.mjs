@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // cf-deploy.mjs - config-only `wrangler deploy` for the live CF Worker+Container.
 //
-// The committed wrangler.jsonc keeps two deploy-time placeholders out of git so
-// no live resource IDs are checked in:
+// The committed wrangler.jsonc keeps three deploy-time placeholders out of git so
+// no live resource IDs (or an env-specific public URL) are checked in:
 //   - <YOUR_ACCOUNT_ID>              in the container image ref
 //   - <better-notion-kv-namespace-id> in the KV binding
-// This script substitutes both into a throwaway, gitignored wrangler.deploy.jsonc
+//   - <YOUR_PUBLIC_URL>              in vars.PUBLIC_URL (worker base URL)
+// This script substitutes all three into a throwaway, gitignored wrangler.deploy.jsonc
 // (deleted after the run) and runs `wrangler deploy` against it, so the committed
 // wrangler.jsonc stays clean.
 //
@@ -17,6 +18,7 @@
 // Required env:
 //   CLOUDFLARE_API_TOKEN   - CF API token (any secret manager works)
 //   CLOUDFLARE_ACCOUNT_ID  - substituted for <YOUR_ACCOUNT_ID>
+//   PUBLIC_URL             - substituted for <YOUR_PUBLIC_URL> (worker base URL)
 // Optional env:
 //   CF_KV_NAMESPACE_ID     - substituted for <better-notion-kv-namespace-id>
 //                            (defaults to the live "KV" namespace below)
@@ -60,13 +62,21 @@ if (!dryRun && !process.env.CLOUDFLARE_API_TOKEN) {
   console.error('CLOUDFLARE_API_TOKEN is required (wrangler auth).')
   process.exit(1)
 }
+const publicUrl = process.env.PUBLIC_URL
+if (!publicUrl) {
+  console.error('PUBLIC_URL is required (substituted for <YOUR_PUBLIC_URL>).')
+  process.exit(1)
+}
 const kvNamespaceId = process.env.CF_KV_NAMESPACE_ID || DEFAULT_KV_NAMESPACE_ID
 
 const src = readFileSync('wrangler.jsonc', 'utf8')
 const resolved = src
   .replaceAll('<YOUR_ACCOUNT_ID>', accountId)
   .replaceAll('<better-notion-kv-namespace-id>', kvNamespaceId)
-  // Drop the single-line `"routes": [...],` block (custom domain already attached).
+  .replaceAll('<YOUR_PUBLIC_URL>', publicUrl)
+  // Drop the single-line `"routes": [...],` block: the custom domain is already
+  // attached, and this also strips the <YOUR_WORKER_DOMAIN> placeholder so it
+  // never reaches wrangler.
   .replace(/^\s*"routes":\s*\[[^\]]*\],?\s*$/m, '')
   // Serve ONLY the custom domain. Without these, wrangler enables a public
   // workers.dev URL + preview URLs by default -> an unintended public surface.
@@ -74,7 +84,15 @@ const resolved = src
 
 if (dryRun) {
   console.log(`cf:dryrun -> would write ${DEPLOY_CONFIG} and run: bunx wrangler deploy --config ${DEPLOY_CONFIG}`)
-  console.log('--- resolved wrangler config suppressed (contains live resource IDs) ---')
+  console.log(`cf:dryrun -> PUBLIC_URL resolved to ${publicUrl}`)
+  // Fail loudly if any placeholder survived substitution: an unsubstituted
+  // <...> token would otherwise ship literally into the deployed config.
+  const leftover = [...new Set(resolved.match(/<[A-Za-z0-9_-]+>/g) ?? [])]
+  if (leftover.length > 0) {
+    console.error(`cf:dryrun -> unsubstituted placeholder(s) would reach wrangler: ${leftover.join(', ')}`)
+    process.exit(1)
+  }
+  console.log('cf:dryrun -> no unsubstituted placeholders remain (live resource IDs suppressed).')
   process.exit(0)
 }
 
