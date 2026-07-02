@@ -46,10 +46,10 @@
     // reachable when the http server binds 0.0.0.0:8080 (same as the OCI VM
     // compose). Without HOST the container "is not listening on 10.0.0.1:8080".
     "HOST": "0.0.0.0",
-    "PUBLIC_URL": "https://notion.n24q02m.com",
+    "PUBLIC_URL": "<YOUR_PUBLIC_URL>",
     "MCP_STORAGE_BACKEND": "cf-kv",
     "MCP_KV_BASE_URL": "http://kv.internal"
   },
-  "routes": [{ "pattern": "notion.n24q02m.com", "custom_domain": true }],
+  "routes": [{ "pattern": "<YOUR_WORKER_DOMAIN>", "custom_domain": true }],
   "observability": { "enabled": true }
 }
