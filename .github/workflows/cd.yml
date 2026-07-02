@@ -294,3 +294,46 @@ jobs:
             -f event_type=plugin-sync \
             -f 'client_payload[repo]=better-notion-mcp' \
             -f 'client_payload[tag]=${{ needs.release.outputs.tag }}'
+
+  deploy-cf:
+    name: Deploy Cloudflare Worker+Container
+    # Builds the http-slim image on a GitHub Linux runner and deploys it to
+    # Cloudflare so any release == CF live on that version — a beta dispatch redeploys
+    # the beta, a stable dispatch is maintainer-gated (replaces the
+    # manual local deploy_cf.py step + its Windows Docker OOM). Only needs the
+    # `release` job (deploy_cf.py builds its OWN image, so merge-docker is not a
+    # dependency). Dispatch-only workflow (no fork PRs) => secrets are safe.
+    # NOTE: in CI the template renders the image at the NEW tag, so deploy_cf.py's
+    # auto-rollback (prev_ref != new) is inert here; a failed canary still fails
+    # this job (exit 1, no silent bad deploy). Live-image prev_ref for true CI
+    # rollback is a tracked follow-up.
+    needs: [release]
+    if: needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2
+        with:
+          egress-policy: audit
+      - name: Checkout the released tag
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+      - name: Setup Bun (bunx wrangler)
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      - name: Install worker deps (wrangler bundles worker.ts, needs @cloudflare/containers)
+        run: bun install --frozen-lockfile
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
+      - name: Deploy to Cloudflare (build http-slim + push + deploy + canary)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_KV_ID: ${{ secrets.CF_KV_ID }}
+          PUBLIC_URL: ${{ secrets.PUBLIC_URL }}
+          IMAGE_TAG: ${{ needs.release.outputs.version }}
+        run: python scripts/deploy_cf.py --from-template --tag "${IMAGE_TAG}"

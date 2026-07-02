@@ -1,0 +1,39 @@
+// wrangler.deploy.template.jsonc - COMMITTED placeholder template for CI CF deploy.
+// scripts/deploy_cf.py --from-template renders this into the gitignored
+// wrangler.deploy.jsonc by substituting the placeholder tokens below from the
+// environment (CI provides them from GitHub Actions secrets synced from skret).
+// Real account/KV IDs never live in git; they are placeholders here.
+// notion is KV-only: no D1 (no docs DB) and no Vectorize (no embeddings) blocks,
+// unlike the wet template this is copied from.
+// NO routes block (notion.n24q02m.com already attached; the deploy token can't
+// reconcile routes). workers_dev:false keeps the worker off *.workers.dev.
+{
+  "name": "better-notion-mcp-worker",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-06-14",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "containers": [
+    {
+      "name": "better-notion-mcp-worker",
+      "class_name": "NotionContainer",
+      "image": "registry.cloudflare.com/${CLOUDFLARE_ACCOUNT_ID}/better-notion-mcp:${IMAGE_TAG}",
+      "instance_type": "basic",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "NOTION", "class_name": "NotionContainer" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["NotionContainer"] }],
+  "kv_namespaces": [{ "binding": "KV", "id": "${CF_KV_ID}" }],
+  "vars": {
+    "MCP_TRANSPORT": "http",
+    "PORT": "8080",
+    "HOST": "0.0.0.0",
+    "PUBLIC_URL": "${PUBLIC_URL}",
+    "MCP_STORAGE_BACKEND": "cf-kv",
+    "MCP_KV_BASE_URL": "http://kv.internal"
+  },
+  "observability": { "enabled": true }
+}
