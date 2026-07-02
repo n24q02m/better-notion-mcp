@@ -198,7 +198,7 @@ docker run -p 8080:8080 \
 
 Run your own multi-user better-notion-mcp serverless on Cloudflare (Worker + Container + KV).
 
-**Prerequisites:** a Cloudflare account on the Workers Paid plan and the `wrangler` CLI.
+**Prerequisites:** a Cloudflare account on the **Workers Paid plan** — required for Containers (the Cloudflare free tier does not include Containers) — and the `wrangler` CLI.
 
 1. `git clone https://github.com/n24q02m/better-notion-mcp && cd better-notion-mcp`
 2. `wrangler login`
