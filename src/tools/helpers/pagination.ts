@@ -45,7 +45,14 @@ export async function autoPaginate<T>(
     }
 
     const response = await fetchFn(cursor || undefined, currentPageSize)
-    allResults.push(...response.results)
+    // BOLT OPTIMIZATION: Use manual push loop instead of spread operator to avoid
+    // Maximum Call Stack Size Exceeded errors on very large page arrays and improve performance
+    // on large datasets by avoiding intermediate array allocations from spread
+    const results = response.results
+    const len = results.length
+    for (let i = 0; i < len; i++) {
+      allResults.push(results[i])
+    }
     cursor = response.next_cursor
     pageCount++
 
