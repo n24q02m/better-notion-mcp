@@ -45,7 +45,11 @@ export async function autoPaginate<T>(
     }
 
     const response = await fetchFn(cursor || undefined, currentPageSize)
-    allResults.push(...response.results)
+    // BOLT OPTIMIZATION: Avoid maximum call stack exceeded errors and array allocation penalties
+    // associated with the spread operator on large paginated datasets.
+    for (let i = 0; i < response.results.length; i++) {
+      allResults.push(response.results[i])
+    }
     cursor = response.next_cursor
     pageCount++
 

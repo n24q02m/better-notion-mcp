@@ -8,3 +8,6 @@
 ## 2026-06-30 - Precompute Inline Regex to avoid Regex Compilation Penalties
 **Learning:** In hot paths, like string matching using `.match()` in `src/tools/helpers/errors.ts`, `src/tools/helpers/markdown.ts`, and `src/tools/helpers/properties.ts`, re-compiling inline regexes can cause CPU allocations and garbage collection overheads.
 **Action:** Always precompute these regex as module-level constants (e.g. `SAFE_STRING_REGEX`) rather than recreating them during runtime to improve speed and performance.
+## 2024-07-04 - Avoid spread operator for array appends on large data
+**Learning:** In V8 environments, using the spread operator (`...`) inside `Array.prototype.push()` (e.g., `arr.push(...largeArray)`) places the elements onto the call stack. For very large paginated datasets, this can cause "Maximum call stack size exceeded" errors and introduces intermediate array allocation and garbage collection penalties.
+**Action:** Always replace `arr.push(...largeArray)` with a traditional `for` loop (e.g., `for (let i = 0; i < largeArray.length; i++) arr.push(largeArray[i]);`) in paths handling potentially large or unbounded sets of data to ensure safety and improve performance.
