@@ -70,6 +70,7 @@ const MENTION_ID_REGEX = /([a-f0-9]{32})/
 const INLINE_SUMMARY_REGEX = /^<details>\s*<summary>(.*?)<\/summary>(.*?)(<\/details>)?$/
 const SUMMARY_REGEX = /<summary>(.*?)<\/summary>/
 const COLUMN_REGEX = /^:::column(?:\{width=([\d.]+)\})?$/
+const TABLE_SEPARATOR_REGEX = /^[-:]+$/
 
 /**
  * Convert markdown string to Notion blocks
@@ -91,7 +92,9 @@ class MarkdownParser {
 
     // Flush remaining list
     if (this.currentList.length > 0) {
-      this.blocks.push(...this.currentList)
+      for (let j = 0; j < this.currentList.length; j++) {
+        this.blocks.push(this.currentList[j])
+      }
     }
 
     return this.blocks
@@ -102,7 +105,9 @@ class MarkdownParser {
 
     // Flush list if we're not in a list anymore
     if (this.currentListType && !isListItem(line)) {
-      this.blocks.push(...this.currentList)
+      for (let j = 0; j < this.currentList.length; j++) {
+        this.blocks.push(this.currentList[j])
+      }
       this.currentList = []
       this.currentListType = null
     }
@@ -786,15 +791,19 @@ function parseTable(lines: string[], startIndex: number): TableParseResult | nul
 
   if (parsedRows.length >= 2) {
     const possibleSeparator = parsedRows[1]
-    const isSeparator = possibleSeparator.every((cell: string) => /^[-:]+$/.test(cell.trim()))
+    const isSeparator = possibleSeparator.every((cell: string) => TABLE_SEPARATOR_REGEX.test(cell.trim()))
 
     if (isSeparator) {
       hasHeader = true
       headerRow = parsedRows[0]
-      dataRows.push(...parsedRows.slice(2))
+      for (let j = 2; j < parsedRows.length; j++) {
+        dataRows.push(parsedRows[j])
+      }
     } else {
       headerRow = parsedRows[0]
-      dataRows.push(...parsedRows.slice(1))
+      for (let j = 1; j < parsedRows.length; j++) {
+        dataRows.push(parsedRows[j])
+      }
     }
   } else {
     headerRow = parsedRows[0]
