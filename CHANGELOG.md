@@ -2,6 +2,55 @@
 
 <!-- version list -->
 
+## v2.36.1-beta.1 (2026-07-05)
+
+### Bug Fixes
+
+- Assert BYO placeholder route in wrangler-config test
+  ([#1074](https://github.com/n24q02m/better-notion-mcp/pull/1074),
+  [`336fcb3`](https://github.com/n24q02m/better-notion-mcp/commit/336fcb3be9978402e74ae4771824053bcb28969a))
+
+- Avoid spread operator for large array appends in autoPaginate
+  ([`48049b1`](https://github.com/n24q02m/better-notion-mcp/commit/48049b152b89b939575b1885e9892df52b9e2aea))
+
+- Clarify Workers Paid plan is required for Containers in Cloudflare deploy prerequisites
+  ([#1074](https://github.com/n24q02m/better-notion-mcp/pull/1074),
+  [`336fcb3`](https://github.com/n24q02m/better-notion-mcp/commit/336fcb3be9978402e74ae4771824053bcb28969a))
+
+- Require PUBLIC_URL env only when wrangler.jsonc carries the placeholder
+  ([#1074](https://github.com/n24q02m/better-notion-mcp/pull/1074),
+  [`336fcb3`](https://github.com/n24q02m/better-notion-mcp/commit/336fcb3be9978402e74ae4771824053bcb28969a))
+
+- Substitute PUBLIC_URL placeholder in cf-deploy.mjs and assert no leftover placeholders
+  ([#1074](https://github.com/n24q02m/better-notion-mcp/pull/1074),
+  [`336fcb3`](https://github.com/n24q02m/better-notion-mcp/commit/336fcb3be9978402e74ae4771824053bcb28969a))
+
+- Use placeholders for PUBLIC_URL and routes in wrangler.jsonc (BYO-generic)
+  ([#1074](https://github.com/n24q02m/better-notion-mcp/pull/1074),
+  [`336fcb3`](https://github.com/n24q02m/better-notion-mcp/commit/336fcb3be9978402e74ae4771824053bcb28969a))
+
+- **deps**: Update non-major dependencies
+  ([`9320ae8`](https://github.com/n24q02m/better-notion-mcp/commit/9320ae8c3bbddc9c13fd4deee7170cd92047b080))
+
+### Chores
+
+- **deps**: Update dependency @cloudflare/workers-types to v5
+  ([#1079](https://github.com/n24q02m/better-notion-mcp/pull/1079),
+  [`8bc68ae`](https://github.com/n24q02m/better-notion-mcp/commit/8bc68ae04b36a310b5de044ea27d2a00d3fec535))
+
+- **deps**: Update docker/build-push-action digest to 53b7df9
+  ([#1075](https://github.com/n24q02m/better-notion-mcp/pull/1075),
+  [`829764f`](https://github.com/n24q02m/better-notion-mcp/commit/829764fc70908feb662ea4a253503591017bad20))
+
+- **deps**: Update docker/login-action digest to af1e73f
+  ([#1076](https://github.com/n24q02m/better-notion-mcp/pull/1076),
+  [`c83df6a`](https://github.com/n24q02m/better-notion-mcp/commit/c83df6ac14177ef8bd1bd0551d90fc4e9b3097c3))
+
+- **deps**: Update docker/setup-buildx-action digest to bb05f3f
+  ([#1077](https://github.com/n24q02m/better-notion-mcp/pull/1077),
+  [`f763f26`](https://github.com/n24q02m/better-notion-mcp/commit/f763f26f79905d07601cb1a9397b1cabc36187dc))
+
+
 ## v2.36.0 (2026-07-02)
 
 ### Bug Fixes
