@@ -68,12 +68,12 @@
     "esbuild"
   ],
   "devDependencies": {
-    "@biomejs/biome": "^2.5.1",
+    "@biomejs/biome": "^2.5.2",
     "@cloudflare/workers-types": "^5.20260705.1",
-    "@types/node": "^26.0.1",
+    "@types/node": "^26.1.0",
     "@vitest/coverage-v8": "^4.1.9",
     "esbuild": "^0.28.1",
-    "tsx": "^4.22.4",
+    "tsx": "^4.23.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.9"
   },
