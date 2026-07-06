@@ -91,7 +91,12 @@ class MarkdownParser {
 
     // Flush remaining list
     if (this.currentList.length > 0) {
-      this.blocks.push(...this.currentList)
+      // BOLT OPTIMIZATION: Use manual push loop instead of spread operator to avoid
+      // intermediate array allocations and stack overflow on very large arrays
+      const len = this.currentList.length
+      for (let j = 0; j < len; j++) {
+        this.blocks.push(this.currentList[j])
+      }
     }
 
     return this.blocks
@@ -102,7 +107,12 @@ class MarkdownParser {
 
     // Flush list if we're not in a list anymore
     if (this.currentListType && !isListItem(line)) {
-      this.blocks.push(...this.currentList)
+      // BOLT OPTIMIZATION: Use manual push loop instead of spread operator to avoid
+      // intermediate array allocations and stack overflow on very large arrays
+      const len = this.currentList.length
+      for (let j = 0; j < len; j++) {
+        this.blocks.push(this.currentList[j])
+      }
       this.currentList = []
       this.currentListType = null
     }
@@ -791,10 +801,20 @@ function parseTable(lines: string[], startIndex: number): TableParseResult | nul
     if (isSeparator) {
       hasHeader = true
       headerRow = parsedRows[0]
-      dataRows.push(...parsedRows.slice(2))
+      // BOLT OPTIMIZATION: Use manual push loop instead of spread operator to avoid
+      // intermediate array allocations and stack overflow on very large arrays
+      const len = parsedRows.length
+      for (let i = 2; i < len; i++) {
+        dataRows.push(parsedRows[i])
+      }
     } else {
       headerRow = parsedRows[0]
-      dataRows.push(...parsedRows.slice(1))
+      // BOLT OPTIMIZATION: Use manual push loop instead of spread operator to avoid
+      // intermediate array allocations and stack overflow on very large arrays
+      const len = parsedRows.length
+      for (let i = 1; i < len; i++) {
+        dataRows.push(parsedRows[i])
+      }
     }
   } else {
     headerRow = parsedRows[0]
