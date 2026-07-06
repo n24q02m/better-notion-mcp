@@ -85,8 +85,7 @@ describe('startHttp', () => {
       NOTION_OAUTH_CLIENT_ID: 'id',
       NOTION_OAUTH_CLIENT_SECRET: 'secret',
       PORT: undefined,
-      HOST: undefined,
-      MCP_AUTH_DISABLE: undefined
+      HOST: undefined
     }
     // `{KEY: undefined}` in the reassignment above does not reliably delete the
     // key (process.env coerces undefined to the string "undefined" in some
@@ -181,35 +180,6 @@ describe('startHttp', () => {
       expect.objectContaining({
         port: 8080,
         host: '0.0.0.0'
-      })
-    )
-
-    if (handlers.SIGINT) await handlers.SIGINT()
-    await startPromise
-  })
-
-  it('uses MCP_AUTH_DISABLE environment variable', async () => {
-    process.env.MCP_AUTH_DISABLE = '1'
-
-    vi.mocked(mcpCore.runHttpServer).mockResolvedValue({
-      host: 'localhost',
-      port: 3000,
-      close: vi.fn().mockResolvedValue(undefined)
-    } as any)
-
-    const handlers: Record<string, (...args: any[]) => any> = {}
-    vi.spyOn(process, 'once').mockImplementation((event, handler) => {
-      handlers[event as string] = handler as (...args: any[]) => any
-      return process
-    })
-
-    const startPromise = startHttp()
-    await new Promise((resolve) => setTimeout(resolve, 50))
-
-    expect(mcpCore.runHttpServer).toHaveBeenCalledWith(
-      expect.any(Function),
-      expect.objectContaining({
-        authDisabled: true
       })
     )
 
@@ -352,12 +322,6 @@ describe('startHttp', () => {
       capturedSub = subjectContext.getStore()?.sub
     })
     expect(capturedSub).toBe('user4')
-
-    // Test authScope - anonymous
-    await authScope!({ anonymous: true }, async () => {
-      capturedSub = subjectContext.getStore()?.sub
-    })
-    expect(capturedSub).toBe('default')
 
     // Test authScope - invalid sub type
     await authScope!({ sub: 123 }, async () => {

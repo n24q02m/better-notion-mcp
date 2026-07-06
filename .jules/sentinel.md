@@ -57,3 +57,8 @@
 **Vulnerability:** Direct path-to-key mapping in a KV outbound handler allowed potentially unauthorized access to the KV namespace from the container.
 **Learning:** Even internal interception layers should validate their inputs (like KV keys) against an allowed namespace or prefix, as the "path" part of the URL is often directly derived from untrusted application-level data.
 **Prevention:** Enforce strict key prefix validation and reject directory traversal sequences (e.g., `/../`) in any handler that maps URLs to a flat key-value store.
+
+## 2026-07-06 - [CRITICAL] Fix authentication bypass vulnerability
+**Vulnerability:** The HTTP transport in `src/transports/http.ts` allowed an authentication bypass via the `MCP_AUTH_DISABLE` environment variable, which skipped Bearer JWT verification and collapsed every JWT subject into a shared 'default' bucket. This would completely break per-user isolation.
+**Learning:** Having an optional auth disable configuration, even if intended for environments behind gateways, is highly risky in a multi-tenant or shared infrastructure application as it creates a backdoor for bypassing authentication and multi-user isolation if set accidentally.
+**Prevention:** Remove authentication bypass environment variables completely. Always enforce Bearer JWT verification internally.
