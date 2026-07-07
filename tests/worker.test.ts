@@ -82,11 +82,12 @@ describe('CF container readiness (TS-on-CF regressions)', () => {
     expect(CONTAINER_ENV_KEYS).toContain('MCP_RELAY_PASSWORD')
   })
 
-  // The default Container ping ('/') redirect-chains through delegated Notion
-  // OAuth to an external https URL, which the redirect-following readiness probe
-  // cannot connect to. Probe a static, non-redirecting 200 instead.
-  it('pings a non-redirecting well-known doc, not the default "/"', () => {
-    expect(CONTAINER_PING_ENDPOINT).toContain('.well-known/oauth-protected-resource')
+  // The default Container ping ('ping' -> URL http://ping/) does not resolve, so
+  // the health-check fetch throws and the container is marked unhealthy -> CF
+  // keeps it running 24/7 instead of sleeping on idle. 'localhost/' resolves to
+  // the container itself and the default route returns 200.
+  it('pings localhost/ (resolves to the container itself), not the unresolvable "ping"', () => {
+    expect(CONTAINER_PING_ENDPOINT).toBe('localhost/')
     expect(CONTAINER_PING_ENDPOINT).not.toBe('ping')
   })
 })

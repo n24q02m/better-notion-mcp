@@ -68,11 +68,12 @@ export const CONTAINER_ENV_KEYS = [
 ] as const
 
 // CF Containers readiness-probe target (NotionContainer.pingEndpoint). The
-// default 'ping' hits path '/', which the delegated-OAuth server 302-redirects
-// through /authorize to api.notion.com (https) — the redirect-following probe
-// then dies on the https hop. The well-known doc answers 200 with no redirect.
-// Exported so the regression test pins it away from the default.
-export const CONTAINER_PING_ENDPOINT = 'ping/.well-known/oauth-protected-resource'
+// default 'ping' (URL http://ping/) does not resolve, so the health-check fetch
+// throws and the container is marked unhealthy -> CF keeps it running 24/7
+// instead of sleeping on idle. 'localhost/' resolves to the container itself;
+// the default route returns 200. Exported so the regression test pins it away
+// from the default.
+export const CONTAINER_PING_ENDPOINT = 'localhost/'
 
 function pickContainerEnv(env: Env): Record<string, string> {
   const out: Record<string, string> = {}
@@ -172,10 +173,11 @@ async function extractUserId(): Promise<string> {
 export class NotionContainer extends Container<Env> {
   defaultPort = 8080
   sleepAfter = '5m'
-  // Readiness-probe path override (see CONTAINER_PING_ENDPOINT): the default
-  // 'ping' redirect-chains through delegated Notion OAuth to an external https
-  // URL and breaks the CF container health check.
-  pingEndpoint = CONTAINER_PING_ENDPOINT
+  // CF container readiness-probe override. Default 'ping' (URL http://ping/) does
+  // not resolve, so the health-check fetch throws and the container is marked
+  // unhealthy -> CF keeps it running 24/7 instead of sleeping on idle. 'localhost/'
+  // resolves to the container itself; the default route returns 200.
+  pingEndpoint = 'localhost/'
   // The container reaches api.notion.com over the public internet; kv.internal
   // stays intercepted (see outboundByHost).
   enableInternet = true
