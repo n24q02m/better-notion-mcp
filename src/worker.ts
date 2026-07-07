@@ -13,7 +13,6 @@
 // notion is KV-only: it has no docs DB and no vectors, so the d1.internal /
 // vectorize.internal handlers from the wet template are intentionally dropped.
 import { Container, ContainerProxy, type OutboundHandler } from '@cloudflare/containers'
-import { JWTIssuer } from '@n24q02m/mcp-core'
 
 // ContainerProxy must be re-exported from the Worker entrypoint: the containers
 // runtime discovers it via `ctx.exports.ContainerProxy` to route the container's

@@ -123,12 +123,6 @@ export async function startHttp(): Promise<void> {
     throw new Error('NOTION_OAUTH_CLIENT_ID and NOTION_OAUTH_CLIENT_SECRET are required for http mode.')
   }
 
-  // MCP_AUTH_DISABLE=1 skips Bearer JWT verification — for deployments behind
-  // an external auth boundary (reverse proxy, API gateway like agentgateway).
-  // Caller is responsible for upstream auth + providing Notion token via a
-  // separate channel (e.g. NOTION_TOKEN env var resolved by tokenStore default).
-  const authDisabled = process.env.MCP_AUTH_DISABLE === '1'
-
   // CF deploy requirement (P3-03): CREDENTIAL_SECRET MUST be set in the
   // container env (wrangler secret put). When set, mcp-core's JWTIssuer derives
   // a deterministic Ed25519 (EdDSA) signing key via HKDF-SHA256 with no disk I/O.
@@ -141,7 +135,6 @@ export async function startHttp(): Promise<void> {
     serverName: SERVER_NAME,
     port,
     host,
-    authDisabled,
     delegatedOAuth: {
       flow: 'redirect',
       sessionKv: sessionKvForDeploy(),
@@ -168,10 +161,8 @@ export async function startHttp(): Promise<void> {
         return sub
       }
     },
-    authScope: async (claims: { sub?: unknown; anonymous?: unknown }, next: () => Promise<void>) => {
-      // Anonymous caller (auth-disabled mode behind gateway): use 'default'
-      // bucket so a single deployment can serve one Notion token via env.
-      const sub = claims.anonymous === true ? 'default' : typeof claims.sub === 'string' ? claims.sub : 'default'
+    authScope: async (claims: { sub?: unknown }, next: () => Promise<void>) => {
+      const sub = typeof claims.sub === 'string' ? claims.sub : 'default'
       // Warm the per-sub cache from the durable store (KV) BEFORE the tool
       // dispatch reads it synchronously via the factory/resolver. After a
       // container delete+recreate the in-memory cache is empty; without this a

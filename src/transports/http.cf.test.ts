@@ -39,14 +39,6 @@ describe('per-sub token isolation (anonymous-bucket-collapse guard)', () => {
     expect(store.get('bob')).toBe('ntn_bob')
     expect(store.get('alice')).not.toBe(store.get('bob'))
   })
-
-  it('the wrangler deploy config never enables MCP_AUTH_DISABLE on shared infra', () => {
-    const raw = readFileSync('wrangler.jsonc', 'utf-8')
-    // The guard is a literal absence: MCP_AUTH_DISABLE must not appear as an
-    // enabled var. (If ever needed for a private self-host, it is the operator's
-    // opt-in, never on *.n24q02m.com.)
-    expect(/"MCP_AUTH_DISABLE"\s*:\s*"1"/.test(raw)).toBe(false)
-  })
 })
 
 describe('token store selection', () => {
