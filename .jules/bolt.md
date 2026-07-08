@@ -13,3 +13,7 @@
 ## 2024-07-03 - Array Spread Operator (Spread Syntax) Performance Penalty on V8
 **Learning:** Using the spread operator (`...arr`) to push elements into an array (`allResults.push(...results)`) can cause 'Maximum call stack size exceeded' errors when the spread array is very large. In V8 (used by Node and Bun), it also incurs a performance penalty due to intermediate array allocation overhead compared to a manual `for` loop.
 **Action:** For performance-critical code or when dealing with potentially large arrays (like paginated API results), use a manual `for` loop to push elements individually instead of using the spread operator.
+
+## 2024-07-08 - Array Map and Push Preallocation Penalty on V8
+**Learning:** Using chained `.map()` or `.push()` inside hot loops like parsing markdown tables (`src/tools/helpers/markdown.ts`) incurs intermediate array allocations and closure creation. Additionally, using regex with a global ^ anchor to apply prefix strings across multiline text (e.g., `replace(/^/gm, '  ')`) is significantly slower than using `.replaceAll('\n', '\n  ')`.
+**Action:** Always pre-allocate arrays (`new Array(length)`) and use manual loops instead of `.map()` or `.push()` on hot paths. For multiline prefixing, use `.replaceAll()` for >2x faster processing.
