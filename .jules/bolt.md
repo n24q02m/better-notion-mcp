@@ -13,3 +13,7 @@
 ## 2024-07-03 - Array Spread Operator (Spread Syntax) Performance Penalty on V8
 **Learning:** Using the spread operator (`...arr`) to push elements into an array (`allResults.push(...results)`) can cause 'Maximum call stack size exceeded' errors when the spread array is very large. In V8 (used by Node and Bun), it also incurs a performance penalty due to intermediate array allocation overhead compared to a manual `for` loop.
 **Action:** For performance-critical code or when dealing with potentially large arrays (like paginated API results), use a manual `for` loop to push elements individually instead of using the spread operator.
+
+## 2024-07-04 - Multiline String Prefixing Performance
+**Learning:** In V8/Bun environments, applying multiline prefix strings (e.g., indenting markdown blocks with spaces or `> `) is significantly faster using string concatenation and `.replaceAll('\n', '\nprefix')` rather than global regex replacement with a start-of-line anchor (`.replace(/^/gm, 'prefix')`). The regex engine overhead is higher than the optimized string replacement path for this specific use case.
+**Action:** When prepending text to all lines of a multiline string, prefer `prefix + str.replaceAll('\n', '\n' + prefix)` over `str.replace(/^/gm, prefix)` for better performance in hot paths.
