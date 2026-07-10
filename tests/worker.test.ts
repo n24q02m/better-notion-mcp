@@ -153,6 +153,13 @@ describe('edge auth gate (cost bug: anonymous /mcp must never reach the DO)', ()
     expect(calls).toEqual([])
   })
 
+  it('GET /mcp with no Authorization -> still 401 (bearer gate runs before the 405 gate), DO never touched', async () => {
+    const { calls, env } = envWithDoSpy()
+    const res = await worker.fetch(new Request('https://notion.n24q02m.com/mcp', { method: 'GET' }), env as never)
+    expect(res.status).toBe(401)
+    expect(calls).toEqual([])
+  })
+
   it('POST /mcp with Authorization: Bearer anything -> DO is called (validity not judged)', async () => {
     const { calls, env } = envWithDoSpy()
     const res = await worker.fetch(
@@ -173,6 +180,29 @@ describe('edge auth gate (cost bug: anonymous /mcp must never reach the DO)', ()
   })
 })
 
+describe('standing GET /mcp SSE decline (cost bug: an open stream pins the container awake 24/7)', () => {
+  it('GET /mcp with a valid Bearer -> 405, Allow: POST, DELETE, DO never touched', async () => {
+    const { calls, env } = envWithDoSpy()
+    const res = await worker.fetch(
+      new Request('https://notion.n24q02m.com/mcp', { method: 'GET', headers: { authorization: 'Bearer x' } }),
+      env as never
+    )
+    expect(res.status).toBe(405)
+    expect(res.headers.get('allow')).toBe('POST, DELETE')
+    expect(calls).toEqual([])
+  })
+
+  it('GET /mcp/sub with a valid Bearer -> 405 (sub-path also declines the stream)', async () => {
+    const { calls, env } = envWithDoSpy()
+    const res = await worker.fetch(
+      new Request('https://notion.n24q02m.com/mcp/sub', { method: 'GET', headers: { authorization: 'Bearer x' } }),
+      env as never
+    )
+    expect(res.status).toBe(405)
+    expect(calls).toEqual([])
+  })
+})
+
 describe('single-user DO contract + per-sub routing (E.2)', () => {
   it('no Bearer token on a non-/mcp path -> routes to the "default" DO', async () => {
     // /mcp itself is gated by the edge auth check below when there's no Bearer;
@@ -187,8 +217,11 @@ describe('single-user DO contract + per-sub routing (E.2)', () => {
   it('Bearer token without sub -> routes to the "default" DO', async () => {
     const { calls, env } = envWithDoSpy()
     const jwt = `h.${btoa(JSON.stringify({ aud: 'x' }))}.s`
+    // POST: GET /mcp is declined with 405 (standing SSE stream) before reaching
+    // the DO, so sub-extraction is exercised via the same method a real client
+    // uses to send a JSON-RPC message.
     await worker.fetch(
-      new Request('https://notion.n24q02m.com/mcp', { headers: { authorization: `Bearer ${jwt}` } }),
+      new Request('https://notion.n24q02m.com/mcp', { method: 'POST', headers: { authorization: `Bearer ${jwt}` } }),
       env as never
     )
     expect(calls).toEqual(['default'])
@@ -198,7 +231,7 @@ describe('single-user DO contract + per-sub routing (E.2)', () => {
     const { calls, env } = envWithDoSpy()
     const jwt = `h.${btoa(JSON.stringify({ sub: 'user-123' }))}.s`
     await worker.fetch(
-      new Request('https://notion.n24q02m.com/mcp', { headers: { authorization: `Bearer ${jwt}` } }),
+      new Request('https://notion.n24q02m.com/mcp', { method: 'POST', headers: { authorization: `Bearer ${jwt}` } }),
       env as never
     )
     expect(calls).toEqual(['default'])
@@ -210,7 +243,7 @@ describe('single-user DO contract + per-sub routing (E.2)', () => {
     // Actually, atob() in Node/Bun is quite permissive but we can provide something that definitely fails or results in garbage.
     // In many JS environments atob("!!!") throws.
     await worker.fetch(
-      new Request('https://notion.n24q02m.com/mcp', { headers: { authorization: 'Bearer h.!!!.s' } }),
+      new Request('https://notion.n24q02m.com/mcp', { method: 'POST', headers: { authorization: 'Bearer h.!!!.s' } }),
       env as never
     )
     expect(calls).toEqual(['default'])
@@ -220,7 +253,10 @@ describe('single-user DO contract + per-sub routing (E.2)', () => {
     const { calls, env } = envWithDoSpy()
     const malformedJsonB64 = btoa('{"sub": "missing-quote')
     await worker.fetch(
-      new Request('https://notion.n24q02m.com/mcp', { headers: { authorization: `Bearer h.${malformedJsonB64}.s` } }),
+      new Request('https://notion.n24q02m.com/mcp', {
+        method: 'POST',
+        headers: { authorization: `Bearer h.${malformedJsonB64}.s` }
+      }),
       env as never
     )
     expect(calls).toEqual(['default'])
