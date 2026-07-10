@@ -161,6 +161,17 @@ export default {
     if (url.pathname === '/mcp' || url.pathname.startsWith('/mcp/')) {
       if (!BEARER.test(request.headers.get('authorization') ?? '')) return unauthenticated(request)
     }
+    // Standing GET /mcp = the streamable-HTTP server-push SSE stream. On a
+    // scale-to-zero container this is pure idle cost: @cloudflare/containers
+    // counts an open stream as an in-flight request forever (inflight > 0 =>
+    // activity never expires), so a single idle client pins the container
+    // awake 24/7. None of this stack's servers send server-initiated
+    // messages; request-scoped notifications ride the POST's own SSE
+    // response. The spec allows declining the stream: both official SDKs
+    // treat 405 as the optional-feature path and continue POST-only.
+    if (request.method === 'GET' && (url.pathname === '/mcp' || url.pathname.startsWith('/mcp/'))) {
+      return new Response(null, { status: 405, headers: { Allow: 'POST, DELETE' } })
+    }
     if (env.NOTION) {
       const userId = await extractUserId()
       const stub = env.NOTION.get(env.NOTION.idFromName(userId))
