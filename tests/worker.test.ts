@@ -17,6 +17,24 @@ function fakeEnv() {
 // public `fetch` entrypoint, so tests exercise them through the exported registry).
 const kvH = OUTBOUND_BY_HOST['kv.internal']!
 
+// Spies on a NOTION binding's idFromName, shared by the edge-auth-gate and
+// single-user-DO-contract describe blocks below.
+function envWithDoSpy() {
+  const calls: string[] = []
+  return {
+    calls,
+    env: {
+      NOTION: {
+        idFromName: (n: string) => {
+          calls.push(n)
+          return { name: n }
+        },
+        get: (_id: unknown) => ({ fetch: async () => new Response('do-hit', { status: 200 }) })
+      }
+    }
+  }
+}
+
 describe('outbound registry (KV-only)', () => {
   it('registers a kv.internal outbound handler', () => {
     expect(NotionContainer.outboundByHost['kv.internal']).toBeDefined()
@@ -103,26 +121,51 @@ describe('public fetch entrypoint does NOT expose outbound handlers (security)',
   })
 })
 
-describe('single-user DO contract + per-sub routing (E.2)', () => {
-  function envWithDoSpy() {
-    const calls: string[] = []
-    return {
-      calls,
-      env: {
-        NOTION: {
-          idFromName: (n: string) => {
-            calls.push(n)
-            return { name: n }
-          },
-          get: (_id: unknown) => ({ fetch: async () => new Response('do-hit', { status: 200 }) })
-        }
-      }
-    }
-  }
-
-  it('no Bearer token -> routes to the "default" DO', async () => {
+describe('edge auth gate (cost bug: anonymous /mcp must never reach the DO)', () => {
+  it('POST /mcp with no Authorization -> 401, DO never touched', async () => {
     const { calls, env } = envWithDoSpy()
-    const res = await worker.fetch(new Request('https://notion.n24q02m.com/mcp'), env as never)
+    const res = await worker.fetch(new Request('https://notion.n24q02m.com/mcp', { method: 'POST' }), env as never)
+    expect(res.status).toBe(401)
+    expect(await res.text()).toBe('')
+    expect(res.headers.get('WWW-Authenticate')).toMatch(
+      /^Bearer resource_metadata="https:\/\/[^"]+\/\.well-known\/oauth-protected-resource"$/
+    )
+    expect(calls).toEqual([])
+  })
+
+  it('OPTIONS /mcp with no Authorization -> 401, DO never touched', async () => {
+    const { calls, env } = envWithDoSpy()
+    const res = await worker.fetch(new Request('https://notion.n24q02m.com/mcp', { method: 'OPTIONS' }), env as never)
+    expect(res.status).toBe(401)
+    expect(calls).toEqual([])
+  })
+
+  it('POST /mcp with Authorization: Bearer anything -> DO is called (validity not judged)', async () => {
+    const { calls, env } = envWithDoSpy()
+    const res = await worker.fetch(
+      new Request('https://notion.n24q02m.com/mcp', {
+        method: 'POST',
+        headers: { authorization: 'Bearer anything' }
+      }),
+      env as never
+    )
+    expect(res.status).toBe(200)
+    expect(calls).toEqual(['default'])
+  })
+
+  it('GET /authorize?foo=1 with no Authorization -> non-/mcp paths still reach the DO', async () => {
+    const { calls, env } = envWithDoSpy()
+    await worker.fetch(new Request('https://notion.n24q02m.com/authorize?foo=1'), env as never)
+    expect(calls).toEqual(['default'])
+  })
+})
+
+describe('single-user DO contract + per-sub routing (E.2)', () => {
+  it('no Bearer token on a non-/mcp path -> routes to the "default" DO', async () => {
+    // /mcp itself is gated by the edge auth check below when there's no Bearer;
+    // /authorize is not, so it still exercises extractUserId()'s "default" fallback.
+    const { calls, env } = envWithDoSpy()
+    const res = await worker.fetch(new Request('https://notion.n24q02m.com/authorize'), env as never)
     expect(res.status).toBe(200)
     expect(await res.text()).toBe('do-hit')
     expect(calls).toEqual(['default'])
