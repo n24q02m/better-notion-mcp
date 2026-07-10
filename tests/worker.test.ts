@@ -1,5 +1,21 @@
-import { readFileSync } from 'node:fs'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+// @cloudflare/containers imports `cloudflare:workers`, which only exists in the
+// Workers runtime, so it cannot load under Node/vitest. Mock it: Container as a
+// plain base class (real field initializers like `pingEndpoint = '...'` still run
+// against it, so NotionContainer can be constructed and its real fields read) +
+// a ContainerProxy stub for the entrypoint re-export. Same technique as the
+// sibling better-email-mcp's tests/worker.test.ts.
+vi.mock('@cloudflare/containers', () => ({
+  Container: class {
+    env: unknown
+    constructor(_ctx?: unknown, env?: unknown) {
+      this.env = env ?? {}
+    }
+  },
+  ContainerProxy: class {}
+}))
+
 import worker, { CONTAINER_ENV_KEYS, NotionContainer, OUTBOUND_BY_HOST } from '../src/worker'
 
 function fakeEnv() {
@@ -101,13 +117,9 @@ describe('CF container readiness (TS-on-CF regressions)', () => {
     expect(CONTAINER_ENV_KEYS).toContain('MCP_RELAY_PASSWORD')
   })
 
-  // NotionContainer's real constructor (from @cloudflare/containers) requires a
-  // live Durable Object ctx (ctx.container/.storage/.sql), so it cannot be
-  // `new`'d in a plain-node unit test -- assert against the source text instead,
-  // same technique as the sleepAfter check in transports/http.cf.test.ts.
-  it('pingEndpoint targets /health, the actual field the container class reads', () => {
-    const src = readFileSync('src/worker.ts', 'utf-8')
-    expect(src).toContain("pingEndpoint = 'localhost/health'")
+  it('pingEndpoint targets /health, not the default unresolvable "ping"', () => {
+    const c = new NotionContainer(undefined as never, {} as never)
+    expect(c.pingEndpoint).toBe('localhost/health')
   })
 })
 
