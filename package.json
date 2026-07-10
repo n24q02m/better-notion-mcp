@@ -61,7 +61,7 @@
     "@cloudflare/containers": "^0.3.7",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@n24q02m/mcp-core": "^1.18.2",
-    "@notionhq/client": "^5.22.0",
+    "@notionhq/client": "^5.23.0",
     "zod": "^4.4.3"
   },
   "trustedDependencies": [
