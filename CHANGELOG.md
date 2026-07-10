@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v2.37.0-beta.2 (2026-07-10)
+
+### Bug Fixes
+
+- Decline standing GET /mcp SSE stream at the edge
+  ([#1098](https://github.com/n24q02m/better-notion-mcp/pull/1098),
+  [`536f1ce`](https://github.com/n24q02m/better-notion-mcp/commit/536f1ceaf095b1efc28aaa3b82ca3f73dca9669b))
+
+- Fail the release when the computed version already exists on npm
+  ([#1097](https://github.com/n24q02m/better-notion-mcp/pull/1097),
+  [`31a997e`](https://github.com/n24q02m/better-notion-mcp/commit/31a997ebf4c931a9135f36f0c3ea1da5bdd629f7))
+
+
 ## v2.37.0-beta.1 (2026-07-10)
 
 ### Bug Fixes
