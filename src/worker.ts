@@ -67,14 +67,6 @@ export const CONTAINER_ENV_KEYS = [
   'NOTION_OAUTH_CLIENT_SECRET'
 ] as const
 
-// CF Containers readiness-probe target (NotionContainer.pingEndpoint). The
-// default 'ping' (URL http://ping/) does not resolve, so the health-check fetch
-// throws and the container is marked unhealthy -> CF keeps it running 24/7
-// instead of sleeping on idle. 'localhost/' resolves to the container itself;
-// the default route returns 200. Exported so the regression test pins it away
-// from the default.
-export const CONTAINER_PING_ENDPOINT = 'localhost/'
-
 function pickContainerEnv(env: Env): Record<string, string> {
   const out: Record<string, string> = {}
   for (const k of CONTAINER_ENV_KEYS) {

@@ -1,5 +1,6 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import worker, { CONTAINER_ENV_KEYS, CONTAINER_PING_ENDPOINT, NotionContainer, OUTBOUND_BY_HOST } from '../src/worker'
+import worker, { CONTAINER_ENV_KEYS, NotionContainer, OUTBOUND_BY_HOST } from '../src/worker'
 
 function fakeEnv() {
   const kv = new Map<string, ArrayBuffer>()
@@ -100,13 +101,13 @@ describe('CF container readiness (TS-on-CF regressions)', () => {
     expect(CONTAINER_ENV_KEYS).toContain('MCP_RELAY_PASSWORD')
   })
 
-  // The default Container ping ('ping' -> URL http://ping/) does not resolve, so
-  // the health-check fetch throws and the container is marked unhealthy -> CF
-  // keeps it running 24/7 instead of sleeping on idle. 'localhost/' resolves to
-  // the container itself and the default route returns 200.
-  it('pings localhost/ (resolves to the container itself), not the unresolvable "ping"', () => {
-    expect(CONTAINER_PING_ENDPOINT).toBe('localhost/')
-    expect(CONTAINER_PING_ENDPOINT).not.toBe('ping')
+  // NotionContainer's real constructor (from @cloudflare/containers) requires a
+  // live Durable Object ctx (ctx.container/.storage/.sql), so it cannot be
+  // `new`'d in a plain-node unit test -- assert against the source text instead,
+  // same technique as the sleepAfter check in transports/http.cf.test.ts.
+  it('pingEndpoint targets /health, the actual field the container class reads', () => {
+    const src = readFileSync('src/worker.ts', 'utf-8')
+    expect(src).toContain("pingEndpoint = 'localhost/health'")
   })
 })
 
