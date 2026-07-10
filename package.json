@@ -60,22 +60,22 @@
   "dependencies": {
     "@cloudflare/containers": "^0.3.7",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@n24q02m/mcp-core": "^1.18.1",
-    "@notionhq/client": "^5.22.0",
+    "@n24q02m/mcp-core": "^1.18.2",
+    "@notionhq/client": "^5.23.0",
     "zod": "^4.4.3"
   },
   "trustedDependencies": [
     "esbuild"
   ],
   "devDependencies": {
-    "@biomejs/biome": "^2.5.2",
-    "@cloudflare/workers-types": "^5.20260705.1",
-    "@types/node": "^26.1.0",
-    "@vitest/coverage-v8": "^4.1.9",
+    "@biomejs/biome": "^2.5.3",
+    "@cloudflare/workers-types": "^5.20260710.1",
+    "@types/node": "^26.1.1",
+    "@vitest/coverage-v8": "^4.1.10",
     "esbuild": "^0.28.1",
     "tsx": "^4.23.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.10"
   },
   "description": "Better MCP server for Notion API with composite tools optimized for AI agents",
   "main": "build/src/init-server.js",
