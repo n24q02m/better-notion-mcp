@@ -2,6 +2,36 @@
 
 <!-- version list -->
 
+## v2.37.0-beta.1 (2026-07-10)
+
+### Bug Fixes
+
+- Cf container health check ping endpoint override
+  ([`deafb24`](https://github.com/n24q02m/better-notion-mcp/commit/deafb24c77e050706935f59083d040f014965f41))
+
+- Point NotionContainer pingEndpoint at /health (core-ts liveness route) so CF health passes
+  ([#1094](https://github.com/n24q02m/better-notion-mcp/pull/1094),
+  [`e0630ea`](https://github.com/n24q02m/better-notion-mcp/commit/e0630ea503a91092ba6c32a6e7d6a0d831e2ce96))
+
+- Reject unauthenticated /mcp at the Worker edge
+  ([#1096](https://github.com/n24q02m/better-notion-mcp/pull/1096),
+  [`dea52ac`](https://github.com/n24q02m/better-notion-mcp/commit/dea52acf94f721f2dd0431407047a5740dbb12d8))
+
+### Features
+
+- Add opencode github agent (responds to /oc)
+  ([`91da662`](https://github.com/n24q02m/better-notion-mcp/commit/91da662041b141245fe2f417187c7cbecf030a49))
+
+- Add review-learnings store the automated reviewer must obey
+  ([`fe9dc90`](https://github.com/n24q02m/better-notion-mcp/commit/fe9dc90222a53048119b2511304ccced391afe1c))
+
+- Auto-respond only to issues and PRs opened by outside people
+  ([`6e714e6`](https://github.com/n24q02m/better-notion-mcp/commit/6e714e6b8aef184ca2d0079c73753119417ec2c1))
+
+- Reviewer must obey .github/review-learnings.md
+  ([`5fdefaf`](https://github.com/n24q02m/better-notion-mcp/commit/5fdefafa32a0f998a5e53dd57ce3311b14b812ca))
+
+
 ## v2.36.1 (2026-07-05)
 
 
