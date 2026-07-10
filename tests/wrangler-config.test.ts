@@ -43,4 +43,8 @@ describe('wrangler.jsonc', () => {
     expect(cfg.routes[0].pattern).toBe('<YOUR_WORKER_DOMAIN>')
     expect(cfg.routes[0].custom_domain).toBe(true)
   })
+
+  it('never enables MCP_AUTH_DISABLE in vars (anonymous-bucket-collapse guard)', () => {
+    expect(cfg.vars.MCP_AUTH_DISABLE).toBeUndefined()
+  })
 })

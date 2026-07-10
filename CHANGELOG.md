@@ -739,7 +739,7 @@
 
 ### Features
 
-- Cut new beta for authentication enhancements
+- Cut new beta to expose MCP_AUTH_DISABLE wired in #725 squash
   ([`6c1a1e3`](https://github.com/n24q02m/better-notion-mcp/commit/6c1a1e3ce93a9187c201a8be5a8799ed84bb420c))
 
 

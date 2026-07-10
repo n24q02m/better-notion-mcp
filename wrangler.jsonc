@@ -35,6 +35,10 @@
   // CREDENTIAL_SECRET (-> JWTIssuer EdDSA HKDF, no-disk, survives recreate),
   // MCP_RELAY_PASSWORD (Gate A shared relay-password front door),
   // NOTION_OAUTH_CLIENT_ID, NOTION_OAUTH_CLIENT_SECRET.
+  //
+  // MCP_AUTH_DISABLE is intentionally ABSENT: enabling it would collapse every
+  // JWT sub into the 'default' token bucket (http.ts) -> silent per-sub
+  // isolation loss. Never set auth-bypass on shared infra.
   "vars": {
     "MCP_TRANSPORT": "http",
     "PORT": "8080",
