@@ -261,8 +261,9 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
  * Convert Notion blocks to markdown
  */
 function indentChildren(children: NotionBlock[]): string {
-  // Optimized: use highly optimized C++ RegExp engine instead of creating thousands of intermediate JS array/string objects
-  return blocksToMarkdown(children).replace(/^/gm, '  ')
+  // Optimized: In V8/Bun environments, applying multiline prefix strings using string concatenation
+  // and .replaceAll is significantly faster than global regex replacement with a start-of-line anchor
+  return `  ${blocksToMarkdown(children).replaceAll('\n', '\n  ')}`
 }
 
 function calloutToMarkdown(block: NotionBlock, lines: string[]): void {
@@ -272,7 +273,7 @@ function calloutToMarkdown(block: NotionBlock, lines: string[]): void {
   lines.push(`> [!${calloutType}] ${calloutText}`)
   if (block.callout.children?.length > 0) {
     const childMd = blocksToMarkdown(block.callout.children)
-    lines.push(childMd.replace(/^/gm, '> '))
+    lines.push(`> ${childMd.replaceAll('\n', '\n> ')}`)
   }
 }
 
@@ -392,7 +393,7 @@ const BLOCK_HANDLERS: Record<string, BlockHandler> = {
     lines.push(`> ${richTextToMarkdown(block.quote.rich_text)}`)
     if (block.quote.children?.length > 0) {
       const childMd = blocksToMarkdown(block.quote.children)
-      lines.push(childMd.replace(/^/gm, '> '))
+      lines.push(`> ${childMd.replaceAll('\n', '\n> ')}`)
     }
   },
   divider: (_, lines) => {
