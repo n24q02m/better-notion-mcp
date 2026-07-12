@@ -727,7 +727,7 @@ describe('registerTools', () => {
       expect(result.isError).toBeUndefined()
     })
 
-    it('should include structuredContent (raw result, pre-XPIA-wrap) for domain tools', async () => {
+    it('should envelope structuredContent with an untrusted-source marker for external-content tools', async () => {
       const handler = server.getHandler(3)
       const mockResult = { action: 'get', page_id: 'page-123', title: 'Test' }
       vi.mocked(pages).mockResolvedValue(mockResult as any)
@@ -736,13 +736,16 @@ describe('registerTools', () => {
         params: { name: 'pages', arguments: { action: 'get', page_id: 'page-123' } }
       })
 
-      // structuredContent must be the raw object -- not the JSON-stringified,
-      // XPIA-wrapped text -- so it validates against the declared outputSchema.
-      expect(result.structuredContent).toEqual(mockResult)
+      // structuredContent carries an envelope-level marker (not field-level XML
+      // wrapping, which would break machine-parseability) plus the payload intact.
+      expect(result.structuredContent._untrusted_source).toBe('notion')
+      expect(result.structuredContent._untrusted_warning).toBeTruthy()
+      expect(result.structuredContent).toMatchObject(mockResult)
+      // Text block keeps its existing XPIA marker unchanged (dual-emit regression pin)
       expect(result.content[0].text).toContain('<untrusted_notion_content>')
     })
 
-    it('should include structuredContent for non-external-content tools (config)', async () => {
+    it('should NOT envelope structuredContent for non-external-content tools (config)', async () => {
       const handler = server.getHandler(3)
       const mockResult = { action: 'status', state: 'configured', has_token: true }
       vi.mocked(config).mockResolvedValue(mockResult)
@@ -752,6 +755,8 @@ describe('registerTools', () => {
       })
 
       expect(result.structuredContent).toEqual(mockResult)
+      expect(result.structuredContent._untrusted_source).toBeUndefined()
+      expect(result.structuredContent._untrusted_warning).toBeUndefined()
     })
 
     it('should NOT include structuredContent for the help tool', async () => {
