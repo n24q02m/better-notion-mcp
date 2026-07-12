@@ -131,7 +131,8 @@ const TOOLS = [
         archived: { type: 'boolean', description: 'Archive status' }
       },
       required: ['action']
-    }
+    },
+    outputSchema: { type: 'object', additionalProperties: true }
   },
   {
     name: 'databases',
@@ -194,7 +195,8 @@ const TOOLS = [
         pages: { type: 'array', items: { type: 'object' }, description: 'Array of pages for bulk create/update' }
       },
       required: ['action']
-    }
+    },
+    outputSchema: { type: 'object', additionalProperties: true }
   },
   {
     name: 'blocks',
@@ -226,7 +228,8 @@ const TOOLS = [
         after_block_id: { type: 'string', description: 'Block ID to insert after (when position is after_block)' }
       },
       required: ['action', 'block_id']
-    }
+    },
+    outputSchema: { type: 'object', additionalProperties: true }
   },
   {
     name: 'users',
@@ -250,7 +253,8 @@ const TOOLS = [
         user_id: { type: 'string', description: 'User ID (for get action)' }
       },
       required: ['action']
-    }
+    },
+    outputSchema: { type: 'object', additionalProperties: true }
   },
   {
     name: 'workspace',
@@ -292,7 +296,8 @@ const TOOLS = [
         limit: { type: 'number', description: 'Max results' }
       },
       required: ['action']
-    }
+    },
+    outputSchema: { type: 'object', additionalProperties: true }
   },
   {
     name: 'comments',
@@ -315,7 +320,8 @@ const TOOLS = [
         content: { type: 'string', description: 'Comment content (for create)' }
       },
       required: ['action']
-    }
+    },
+    outputSchema: { type: 'object', additionalProperties: true }
   },
   {
     name: 'content_convert',
@@ -339,7 +345,8 @@ const TOOLS = [
         content: { type: 'string', description: 'Content to convert (string or array/JSON string)' }
       },
       required: ['direction', 'content']
-    }
+    },
+    outputSchema: { type: 'object', additionalProperties: true }
   },
   {
     name: 'file_uploads',
@@ -374,7 +381,8 @@ const TOOLS = [
         limit: { type: 'number', description: 'Max results for list' }
       },
       required: ['action']
-    }
+    },
+    outputSchema: { type: 'object', additionalProperties: true }
   },
   {
     name: 'help',
@@ -431,7 +439,8 @@ const TOOLS = [
         }
       },
       required: ['action']
-    }
+    },
+    outputSchema: { type: 'object', additionalProperties: true }
   },
   {
     name: 'config__open_relay',
@@ -449,7 +458,8 @@ const TOOLS = [
       properties: {},
       additionalProperties: false,
       required: []
-    }
+    },
+    outputSchema: { type: 'object', additionalProperties: true }
   }
 ]
 
@@ -614,14 +624,16 @@ export function registerTools(server: Server, notionClientFactory: () => Client)
       }
 
       const jsonText = JSON.stringify(result, null, 2)
-      return {
-        content: [
-          {
-            type: 'text',
-            text: wrapToolResult(name, jsonText)
-          }
-        ]
-      }
+      const content = [
+        {
+          type: 'text' as const,
+          text: wrapToolResult(name, jsonText)
+        }
+      ]
+      // help returns markdown/text by design (not structured data) -- dual-emit
+      // structuredContent for every other tool, using the raw pre-stringify,
+      // pre-XPIA-wrap result object so it matches the declared outputSchema.
+      return name === 'help' ? { content } : { content, structuredContent: result }
     } catch (error) {
       const enhancedError =
         error instanceof NotionMCPError

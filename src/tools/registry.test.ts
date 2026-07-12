@@ -208,6 +208,20 @@ describe('registerTools', () => {
       expect(toolMap.get('blocks').inputSchema.required).toContain('action')
       expect(toolMap.get('help').inputSchema.required).toContain('tool_name')
     })
+
+    it('should declare outputSchema for every tool except help', async () => {
+      const handler = server.getHandler(0)
+      const result = await handler()
+      const toolMap = new Map<string, any>(result.tools.map((t: any) => [t.name, t]))
+
+      for (const name of EXPECTED_TOOL_NAMES) {
+        if (name === 'help') {
+          expect(toolMap.get(name).outputSchema).toBeUndefined()
+          continue
+        }
+        expect(toolMap.get(name).outputSchema).toEqual({ type: 'object', additionalProperties: true })
+      }
+    })
   })
 
   describe('ListResources handler', () => {
@@ -711,6 +725,56 @@ describe('registerTools', () => {
       expect(result.content[0].text).toContain(JSON.stringify({ ok: true }, null, 2))
       expect(result.content[0].text).toContain('<untrusted_notion_content>')
       expect(result.isError).toBeUndefined()
+    })
+
+    it('should include structuredContent (raw result, pre-XPIA-wrap) for domain tools', async () => {
+      const handler = server.getHandler(3)
+      const mockResult = { action: 'get', page_id: 'page-123', title: 'Test' }
+      vi.mocked(pages).mockResolvedValue(mockResult as any)
+
+      const result = await handler({
+        params: { name: 'pages', arguments: { action: 'get', page_id: 'page-123' } }
+      })
+
+      // structuredContent must be the raw object -- not the JSON-stringified,
+      // XPIA-wrapped text -- so it validates against the declared outputSchema.
+      expect(result.structuredContent).toEqual(mockResult)
+      expect(result.content[0].text).toContain('<untrusted_notion_content>')
+    })
+
+    it('should include structuredContent for non-external-content tools (config)', async () => {
+      const handler = server.getHandler(3)
+      const mockResult = { action: 'status', state: 'configured', has_token: true }
+      vi.mocked(config).mockResolvedValue(mockResult)
+
+      const result = await handler({
+        params: { name: 'config', arguments: { action: 'status' } }
+      })
+
+      expect(result.structuredContent).toEqual(mockResult)
+    })
+
+    it('should NOT include structuredContent for the help tool', async () => {
+      const handler = server.getHandler(3)
+      vi.mocked(readFile).mockResolvedValue('# Pages Documentation\n\nFull docs here.')
+
+      const result = await handler({
+        params: { name: 'help', arguments: { tool_name: 'pages' } }
+      })
+
+      expect(result.structuredContent).toBeUndefined()
+    })
+
+    it('should NOT include structuredContent on isError responses', async () => {
+      const handler = server.getHandler(3)
+      vi.mocked(pages).mockRejectedValue(new NotionMCPError('Page not found', 'NOT_FOUND', 'Check the ID'))
+
+      const result = await handler({
+        params: { name: 'pages', arguments: { action: 'get', page_id: 'bad-id' } }
+      })
+
+      expect(result.isError).toBe(true)
+      expect(result.structuredContent).toBeUndefined()
     })
   })
 
