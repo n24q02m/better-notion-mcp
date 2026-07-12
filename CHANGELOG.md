@@ -2,6 +2,56 @@
 
 <!-- version list -->
 
+## v2.37.0-beta.3 (2026-07-12)
+
+### Bug Fixes
+
+- Bump @n24q02m/mcp-core to 1.18.2 ([#1100](https://github.com/n24q02m/better-notion-mcp/pull/1100),
+  [`6b9f427`](https://github.com/n24q02m/better-notion-mcp/commit/6b9f427a0a00cb670d7e7f3c216f7fca6be115fc))
+
+- Enforce fix(deps) semantic commit prefix in renovate config
+  ([`7e81b3b`](https://github.com/n24q02m/better-notion-mcp/commit/7e81b3b834f74e601833a7dac95f1e0a02cb3218))
+
+- Make renovate automerge effective (isolated groups, digest+lockfile automerge, 7-day cooldown)
+  ([`531ccd5`](https://github.com/n24q02m/better-notion-mcp/commit/531ccd5602b096ac580c26e430f01b1e0df4f26c))
+
+- Make untrusted marker override payload keys
+  ([#1108](https://github.com/n24q02m/better-notion-mcp/pull/1108),
+  [`071d49e`](https://github.com/n24q02m/better-notion-mcp/commit/071d49ed478baae145006e7be641c63dc15d9add))
+
+- Mark untrusted source in structured content envelope
+  ([#1108](https://github.com/n24q02m/better-notion-mcp/pull/1108),
+  [`071d49e`](https://github.com/n24q02m/better-notion-mcp/commit/071d49ed478baae145006e7be641c63dc15d9add))
+
+- Optimize markdown parser array allocations and regex compilation
+  ([`cd5e3a0`](https://github.com/n24q02m/better-notion-mcp/commit/cd5e3a005d2bd7c097f21a1ed1d84c5aa66fa534))
+
+- **deps**: Lock file maintenance ([#1107](https://github.com/n24q02m/better-notion-mcp/pull/1107),
+  [`f9d0fe2`](https://github.com/n24q02m/better-notion-mcp/commit/f9d0fe265f9667227389c76f70a5417db74394b6))
+
+- **deps**: Lock file maintenance ([#1106](https://github.com/n24q02m/better-notion-mcp/pull/1106),
+  [`f385ecd`](https://github.com/n24q02m/better-notion-mcp/commit/f385ecdd1727b55169139fc4cbe4ba55f4b56789))
+
+- **deps**: Update dependency @notionhq/client to ^5.23.0
+  ([#1102](https://github.com/n24q02m/better-notion-mcp/pull/1102),
+  [`bb0ab98`](https://github.com/n24q02m/better-notion-mcp/commit/bb0ab981fbe1acf12b9e57fd9f7cd4c451c24346))
+
+### Chores
+
+- **deps**: Lock file maintenance ([#1087](https://github.com/n24q02m/better-notion-mcp/pull/1087),
+  [`3e6f745`](https://github.com/n24q02m/better-notion-mcp/commit/3e6f74555edacb5032fe5812d64f7b40393f243c))
+
+- **deps**: Update actions/checkout action to v7
+  ([#1103](https://github.com/n24q02m/better-notion-mcp/pull/1103),
+  [`80ede00`](https://github.com/n24q02m/better-notion-mcp/commit/80ede0031fc18c06f095b7b7b8ff55595260b5c0))
+
+### Features
+
+- Declare output schemas and emit structured content
+  ([#1108](https://github.com/n24q02m/better-notion-mcp/pull/1108),
+  [`071d49e`](https://github.com/n24q02m/better-notion-mcp/commit/071d49ed478baae145006e7be641c63dc15d9add))
+
+
 ## v2.37.0-beta.2 (2026-07-10)
 
 ### Bug Fixes
