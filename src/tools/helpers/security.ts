@@ -11,7 +11,7 @@
  * filenames, and free-text metadata that can come from an untrusted upstream
  * Notion workspace. Treat that payload the same as `pages`/`blocks` content.
  */
-const EXTERNAL_CONTENT_TOOLS = new Set([
+export const EXTERNAL_CONTENT_TOOLS = new Set([
   'pages',
   'blocks',
   'comments',
