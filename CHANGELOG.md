@@ -2,6 +2,43 @@
 
 <!-- version list -->
 
+## v2.37.0 (2026-07-14)
+
+### Bug Fixes
+
+- Correct mention gate expression (balanced parens + precedence)
+  ([#1113](https://github.com/n24q02m/better-notion-mcp/pull/1113),
+  [`0f79c3e`](https://github.com/n24q02m/better-notion-mcp/commit/0f79c3e7e8c85d26a1a696e73d5437a726a9795c))
+
+- Gate oc mention job on comment author write access
+  ([#1113](https://github.com/n24q02m/better-notion-mcp/pull/1113),
+  [`0f79c3e`](https://github.com/n24q02m/better-notion-mcp/commit/0f79c3e7e8c85d26a1a696e73d5437a726a9795c))
+
+- Run opencode bot on hosted runners
+  ([#1112](https://github.com/n24q02m/better-notion-mcp/pull/1112),
+  [`10643a7`](https://github.com/n24q02m/better-notion-mcp/commit/10643a7bd1dca07427f13d47a53296240b1e5f32))
+
+- **deps**: Lock file maintenance ([#1116](https://github.com/n24q02m/better-notion-mcp/pull/1116),
+  [`c793e1d`](https://github.com/n24q02m/better-notion-mcp/commit/c793e1da2c9c7402b7de15b07ab5b812e571ac4b))
+
+- **deps**: Lock file maintenance ([#1109](https://github.com/n24q02m/better-notion-mcp/pull/1109),
+  [`04895d9`](https://github.com/n24q02m/better-notion-mcp/commit/04895d981ddef6fcfe04e13411ba2355b25ca2b0))
+
+- **deps**: Update @cloudflare/workers-types to ^5.20260707.1
+  ([#1115](https://github.com/n24q02m/better-notion-mcp/pull/1115),
+  [`1823129`](https://github.com/n24q02m/better-notion-mcp/commit/1823129d1b369c08819381ea8f7ad7f4e8c28539))
+
+- **deps**: Update patch dependencies to ^4.1.10
+  ([#1114](https://github.com/n24q02m/better-notion-mcp/pull/1114),
+  [`7ed21b6`](https://github.com/n24q02m/better-notion-mcp/commit/7ed21b66842181fa5429210c4522bdb41d79fda1))
+
+### Features
+
+- Add smithery.yaml for stdio deployment
+  ([#1117](https://github.com/n24q02m/better-notion-mcp/pull/1117),
+  [`5b616f2`](https://github.com/n24q02m/better-notion-mcp/commit/5b616f2a7e5e37bc7730fabc8e6656ac22cf27f6))
+
+
 ## v2.37.0-beta.3 (2026-07-12)
 
 ### Bug Fixes
