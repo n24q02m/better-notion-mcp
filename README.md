@@ -47,6 +47,9 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 
 - [Features](#features)
 - [Install](#install)
+- [CLI](#cli)
+- [Hosted endpoint](#hosted-endpoint)
+- [Smithery](#smithery)
 - [Status](#status)
 - [Documentation](#documentation)
 - [Tools](#tools)
@@ -96,6 +99,47 @@ docker run --rm -i -e NOTION_TOKEN=ntn_your_token_here n24q02m/better-notion-mcp
 ```
 
 See the [Documentation](#documentation) section for per-client setup (Claude Code, Codex, Gemini CLI, Cursor, Windsurf) and HTTP/OAuth mode.
+
+## CLI
+
+Installing the package exposes a `better-notion-mcp` binary (run it with `npx` or after a global install). It has **no subcommands** -- running it starts the MCP server and speaks the protocol over stdin/stdout, so it is normally launched by an MCP client rather than by hand.
+
+```bash
+# Start the stdio server (default transport; requires NOTION_TOKEN)
+NOTION_TOKEN=ntn_your_token_here npx --yes @n24q02m/better-notion-mcp@latest
+
+# Start the remote HTTP server (OAuth 2.1) instead of stdio
+npx --yes @n24q02m/better-notion-mcp@latest --http
+```
+
+| Argument / env | Effect |
+|:---------------|:-------|
+| _(none)_ | stdio transport (default); requires `NOTION_TOKEN` |
+| `--http` | HTTP transport with OAuth 2.1 (equivalent to `TRANSPORT_MODE=http` / `MCP_TRANSPORT=http`) |
+
+See [Configuration](#configuration) for the full environment-variable reference.
+
+## Hosted endpoint
+
+A ready-to-use remote instance is hosted at **`https://notion.n24q02m.com/mcp`** (HTTP transport, OAuth 2.1 -- no integration token to paste). Point an MCP client that supports remote HTTP servers at it:
+
+```jsonc
+// MCP client config -- remote HTTP (OAuth 2.1)
+{
+  "mcpServers": {
+    "better-notion-mcp": {
+      "type": "http",
+      "url": "https://notion.n24q02m.com/mcp"
+    }
+  }
+}
+```
+
+On first connect the client opens Notion's OAuth consent screen; per-user access tokens are held in-process only (see [Trust Model](#trust-model)). To run your own remote instance instead, see [Self-Hosting (Remote Mode)](#self-hosting-remote-mode) and [Deploy to Cloudflare](#deploy-to-cloudflare).
+
+## Smithery
+
+The repo ships a [`smithery.yaml`](smithery.yaml) config for [Smithery](https://smithery.ai). Smithery launches the server over stdio (`npx -y @n24q02m/better-notion-mcp`) and requires no install-time config -- provide your Notion credentials at runtime through the server's own setup flow (`NOTION_TOKEN` env, or the relay form; see [Configuration](#configuration)).
 
 ## Status
 
