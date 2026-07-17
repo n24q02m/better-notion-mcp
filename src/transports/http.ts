@@ -26,6 +26,19 @@ import { NotionMCPError } from '../tools/helpers/errors.js'
 const SERVER_NAME = 'better-notion-mcp'
 
 /**
+ * Parse a `--flag=value` argv entry. Used for the BYO OAuth client CLI flags
+ * below -- notion's `--http` serve path has no interactive subcommand to
+ * attach flags to (unlike wet/mnemo's `auth --client-id`), so the flags ride
+ * on the same leading-dash argv that `--http` itself uses (buildCli passes
+ * it through to `serve` untouched). Returns null if the flag is absent.
+ */
+function argFlag(name: string): string | null {
+  const prefix = `--${name}=`
+  const found = process.argv.find((a) => a.startsWith(prefix))
+  return found ? found.slice(prefix.length) : null
+}
+
+/**
  * Durable KV for the delegated-OAuth handshake state (pending sessions +
  * issued auth codes), so it survives a container cold-start/restart between
  * /authorize and /callback. Keyed under the SAME `better-notion/` namespace
@@ -117,10 +130,15 @@ export async function startHttp(): Promise<void> {
   const port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 0
   const host = process.env.HOST
 
-  const clientId = process.env.NOTION_OAUTH_CLIENT_ID
-  const clientSecret = process.env.NOTION_OAUTH_CLIENT_SECRET
+  // BYO OAuth client: CLI flag overrides env var (parity with wet/mnemo's
+  // `auth --client-id`/`--client-secret`; see argFlag doc comment above).
+  const clientId = argFlag('oauth-client-id') || process.env.NOTION_OAUTH_CLIENT_ID
+  const clientSecret = argFlag('oauth-client-secret') || process.env.NOTION_OAUTH_CLIENT_SECRET
   if (!clientId || !clientSecret) {
-    throw new Error('NOTION_OAUTH_CLIENT_ID and NOTION_OAUTH_CLIENT_SECRET are required for http mode.')
+    throw new Error(
+      'NOTION_OAUTH_CLIENT_ID and NOTION_OAUTH_CLIENT_SECRET are required for http mode ' +
+        '(or pass --oauth-client-id=<id> --oauth-client-secret=<secret>).'
+    )
   }
 
   // MCP_AUTH_DISABLE=1 skips Bearer JWT verification — for deployments behind

@@ -187,7 +187,7 @@ Eight composite Notion tools (39 actions) plus three infrastructure tools (`conf
 | `comments` | `list`, `get`, `create` | Page comments and discussion replies |
 | `content_convert` | `markdown-to-blocks`, `blocks-to-markdown` | Convert between Markdown and Notion blocks (uses a `direction` parameter) |
 | `file_uploads` | `create`, `send`, `complete`, `retrieve`, `list` | Upload files to Notion (single or multi-part) |
-| `config` | `status`, `setup_start`, `setup_reset`, `setup_complete`, `set`, `cache_clear` | Inspect and manage credential state and configuration lifecycle |
+| `config` | `status`, `setup_status`, `setup_start`, `setup_reset`, `setup_complete`, `set`, `cache_clear` | Inspect and manage credential state and configuration lifecycle |
 | `config__open_relay` | - | Open the relay configuration form in the browser and return the relay URL + credential state |
 | `help` | - | Get full documentation for any composite tool (`tool_name` parameter) |
 
@@ -211,8 +211,8 @@ Eight composite Notion tools (39 actions) plus three infrastructure tools (`conf
 | `NOTION_TOKEN` | Yes (stdio) | - | Notion integration token |
 | `TRANSPORT_MODE` / `MCP_TRANSPORT` | No | `stdio` | Set either to `http` for remote mode (or pass `--http`) |
 | `PUBLIC_URL` | No (http) | - | Server's public URL for OAuth redirect links |
-| `NOTION_OAUTH_CLIENT_ID` | Yes (http) | - | Notion Public Integration client ID |
-| `NOTION_OAUTH_CLIENT_SECRET` | Yes (http) | - | Notion Public Integration client secret |
+| `NOTION_OAUTH_CLIENT_ID` | Yes (http) | - | Notion Public Integration client ID (or `--oauth-client-id=<id>` CLI flag, which overrides the env var) |
+| `NOTION_OAUTH_CLIENT_SECRET` | Yes (http) | - | Notion Public Integration client secret (or `--oauth-client-secret=<secret>` CLI flag, which overrides the env var) |
 | `MCP_AUTH_DISABLE` | No (http) | - | Set to `1` to skip Bearer JWT verification when behind an external auth gateway |
 | `PORT` | No | `0` (OS-assigned) | Server port; set explicitly (e.g. `8080`) to bind a fixed port |
 | `HOST` | No | - | Bind address (http mode) |

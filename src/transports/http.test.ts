@@ -109,6 +109,67 @@ describe('startHttp', () => {
     await expect(startHttp()).rejects.toThrow('NOTION_OAUTH_CLIENT_ID and NOTION_OAUTH_CLIENT_SECRET are required')
   })
 
+  describe('BYO OAuth client CLI flags', () => {
+    const originalArgv = process.argv
+
+    afterEach(() => {
+      process.argv = originalArgv
+    })
+
+    it('accepts --oauth-client-id/--oauth-client-secret when env vars are absent', async () => {
+      delete process.env.NOTION_OAUTH_CLIENT_ID
+      delete process.env.NOTION_OAUTH_CLIENT_SECRET
+      process.argv = [...originalArgv, '--http', '--oauth-client-id=flag-id', '--oauth-client-secret=flag-secret']
+
+      vi.mocked(mcpCore.runHttpServer).mockResolvedValue({
+        host: 'localhost',
+        port: 3000,
+        close: vi.fn().mockResolvedValue(undefined)
+      } as any)
+      const handlers: Record<string, (...args: any[]) => any> = {}
+      vi.spyOn(process, 'once').mockImplementation((event, handler) => {
+        handlers[event as string] = handler as (...args: any[]) => any
+        return process
+      })
+
+      const startPromise = startHttp()
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      const options = vi.mocked(mcpCore.runHttpServer).mock.calls[0][1] as any
+      expect(options.delegatedOAuth?.upstream?.clientId).toBe('flag-id')
+      expect(options.delegatedOAuth?.upstream?.clientSecret).toBe('flag-secret')
+
+      if (handlers.SIGINT) await handlers.SIGINT()
+      await startPromise
+    })
+
+    it('flag overrides env var when both are present', async () => {
+      // env vars from beforeEach ('id' / 'secret') are already set.
+      process.argv = [...originalArgv, '--http', '--oauth-client-id=flag-id', '--oauth-client-secret=flag-secret']
+
+      vi.mocked(mcpCore.runHttpServer).mockResolvedValue({
+        host: 'localhost',
+        port: 3000,
+        close: vi.fn().mockResolvedValue(undefined)
+      } as any)
+      const handlers: Record<string, (...args: any[]) => any> = {}
+      vi.spyOn(process, 'once').mockImplementation((event, handler) => {
+        handlers[event as string] = handler as (...args: any[]) => any
+        return process
+      })
+
+      const startPromise = startHttp()
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      const options = vi.mocked(mcpCore.runHttpServer).mock.calls[0][1] as any
+      expect(options.delegatedOAuth?.upstream?.clientId).toBe('flag-id')
+      expect(options.delegatedOAuth?.upstream?.clientSecret).toBe('flag-secret')
+
+      if (handlers.SIGINT) await handlers.SIGINT()
+      await startPromise
+    })
+  })
+
   it('starts the server and handles shutdown via SIGINT', async () => {
     const closeMock = vi.fn().mockResolvedValue(undefined)
     vi.mocked(mcpCore.runHttpServer).mockResolvedValue({
