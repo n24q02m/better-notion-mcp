@@ -13,6 +13,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { buildCli } from '@n24q02m/mcp-core'
 import { Client } from '@notionhq/client'
 import { getNotionToken, resolveCredentialState } from './credential-state.js'
 import { registerTools } from './tools/registry.js'
@@ -139,7 +140,36 @@ export async function bootstrap(selectedMode: string = mode) {
 }
 // Rebuild target: mcp-core 1.11.5 (P0 fork-bomb fix)
 
-// Only execute bootstrap if we're the main module and not in a test environment.
+/**
+ * `serve` entry point for `buildCli` (config/relay/doctor/--version/-h
+ * built-ins; bare/flag argv routes here).
+ *
+ * `bootstrap()` already resolves as soon as the transport is ready -- for
+ * http mode that means `startHttp()` has already blocked until its own
+ * SIGINT/SIGTERM shutdown completes (see transports/http.ts), but for stdio
+ * mode `server.connect(transport)` resolves the instant the stdin listener
+ * attaches, not when the session ends. If this function returned right
+ * there, buildCli's `.then((code) => process.exit(code))` would kill the
+ * process immediately after startup. So stdio keeps this promise pending
+ * until SIGINT/SIGTERM, mirroring the shutdown-wait pattern http already
+ * uses.
+ */
+async function serve(): Promise<void> {
+  await bootstrap()
+  if (mode === 'http') return
+  await new Promise<void>((resolve) => {
+    const shutdown = () => {
+      console.error(`[${SERVER_NAME}] shutting down`)
+      resolve()
+    }
+    process.once('SIGINT', shutdown)
+    process.once('SIGTERM', shutdown)
+  })
+}
+
+// Only execute the CLI if we're the main module and not in a test environment.
 if (isMain(import.meta.url) && process.env.NODE_ENV !== 'test') {
-  bootstrap()
+  buildCli(SERVER_NAME, { serve, version: getPackageVersion() })(process.argv.slice(2)).then((code) =>
+    process.exit(code)
+  )
 }
