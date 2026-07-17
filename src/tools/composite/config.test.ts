@@ -85,6 +85,43 @@ describe('config', () => {
     })
   })
 
+  describe('setup_status action', () => {
+    it('should return the same credential fields as status, tagged setup_status', async () => {
+      const result = await config({ action: 'setup_status' })
+
+      expect(result.action).toBe('setup_status')
+      expect(result.state).toBe('awaiting_setup')
+      expect(result.has_token).toBe(false)
+      expect(result.setup_url).toBeNull()
+      expect(result.token_source).toBeNull()
+    })
+
+    it('should reflect configured state with relay token', async () => {
+      vi.mocked(getState).mockReturnValue('configured')
+      vi.mocked(getNotionToken).mockReturnValue('ntn_test123')
+      vi.mocked(getSubjectToken).mockReturnValue('ntn_test123')
+
+      const result = await config({ action: 'setup_status' })
+
+      expect(result.state).toBe('configured')
+      expect(result.has_token).toBe(true)
+      expect(result.token_source).toBe('relay')
+    })
+
+    it('should not include unrelated status fields (identical shape to status minus the action tag)', async () => {
+      vi.mocked(getState).mockReturnValue('configured')
+      vi.mocked(getSubjectToken).mockReturnValue('ntn_oauth_token')
+      process.env.PUBLIC_URL = 'https://better-notion-mcp.example.com'
+
+      const statusResult = await config({ action: 'status' })
+      const setupStatusResult = await config({ action: 'setup_status' })
+
+      const { action: _a, ...statusFields } = statusResult
+      const { action: _b, ...setupStatusFields } = setupStatusResult
+      expect(setupStatusFields).toEqual(statusFields)
+    })
+  })
+
   describe('setup_start action', () => {
     it('should return PUBLIC_URL/authorize when in HTTP mode', async () => {
       process.env.PUBLIC_URL = 'https://better-notion-mcp.example.com'

@@ -55,7 +55,7 @@ mise run fix                # bun run check:fix
 ## Env vars
 
 - **stdio mode** (default): `NOTION_TOKEN` (bat buoc; stdio fails fast if unset, see `main.ts:76`)
-- **http mode** (opt-in via `--http`, `MCP_TRANSPORT=http`, or `TRANSPORT_MODE=http`): `NOTION_OAUTH_CLIENT_ID` + `NOTION_OAUTH_CLIENT_SECRET` (bat buoc, validated `transports/http.ts:51-53`), `PUBLIC_URL` (OAuth redirect URLs), `MCP_AUTH_DISABLE=1` (optional, skip Bearer JWT verification behind external gateway)
+- **http mode** (opt-in via `--http`, `MCP_TRANSPORT=http`, or `TRANSPORT_MODE=http`): `NOTION_OAUTH_CLIENT_ID` + `NOTION_OAUTH_CLIENT_SECRET` (bat buoc, validated `transports/http.ts`; BYO OAuth client cung ho tro `--oauth-client-id=<id>` / `--oauth-client-secret=<secret>` CLI flag -- flag override env var, xem `argFlag()` trong `transports/http.ts`), `PUBLIC_URL` (OAuth redirect URLs), `MCP_AUTH_DISABLE=1` (optional, skip Bearer JWT verification behind external gateway)
 - `PORT` (default `0` = OS-assigned random port), `HOST` (optional bind address)
 - Secrets: skret SSM namespace `/better-notion-mcp/prod` (region `ap-southeast-1`)
 
@@ -93,6 +93,8 @@ Two transports, selected in `init-server.ts:14-15` (delegated to `main.ts`). The
 
 - **stdio (default)**: MCP SDK `StdioServerTransport` directly. Single-user; requires `NOTION_TOKEN`. Fails fast with a stderr message if the token is unset (`main.ts:76-91`). No local relay spawn.
 - **http (opt-in)**: enabled via `--http`, `MCP_TRANSPORT=http`, or `TRANSPORT_MODE=http`. Always delegated OAuth 2.1 redirect flow to Notion at `https://api.notion.com/v1/oauth/authorize`. Requires `NOTION_OAUTH_CLIENT_ID` + `NOTION_OAUTH_CLIENT_SECRET`. Per-user access token stored in-process keyed by JWT `sub` (`auth/notion-token-store.ts`, in-memory `Map`). Multi-user. Deploy at `https://notion.n24q02m.com` (Cloudflare Worker + Container; legacy OCI VM at `https://better-notion-mcp.n24q02m.com`).
+
+**CLI `auth`/`logout` subcommand -- N/A by domain (verified 2026-07-17)**: unlike wet/mnemo (`auth google`) or telegram (`auth`/`login`/`logout`), notion has no interactive CLI-triggered credential flow to standardize. stdio mode reads `NOTION_TOKEN` straight from the env (no local relay, no on-disk session to log out of); http mode is always a delegated browser OAuth redirect served at `/authorize` (no CLI-drivable step). Cross-server auth-naming parity (`auth [<provider>]` + `logout`) is therefore not applicable here.
 
 ## Config storage path
 

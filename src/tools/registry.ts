@@ -409,7 +409,7 @@ const TOOLS = [
   {
     name: 'config',
     description:
-      'Manage server configuration and credential state.\n\nActions:\n- status: current credential state, token source, setup URL\n- setup_start (-> force): trigger relay setup to configure Notion token via browser\n- setup_reset: clear credentials and config, return to awaiting_setup\n- setup_complete: re-check credentials after external config changes\n- set: update a runtime setting (notion has no mutable settings; returns info)\n- cache_clear: clear any cached state (no-op for notion)',
+      'Manage server configuration and credential state.\n\nActions:\n- status: current credential state, token source, setup URL\n- setup_status: credential/setup state only (alias-equivalent to status for notion; kept for cross-server parity)\n- setup_start (-> force): trigger relay setup to configure Notion token via browser\n- setup_reset: clear credentials and config, return to awaiting_setup\n- setup_complete: re-check credentials after external config changes\n- set: update a runtime setting (notion has no mutable settings; returns info)\n- cache_clear: clear any cached state (no-op for notion)',
     annotations: {
       title: 'Config',
       readOnlyHint: false,
@@ -422,7 +422,7 @@ const TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['status', 'setup_start', 'setup_reset', 'setup_complete', 'set', 'cache_clear'],
+          enum: ['status', 'setup_status', 'setup_start', 'setup_reset', 'setup_complete', 'set', 'cache_clear'],
           description: 'Action to perform'
         },
         force: {

@@ -8,10 +8,29 @@ import { getState, getSubjectToken, resetState, resolveCredentialState } from '.
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 
 export interface ConfigInput {
-  action: 'status' | 'setup_start' | 'setup_reset' | 'setup_complete' | 'set' | 'cache_clear'
+  action: 'status' | 'setup_status' | 'setup_start' | 'setup_reset' | 'setup_complete' | 'set' | 'cache_clear'
   force?: boolean
   key?: string
   value?: string
+}
+
+/**
+ * Credential/setup-focused fields shared by `status` (kept for backward
+ * compatibility -- it has always returned exactly this shape) and the
+ * dedicated `setup_status` action (parity with the credential-state-only
+ * action every other server in the stack exposes, e.g. wet/mnemo/telegram
+ * `config(action="setup_status")`).
+ */
+function buildSetupStatusInfo() {
+  const state = getState()
+  const token = getSubjectToken()
+  const publicUrl = process.env.PUBLIC_URL ?? null
+  return {
+    state,
+    has_token: token !== null,
+    setup_url: publicUrl ? `${publicUrl}/authorize` : null,
+    token_source: token ? (process.env.NOTION_TOKEN ? 'environment' : publicUrl ? 'oauth' : 'relay') : null
+  }
 }
 
 /**
@@ -21,16 +40,11 @@ export async function config(input: ConfigInput): Promise<any> {
   return withErrorHandling(async () => {
     switch (input.action) {
       case 'status': {
-        const state = getState()
-        const token = getSubjectToken()
-        const publicUrl = process.env.PUBLIC_URL ?? null
-        return {
-          action: 'status',
-          state,
-          has_token: token !== null,
-          setup_url: publicUrl ? `${publicUrl}/authorize` : null,
-          token_source: token ? (process.env.NOTION_TOKEN ? 'environment' : publicUrl ? 'oauth' : 'relay') : null
-        }
+        return { action: 'status', ...buildSetupStatusInfo() }
+      }
+
+      case 'setup_status': {
+        return { action: 'setup_status', ...buildSetupStatusInfo() }
       }
 
       case 'setup_start': {
@@ -100,7 +114,7 @@ export async function config(input: ConfigInput): Promise<any> {
         throw new NotionMCPError(
           `Unsupported action: ${(input as any).action}`,
           'VALIDATION_ERROR',
-          'Valid actions: status, setup_start, setup_reset, setup_complete, set, cache_clear'
+          'Valid actions: status, setup_status, setup_start, setup_reset, setup_complete, set, cache_clear'
         )
     }
   })()
