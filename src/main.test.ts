@@ -438,4 +438,85 @@ describe('main.ts', () => {
       delete process.env.BETTER_NOTION_MCP_BOOTSTRAPPED
     })
   })
+
+  describe('CLI wiring (buildCli)', () => {
+    const currentDir = dirname(fileURLToPath(import.meta.url))
+    const mainPath = join(currentDir, 'main.ts')
+
+    beforeEach(() => {
+      vi.stubEnv('NODE_ENV', 'production')
+      process.argv[1] = mainPath
+      vi.mocked(fs.realpathSync).mockReturnValue(mainPath)
+    })
+
+    afterEach(() => {
+      delete process.env.BETTER_NOTION_MCP_BOOTSTRAPPED
+    })
+
+    it('prints version and exits 0 without starting the server', async () => {
+      process.argv = [process.argv[0], mainPath, '--version']
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ version: '9.9.9' }))
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+      vi.resetModules()
+      await import(`${pathToFileURL(mainPath).href}?test=${Date.now()}`)
+      await vi.waitFor(() => expect(exitSpy).toHaveBeenCalled())
+
+      expect(logSpy).toHaveBeenCalledWith('better-notion-mcp 9.9.9')
+      expect(exitSpy).toHaveBeenCalledWith(0)
+      expect(stdioConnectMock).not.toHaveBeenCalled()
+      logSpy.mockRestore()
+    })
+
+    it('routes config status to the built-in handler without starting the server', async () => {
+      process.argv = [process.argv[0], mainPath, 'config', 'status']
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+      vi.resetModules()
+      await import(`${pathToFileURL(mainPath).href}?test=${Date.now()}`)
+      await vi.waitFor(() => expect(exitSpy).toHaveBeenCalled())
+
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('better-notion-mcp:'))
+      expect(stdioConnectMock).not.toHaveBeenCalled()
+      logSpy.mockRestore()
+    })
+
+    it('does not exit right after the stdio transport connects (stays alive until shutdown)', async () => {
+      // Regression guard: Server.connect() resolves once the transport
+      // starts listening, not once the session ends. If `serve()` returned
+      // right there, buildCli's `.then((code) => process.exit(code))` would
+      // kill the process immediately after startup instead of keeping the
+      // server running.
+      process.argv = [process.argv[0], mainPath]
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+
+      vi.resetModules()
+      await import(`${pathToFileURL(mainPath).href}?test=${Date.now()}`)
+      await vi.waitFor(() => expect(stdioConnectMock).toHaveBeenCalled())
+
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      expect(exitSpy).not.toHaveBeenCalled()
+    })
+
+    it('exits 0 once SIGINT fires after the transport connects', async () => {
+      process.argv = [process.argv[0], mainPath]
+      process.env.NOTION_TOKEN = 'ntn_test_token'
+      let sigintHandler: (() => void) | undefined
+      const onceSpy = vi.spyOn(process, 'once').mockImplementation((event, listener) => {
+        if (event === 'SIGINT') sigintHandler = listener as () => void
+        return process
+      })
+
+      vi.resetModules()
+      await import(`${pathToFileURL(mainPath).href}?test=${Date.now()}`)
+      await vi.waitFor(() => expect(sigintHandler).toBeDefined())
+      expect(exitSpy).not.toHaveBeenCalled()
+
+      sigintHandler?.()
+      await vi.waitFor(() => expect(exitSpy).toHaveBeenCalled())
+      expect(exitSpy).toHaveBeenCalledWith(0)
+
+      onceSpy.mockRestore()
+    })
+  })
 })
