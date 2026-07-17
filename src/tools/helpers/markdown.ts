@@ -1178,28 +1178,34 @@ function createEquation(expression: string): NotionBlock {
 
 function createTable(headers: string[], rows: string[][], hasHeader: boolean): NotionBlock {
   const tableWidth = headers.length
-  const allRows: NotionBlock[] = []
+  const allRows: NotionBlock[] = new Array(rows.length + 1)
 
   // Header row
-  allRows.push({
+  const headerCells = new Array(tableWidth)
+  for (let c = 0; c < tableWidth; c++) {
+    headerCells[c] = parseRichText(headers[c])
+  }
+
+  allRows[0] = {
     object: 'block',
     type: 'table_row',
     table_row: {
-      cells: headers.map((h) => parseRichText(h))
+      cells: headerCells
     }
-  })
+  }
 
   // Data rows
-  for (const row of rows) {
-    const cells = []
+  for (let r = 0; r < rows.length; r++) {
+    const row = rows[r]
+    const cells = new Array(tableWidth)
     for (let c = 0; c < tableWidth; c++) {
-      cells.push(parseRichText(row[c] || ''))
+      cells[c] = parseRichText(row[c] || '')
     }
-    allRows.push({
+    allRows[r + 1] = {
       object: 'block',
       type: 'table_row',
       table_row: { cells }
-    })
+    }
   }
 
   return {
@@ -1215,18 +1221,20 @@ function createTable(headers: string[], rows: string[][], hasHeader: boolean): N
 }
 
 function createColumnList(columns: NotionBlock[][], widthRatios?: (number | undefined)[]): NotionBlock {
-  const columnBlocks = columns.map((children, i) => {
+  const columnBlocks = new Array(columns.length)
+  for (let i = 0; i < columns.length; i++) {
+    const children = columns[i]
     const col: any = { children }
     const ratio = widthRatios?.[i]
     if (ratio !== undefined) {
       col.format = { column_ratio: ratio }
     }
-    return {
+    columnBlocks[i] = {
       object: 'block' as const,
       type: 'column',
       column: col
     }
-  })
+  }
 
   return {
     object: 'block',
