@@ -2,6 +2,71 @@
 
 <!-- version list -->
 
+## v2.38.0 (2026-07-18)
+
+### Bug Fixes
+
+- Add orphan-tag integrity guard to release CI
+  ([#1131](https://github.com/n24q02m/better-notion-mcp/pull/1131),
+  [`d5f35ba`](https://github.com/n24q02m/better-notion-mcp/commit/d5f35ba3bf785509c10ed0bd630c6014cbd106a4))
+
+- Adopt better-semantic-release for built-in release guards
+  ([`12d2b76`](https://github.com/n24q02m/better-notion-mcp/commit/12d2b767aaebbcd4b510d7b47e458a289545f11c))
+
+- Broaden XPIA marker regex to catch whitespace-padded variants
+  ([`10fe06f`](https://github.com/n24q02m/better-notion-mcp/commit/10fe06f27f399f3e52259ba00a570b71d7546aa5))
+
+- Bump mcp-core floor to 1.19.0 stable
+  ([#1128](https://github.com/n24q02m/better-notion-mcp/pull/1128),
+  [`f5dab49`](https://github.com/n24q02m/better-notion-mcp/commit/f5dab497d4176cc51956f33b4b36551923e20949))
+
+- Bump mcp-core to 1.20.0 ([#1140](https://github.com/n24q02m/better-notion-mcp/pull/1140),
+  [`f24dcb4`](https://github.com/n24q02m/better-notion-mcp/commit/f24dcb4a2c3ebebecb9afb069c6bc40f2661958a))
+
+- Drop redundant orphan-tag CI guard that blocked releases
+  ([#1138](https://github.com/n24q02m/better-notion-mcp/pull/1138),
+  [`048eb83`](https://github.com/n24q02m/better-notion-mcp/commit/048eb83d2dce85c9207aa7782f538cf92e231899))
+
+- Optimize multiline prefixing in markdown renderer
+  ([`723c765`](https://github.com/n24q02m/better-notion-mcp/commit/723c7657508a838c0e34142ab1c296fe25327750))
+
+- Pin rangeStrategy on delayed packageRules to fix renovate artifacts failure
+  ([#1132](https://github.com/n24q02m/better-notion-mcp/pull/1132),
+  [`3a439a1`](https://github.com/n24q02m/better-notion-mcp/commit/3a439a19b73307a18100efb8e4eae410b0b3fac2))
+
+- **deps**: Lock file maintenance ([#1129](https://github.com/n24q02m/better-notion-mcp/pull/1129),
+  [`344aa53`](https://github.com/n24q02m/better-notion-mcp/commit/344aa53d54f868789cbe974171e63c4945cf4c2d))
+
+- **deps**: Lock file maintenance ([#1121](https://github.com/n24q02m/better-notion-mcp/pull/1121),
+  [`e3be0f7`](https://github.com/n24q02m/better-notion-mcp/commit/e3be0f719ec46adc25b77fcee5be0e47ab165850))
+
+- **deps**: Update @cloudflare/workers-types to ^5.20260708.1
+  ([#1125](https://github.com/n24q02m/better-notion-mcp/pull/1125),
+  [`57bc8f2`](https://github.com/n24q02m/better-notion-mcp/commit/57bc8f221fd9eb033501b3d46f982cee8c53c7c4))
+
+- **deps**: Update patch dependencies
+  ([#1124](https://github.com/n24q02m/better-notion-mcp/pull/1124),
+  [`ef2006e`](https://github.com/n24q02m/better-notion-mcp/commit/ef2006e995268c0462e1ba909f8f5686e62a2ec8))
+
+### Features
+
+- Add PR-title conventional-commit gate + no-bump release warning
+  ([#1134](https://github.com/n24q02m/better-notion-mcp/pull/1134),
+  [`6f3b0f7`](https://github.com/n24q02m/better-notion-mcp/commit/6f3b0f76cbecb2b5318453509d37db70f3609367))
+
+- Add setup_status config action and BYO OAuth client CLI flags
+  ([#1136](https://github.com/n24q02m/better-notion-mcp/pull/1136),
+  [`887e175`](https://github.com/n24q02m/better-notion-mcp/commit/887e175d081cd310ab5ac9c6521e62c2e2cec9a1))
+
+- Document CLI, smithery, and self-host endpoint in README
+  ([#1123](https://github.com/n24q02m/better-notion-mcp/pull/1123),
+  [`05fe9bb`](https://github.com/n24q02m/better-notion-mcp/commit/05fe9bbca3703004f5f2b45762f8bf092a59376e))
+
+- Wire core buildCli for doctor/config/relay/--version
+  ([#1135](https://github.com/n24q02m/better-notion-mcp/pull/1135),
+  [`4790012`](https://github.com/n24q02m/better-notion-mcp/commit/47900123f7816493b0ed5481f5b3b50651400e26))
+
+
 ## v2.37.0 (2026-07-14)
 
 ### Bug Fixes
