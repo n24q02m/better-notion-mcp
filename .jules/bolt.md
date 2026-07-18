@@ -16,3 +16,7 @@
 ## 2024-07-04 - Multiline String Prefixing Performance in V8/Bun
 **Learning:** Using regex `.replace(/^/gm, 'prefix')` for multiline string operations (like indenting or adding blockquote markers in markdown rendering) incurs measurable overhead due to RegExp state machine execution. In V8/Bun, using template literals combined with native string search via `.replaceAll('\n', '\nprefix')` (e.g., \`prefix${str.replaceAll('\n', '\nprefix')}\`) is significantly faster.
 **Action:** When applying static prefixes to every line of a string on a hot path, prefer string concatenation and `.replaceAll('\n', '\nprefix')` over global regex start-of-line replacements.
+
+## 2024-07-17 - Avoid .map() and intermediate array allocations in Hot Paths
+**Learning:** In heavily used loops or rendering pipelines (e.g., parsing markdown tables and columns), using array methods like `.map()` and `.push()` can cause unnecessary garbage collection overhead and closure allocations. Specifically, large `.map()` chains or dynamic `.push()` calls create many intermediate arrays that penalize V8 performance.
+**Action:** Replace `.map()` and dynamic `.push()` with manual `for` loops over pre-allocated arrays (e.g., `new Array(length)`) to reduce garbage collection pressure and improve CPU efficiency in highly recursive or hot code paths.
