@@ -191,7 +191,7 @@ class MarkdownParser {
     }
 
     // Table (pipe-delimited)
-    if (line.includes('|') && trimmedLine.startsWith('|')) {
+    if (trimmedLine.startsWith('|')) {
       const tableData = parseTable(this.lines, i)
       if (tableData) {
         this.blocks.push(createTable(tableData.headers, tableData.rows, tableData.hasHeader))
@@ -765,8 +765,10 @@ function parseTable(lines: string[], startIndex: number): TableParseResult | nul
   let i = startIndex
 
   // Collect all consecutive pipe-delimited lines
-  while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].includes('|')) {
-    tableLines.push(lines[i])
+  while (i < lines.length) {
+    const line = lines[i]
+    if (!line.trimStart().startsWith('|')) break
+    tableLines.push(line)
     i++
   }
 
