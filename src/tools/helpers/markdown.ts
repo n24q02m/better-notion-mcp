@@ -190,8 +190,10 @@ class MarkdownParser {
       return columnData.endIndex
     }
 
-    // Table (pipe-delimited)
-    if (line.includes('|') && trimmedLine.startsWith('|')) {
+    // ⚡ Bolt: Table (pipe-delimited)
+    // Optimized: removed redundant O(N) `.includes('|')` check since `.startsWith('|')`
+    // already guarantees the presence of a pipe character in O(1) time.
+    if (trimmedLine.startsWith('|')) {
       const tableData = parseTable(this.lines, i)
       if (tableData) {
         this.blocks.push(createTable(tableData.headers, tableData.rows, tableData.hasHeader))
@@ -765,8 +767,12 @@ function parseTable(lines: string[], startIndex: number): TableParseResult | nul
   let i = startIndex
 
   // Collect all consecutive pipe-delimited lines
-  while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].includes('|')) {
-    tableLines.push(lines[i])
+  while (i < lines.length) {
+    const line = lines[i]
+    // ⚡ Bolt: Use .trimStart() instead of .trim() to avoid unnecessary allocation
+    // of a string with trailing whitespace removed, and removed redundant .includes()
+    if (!line.trimStart().startsWith('|')) break
+    tableLines.push(line)
     i++
   }
 
