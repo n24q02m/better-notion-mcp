@@ -765,8 +765,12 @@ function parseTable(lines: string[], startIndex: number): TableParseResult | nul
   let i = startIndex
 
   // Collect all consecutive pipe-delimited lines
-  while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].includes('|')) {
-    tableLines.push(lines[i])
+  // BOLT OPTIMIZATION: Cache current line and use trimStart().startsWith('|')
+  // instead of redundant trim() and .includes('|') checks
+  while (i < lines.length) {
+    const line = lines[i]
+    if (!line.trimStart().startsWith('|')) break
+    tableLines.push(line)
     i++
   }
 
