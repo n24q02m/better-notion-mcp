@@ -13,7 +13,7 @@
       },
       "devDependencies": {
         "@biomejs/biome": "^2.5.4",
-        "@cloudflare/workers-types": "^5.20260716.1",
+        "@cloudflare/workers-types": "^5.20260717.1",
         "@types/node": "^26.1.1",
         "@vitest/coverage-v8": "^4.1.10",
         "esbuild": "^0.28.1",
@@ -57,7 +57,7 @@
 
     "@cloudflare/containers": ["@cloudflare/containers@0.3.7", "", {}, "sha512-DM9dm3FnIBSyiSJ1FLavKwl/lk3oAmTaynCzZQ9pZR0ncRPquSxkxd8Nu2MFILxmDDsPkxKsSNEh9mHHMty4Fw=="],
 
-    "@cloudflare/workers-types": ["@cloudflare/workers-types@5.20260716.1", "", {}, "sha512-LqQPmGAvdpQxzZGAMlDI6fnCsTlr8nRQibWsREaERqD0PucwFl25aXpUskSob70uSY2n6K1sp6Te9xkmzSFgaw=="],
+    "@cloudflare/workers-types": ["@cloudflare/workers-types@5.20260724.1", "", {}, "sha512-gl0brZ60JhkZU3INgr1jsxaFEiWf3AB9RsCjLTMwT5RKspWRUpsFd0wxwbys7gb8Ywkfq9tORhw0y9G+7bDUYw=="],
 
     "@emnapi/core": ["@emnapi/core@1.11.1", "", { "dependencies": { "@emnapi/wasi-threads": "1.2.2", "tslib": "^2.4.0" } }, "sha512-RSvbQmHzdKzNsLYa/wHrbc3KN4sYLKAdPZxqiM2HATqv/SBk2/ENSHpvXGaLOMcsAyz0poEGqkmmKYG3OWiJEQ=="],
 
