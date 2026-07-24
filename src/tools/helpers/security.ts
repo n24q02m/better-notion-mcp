@@ -83,8 +83,12 @@ export function wrapToolResult(toolName: string, jsonText: string): string {
   }
 
   // Sanitize the payload to prevent XPIA breakout attacks
-  // If the payload contains the closing tag, it could break out of the wrapper
-  const sanitizedText = jsonText.replace(/<[\s/]*untrusted_notion_content/gi, '<_/untrusted_notion_content')
+  // If the payload contains the closing tag, it could break out of the wrapper.
+  // Note: jsonText is a JSON string, so newlines might be encoded as \n.
+  const sanitizedText = jsonText.replace(
+    /<(?:[\s/]|\\[nrtfb]|\\u[0-9a-fA-F]{4})*untrusted_notion_content/gi,
+    '<_/untrusted_notion_content'
+  )
 
   return `<untrusted_notion_content>\n${sanitizedText}\n</untrusted_notion_content>\n\n${SAFETY_WARNING}`
 }
