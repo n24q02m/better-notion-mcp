@@ -25,7 +25,12 @@ function toRelation(value: any): { relation: { id: string }[] } {
       try {
         const parsed = JSON.parse(value)
         if (Array.isArray(parsed) && parsed.every((v) => typeof v === 'string')) {
-          return { relation: parsed.map((v: string) => ({ id: extractPageId(v) })) }
+          const len = parsed.length
+          const arr = new Array(len)
+          for (let i = 0; i < len; i++) {
+            arr[i] = { id: extractPageId(parsed[i]) }
+          }
+          return { relation: arr }
         }
       } catch {
         // Not valid JSON, treat as single value
@@ -34,9 +39,13 @@ function toRelation(value: any): { relation: { id: string }[] } {
     return { relation: [{ id: extractPageId(value) }] }
   }
   if (Array.isArray(value)) {
-    return {
-      relation: value.map((v: any) => (typeof v === 'object' && v !== null && 'id' in v ? v : { id: extractPageId(v) }))
+    const len = value.length
+    const arr = new Array(len)
+    for (let i = 0; i < len; i++) {
+      const v = value[i]
+      arr[i] = typeof v === 'object' && v !== null && 'id' in v ? v : { id: extractPageId(v) }
     }
+    return { relation: arr }
   }
   return value
 }
@@ -145,9 +154,9 @@ export function extractPageProperties(pageProperties: any): any {
         if (p.title) {
           const title = p.title
           const len = title.length
-          const arr = new Array(len)
-          for (let j = 0; j < len; j++) arr[j] = title[j].plain_text || ''
-          properties[key] = arr.join('')
+          let text = ''
+          for (let j = 0; j < len; j++) text += title[j].plain_text || ''
+          properties[key] = text
         }
         break
       }
@@ -155,9 +164,9 @@ export function extractPageProperties(pageProperties: any): any {
         if (p.rich_text) {
           const richText = p.rich_text
           const len = richText.length
-          const arr = new Array(len)
-          for (let j = 0; j < len; j++) arr[j] = richText[j].plain_text || ''
-          properties[key] = arr.join('')
+          let text = ''
+          for (let j = 0; j < len; j++) text += richText[j].plain_text || ''
+          properties[key] = text
         }
         break
       }
