@@ -20,3 +20,9 @@
 ## 2024-07-17 - Avoid .map() and intermediate array allocations in Hot Paths
 **Learning:** In heavily used loops or rendering pipelines (e.g., parsing markdown tables and columns), using array methods like `.map()` and `.push()` can cause unnecessary garbage collection overhead and closure allocations. Specifically, large `.map()` chains or dynamic `.push()` calls create many intermediate arrays that penalize V8 performance.
 **Action:** Replace `.map()` and dynamic `.push()` with manual `for` loops over pre-allocated arrays (e.g., `new Array(length)`) to reduce garbage collection pressure and improve CPU efficiency in highly recursive or hot code paths.
+## 2026-07-24 - Avoid Micro-optimizing Small Arrays
+**Learning:** Replacing `.map()` with pre-allocated `for` loops for very small data structures (like converting strings to Notion relation IDs in `toRelation`) is a micro-optimization with negligible performance impact that sacrifices readability. V8 is highly optimized for such operations.
+**Action:** Focus array allocation optimizations on truly hot paths dealing with large, unbounded datasets (like parsing long markdown files or massive paginated API responses), rather than small utility functions.
+## 2026-07-24 - Avoid map() and join() on hot path string building
+**Learning:** In `src/tools/helpers/properties.ts`, the `extractPageProperties` function used an intermediate array mapping (e.g. `new Array(len)` and `arr.join('')`) to build string values from `p.title` and `p.rich_text` objects. This incurs unnecessary array allocation, garbage collection pressure, and iteration overhead.
+**Action:** Use a pre-allocated `for` loop and string concatenation (`+=`) to directly build strings from JSON arrays. This improves performance and eliminates extra memory allocations in high-frequency data transformation paths like bulk page extraction.
