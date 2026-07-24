@@ -86,7 +86,7 @@ export function wrapToolResult(toolName: string, jsonText: string): string {
   // If the payload contains the closing tag, it could break out of the wrapper.
   // Note: jsonText is a JSON string, so newlines might be encoded as \n.
   const sanitizedText = jsonText.replace(
-    /<(?:[\s/]|\\\\[nrtfb]|\\\\u[0-9a-fA-F]{4})*untrusted_notion_content/gi,
+    /<(?:[\s/]|\\[nrtfb]|\\u[0-9a-fA-F]{4})*untrusted_notion_content/gi,
     '<_/untrusted_notion_content'
   )
 
