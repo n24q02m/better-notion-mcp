@@ -23,11 +23,6 @@
 
 ## 2026-05-28 - Improve Security Coverage for isSafeWebUrl
 **Vulnerability:** N/A (Testing Task)
-**Learning:** The  function provides a stricter validation layer for opening URLs in external browsers compared to , specifically by enforcing standard web protocols (HTTP/HTTPS) and preventing shell flag injection (URLs starting with ).
-**Prevention:** Ensure all security-critical utility functions have comprehensive unit test coverage, specifically targeting edge cases like protocol obfuscation, shell injection vectors, and malformed URL handling.
-
-## 2026-05-28 - Improve Security Coverage for isSafeWebUrl
-**Vulnerability:** N/A (Testing Task)
 **Learning:** The function isSafeWebUrl provides a stricter validation layer for opening URLs in external browsers compared to isSafeUrl, specifically by enforcing standard web protocols (HTTP/HTTPS) and preventing shell flag injection (URLs starting with dash).
 **Prevention:** Ensure all security-critical utility functions have comprehensive unit test coverage, specifically targeting edge cases like protocol obfuscation, shell injection vectors, and malformed URL handling.
 ## 2025-05-28 - XPIA Breakout via Closing Tag Attributes
@@ -62,3 +57,15 @@
 **Vulnerability:** The previous `wrapToolResult` regex `/<[/]?untrusted_notion_content/gi` failed to sanitize untrusted content when attackers included whitespaces or newlines between the opening bracket and the tag name (e.g. `< / untrusted_notion_content>` or `<\n/untrusted_notion_content>`).
 **Learning:** Leniency in XML/HTML parsing (including LLMs parsing tags) allows optional whitespaces/newlines. A strict exact-match or single-character `[/]?` check is insufficient against evasion via padding.
 **Prevention:** Always use a regex that matches and neutralizes leading whitespace and slashes (e.g., `/<[\s/]*untrusted_notion_content/gi`) for prompt injection tags defenses to safely handle padding and evasion tactics.
+
+## 2026-07-25 - Anchor XPIA sanitization on the tag name, not on the padding before it
+**Vulnerability:** `wrapToolResult` sanitized breakout tags with a regex anchored on `<` that enumerated the padding allowed before the tag name (`/<[\s/]*untrusted_notion_content/gi`). `jsonText` is already-serialized JSON, so anything an attacker types into a Notion page arrives escaped: a newline is the two characters `\` `n`, a quote is `\` `"`, a control character is `\uXXXX`. `[\s/]` matches none of those. Measured against the shipped regex, a page containing a real newline, a tab, a typed backslash-n, a typed quote or a control character (serialized as \u0001) between `<` and `/untrusted_notion_content>` passed through with the closing tag intact.
+**Learning:** Widening the character class after `<` cannot terminate this bug class -- six successive regexes each recognized one more padding form and stayed bypassable by the next escape sequence. The escaped-newline case was in fact discovered earlier and then suppressed: `security.test.ts` carried a dead `_maliciousJsonText` binding and a comment reasoning through the bypass, while the code went unfixed. Weakening a test to make a sanitizer look correct hides the vulnerability instead of closing it.
+**Action:** Sanitize by rewriting the sentinel name itself -- `jsonText.replace(/untrusted_notion_content/gi, 'redacted_xpia_marker')` in `src/tools/helpers/security.ts`. Once the name cannot survive in the payload, no padding in front of it can reconstruct the envelope. Assert the invariant "the tag name does not occur in the payload region" (see the `it.each` evasion table in `src/tools/helpers/security.test.ts`) rather than asserting a marker shape, so the test cannot pass while an evasion still works. Do not propose further `<`-anchored padding regexes for this wrapper.
+
+## Rejected
+
+Proposals that were reviewed and declined. Closing a PR records the decision where the bot cannot read it; this section is the part that carries forward.
+
+- **A wider padding regex for `wrapToolResult`** (`/<(?:[\s/]|\\[nrtfb]|\\u[0-9a-fA-F]{4})*untrusted_notion_content/gi`, PR #1151). Rejected because it is still bypassable: an attacker who types a literal backslash or a double quote produces `\\n` / `\"` in the serialized payload, neither of which the alternation matches. The bug class is closed by anchoring on the tag name (2026-07-25 entry above), not by extending the alternation again.
+- **Relaxing the PR-title Conventional Commits gate for bot-prefixed titles** (`.github/workflows/ci.yml`, proposed alongside PR #1151). Rejected. The gate is red on `🛡️ Sentinel:` / `⚡ Bolt:` / `🎨 Palette:` titles by design: it is the reminder to retype the squash-commit subject as `fix:`/`feat:` so python-semantic-release still parses it. Skipping the job for exactly those titles removes the reminder on the only PRs that need it, and lets a release-invisible commit reach `main`. A security fix must not carry a change that disables the repository's own CI guardrail.
