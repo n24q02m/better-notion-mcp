@@ -23,3 +23,7 @@
 ## 2026-07-20 - Avoid Redundant String Scans
 **Learning:** Checking `.includes(char)` on a string when `.startsWith(char)` is already being verified is entirely redundant and forces V8 to scan the entire string. Additionally, replacing `.trim().startsWith()` with `.trimStart().startsWith()` avoids parsing whitespaces at the end of long strings in hot loops.
 **Action:** Remove redundant `.includes()` checks when string prefixes are already matched, and use targeted trimming like `.trimStart()` when only the leading characters matter.
+
+## 2026-07-20 - Rejected: Micro-optimizations without measurement
+**Learning:** A PR optimizing `.includes('|')` out of table parsing was rejected as churn. Even though the redundancy was real and the code behavior-preserving, there was no measurable performance impact or identified bottleneck to justify the change. The repo's policy requires a real number or a demonstrated hot path for performance PRs.
+**Action:** Do not submit micro-optimizations that cannot be backed by actual benchmark data showing a meaningful impact, regardless of theoretical efficiency.
