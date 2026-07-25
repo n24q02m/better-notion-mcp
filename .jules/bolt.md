@@ -24,3 +24,7 @@
 ## 2025-07-22 - Optimizing string parsing loops
 **Learning:** In string parsing hot loops (like processing markdown tables), redundant character lookups and string allocation can impact performance. `.includes('|')` after `.startsWith('|')` is completely redundant, and `trimStart()` allocates less and scans less than `.trim()`. Caching array lookups (e.g. `lines[i]`) also saves slightly on property access.
 **Action:** In high-throughput parsing loops, always cache the current element, ensure string methods (like `startsWith`, `indexOf`) are not checking conditions already satisfied by prior operations, and use more targeted trimming/slicing functions when possible.
+
+## Rejected
+**Learning:** Optimizations without measurable benchmarks or identifying a genuine "hot path" (e.g., tight loop) are likely to be rejected as churn, even if they are technically behaviour-preserving and eliminate redundant checks.
+**Action:** Before optimizing parsing loops (like `parseTable`), verify it is a true hot path that executes repeatedly with high frequency. Always include actual performance measurements when proposing optimization PRs to prevent them from being closed as churn.
