@@ -20,3 +20,14 @@
 ## 2024-07-17 - Avoid .map() and intermediate array allocations in Hot Paths
 **Learning:** In heavily used loops or rendering pipelines (e.g., parsing markdown tables and columns), using array methods like `.map()` and `.push()` can cause unnecessary garbage collection overhead and closure allocations. Specifically, large `.map()` chains or dynamic `.push()` calls create many intermediate arrays that penalize V8 performance.
 **Action:** Replace `.map()` and dynamic `.push()` with manual `for` loops over pre-allocated arrays (e.g., `new Array(length)`) to reduce garbage collection pressure and improve CPU efficiency in highly recursive or hot code paths.
+
+## Rejected
+
+Proposals that were reviewed and declined. A closing comment lives on the PR, where it cannot be read again; this section is the part that carries forward. Before proposing an optimization, check that it is not listed here.
+
+**Bar for a performance change in this repo:** a measured number on a realistic payload, or a named hot path. "Expected impact", a complexity argument, or "tests pass" is not a measurement.
+
+- **`+=` instead of a pre-allocated array + `join('')` in `properties.ts` title/rich_text extraction** (PR #1152). Rejected: it reverses `2abf195 (#991)`, which introduced the pre-allocated array on those same lines under the `2024-07-17` entry above. Both directions were argued as faster and neither was measured. Do not flip these lines again without a benchmark that survives noise.
+- **Dropping the redundant `.includes('|')` and using `.trimStart()` in `markdown.ts` table parsing** (PRs #1142, #1143, #1144 — one cluster, three PRs). The redundancy is real and the rewrite is behaviour-preserving, but `parseTable` runs once per table during page conversion and the removed check scans a single line. Unmeasured, so closed. `#1142` is the cleanest diff if this is ever revisited.
+- **Writing `// ⚡ Bolt: ...` narration into source files** (PR #1143, `markdown.ts:193`). This is a public repository; attribution markers of that form do not belong in shipped code. Keep the rationale in this ledger and in the commit message.
+- **Deleting existing entries from this file** (PR #1143 removed 22 lines). This ledger is append-only memory. Removing entries is how settled proposals return.
