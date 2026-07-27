@@ -20,3 +20,6 @@
 ## 2024-07-17 - Avoid .map() and intermediate array allocations in Hot Paths
 **Learning:** In heavily used loops or rendering pipelines (e.g., parsing markdown tables and columns), using array methods like `.map()` and `.push()` can cause unnecessary garbage collection overhead and closure allocations. Specifically, large `.map()` chains or dynamic `.push()` calls create many intermediate arrays that penalize V8 performance.
 **Action:** Replace `.map()` and dynamic `.push()` with manual `for` loops over pre-allocated arrays (e.g., `new Array(length)`) to reduce garbage collection pressure and improve CPU efficiency in highly recursive or hot code paths.
+## 2024-07-28 - Optimize String Scanning in Hot Paths
+**Learning:** In hot loops, combining `.startsWith()` with a redundant `.includes()` check causes unnecessary O(N) string scans. Also, using `.trim()` when only leading characters matter creates unnecessary allocations.
+**Action:** Remove redundant `.includes()` when `.startsWith()` guarantees the condition, and use `.trimStart()` instead of `.trim()` when trailing whitespace is irrelevant to reduce string allocation overhead.
