@@ -52,7 +52,7 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 - [Features](#features)
 - [Install](#install)
 - [CLI](#cli)
-- [Hosted endpoint](#hosted-endpoint)
+- [Remote (HTTP mode)](#remote-http-mode)
 - [Smithery](#smithery)
 - [Status](#status)
 - [Documentation](#documentation)
@@ -123,9 +123,9 @@ npx --yes @n24q02m/better-notion-mcp@latest --http
 
 See [Configuration](#configuration) for the full environment-variable reference.
 
-## Hosted endpoint
+## Remote (HTTP mode)
 
-A ready-to-use remote instance is hosted at **`https://notion.n24q02m.com/mcp`** (HTTP transport, OAuth 2.1 -- no integration token to paste). Point an MCP client that supports remote HTTP servers at it:
+Deployed with the HTTP transport, the server is a remote endpoint gated by OAuth 2.1 -- no integration token to paste. Point an MCP client that supports remote HTTP servers at the host you deployed it on:
 
 ```jsonc
 // MCP client config -- remote HTTP (OAuth 2.1)
@@ -133,13 +133,13 @@ A ready-to-use remote instance is hosted at **`https://notion.n24q02m.com/mcp`**
   "mcpServers": {
     "better-notion-mcp": {
       "type": "http",
-      "url": "https://notion.n24q02m.com/mcp"
+      "url": "https://<your-host>/mcp"
     }
   }
 }
 ```
 
-On first connect the client opens Notion's OAuth consent screen; per-user access tokens are held in-process only (see [Trust Model](#trust-model)). To run your own remote instance instead, see [Self-Hosting (Remote Mode)](#self-hosting-remote-mode) and [Deploy to Cloudflare](#deploy-to-cloudflare).
+On first connect the client opens Notion's OAuth consent screen; per-user access tokens are held in-process only (see [Trust Model](#trust-model)). To stand up such an instance, see [Self-Hosting (Remote Mode)](#self-hosting-remote-mode) and [Deploy to Cloudflare](#deploy-to-cloudflare).
 
 ## Smithery
 
