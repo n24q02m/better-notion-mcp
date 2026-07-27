@@ -24,13 +24,16 @@ export function isValidNotionId(id: string): boolean {
   return UUID_REGEX.test(id)
 }
 
+// BOLT OPTIMIZATION: Cache regex at module level to avoid compiling literal on every formatId invocation
+const HEX_REGEX = /^[0-9a-f]+$/i
+
 /**
  * Format a compact UUID into hyphenated form (8-4-4-4-12)
  * Returns original string if not a valid 32-char hex
  */
 export function formatId(id: string): string {
   const clean = normalizeId(id)
-  if (clean.length !== 32 || !/^[0-9a-f]+$/i.test(clean)) return id
+  if (clean.length !== 32 || !HEX_REGEX.test(clean)) return id
   return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20)}`
 }
 
