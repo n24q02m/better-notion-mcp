@@ -62,3 +62,8 @@
 **Vulnerability:** The previous `wrapToolResult` regex `/<[/]?untrusted_notion_content/gi` failed to sanitize untrusted content when attackers included whitespaces or newlines between the opening bracket and the tag name (e.g. `< / untrusted_notion_content>` or `<\n/untrusted_notion_content>`).
 **Learning:** Leniency in XML/HTML parsing (including LLMs parsing tags) allows optional whitespaces/newlines. A strict exact-match or single-character `[/]?` check is insufficient against evasion via padding.
 **Prevention:** Always use a regex that matches and neutralizes leading whitespace and slashes (e.g., `/<[\s/]*untrusted_notion_content/gi`) for prompt injection tags defenses to safely handle padding and evasion tactics.
+
+## 2025-07-25 - XPIA Breakout via JSON-Escaped Padding
+**Vulnerability:** Untrusted content tools were protected against XPIA using a tag replacement regex (`/<[\s/]*untrusted_notion_content/gi`). However, since `wrapToolResult` operates on JSON-stringified payloads, an attacker could bypass sanitization by padding tags with JSON-escaped whitespace characters like `\n` (which appears as the literal string `\n` in the unparsed JSON), breaking out of the security wrapper.
+**Learning:** When sanitizing stringified JSON for tag-based wrappers, standard whitespace matchers (`\s`) do not match JSON-escaped whitespace characters (like `\n` or `\u0020`). Regexes must explicitly account for these escaped sequences.
+**Prevention:** Always use regular expressions that match JSON-escaped whitespace (e.g., `\\[nrtfb]` and `\\u[0-9a-fA-F]{4}`) alongside standard whitespace when neutralizing XML/HTML-like tags in unparsed JSON payloads to prevent evasion via escaped character padding.
