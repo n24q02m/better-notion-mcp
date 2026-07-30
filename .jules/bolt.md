@@ -20,3 +20,7 @@
 ## 2024-07-17 - Avoid .map() and intermediate array allocations in Hot Paths
 **Learning:** In heavily used loops or rendering pipelines (e.g., parsing markdown tables and columns), using array methods like `.map()` and `.push()` can cause unnecessary garbage collection overhead and closure allocations. Specifically, large `.map()` chains or dynamic `.push()` calls create many intermediate arrays that penalize V8 performance.
 **Action:** Replace `.map()` and dynamic `.push()` with manual `for` loops over pre-allocated arrays (e.g., `new Array(length)`) to reduce garbage collection pressure and improve CPU efficiency in highly recursive or hot code paths.
+
+## 2024-07-31 - Array .slice() vs Constrained Push Loops in Pagination
+**Learning:** Using `Array.prototype.slice(0, limit)` at the end of array accumulation logic (like paginated results) creates unnecessary intermediate array allocations, increasing GC pressure and potentially causing memory bloat on large datasets.
+**Action:** When accumulating items into an array up to a certain `limit`, calculate the exact number of remaining items needed (`limit - allResults.length`) and constrain the bounds of the `.push()` loop (e.g. `for (let i = 0; i < Math.min(len, remaining); i++)`) to avoid pushing unnecessary items and bypassing the need for a final `.slice()`.
