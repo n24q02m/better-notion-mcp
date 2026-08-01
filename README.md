@@ -9,7 +9,7 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 [![codecov](https://codecov.io/gh/n24q02m/better-notion-mcp/graph/badge.svg?token=D7FSDVVTAN)](https://codecov.io/gh/n24q02m/better-notion-mcp)
 [![npm](https://img.shields.io/npm/v/@n24q02m/better-notion-mcp?logo=npm&logoColor=white)](https://www.npmjs.com/package/@n24q02m/better-notion-mcp)
 [![Docker](https://img.shields.io/docker/v/n24q02m/better-notion-mcp?label=docker&logo=docker&logoColor=white&sort=semver)](https://hub.docker.com/r/n24q02m/better-notion-mcp)
-[![License: MIT](https://img.shields.io/github/license/n24q02m/better-notion-mcp)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/github/license/n24q02m/better-notion-mcp)](LICENSE)
 
 <!-- Badge Row 2: Tech -->
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](#)
@@ -285,7 +285,7 @@ How better-notion-mcp stacks up against direct competitors in each pillar:
 | Comments | Yes (`comments`: list/get/create) | Yes | Yes | Yes |
 | Remote HTTP + OAuth 2.1 transport | Yes (per-JWT-sub multi-user) | partial (HTTP + bearer token, no OAuth) | No (stdio token only) | No (stdio token only) |
 | Self-hostable | Yes (Docker, own OAuth app) | Yes | Yes | Yes |
-| License | MIT | ? | MIT | MIT |
+| License | Apache-2.0 | ? | MIT | MIT |
 
 ## Security
 
@@ -315,4 +315,4 @@ This plugin implements **TC-NearZK** (in-memory, ephemeral). See [the trust mode
 
 ## License
 
-MIT -- See [LICENSE](LICENSE).
+Apache-2.0 -- See [LICENSE](LICENSE).
