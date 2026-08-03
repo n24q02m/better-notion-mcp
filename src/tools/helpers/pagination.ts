@@ -49,7 +49,16 @@ export async function autoPaginate<T>(
     // Maximum Call Stack Size Exceeded errors on very large page arrays and improve performance
     // on large datasets by avoiding intermediate array allocations from spread
     const results = response.results
-    const len = results.length
+
+    // BOLT OPTIMIZATION: Calculate exact remaining items to push and avoid post-accumulation slice
+    let len = results.length
+    if (limit > 0) {
+      const remaining = limit - allResults.length
+      if (remaining < len) {
+        len = remaining
+      }
+    }
+
     for (let i = 0; i < len; i++) {
       allResults.push(results[i])
     }
@@ -67,7 +76,7 @@ export async function autoPaginate<T>(
     }
   } while (cursor !== null)
 
-  return limit > 0 ? allResults.slice(0, limit) : allResults
+  return allResults
 }
 
 /** Block types that need children fetched for proper markdown rendering */
