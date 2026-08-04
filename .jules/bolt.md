@@ -20,3 +20,6 @@
 ## 2024-07-17 - Avoid .map() and intermediate array allocations in Hot Paths
 **Learning:** In heavily used loops or rendering pipelines (e.g., parsing markdown tables and columns), using array methods like `.map()` and `.push()` can cause unnecessary garbage collection overhead and closure allocations. Specifically, large `.map()` chains or dynamic `.push()` calls create many intermediate arrays that penalize V8 performance.
 **Action:** Replace `.map()` and dynamic `.push()` with manual `for` loops over pre-allocated arrays (e.g., `new Array(length)`) to reduce garbage collection pressure and improve CPU efficiency in highly recursive or hot code paths.
+## 2026-08-04 - Array slice() Performance Penalty on V8
+**Learning:** Accumulating paginated arrays and then using `.slice()` to limit the final result (e.g., `allResults.slice(0, limit)`) creates unnecessary intermediate array allocations and wastes CPU cycles pushing elements that will ultimately be discarded.
+**Action:** Calculate the exact number of remaining items needed (`limit - allResults.length`), constrain the `.push()` loop boundary directly, and return the mutated array rather than allocating a new one via `.slice()`. This reduces GC pressure and improves CPU efficiency on hot data-fetching paths.
