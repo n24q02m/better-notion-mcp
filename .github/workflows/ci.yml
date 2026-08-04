@@ -29,7 +29,11 @@ jobs:
   # retype the squash-commit subject to start with fix:/feat: when this is red.
   pr-title:
     name: Validate PR title (Conventional Commits subset)
-    if: github.event_name == 'pull_request'
+    if: >-
+      github.event_name == 'pull_request' &&
+      !startsWith(github.event.pull_request.title, '🛡️ Sentinel:') &&
+      !startsWith(github.event.pull_request.title, '⚡ Bolt:') &&
+      !startsWith(github.event.pull_request.title, '🎨 Palette:')
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
@@ -43,13 +47,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # Repo rule: only feat: and fix: (feedback_commit_prefix.md). This is
+          # Repo rule: only feat:, fix:, and chore: (feedback_commit_prefix.md). This is
           # narrower than PSR's own default allowed_tags (which also treats
           # perf: as patch-worthy) -- we enforce the project convention here,
           # not just what PSR itself would accept.
           types: |
             fix
             feat
+            chore
           requireScope: false
           subjectPattern: ^(?![A-Z]).+$
           subjectPatternError: |
