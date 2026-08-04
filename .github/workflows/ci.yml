@@ -47,13 +47,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # Repo rule: only feat: and fix: (feedback_commit_prefix.md). This is
+          # Repo rule: only feat:, fix:, and chore: (feedback_commit_prefix.md). This is
           # narrower than PSR's own default allowed_tags (which also treats
           # perf: as patch-worthy) -- we enforce the project convention here,
           # not just what PSR itself would accept.
           types: |
             fix
             feat
+            chore
           requireScope: false
           subjectPattern: ^(?![A-Z]).+$
           subjectPatternError: |
