@@ -1,5 +1,7 @@
 # Better Notion MCP
 
+[![MCP Toplist](https://mcptoplist.com/badge/io.github.n24q02m%2Fbetter-notion-mcp.svg)](https://mcptoplist.com/server/io.github.n24q02m%2Fbetter-notion-mcp)
+
 mcp-name: io.github.n24q02m/better-notion-mcp
 
 **Markdown-first Notion for AI agents -- pages, databases, blocks, and comments in one call.**
