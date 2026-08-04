@@ -62,3 +62,8 @@
 **Vulnerability:** The previous `wrapToolResult` regex `/<[/]?untrusted_notion_content/gi` failed to sanitize untrusted content when attackers included whitespaces or newlines between the opening bracket and the tag name (e.g. `< / untrusted_notion_content>` or `<\n/untrusted_notion_content>`).
 **Learning:** Leniency in XML/HTML parsing (including LLMs parsing tags) allows optional whitespaces/newlines. A strict exact-match or single-character `[/]?` check is insufficient against evasion via padding.
 **Prevention:** Always use a regex that matches and neutralizes leading whitespace and slashes (e.g., `/<[\s/]*untrusted_notion_content/gi`) for prompt injection tags defenses to safely handle padding and evasion tactics.
+
+## 2025-02-24 - [Fix XPIA evasion in wrapToolResult JSON stringified payloads]
+**Vulnerability:** The XPIA protection regex `/<[\s/]*untrusted_notion_content/gi` failed to match escaped whitespace (e.g. `\n`) in stringified JSON returned by tools, allowing malicious upstream Notion content to bypass sanitization by using tags like `<\\n/untrusted_notion_content>`.
+**Learning:** `JSON.stringify` converts real newlines into literal backslash-n sequences. Standard regex whitespace matchers (`\s`) do not match these literal sequences.
+**Prevention:** When sanitizing strings that may have been JSON-escaped, ensure regexes account for literal escape sequences like `\\[nrtfb]` or `\\u[0-9a-fA-F]{4}` in addition to normal whitespace.
