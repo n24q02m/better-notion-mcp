@@ -20,3 +20,6 @@
 ## 2024-07-17 - Avoid .map() and intermediate array allocations in Hot Paths
 **Learning:** In heavily used loops or rendering pipelines (e.g., parsing markdown tables and columns), using array methods like `.map()` and `.push()` can cause unnecessary garbage collection overhead and closure allocations. Specifically, large `.map()` chains or dynamic `.push()` calls create many intermediate arrays that penalize V8 performance.
 **Action:** Replace `.map()` and dynamic `.push()` with manual `for` loops over pre-allocated arrays (e.g., `new Array(length)`) to reduce garbage collection pressure and improve CPU efficiency in highly recursive or hot code paths.
+## 2024-07-28 - Slice vs Loop for Array Slicing Limit in Auto Paginate
+**Learning:** In `src/tools/helpers/pagination.ts`, applying a `limit` via a `.slice(0, limit)` operation after aggregating the paginated results creates unnecessary array cloning overhead and allocates an unneeded array.
+**Action:** When a loop dynamically accumulates paginated API results into a master array and applies a limit, cap the inner loop iteration count logic (e.g. `const remaining = limit - allResults.length; if (len > remaining) len = remaining;`) directly.
