@@ -1,3 +1,0 @@
-fix: sanitize JSON-escaped padding in XPIA tag wrappers
-
-Update `wrapToolResult` regex to correctly identify and sanitize JSON-escaped padding characters (like `\n`, `\r`, and Unicode escapes) that attackers could use to evade the `<untrusted_notion_content>` wrapper in stringified JSON payloads. Restored original security assertions.
