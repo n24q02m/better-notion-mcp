@@ -1,0 +1,5 @@
+🚨 **Severity:** HIGH
+💡 **Vulnerability:** The previous XPIA sanitization regex only matched literal whitespace. However, because `wrapToolResult` operates on stringified JSON, an attacker could bypass the filter using JSON escape sequences (e.g., `\n`, `\t`, `\u0020`), which an LLM could later interpret as valid tag padding, allowing them to break out of the `<untrusted_notion_content>` wrapper.
+🎯 **Impact:** Indirect Prompt Injection (XPIA) if an attacker crafts malicious padding in a Notion payload that evades sanitization and executes arbitrary instructions on the LLM client.
+🔧 **Fix:** Expanded the wrapper sanitization regex to explicitly match JSON-escaped control characters and Unicode sequences alongside standard literal spaces/slashes.
+✅ **Verification:** Updated tests in `src/tools/helpers/security.test.ts` to assert against literal stringified JSON escapes and ran the full test suite successfully.
