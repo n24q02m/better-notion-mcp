@@ -7,6 +7,7 @@ import type { Client, PageObjectResponse } from '@notionhq/client'
 import { formatCover } from '../helpers/covers.js'
 import { NotionMCPError, retryWithBackoff, withErrorHandling } from '../helpers/errors.js'
 import { formatIcon } from '../helpers/icons.js'
+import { normalizeId } from '../helpers/id.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate, populateDeepChildren, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties, extractPageProperties } from '../helpers/properties.js'
@@ -154,7 +155,7 @@ async function createPage(notion: Client, input: PagesInput): Promise<CreatePage
     )
   }
 
-  const normalizedId = input.parent_id.replace(/-/g, '')
+  const normalizedId = normalizeId(input.parent_id)
 
   // Auto-detect parent type
   let parent: Record<string, any>
@@ -441,7 +442,7 @@ async function movePage(notion: Client, input: PagesInput): Promise<MovePageResu
     )
   }
 
-  const normalizedParentId = input.parent_id.replace(/-/g, '')
+  const normalizedParentId = normalizeId(input.parent_id)
 
   // SDK types don't include parent in UpdatePageParameters, but the API supports it
   await (notion.pages as any).update({
