@@ -24,3 +24,7 @@
 ## 2024-11-20 - Precompute Inline Regex to avoid Regex Compilation Penalties
 **Learning:** In hot paths, like string matching using `.replace()` in `src/tools/helpers/security.ts`, re-compiling inline regexes (like `/<[\s/]*untrusted_notion_content/gi` with special escape sequences) can cause CPU allocations and garbage collection overheads.
 **Action:** Always precompute these regex as module-level constants (e.g. `XPIA_BREAKOUT_REGEX`) rather than recreating them during runtime to improve speed and performance.
+
+## 2024-11-20 - V8 Regex Caching and Fast Paths
+**Learning:** Contrary to older expectations, modern JavaScript engines (V8/Bun) compile static regex literals (e.g., `/<[\s/]*untrusted_notion_content/gi`) only once during parsing, not on every function invocation. Hoisting these inline regular expressions to module-level constants does not yield measurable performance gains and can sometimes be slower.
+**Action:** Avoid extracting inline regex literals to module-level constants as a micro-optimization. Instead, use string search fast paths (like `indexOf`) to avoid executing the regex state machine entirely when the input string obviously doesn't match the pattern (e.g. `if (str.indexOf('<') !== -1) str.replace(...)`).
