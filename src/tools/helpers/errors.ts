@@ -280,6 +280,11 @@ export function findClosestMatch(input: string, validOptions: string[]): string 
   const inputBigrams = new Set<string>()
   for (let i = 0; i < lower.length - 1; i++) inputBigrams.add(lower.slice(i, i + 2))
 
+  // Bolt optimization: Convert Set to Array outside the loop to avoid creating
+  // an iterator object on every iteration of validOptions
+  const inputBigramsArray = Array.from(inputBigrams)
+  const inputBigramsSize = inputBigrams.size
+
   for (const option of validOptions) {
     const optionLower = option.toLowerCase()
     // Check prefix match first
@@ -291,10 +296,11 @@ export function findClosestMatch(input: string, validOptions: string[]): string 
     for (let i = 0; i < optionLower.length - 1; i++) optionBigrams.add(optionLower.slice(i, i + 2))
 
     let overlap = 0
-    for (const b of inputBigrams) {
-      if (optionBigrams.has(b)) overlap++
+    for (let i = 0; i < inputBigramsSize; i++) {
+      if (optionBigrams.has(inputBigramsArray[i])) overlap++
     }
-    const score = (2 * overlap) / (inputBigrams.size + optionBigrams.size)
+
+    const score = (2 * overlap) / (inputBigramsSize + optionBigrams.size)
     if (score > bestScore && score > 0.4) {
       bestScore = score
       bestMatch = option

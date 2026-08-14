@@ -21,6 +21,6 @@
 **Learning:** In heavily used loops or rendering pipelines (e.g., parsing markdown tables and columns), using array methods like `.map()` and `.push()` can cause unnecessary garbage collection overhead and closure allocations. Specifically, large `.map()` chains or dynamic `.push()` calls create many intermediate arrays that penalize V8 performance.
 **Action:** Replace `.map()` and dynamic `.push()` with manual `for` loops over pre-allocated arrays (e.g., `new Array(length)`) to reduce garbage collection pressure and improve CPU efficiency in highly recursive or hot code paths.
 
-## 2024-07-31 - Array .slice() vs Constrained Push Loops in Pagination
-**Learning:** Using `Array.prototype.slice(0, limit)` at the end of array accumulation logic (like paginated results) creates unnecessary intermediate array allocations, increasing GC pressure and potentially causing memory bloat on large datasets.
-**Action:** When accumulating items into an array up to a certain `limit`, calculate the exact number of remaining items needed (`limit - allResults.length`) and constrain the bounds of the `.push()` loop (e.g. `for (let i = 0; i < Math.min(len, remaining); i++)`) to avoid pushing unnecessary items and bypassing the need for a final `.slice()`.
+## 2024-07-31 - Iteration optimizations on cold paths
+**Learning:** Optimizing `for...of` loops over Sets by converting them to Arrays on cold paths (like error message typo suggestions in `findClosestMatch`) is a micro-optimization with negligible real-world impact that slightly sacrifices readability.
+**Action:** Focus performance efforts on hot paths (e.g., rendering, high-throughput data processing) rather than cold paths like error handling, and avoid sacrificing code readability for unmeasurable gains.
