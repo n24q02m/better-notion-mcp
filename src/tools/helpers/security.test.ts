@@ -66,6 +66,11 @@ describe('Security Utilities', () => {
       expect(isSafeUrl('java\u202Escript:alert(1)')).toBe(false)
       // Byte Order Mark
       expect(isSafeUrl('java\uFEFFscript:alert(1)')).toBe(false)
+      // Invisible operators and special non-characters
+      expect(isSafeUrl('java\u2060script:alert(1)')).toBe(false)
+      expect(isSafeUrl('java\u206Fscript:alert(1)')).toBe(false)
+      expect(isSafeUrl('java\uFFFEscript:alert(1)')).toBe(false)
+      expect(isSafeUrl('java\uFFFFscript:alert(1)')).toBe(false)
     })
 
     it('should allow valid relative or absolute URLs that fail parsing but are not dangerous', () => {
