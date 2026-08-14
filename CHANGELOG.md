@@ -2,6 +2,95 @@
 
 <!-- version list -->
 
+## v2.39.0-beta.1 (2026-08-14)
+
+### Bug Fixes
+
+- Align live Cloudflare validation ([#1202](https://github.com/n24q02m/better-notion-mcp/pull/1202),
+  [`b65efae`](https://github.com/n24q02m/better-notion-mcp/commit/b65efae903c2acc0f4ae0600c15d334dc3e53d6b))
+
+- Anchor XPIA sanitization on the tag name instead of the padding
+  ([#1153](https://github.com/n24q02m/better-notion-mcp/pull/1153),
+  [`744640a`](https://github.com/n24q02m/better-notion-mcp/commit/744640a1d59f6ca74fe098d2d23c4047509513a0))
+
+- Bump mcp-core to 1.23.0 ([#1199](https://github.com/n24q02m/better-notion-mcp/pull/1199),
+  [`507cdaf`](https://github.com/n24q02m/better-notion-mcp/commit/507cdafcf25cc9f0273ee1e1535da04a8843445e))
+
+- Describe the HTTP mode instead of advertising a personal instance
+  ([`f0008c6`](https://github.com/n24q02m/better-notion-mcp/commit/f0008c66ea5ed94fe745b7db6227e5bf03d15e60))
+
+- Drop code_quality from the main ruleset
+  ([#1156](https://github.com/n24q02m/better-notion-mcp/pull/1156),
+  [`db415ef`](https://github.com/n24q02m/better-notion-mcp/commit/db415efe53a2d8c4b78bb2c70db0a6a8ba34fb4c))
+
+- Drop rangeStrategy from update-type package rules
+  ([#1145](https://github.com/n24q02m/better-notion-mcp/pull/1145),
+  [`528e43d`](https://github.com/n24q02m/better-notion-mcp/commit/528e43d16492ef8ea2ffb69e99a836b2302a37a3))
+
+- Move this repo to Apache-2.0, preserving the MIT terms it received
+  ([#1173](https://github.com/n24q02m/better-notion-mcp/pull/1173),
+  [`94f5a5f`](https://github.com/n24q02m/better-notion-mcp/commit/94f5a5f7b6a3c261dce1b167b2a128bc968bebdd))
+
+- Pin GitHub Action references to commit SHAs
+  ([#1141](https://github.com/n24q02m/better-notion-mcp/pull/1141),
+  [`5ae7b04`](https://github.com/n24q02m/better-notion-mcp/commit/5ae7b04dcbf41cec921b87a46c517dae469a949b))
+
+- Pre-allocate arrays in markdown rendering
+  ([`c9242fb`](https://github.com/n24q02m/better-notion-mcp/commit/c9242fb84034f4e31b0e8ebb7b038905b304795b))
+
+- Record rejected Bolt proposals in the ledger
+  ([#1154](https://github.com/n24q02m/better-notion-mcp/pull/1154),
+  [`064a7b3`](https://github.com/n24q02m/better-notion-mcp/commit/064a7b395719b7a0d0617481593d6a92685e3584))
+
+- Rerun PR title validation after edits
+  ([#1200](https://github.com/n24q02m/better-notion-mcp/pull/1200),
+  [`63ac740`](https://github.com/n24q02m/better-notion-mcp/commit/63ac740acf1f039161dc3d474cc2bacaa6b7e78d))
+
+- **deps**: Lock file maintenance ([#1158](https://github.com/n24q02m/better-notion-mcp/pull/1158),
+  [`95608d6`](https://github.com/n24q02m/better-notion-mcp/commit/95608d6cca11789fd64e872bc96bf1238cf5c6df))
+
+- **deps**: Update @cloudflare/workers-types to ^5.20260716.1
+  ([#1147](https://github.com/n24q02m/better-notion-mcp/pull/1147),
+  [`c97367c`](https://github.com/n24q02m/better-notion-mcp/commit/c97367c7f4e49d631f1a2f108bcc30ea328a9013))
+
+- **deps**: Update @cloudflare/workers-types to ^5.20260717.1
+  ([#1150](https://github.com/n24q02m/better-notion-mcp/pull/1150),
+  [`01cfd93`](https://github.com/n24q02m/better-notion-mcp/commit/01cfd93135d77ed9ed66eefdab754410416c6a88))
+
+- **deps**: Update @cloudflare/workers-types to ^5.20260718.1
+  ([#1157](https://github.com/n24q02m/better-notion-mcp/pull/1157),
+  [`449e62a`](https://github.com/n24q02m/better-notion-mcp/commit/449e62a72167501042fb5e639f7a13c665bf6230))
+
+- **deps**: Update actions/setup-node action to v7
+  ([#1120](https://github.com/n24q02m/better-notion-mcp/pull/1120),
+  [`1306813`](https://github.com/n24q02m/better-notion-mcp/commit/1306813e6b3182a726189e75fe8fec596570dbb7))
+
+- **deps**: Update actions/setup-python action to v7
+  ([#1149](https://github.com/n24q02m/better-notion-mcp/pull/1149),
+  [`c2a1f04`](https://github.com/n24q02m/better-notion-mcp/commit/c2a1f04e87e512761390b4723244d7d3ec73e5f4))
+
+- **deps**: Update minor dependencies
+  ([#1148](https://github.com/n24q02m/better-notion-mcp/pull/1148),
+  [`b0a3dc6`](https://github.com/n24q02m/better-notion-mcp/commit/b0a3dc6a29e93fd9b21ad1963f2e06608323afb6))
+
+- **deps**: Update patch dependencies
+  ([#1146](https://github.com/n24q02m/better-notion-mcp/pull/1146),
+  [`cc1cb9f`](https://github.com/n24q02m/better-notion-mcp/commit/cc1cb9f7bf57f388073a1aa72b8a8a00a9c4b2ac))
+
+- **deps**: Update typescript to v7
+  ([#1105](https://github.com/n24q02m/better-notion-mcp/pull/1105),
+  [`4c5aa0b`](https://github.com/n24q02m/better-notion-mcp/commit/4c5aa0b38eab051c6d631da9ab3711adde86ddbb))
+
+### Features
+
+- Govern duplicate bot pull requests
+  ([#1201](https://github.com/n24q02m/better-notion-mcp/pull/1201),
+  [`f661f0b`](https://github.com/n24q02m/better-notion-mcp/commit/f661f0ba808069a3f8171fc16e604aa25c8abacc))
+
+- Sync cross-promo section ([#1163](https://github.com/n24q02m/better-notion-mcp/pull/1163),
+  [`59b4c89`](https://github.com/n24q02m/better-notion-mcp/commit/59b4c8977500f6b3995d350fced43260e194015e))
+
+
 ## v2.38.0 (2026-07-18)
 
 ### Bug Fixes
