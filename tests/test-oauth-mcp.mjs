@@ -20,7 +20,7 @@ import { execFile } from 'node:child_process'
 import { createHash, randomBytes } from 'node:crypto'
 import { createServer } from 'node:http'
 
-const MCP_URL = process.env.MCP_URL || 'https://better-notion-mcp.n24q02m.com'
+const MCP_URL = process.env.MCP_URL || 'https://notion.n24q02m.com'
 const CALLBACK_PORT = 9876
 const CALLBACK_URI = `http://127.0.0.1:${CALLBACK_PORT}/callback`
 

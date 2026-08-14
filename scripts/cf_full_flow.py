@@ -179,33 +179,38 @@ def _run_session(
     import anyio
 
     async def _go() -> None:
+        import httpx2
         from mcp import ClientSession
-        from mcp.client.streamable_http import streamablehttp_client
+        from mcp.client.streamable_http import create_mcp_http_client, streamable_http_client
 
-        async with (
-            streamablehttp_client(
-                f"{endpoint}/mcp", headers={"Authorization": f"Bearer {jwt}"}
-            ) as (r, w, _),
-            ClientSession(r, w) as s,
-        ):
-            await s.initialize()
-            tools = await s.list_tools()
-            print("TOOLS:", [t.name for t in tools.tools])
-            st = await s.call_tool("config", {"action": "status"})
-            st_txt = "".join(getattr(b, "text", "") for b in st.content)
-            print("CONFIG_STATUS:", st_txt[:300].replace("\n", " "))
-            if expect_has_token:
-                assert '"has_token": true' in st_txt or '"has_token":true' in st_txt, (
-                    f"has_token is NOT true -- token did not survive / not saved: {st_txt[:300]}"
-                )
-                print("ASSERT OK: has_token=true.")
-            if probe_me:
-                me = await s.call_tool("users", {"action": "me"})
-                me_txt = "".join(getattr(b, "text", "") for b in me.content)
-                print("USERS_ME:", me_txt[:300].replace("\n", " "))
-                assert "error" not in me_txt.lower() or "bot" in me_txt.lower(), (
-                    f"users(me) failed -- Notion token not usable: {me_txt[:300]}"
-                )
+        class BearerAuth(httpx2.Auth):
+            def auth_flow(self, request: httpx2.Request):
+                request.headers["Authorization"] = f"Bearer {jwt}"
+                yield request
+
+        async with create_mcp_http_client(auth=BearerAuth()) as http_client:
+            async with streamable_http_client(
+                f"{endpoint}/mcp", http_client=http_client
+            ) as (r, w):
+                async with ClientSession(r, w) as s:
+                    await s.initialize()
+                    tools = await s.list_tools()
+                    print("TOOLS:", [t.name for t in tools.tools])
+                    st = await s.call_tool("config", {"action": "status"})
+                    st_txt = "".join(getattr(b, "text", "") for b in st.content)
+                    print("CONFIG_STATUS:", st_txt[:300].replace("\n", " "))
+                    if expect_has_token:
+                        assert '"has_token": true' in st_txt or '"has_token":true' in st_txt, (
+                            f"has_token is NOT true -- token did not survive / not saved: {st_txt[:300]}"
+                        )
+                        print("ASSERT OK: has_token=true.")
+                    if probe_me:
+                        me = await s.call_tool("users", {"action": "me"})
+                        me_txt = "".join(getattr(b, "text", "") for b in me.content)
+                        print("USERS_ME:", me_txt[:300].replace("\n", " "))
+                        assert "error" not in me_txt.lower() or "bot" in me_txt.lower(), (
+                            f"users(me) failed -- Notion token not usable: {me_txt[:300]}"
+                        )
 
     anyio.run(_go)
 

@@ -62,10 +62,10 @@ mise run fix                # bun run check:fix
 ## Release & Deploy
 
 - Conventional Commits. Tag format: `v{version}` (config: `semantic-release.toml`)
-- CD: workflow_dispatch, chon beta/stable
-- Pipeline: PSR v10 -> npm publish (`@n24q02m/better-notion-mcp`) -> Docker multi-arch (amd64 + arm64) -> DockerHub + GHCR -> MCP Registry
+- CD: workflow_dispatch, chọn beta/stable; versioning qua `n24q02m/better-semantic-release` và publish-action
+- Pipeline: semantic release -> npm publish (`@n24q02m/better-notion-mcp`) -> Docker multi-arch (amd64 + arm64) -> DockerHub + GHCR -> MCP Registry
 - OCI VM deploy: Docker Compose + Watchtower. Prod `:latest` 0.125G, Staging `:beta` 0.0625G
-- Cloudflare deploy (canonical, manual via wrangler): `notion.n24q02m.com` (Worker + Container + KV). Legacy OCI VM: `better-notion-mcp.n24q02m.com` (prod) / `better-notion-mcp-staging.n24q02m.com` (staging) — fallback until decommission.
+- Cloudflare deploy canonical: CD job `deploy-cf` checks out the released tag, runs `scripts/deploy_cf.py`, waits for rollout, and runs Gate A/B/JWKS canary. Do not deploy the n24q02m instance manually from a laptop. Public host: `https://notion.n24q02m.com` (Worker + Container + KV); the legacy OCI host is not canonical.
 
 ## Pre-commit hooks
 
@@ -92,7 +92,7 @@ mise run fix                # bun run check:fix
 Two transports, selected in `init-server.ts:14-15` (delegated to `main.ts`). There is no `MCP_MODE` env var; the old `local-relay` / `remote-oauth` distinction was removed (see `transports/http.ts:4-9`).
 
 - **stdio (default)**: MCP SDK `StdioServerTransport` directly. Single-user; requires `NOTION_TOKEN`. Fails fast with a stderr message if the token is unset (`main.ts:76-91`). No local relay spawn.
-- **http (opt-in)**: enabled via `--http`, `MCP_TRANSPORT=http`, or `TRANSPORT_MODE=http`. Always delegated OAuth 2.1 redirect flow to Notion at `https://api.notion.com/v1/oauth/authorize`. Requires `NOTION_OAUTH_CLIENT_ID` + `NOTION_OAUTH_CLIENT_SECRET`. Per-user access token stored in-process keyed by JWT `sub` (`auth/notion-token-store.ts`, in-memory `Map`). Multi-user. Deploy at `https://notion.n24q02m.com` (Cloudflare Worker + Container; legacy OCI VM at `https://better-notion-mcp.n24q02m.com`).
+- **http (opt-in)**: enabled via `--http`, `MCP_TRANSPORT=http`, or `TRANSPORT_MODE=http`. Always delegated OAuth 2.1 redirect flow to Notion at `https://api.notion.com/v1/oauth/authorize`. Requires `NOTION_OAUTH_CLIENT_ID` + `NOTION_OAUTH_CLIENT_SECRET`. Per-user access token stored in-process keyed by JWT `sub` (`auth/notion-token-store.ts`, in-memory `Map`). Multi-user. The n24q02m deployment is `https://notion.n24q02m.com` through the Cloudflare CD job.
 
 **CLI `auth`/`logout` subcommand -- N/A by domain (verified 2026-07-17)**: unlike wet/mnemo (`auth google`) or telegram (`auth`/`login`/`logout`), notion has no interactive CLI-triggered credential flow to standardize. stdio mode reads `NOTION_TOKEN` straight from the env (no local relay, no on-disk session to log out of); http mode is always a delegated browser OAuth redirect served at `/authorize` (no CLI-drivable step). Cross-server auth-naming parity (`auth [<provider>]` + `logout`) is therefore not applicable here.
 
