@@ -20,3 +20,7 @@
 ## 2024-07-17 - Avoid .map() and intermediate array allocations in Hot Paths
 **Learning:** In heavily used loops or rendering pipelines (e.g., parsing markdown tables and columns), using array methods like `.map()` and `.push()` can cause unnecessary garbage collection overhead and closure allocations. Specifically, large `.map()` chains or dynamic `.push()` calls create many intermediate arrays that penalize V8 performance.
 **Action:** Replace `.map()` and dynamic `.push()` with manual `for` loops over pre-allocated arrays (e.g., `new Array(length)`) to reduce garbage collection pressure and improve CPU efficiency in highly recursive or hot code paths.
+
+## 2024-07-20 - Adhere to existing functional test contracts when optimizing
+**Learning:** Even if removing an intermediate array allocation (like `.slice()`) seems like an obvious micro-optimization, it must not be applied if it modifies the behavioral contract of the function, especially edge-cases defined by existing unit tests (e.g., returning the exact requested `limit` vs the number of items fetched before the `limit` condition is met). Optimizations that alter functional behavior are invalid and will be rejected.
+**Action:** Always run the test suite *before* pushing optimizations, and if a test fails due to a behavioral change caused by the optimization, either find a way to optimize without breaking the contract or abandon the micro-optimization altogether. Do not submit unbenchmarked optimizations that break tests.

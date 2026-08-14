@@ -49,12 +49,8 @@ export async function autoPaginate<T>(
     // Maximum Call Stack Size Exceeded errors on very large page arrays and improve performance
     // on large datasets by avoiding intermediate array allocations from spread
     const results = response.results
-
-    // ⚡ Bolt: Calculate exactly how many items we should push to avoid over-fetching
-    // and subsequent .slice() allocation at the end.
-    const itemsToPush = limit > 0 ? Math.min(results.length, limit - allResults.length) : results.length
-
-    for (let i = 0; i < itemsToPush; i++) {
+    const len = results.length
+    for (let i = 0; i < len; i++) {
       allResults.push(results[i])
     }
     cursor = response.next_cursor
@@ -62,6 +58,8 @@ export async function autoPaginate<T>(
 
     // Stop if limit reached
     if (limit > 0 && allResults.length >= limit) {
+      // ⚡ Bolt: Immediately trim to the limit so that the final returned array matches the expected test contract length
+      allResults.length = limit
       break
     }
 
@@ -71,6 +69,7 @@ export async function autoPaginate<T>(
     }
   } while (cursor !== null)
 
+  // ⚡ Bolt: No `.slice()` needed since we accurately trim `allResults.length` during loop termination.
   return allResults
 }
 
