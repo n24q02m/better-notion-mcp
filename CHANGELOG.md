@@ -2,6 +2,18 @@
 
 <!-- version list -->
 
+## v2.39.0-beta.2 (2026-08-14)
+
+### Bug Fixes
+
+- Update Cloudflare worker types ([#1205](https://github.com/n24q02m/better-notion-mcp/pull/1205),
+  [`b26446e`](https://github.com/n24q02m/better-notion-mcp/commit/b26446eb898746cb4cc6dfd95baa5b2419f700b5))
+
+- **deps**: Update patch dependencies
+  ([#1203](https://github.com/n24q02m/better-notion-mcp/pull/1203),
+  [`5d4612e`](https://github.com/n24q02m/better-notion-mcp/commit/5d4612e793b4126df28b6944b10c80dead0a116c))
+
+
 ## v2.39.0-beta.1 (2026-08-14)
 
 ### Bug Fixes
