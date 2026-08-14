@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
   pull_request_target:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
@@ -57,7 +57,9 @@ jobs:
 
   lint-and-test:
     name: Lint, Test & Build (${{ matrix.os }})
-    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    if: >-
+      (github.event_name == 'pull_request' && github.event.action != 'edited')
+      || github.event_name == 'push'
     strategy:
       fail-fast: false
       matrix:
@@ -102,7 +104,7 @@ jobs:
 
   dependency-review:
     name: Dependency Review
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.event.action != 'edited'
     runs-on: ubuntu-latest
 
     steps:
