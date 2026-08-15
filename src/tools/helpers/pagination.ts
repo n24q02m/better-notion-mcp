@@ -58,6 +58,8 @@ export async function autoPaginate<T>(
 
     // Stop if limit reached
     if (limit > 0 && allResults.length >= limit) {
+      // ⚡ Bolt: In-place array truncation avoids GC overhead of intermediate arrays created by .slice()
+      allResults.length = limit
       break
     }
 
@@ -67,7 +69,7 @@ export async function autoPaginate<T>(
     }
   } while (cursor !== null)
 
-  return limit > 0 ? allResults.slice(0, limit) : allResults
+  return allResults
 }
 
 /** Block types that need children fetched for proper markdown rendering */
