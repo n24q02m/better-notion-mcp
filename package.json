@@ -72,7 +72,7 @@
     "@cloudflare/workers-types": "^5.20260808.1",
     "@types/node": "^26.2.0",
     "@vitest/coverage-v8": "^4.1.10",
-    "esbuild": "^0.28.1",
+    "esbuild": "^0.28.2",
     "tsx": "^4.23.11",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
