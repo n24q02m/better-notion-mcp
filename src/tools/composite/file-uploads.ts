@@ -235,19 +235,21 @@ async function retrieveFileUpload(notion: Client, input: FileUploadsInput): Prom
  * Maps to: GET /v1/file_uploads
  */
 async function listFileUploads(notion: Client, input: FileUploadsInput): Promise<any> {
-  const allResults = await autoPaginate(async (cursor) => {
-    const response: any = await (notion as any).fileUploads.list({
-      start_cursor: cursor,
-      page_size: 100
-    })
-    return {
-      results: response.results,
-      next_cursor: response.next_cursor,
-      has_more: response.has_more
-    }
-  })
-
-  const results = input.limit ? allResults.slice(0, input.limit) : allResults
+  // ⚡ Bolt: Pass limit to autoPaginate to avoid extra network I/O and intermediate arrays
+  const results = await autoPaginate(
+    async (cursor, pageSize) => {
+      const response: any = await (notion as any).fileUploads.list({
+        start_cursor: cursor,
+        page_size: pageSize || 100
+      })
+      return {
+        results: response.results,
+        next_cursor: response.next_cursor,
+        has_more: response.has_more
+      }
+    },
+    { limit: input.limit }
+  )
 
   return {
     action: 'list',
