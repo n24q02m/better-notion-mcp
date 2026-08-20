@@ -58,6 +58,7 @@ export async function autoPaginate<T>(
 
     // Stop if limit reached
     if (limit > 0 && allResults.length >= limit) {
+      allResults.length = limit
       break
     }
 
@@ -67,7 +68,7 @@ export async function autoPaginate<T>(
     }
   } while (cursor !== null)
 
-  return limit > 0 ? allResults.slice(0, limit) : allResults
+  return allResults
 }
 
 /** Block types that need children fetched for proper markdown rendering */
