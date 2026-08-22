@@ -48,6 +48,9 @@ export interface Env {
   MCP_RELAY_PASSWORD: string
   NOTION_OAUTH_CLIENT_ID: string
   NOTION_OAUTH_CLIENT_SECRET: string
+  // Dehost / tombstone drill flag (W4)
+  DEHOSTED?: string
+  TOMBSTONE?: string
 }
 
 // Keys forwarded from the Worker env (wrangler vars + secrets) into the container
@@ -138,8 +141,30 @@ function unauthenticated(request: Request): Response {
   })
 }
 
+function tombstoneResponse(): Response {
+  return new Response(
+    JSON.stringify({
+      error: 'hosted_runtime_dehosted',
+      status: 410,
+      message:
+        'The hosted Cloudflare endpoint for better-notion-mcp has been retired. The package remains active via local stdio (npx @n24q02m/better-notion-mcp / docker run -i n24q02m/better-notion-mcp) and self-hosted HTTP. See https://mcp.n24q02m.com/servers/better-notion-mcp/ for instructions.',
+      successor: 'https://mcp.n24q02m.com/servers/better-notion-mcp/'
+    }),
+    {
+      status: 410,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Dehosted-Successor': 'https://mcp.n24q02m.com/servers/better-notion-mcp/'
+      }
+    }
+  )
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    if (env.DEHOSTED === 'true' || env.TOMBSTONE === 'true') {
+      return tombstoneResponse()
+    }
     // Public entrypoint: ONLY routes inbound requests to the per-user container
     // DO. The kv.internal outbound handler is deliberately NOT dispatched here —
     // exposing it on the public fetch surface would let an external caller

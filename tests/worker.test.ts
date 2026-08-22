@@ -290,3 +290,51 @@ describe('KV security (Sentinel)', () => {
     expect(res.status).toBe(403)
   })
 })
+
+describe('tombstone contract (W4 dehost preparation & drill)', () => {
+  it('returns 410 Gone with non-sensitive successor message and headers when DEHOSTED is true', async () => {
+    const { calls, env } = envWithDoSpy()
+    const dehostedEnv = { ...env, DEHOSTED: 'true' }
+
+    const res = await worker.fetch(
+      new Request('https://notion.n24q02m.com/mcp', {
+        method: 'POST',
+        headers: { authorization: 'Bearer valid.jwt.token' }
+      }),
+      dehostedEnv as never
+    )
+
+    expect(res.status).toBe(410)
+    expect(res.headers.get('Content-Type')).toBe('application/json')
+    expect(res.headers.get('X-Dehosted-Successor')).toBe('https://mcp.n24q02m.com/servers/better-notion-mcp/')
+
+    const body = await res.json()
+    expect(body).toMatchObject({
+      error: 'hosted_runtime_dehosted',
+      status: 410,
+      successor: 'https://mcp.n24q02m.com/servers/better-notion-mcp/'
+    })
+    expect(body.message).toContain('retired')
+    expect(body.message).toContain('stdio')
+
+    // CRITICAL: 0 requests reach the Container DO
+    expect(calls).toEqual([])
+  })
+
+  it('returns 410 Gone on all routes (including /authorize, /health, /.well-known) when TOMBSTONE is true', async () => {
+    const { calls, env } = envWithDoSpy()
+    const dehostedEnv = { ...env, TOMBSTONE: 'true' }
+
+    for (const path of ['/authorize', '/health', '/.well-known/jwks.json', '/mcp/v1']) {
+      const res = await worker.fetch(
+        new Request(`https://notion.n24q02m.com${path}`, { method: 'GET' }),
+        dehostedEnv as never
+      )
+      expect(res.status).toBe(410)
+      expect(res.headers.get('X-Dehosted-Successor')).toBe('https://mcp.n24q02m.com/servers/better-notion-mcp/')
+    }
+
+    // CRITICAL: 0 requests reach the Container DO
+    expect(calls).toEqual([])
+  })
+})
