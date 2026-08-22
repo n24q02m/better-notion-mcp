@@ -31,3 +31,7 @@ Proposals that were reviewed and declined. A closing comment lives on the PR, wh
 - **Dropping the redundant `.includes('|')` and using `.trimStart()` in `markdown.ts` table parsing** (PRs #1142, #1143, #1144 — one cluster, three PRs). The redundancy is real and the rewrite is behaviour-preserving, but `parseTable` runs once per table during page conversion and the removed check scans a single line. Unmeasured, so closed. `#1142` is the cleanest diff if this is ever revisited.
 - **Writing `// ⚡ Bolt: ...` narration into source files** (PR #1143, `markdown.ts:193`). This is a public repository; attribution markers of that form do not belong in shipped code. Keep the rationale in this ledger and in the commit message.
 - **Deleting existing entries from this file** (PR #1143 removed 22 lines). This ledger is append-only memory. Removing entries is how settled proposals return.
+
+## 2024-07-25 - Avoid .slice() for Array Truncation
+**Learning:** In V8 environments, using `.slice(0, limit)` to truncate arrays creates unnecessary garbage collection overhead due to intermediate array allocations. Furthermore, when paginating over an API, fetching everything and then slicing it discards hard-won network I/O.
+**Action:** Always pass limits down to the fetcher if possible (e.g., using `pageSize`). When array truncation in-memory is absolutely necessary, use in-place truncation (`arr.length = limit`) instead of `.slice()`.
