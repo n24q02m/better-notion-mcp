@@ -45,7 +45,7 @@ export async function autoPaginate<T>(
     }
 
     const response = await fetchFn(cursor || undefined, currentPageSize)
-    // BOLT OPTIMIZATION: Use manual push loop instead of spread operator to avoid
+    // Use manual push loop instead of spread operator to avoid
     // Maximum Call Stack Size Exceeded errors on very large page arrays and improve performance
     // on large datasets by avoiding intermediate array allocations from spread
     const results = response.results
@@ -67,7 +67,13 @@ export async function autoPaginate<T>(
     }
   } while (cursor !== null)
 
-  return limit > 0 ? allResults.slice(0, limit) : allResults
+  // Use in-place array truncation to avoid GC overhead
+  // from intermediate array allocations caused by .slice()
+  if (limit > 0 && allResults.length > limit) {
+    allResults.length = limit
+  }
+
+  return allResults
 }
 
 /** Block types that need children fetched for proper markdown rendering */
