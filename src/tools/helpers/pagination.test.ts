@@ -94,6 +94,27 @@ describe('autoPaginate', () => {
 
     expect(fetchFn).toHaveBeenCalledWith(undefined, 50)
   })
+  it('uses the remaining limit for page size and stops without an extra request', async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce({
+        results: [1, 2],
+        next_cursor: 'cursor-1',
+        has_more: true
+      })
+      .mockResolvedValueOnce({
+        results: [3, 4],
+        next_cursor: 'cursor-2',
+        has_more: true
+      })
+
+    const results = await autoPaginate(fetchFn, { limit: 3 })
+
+    expect(results).toEqual([1, 2, 3])
+    expect(fetchFn).toHaveBeenCalledTimes(2)
+    expect(fetchFn).toHaveBeenNthCalledWith(1, undefined, 3)
+    expect(fetchFn).toHaveBeenNthCalledWith(2, 'cursor-1', 1)
+  })
 })
 
 describe('fetchChildrenRecursive', () => {
