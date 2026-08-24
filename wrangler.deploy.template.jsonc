@@ -28,6 +28,7 @@
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["NotionContainer"] }],
   "kv_namespaces": [{ "binding": "KV", "id": "${CF_KV_ID}" }],
   "vars": {
+    "DEHOSTED": "true",
     "MCP_TRANSPORT": "http",
     "PORT": "8080",
     "HOST": "0.0.0.0",
