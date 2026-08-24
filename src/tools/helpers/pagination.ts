@@ -67,7 +67,13 @@ export async function autoPaginate<T>(
     }
   } while (cursor !== null)
 
-  return limit > 0 ? allResults.slice(0, limit) : allResults
+  // Use in-place truncation to avoid intermediate array allocation GC
+  // overhead from .slice(0, limit) on very large result sets
+  if (limit > 0 && allResults.length > limit) {
+    allResults.length = limit
+  }
+
+  return allResults
 }
 
 /** Block types that need children fetched for proper markdown rendering */
