@@ -58,16 +58,25 @@ export async function autoPaginate<T>(
 
     // Stop if limit reached
     if (limit > 0 && allResults.length >= limit) {
+      // In-place truncation to avoid intermediate GC allocations from .slice() on large arrays
+      allResults.length = limit
       break
     }
 
     // Stop if max pages reached (user-specified or safety limit)
     if (pageCount >= effectiveMax) {
+      if (limit > 0 && allResults.length > limit) {
+        allResults.length = limit
+      }
       break
     }
   } while (cursor !== null)
 
-  return limit > 0 ? allResults.slice(0, limit) : allResults
+  if (limit > 0 && allResults.length > limit) {
+    allResults.length = limit
+  }
+
+  return allResults
 }
 
 /** Block types that need children fetched for proper markdown rendering */

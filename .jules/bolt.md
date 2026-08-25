@@ -31,3 +31,6 @@ Proposals that were reviewed and declined. A closing comment lives on the PR, wh
 - **Dropping the redundant `.includes('|')` and using `.trimStart()` in `markdown.ts` table parsing** (PRs #1142, #1143, #1144 — one cluster, three PRs). The redundancy is real and the rewrite is behaviour-preserving, but `parseTable` runs once per table during page conversion and the removed check scans a single line. Unmeasured, so closed. `#1142` is the cleanest diff if this is ever revisited.
 - **Writing `// ⚡ Bolt: ...` narration into source files** (PR #1143, `markdown.ts:193`). This is a public repository; attribution markers of that form do not belong in shipped code. Keep the rationale in this ledger and in the commit message.
 - **Deleting existing entries from this file** (PR #1143 removed 22 lines). This ledger is append-only memory. Removing entries is how settled proposals return.
+## 2024-07-28 - Optimize Pagination Network I/O
+**Learning:** In paginated functions (like `autoPaginate` handling Notion API `list` requests), waiting for all pages to fetch and then slicing the array in memory incurs severe performance and network I/O penalties.
+**Action:** Always pass limits directly into pagination functions or utility options (e.g., `{ limit: input.limit }`) to allow the loop to break early and prevent unnecessary network requests.
