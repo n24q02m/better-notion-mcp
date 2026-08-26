@@ -1,19 +1,19 @@
 # Privacy Policy — Better Notion MCP
 
-**Last updated:** 2026-06-16
+**Last updated:** 2026-08-24
 
 ## Data Collection
 
 Better Notion MCP acts as a proxy between MCP clients (Claude, Cursor, etc.) and the Notion API. It does **not** collect, store, or transmit any user data beyond what is necessary for the current request.
 
-## OAuth Mode (Remote Server)
+## HTTP Mode (Self-Hosted)
 
-When using the remote server at `notion.n24q02m.com`:
+The project does not operate a public hosted Notion MCP service. If you run HTTP mode on infrastructure you control:
 
-- **Authentication**: Uses Notion OAuth 2.0.
-- **Token storage**: Your Notion access token is encrypted (AES-GCM) and stored in Cloudflare KV, scoped to your authenticated session (keyed by your OAuth identity) so that no other user can read it and so you do not have to re-authorize after a server restart. It is used only to call the Notion API on your behalf and is never logged.
-- **No content database**: Beyond the encrypted access token above, no Notion page content or session history is persisted between requests.
-- **Logging**: Only anonymous request metadata (timestamps, status codes) is logged for operational monitoring. No Notion content is logged.
+- **Authentication**: Uses the Notion OAuth 2.0 credentials you configure.
+- **Token storage**: Access-token storage and retention are controlled by your deployment configuration.
+- **No content database by default**: The server does not require a Notion content database.
+- **Logging**: Logging and monitoring are controlled by the operator of the self-hosted deployment.
 
 ## Stdio Mode (Local)
 
@@ -25,7 +25,7 @@ When running locally via npm or Docker:
 ## Third-Party Services
 
 - **Notion API** (`api.notion.com`): Your data is subject to [Notion's Privacy Policy](https://www.notion.so/Privacy-Policy-3468d120cf614d4c9014c09f6aab3571).
-- **Cloudflare**: The remote server runs on Cloudflare (Workers + Containers + KV), which also provides DNS proxy and DDoS protection. See [Cloudflare Privacy](https://www.cloudflare.com/privacypolicy/).
+- **Self-hosting provider**: If you deploy HTTP mode, data processing by your chosen infrastructure provider is governed by that provider's terms and your configuration.
 
 ## Contact
 

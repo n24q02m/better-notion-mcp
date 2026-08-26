@@ -392,7 +392,7 @@ jobs:
     # this job (exit 1, no silent bad deploy). Live-image prev_ref for true CI
     # rollback is a tracked follow-up.
     needs: [release]
-    if: needs.release.outputs.released == 'true'
+    if: needs.release.outputs.released == 'true' && vars.CF_HOSTED_ENABLED != 'false'
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
