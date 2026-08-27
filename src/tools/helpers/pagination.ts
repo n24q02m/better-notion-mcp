@@ -58,6 +58,9 @@ export async function autoPaginate<T>(
 
     // Stop if limit reached
     if (limit > 0 && allResults.length >= limit) {
+      // Optimized: In-place truncation instead of slicing to avoid creating a new array
+      // and causing unnecessary GC pressure on large data sets
+      allResults.length = limit
       break
     }
 
@@ -67,7 +70,7 @@ export async function autoPaginate<T>(
     }
   } while (cursor !== null)
 
-  return limit > 0 ? allResults.slice(0, limit) : allResults
+  return allResults
 }
 
 /** Block types that need children fetched for proper markdown rendering */
