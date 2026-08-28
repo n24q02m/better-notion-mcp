@@ -67,6 +67,12 @@ describe('Security Utilities', () => {
       // Byte Order Mark
       expect(isSafeUrl('java\uFEFFscript:alert(1)')).toBe(false)
     })
+    it('should reject invisible operators and Unicode noncharacters in both URL validators', () => {
+      for (const char of ['\u2060', '\u206F', '\uFFFE', '\uFFFF']) {
+        expect(isSafeUrl(`java${char}script:alert(1)`)).toBe(false)
+        expect(isSafeWebUrl(`https://example.com/${char}path`)).toBe(false)
+      }
+    })
 
     it('should allow valid relative or absolute URLs that fail parsing but are not dangerous', () => {
       // These fail new URL() parsing but don't match the dangerous protocol checks
