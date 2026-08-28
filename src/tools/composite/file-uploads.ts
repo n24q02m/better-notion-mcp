@@ -235,7 +235,6 @@ async function retrieveFileUpload(notion: Client, input: FileUploadsInput): Prom
  * Maps to: GET /v1/file_uploads
  */
 async function listFileUploads(notion: Client, input: FileUploadsInput): Promise<any> {
-  // Optimized: Pass limit to autoPaginate to avoid fetching unnecessary pages and dynamically adjust page_size
   const allResults = await autoPaginate(
     async (cursor, pageSize) => {
       const response: any = await (notion as any).fileUploads.list({

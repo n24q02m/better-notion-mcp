@@ -841,18 +841,21 @@ async function listDataSourceTemplates(
   const { databaseId, dataSourceId: resolvedDsId } = await resolveDataSourceId(notion, input.database_id)
   const dataSourceId = input.data_source_id || resolvedDsId
 
-  const templates = await autoPaginate(async (cursor) => {
-    const response: any = await (notion as any).dataSources.listTemplates({
-      data_source_id: dataSourceId,
-      start_cursor: cursor,
-      page_size: 100
-    })
-    return {
-      results: response.templates || response.results,
-      next_cursor: response.next_cursor,
-      has_more: response.has_more
-    }
-  })
+  const templates = await autoPaginate(
+    async (cursor, pageSize) => {
+      const response: any = await (notion as any).dataSources.listTemplates({
+        data_source_id: dataSourceId,
+        start_cursor: cursor,
+        page_size: pageSize
+      })
+      return {
+        results: response.templates || response.results,
+        next_cursor: response.next_cursor,
+        has_more: response.has_more
+      }
+    },
+    { limit: input.limit }
+  )
 
   return {
     action: 'list_templates',

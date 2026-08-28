@@ -392,6 +392,7 @@ describe('databases', () => {
 
       expect(result.total).toBe(2)
       expect(result.results).toHaveLength(2)
+      expect(mockNotion.dataSources.query).toHaveBeenCalledWith(expect.objectContaining({ page_size: 2 }))
     })
 
     it('should format various property types in results', async () => {
