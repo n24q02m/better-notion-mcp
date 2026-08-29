@@ -62,7 +62,7 @@
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@n24q02m/mcp-core": "1.23.0",
     "@notionhq/client": "^5.26.0",
-    "zod": "^4.4.3"
+    "zod": "^4.5.4"
   },
   "trustedDependencies": [
     "esbuild"
