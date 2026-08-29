@@ -13,7 +13,7 @@
       },
       "devDependencies": {
         "@biomejs/biome": "^2.5.10",
-        "@cloudflare/workers-types": "^5.20260821.1",
+        "@cloudflare/workers-types": "^5.20260822.1",
         "@types/node": "^26.2.0",
         "@vitest/coverage-v8": "^4.1.11",
         "esbuild": "^0.28.2",
