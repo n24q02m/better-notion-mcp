@@ -2,6 +2,112 @@
 
 <!-- version list -->
 
+## v2.40.0 (2026-08-29)
+
+### Bug Fixes
+
+- Align Bun toolchain with lockfile v2
+  ([#1241](https://github.com/n24q02m/better-notion-mcp/pull/1241),
+  [`c24acd0`](https://github.com/n24q02m/better-notion-mcp/commit/c24acd023adb701edb6337e69ae30a0204caba03))
+
+- Propagate Notion pagination limits
+  ([#1230](https://github.com/n24q02m/better-notion-mcp/pull/1230),
+  [`e7ceaed`](https://github.com/n24q02m/better-notion-mcp/commit/e7ceaedae17d407521743cbe57d874bd8b3fb005))
+
+- Reject Unicode URL obfuscation characters
+  ([#1229](https://github.com/n24q02m/better-notion-mcp/pull/1229),
+  [`3746660`](https://github.com/n24q02m/better-notion-mcp/commit/3746660f27e0fa89ae5ebc2db427cb813cda7767))
+
+- Remove retired hosted Notion surface
+  ([#1232](https://github.com/n24q02m/better-notion-mcp/pull/1232),
+  [`f4a2366`](https://github.com/n24q02m/better-notion-mcp/commit/f4a236652ed882ae2b5a93e47e47e69926b27d03))
+
+- ⚡ Bolt: Use in-place array truncation in autoPaginate
+  ([#1243](https://github.com/n24q02m/better-notion-mcp/pull/1243),
+  [`d8d275b`](https://github.com/n24q02m/better-notion-mcp/commit/d8d275bca0d85c00a6533d78a1685038881fe7c1))
+
+- **deps**: Lock file maintenance
+  ([`353977c`](https://github.com/n24q02m/better-notion-mcp/commit/353977cab22d1a1edb9bba3a9e4bf40bca31626d))
+
+- **deps**: Update @biomejs/biome to ^2.5.10
+  ([#1242](https://github.com/n24q02m/better-notion-mcp/pull/1242),
+  [`1278728`](https://github.com/n24q02m/better-notion-mcp/commit/1278728dffbd20e5f38b0314019fc796d597a5a2))
+
+- **deps**: Update @biomejs/biome to ^2.5.8
+  ([#1218](https://github.com/n24q02m/better-notion-mcp/pull/1218),
+  [`64c7c86`](https://github.com/n24q02m/better-notion-mcp/commit/64c7c864e9bf576a869534ccd83195c43ee18a62))
+
+- **deps**: Update @cloudflare/workers-types to ^5.20260809.1
+  ([#1213](https://github.com/n24q02m/better-notion-mcp/pull/1213),
+  [`ca69453`](https://github.com/n24q02m/better-notion-mcp/commit/ca69453df4a05d45709178c8dc53683c13e72f2d))
+
+- **deps**: Update @cloudflare/workers-types to ^5.20260811.1
+  ([#1216](https://github.com/n24q02m/better-notion-mcp/pull/1216),
+  [`4161228`](https://github.com/n24q02m/better-notion-mcp/commit/41612283c15f24a75d2fda42e45864f2da2dd4d0))
+
+- **deps**: Update @cloudflare/workers-types to ^5.20260813.1
+  ([#1221](https://github.com/n24q02m/better-notion-mcp/pull/1221),
+  [`53c9971`](https://github.com/n24q02m/better-notion-mcp/commit/53c99711a82d4959d51a993071b882b8a2015367))
+
+- **deps**: Update @cloudflare/workers-types to ^5.20260814.1
+  ([#1223](https://github.com/n24q02m/better-notion-mcp/pull/1223),
+  [`98326f6`](https://github.com/n24q02m/better-notion-mcp/commit/98326f6cfda0f7248367afc72c51d3d6825aabe8))
+
+- **deps**: Update @cloudflare/workers-types to ^5.20260815.1
+  ([#1225](https://github.com/n24q02m/better-notion-mcp/pull/1225),
+  [`99d8d09`](https://github.com/n24q02m/better-notion-mcp/commit/99d8d091f3f8e94ad2c2b386f1829f60d0e7406e))
+
+- **deps**: Update @cloudflare/workers-types to ^5.20260816.1
+  ([#1228](https://github.com/n24q02m/better-notion-mcp/pull/1228),
+  [`60243ec`](https://github.com/n24q02m/better-notion-mcp/commit/60243eccd3865a9fec692a3d9f0d801c96c51156))
+
+- **deps**: Update @cloudflare/workers-types to ^5.20260819.1
+  ([#1236](https://github.com/n24q02m/better-notion-mcp/pull/1236),
+  [`dfe8cb4`](https://github.com/n24q02m/better-notion-mcp/commit/dfe8cb4b1f7c88ac9ed2d7f53dd9502621b076a8))
+
+- **deps**: Update @cloudflare/workers-types to ^5.20260821.1
+  ([#1239](https://github.com/n24q02m/better-notion-mcp/pull/1239),
+  [`cf476f2`](https://github.com/n24q02m/better-notion-mcp/commit/cf476f2469bebd0411998272b6c1448084587618))
+
+- **deps**: Update esbuild to ^0.28.2
+  ([#1209](https://github.com/n24q02m/better-notion-mcp/pull/1209),
+  [`0d91e51`](https://github.com/n24q02m/better-notion-mcp/commit/0d91e510a45584eb16e9b3b992b1fa9f40dbe488))
+
+- **deps**: Update minor dependencies
+  ([#1210](https://github.com/n24q02m/better-notion-mcp/pull/1210),
+  [`69daf6c`](https://github.com/n24q02m/better-notion-mcp/commit/69daf6c7e6a3828b8f259cd0c74e8e644b3e891e))
+
+- **deps**: Update non-major dev dependencies
+  ([#1206](https://github.com/n24q02m/better-notion-mcp/pull/1206),
+  [`a32c915`](https://github.com/n24q02m/better-notion-mcp/commit/a32c9158b3e98fbd1c9c3f024e2625f33d45e3b4))
+
+- **deps**: Update oven/bun:1-alpine Docker digest to 0723557
+  ([#1220](https://github.com/n24q02m/better-notion-mcp/pull/1220),
+  [`aa5cd61`](https://github.com/n24q02m/better-notion-mcp/commit/aa5cd61476588be311845c1154ba06a155a52932))
+
+- **deps**: Update patch dependencies
+  ([#1235](https://github.com/n24q02m/better-notion-mcp/pull/1235),
+  [`627e33d`](https://github.com/n24q02m/better-notion-mcp/commit/627e33d340b1a2cc1c22d5f0a285a9f67ed5a0de))
+
+- **deps**: Update tsx to ^4.23.12 ([#1215](https://github.com/n24q02m/better-notion-mcp/pull/1215),
+  [`f34c27b`](https://github.com/n24q02m/better-notion-mcp/commit/f34c27b219f26f19ccb42de93c4a886678277829))
+
+### Chores
+
+- Bump better-semantic-release to v1.4.0
+  ([#1234](https://github.com/n24q02m/better-notion-mcp/pull/1234),
+  [`85b1da5`](https://github.com/n24q02m/better-notion-mcp/commit/85b1da5c2bc1acf482fdeec6e51a2483ea6919f9))
+
+### Features
+
+- Add hosted runtime tombstone ([#1232](https://github.com/n24q02m/better-notion-mcp/pull/1232),
+  [`f4a2366`](https://github.com/n24q02m/better-notion-mcp/commit/f4a236652ed882ae2b5a93e47e47e69926b27d03))
+
+- Dehost managed Cloudflare runtime
+  ([#1232](https://github.com/n24q02m/better-notion-mcp/pull/1232),
+  [`f4a2366`](https://github.com/n24q02m/better-notion-mcp/commit/f4a236652ed882ae2b5a93e47e47e69926b27d03))
+
+
 ## v2.39.0 (2026-08-14)
 
 
