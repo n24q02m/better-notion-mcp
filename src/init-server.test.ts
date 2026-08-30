@@ -2,13 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const startServerMock = vi.fn()
 
-vi.mock('./main.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./main.js')>()
-  return {
-    ...actual,
-    startServer: startServerMock
-  }
-})
+vi.mock('./main.js', () => ({
+  startServer: startServerMock,
+  getTransportMode: () =>
+    process.argv.includes('--http') || process.env.MCP_TRANSPORT === 'http' || process.env.TRANSPORT_MODE === 'http'
+      ? 'http'
+      : 'stdio'
+}))
+
 describe('initServer', () => {
   const originalEnv = process.env
   const originalArgv = process.argv
