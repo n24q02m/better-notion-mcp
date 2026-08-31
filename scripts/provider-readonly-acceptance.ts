@@ -7,10 +7,7 @@ const SEARCH_QUERY = 'provider-acceptance'
 const SEARCH_LIMIT = 3
 
 export interface AcceptanceClient {
-  callTool(request: {
-    name: string
-    arguments?: Record<string, unknown>
-  }): Promise<unknown>
+  callTool(request: { name: string; arguments?: Record<string, unknown> }): Promise<unknown>
 }
 
 interface ToolCall {
@@ -189,9 +186,7 @@ function searchResultCount(content: z.infer<typeof ContentBlockSchema>[]): numbe
   return total
 }
 
-export async function runReadOnlyAcceptance(
-  client: AcceptanceClient
-): Promise<ReadOnlyAcceptanceSummary> {
+export async function runReadOnlyAcceptance(client: AcceptanceClient): Promise<ReadOnlyAcceptanceSummary> {
   const operations: OperationSummary[] = []
 
   for (const { operation, request } of READ_ONLY_CALLS) {
@@ -225,27 +220,31 @@ export async function runHttpReadOnlyAcceptance(
   }
 
   let transport: StreamableHTTPClientTransport | undefined
+  let summary: ReadOnlyAcceptanceSummary | undefined
+  let failure: AcceptanceError | undefined
+
   try {
+    transport = new StreamableHTTPClientTransport(endpoint, {
+      requestInit: { headers: { authorization: `Bearer ${bearerToken}` } }
+    })
+    const client = new Client({ name: 'notion-readonly-provider-acceptance', version: '1.0.0' })
+    await client.connect(transport)
+    summary = await runReadOnlyAcceptance(client)
+  } catch (error) {
+    failure = error instanceof AcceptanceError ? error : new AcceptanceError('Read-only acceptance transport failed')
+  }
+
+  if (transport) {
     try {
-      transport = new StreamableHTTPClientTransport(endpoint, {
-        requestInit: { headers: { authorization: `Bearer ${bearerToken}` } }
-      })
-      const client = new Client({ name: 'notion-readonly-provider-acceptance', version: '1.0.0' })
-      await client.connect(transport)
-      return await runReadOnlyAcceptance(client)
-    } catch (error) {
-      if (error instanceof AcceptanceError) throw error
-      throw new AcceptanceError('Read-only acceptance transport failed')
-    }
-  } finally {
-    if (transport) {
-      try {
-        await transport.close()
-      } catch {
-        throw new AcceptanceError('Read-only acceptance transport close failed')
-      }
+      await transport.close()
+    } catch {
+      failure ??= new AcceptanceError('Read-only acceptance transport close failed')
     }
   }
+
+  if (failure) throw failure
+  if (!summary) throw new AcceptanceError('Read-only acceptance transport failed')
+  return summary
 }
 
 async function main(): Promise<void> {

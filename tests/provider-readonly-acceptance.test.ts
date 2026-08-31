@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  type AcceptanceClient,
   assertReadOnlyToolCall,
   runHttpReadOnlyAcceptance,
-  runReadOnlyAcceptance,
-  type AcceptanceClient
+  runReadOnlyAcceptance
 } from '../scripts/provider-readonly-acceptance.js'
 
 const sdkMocks = vi.hoisted(() => ({
@@ -67,10 +67,7 @@ class FakeClient implements AcceptanceClient {
         action: 'search',
         query: 'provider-acceptance',
         total: 2,
-        results: [
-          searchItem(sensitiveId, 'Private result'),
-          searchItem('another-private-id', 'Another result')
-        ]
+        results: [searchItem(sensitiveId, 'Private result'), searchItem('another-private-id', 'Another result')]
       })
     }
 
@@ -118,9 +115,9 @@ describe('read-only Notion provider acceptance', () => {
       dispatched.push(request)
     }
 
-    await expect(
-      guardedDispatch({ name: 'pages', arguments: { action: 'create' } })
-    ).rejects.toThrow(/not an allowed read-only acceptance call/)
+    await expect(guardedDispatch({ name: 'pages', arguments: { action: 'create' } })).rejects.toThrow(
+      /not an allowed read-only acceptance call/
+    )
     await expect(
       guardedDispatch({
         name: 'workspace',
@@ -143,9 +140,7 @@ describe('read-only Notion provider acceptance', () => {
         return { isError: true, content: [{ type: 'text', text: secretToken }] }
       }
     }
-    await expect(runReadOnlyAcceptance(providerError)).rejects.toThrow(
-      'workspace.info returned an MCP error'
-    )
+    await expect(runReadOnlyAcceptance(providerError)).rejects.toThrow('workspace.info returned an MCP error')
     try {
       await runReadOnlyAcceptance(providerError)
     } catch (error) {
@@ -161,9 +156,7 @@ describe('read-only Notion provider acceptance', () => {
         return textResult({})
       }
     }
-    await expect(runReadOnlyAcceptance(malformed)).rejects.toThrow(
-      'workspace.search returned malformed JSON'
-    )
+    await expect(runReadOnlyAcceptance(malformed)).rejects.toThrow('workspace.search returned malformed JSON')
 
     const tooManyResults: AcceptanceClient = {
       async callTool(request) {
@@ -183,9 +176,7 @@ describe('read-only Notion provider acceptance', () => {
         return textResult({})
       }
     }
-    await expect(runReadOnlyAcceptance(tooManyResults)).rejects.toThrow(
-      'workspace.search exceeded the result bound'
-    )
+    await expect(runReadOnlyAcceptance(tooManyResults)).rejects.toThrow('workspace.search exceeded the result bound')
   })
 
   it('closes the SDK transport and redacts connection failures', async () => {
@@ -201,10 +192,37 @@ describe('read-only Notion provider acceptance', () => {
     expect(failure).toBeInstanceOf(Error)
     expect((failure as Error).message).toBe('Read-only acceptance transport failed')
     expect((failure as Error).message).not.toContain(secretToken)
-    expect(sdkMocks.transportArgs).toHaveBeenCalledWith(
-      expect.any(URL),
-      { requestInit: { headers: { authorization: `Bearer ${secretToken}` } } }
-    )
+    expect(sdkMocks.transportArgs).toHaveBeenCalledWith(expect.any(URL), {
+      requestInit: { headers: { authorization: `Bearer ${secretToken}` } }
+    })
     expect(sdkMocks.close).toHaveBeenCalledTimes(1)
+  })
+
+  it('preserves the primary sanitized failure when transport close also fails', async () => {
+    sdkMocks.connect.mockRejectedValueOnce(new Error(`provider leaked ${secretToken}`))
+    sdkMocks.close.mockRejectedValueOnce(new Error(`close leaked ${secretToken}`))
+
+    await expect(runHttpReadOnlyAcceptance(new URL('https://notion.example/mcp'), secretToken)).rejects.toThrow(
+      'Read-only acceptance transport failed'
+    )
+  })
+
+  it('reports a sanitized close failure after successful read-only calls', async () => {
+    sdkMocks.callTool
+      .mockResolvedValueOnce(textResult({}))
+      .mockResolvedValueOnce(textResult({}))
+      .mockResolvedValueOnce(
+        textResult({
+          action: 'search',
+          query: 'provider-acceptance',
+          total: 0,
+          results: []
+        })
+      )
+    sdkMocks.close.mockRejectedValueOnce(new Error(`close leaked ${secretToken}`))
+
+    await expect(runHttpReadOnlyAcceptance(new URL('https://notion.example/mcp'), secretToken)).rejects.toThrow(
+      'Read-only acceptance transport close failed'
+    )
   })
 })
