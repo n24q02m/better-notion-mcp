@@ -2,6 +2,40 @@
 
 <!-- version list -->
 
+## v2.40.1-beta.1 (2026-08-31)
+
+### Bug Fixes
+
+- Add bounded Notion provider acceptance
+  ([#1252](https://github.com/n24q02m/better-notion-mcp/pull/1252),
+  [`18347c3`](https://github.com/n24q02m/better-notion-mcp/commit/18347c339ddba5783c62ad48f1063a265802ca92))
+
+- Isolate init-server transport mock
+  ([#1249](https://github.com/n24q02m/better-notion-mcp/pull/1249),
+  [`9867e1e`](https://github.com/n24q02m/better-notion-mcp/commit/9867e1e251c43d236b62fb6d12e7e780766004fa))
+
+- Preserve notion acceptance errors
+  ([#1252](https://github.com/n24q02m/better-notion-mcp/pull/1252),
+  [`18347c3`](https://github.com/n24q02m/better-notion-mcp/commit/18347c339ddba5783c62ad48f1063a265802ca92))
+
+- **deps**: Bump better-semantic-release and zod
+  ([`f3d3c12`](https://github.com/n24q02m/better-notion-mcp/commit/f3d3c12783669de610992a128e63c8d698ea7ab7))
+
+- **deps**: Bump mcp-core to 1.23.1
+  ([`4f0a52a`](https://github.com/n24q02m/better-notion-mcp/commit/4f0a52a8209f02bf7a57a6ff134d79fbb688928b))
+
+- **deps**: Lock file maintenance ([#1251](https://github.com/n24q02m/better-notion-mcp/pull/1251),
+  [`f7e64aa`](https://github.com/n24q02m/better-notion-mcp/commit/f7e64aaf9c22680ed2ff899a76df9397e4b627ac))
+
+- **deps**: Update @cloudflare/workers-types to ^5.20260822.1
+  ([#1245](https://github.com/n24q02m/better-notion-mcp/pull/1245),
+  [`690c150`](https://github.com/n24q02m/better-notion-mcp/commit/690c150cdff02a5cd9c218bbf44b3cd4d7b6c20d))
+
+- **deps**: Update @cloudflare/workers-types to ^5.20260823.1
+  ([#1250](https://github.com/n24q02m/better-notion-mcp/pull/1250),
+  [`237b936`](https://github.com/n24q02m/better-notion-mcp/commit/237b936f980b5edad36b35a8f0487bff9535c1e5))
+
+
 ## v2.40.0 (2026-08-29)
 
 ### Bug Fixes
