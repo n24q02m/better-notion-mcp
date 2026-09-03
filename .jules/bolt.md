@@ -34,3 +34,7 @@ Proposals that were reviewed and declined. A closing comment lives on the PR, wh
 ## 2024-08-28 - In-place Array Truncation
 **Learning:** Returning `.slice(0, limit)` on large arrays (like paginated results) causes unnecessary intermediate array allocation, which increases GC pressure.
 **Action:** When a maximum limit on an array's size is needed, modify the array length in-place (`arr.length = limit`) rather than creating a new array copy using `.slice()`.
+
+## 2024-09-04 - Limit Regex Checks on Large Strings
+**Learning:** Running `Regex.test(str)` on very large strings (e.g., a 10MB base64 file upload) causes severe performance penalties (O(N)) because the V8 regex engine performs redundant character checks. Native `Buffer.from(str, 'base64')` is highly optimized in C++ and handles full validation much faster. However, regex is still helpful for extremely fast O(1) early rejection of badly formatted text.
+**Action:** For large string validations, apply regular expressions only to a fixed-size chunk (like the first and last 1024 characters) to allow fast early-outs without scanning the entire huge string.

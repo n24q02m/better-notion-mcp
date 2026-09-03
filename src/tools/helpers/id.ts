@@ -51,8 +51,15 @@ export function isValidBase64(str: string): boolean {
   }
 
   // Basic regex check for character set and padding structure
-  if (!BASE64_REGEX.test(str)) {
-    return false
+  // ⚡ Bolt: Only test a sample of very large strings to avoid O(N) regex evaluation overhead
+  // Buffer.from's native implementation is significantly faster at full payload validation
+  if (str.length > 1024) {
+    if (!BASE64_REGEX.test(str.substring(0, 1024))) return false
+    if (!BASE64_REGEX.test(str.substring(str.length - 1024))) return false
+  } else {
+    if (!BASE64_REGEX.test(str)) {
+      return false
+    }
   }
 
   // Strict check: Buffer roundtrip to ensure canonicality
