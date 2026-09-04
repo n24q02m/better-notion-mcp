@@ -286,8 +286,26 @@ describe('KV security (Sentinel)', () => {
 
   it('rejects path traversal attempts that try to escape the prefix (403)', async () => {
     const env = fakeEnv()
-    const res = await kvH(new Request('http://kv.internal/better-notion/../secret'), env as never)
-    expect(res.status).toBe(403)
+
+    // Exact match for '..' after prefix
+    const resExact = await kvH(new Request('http://kv.internal/better-notion/..'), env as never)
+    expect(resExact.status).toBe(403)
+
+    // Directory traversal '../'
+    const resTraversal = await kvH(new Request('http://kv.internal/better-notion/../secret'), env as never)
+    expect(resTraversal.status).toBe(403)
+
+    // Directory traversal at the end '/..' (must use %2F to prevent the URL constructor from resolving it locally)
+    const resEnd = await kvH(new Request('http://kv.internal/better-notion/secret%2F..'), env as never)
+    expect(resEnd.status).toBe(403)
+  })
+
+  it('allows valid keys containing .. that are not directory traversals', async () => {
+    const env = fakeEnv()
+    // A key just starting with .. shouldn't be blocked as long as it's not a path traversal
+    const res = await kvH(new Request('http://kv.internal/better-notion/..name'), env as never)
+    // 404 means it passed the prefix check and hit the missing KV key
+    expect(res.status).toBe(404)
   })
 })
 
