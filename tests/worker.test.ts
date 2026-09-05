@@ -289,6 +289,12 @@ describe('KV security (Sentinel)', () => {
     const res = await kvH(new Request('http://kv.internal/better-notion/../secret'), env as never)
     expect(res.status).toBe(403)
   })
+
+  it('allows valid keys containing "..", like "..foo", after a slash', async () => {
+    const env = fakeEnv()
+    const res = await kvH(new Request('http://kv.internal/better-notion/..foo'), env as never)
+    expect(res.status).toBe(404) // 404 indicates it passed prefix validation
+  })
 })
 
 describe('tombstone contract (W4 dehost preparation & drill)', () => {
