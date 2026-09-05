@@ -34,3 +34,6 @@ Proposals that were reviewed and declined. A closing comment lives on the PR, wh
 ## 2024-08-28 - In-place Array Truncation
 **Learning:** Returning `.slice(0, limit)` on large arrays (like paginated results) causes unnecessary intermediate array allocation, which increases GC pressure.
 **Action:** When a maximum limit on an array's size is needed, modify the array length in-place (`arr.length = limit`) rather than creating a new array copy using `.slice()`.
+## 2025-03-09 - Fast Early Rejection for Large String Validation
+**Learning:** In V8 environments, executing regular expressions over massive strings (e.g., 20MB base64 payloads) blocks the event loop with O(N) evaluation overhead, drastically slowing down processing even when caching regex patterns at the module level.
+**Action:** When validating massive string payloads with regex, perform fast early rejection by slicing the payload into small chunks (e.g., first and last 1024 characters) and applying the regex rules to those chunks first, before resorting to native full-payload methods (like `Buffer.from`).

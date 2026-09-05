@@ -39,6 +39,7 @@ const MAX_BASE64_LENGTH = 20 * 1024 * 1024
 
 // BOLT OPTIMIZATION: Cache regex at module level to avoid compiling literal on every file_content validation
 const BASE64_REGEX = /^[A-Za-z0-9+/]*={0,2}$/
+const BASE64_CHUNK_START_REGEX = /^[A-Za-z0-9+/]+$/
 
 /**
  * Check if a string is valid base64 encoding
@@ -50,9 +51,20 @@ export function isValidBase64(str: string): boolean {
     return false
   }
 
-  // Basic regex check for character set and padding structure
-  if (!BASE64_REGEX.test(str)) {
-    return false
+  // BOLT OPTIMIZATION: Fast early rejection for obvious non-base64 strings using small chunks.
+  // This avoids blocking the event loop with O(N) regex evaluation on massive payloads.
+  if (str.length > 2048) {
+    if (
+      !BASE64_CHUNK_START_REGEX.test(str.substring(0, 1024)) ||
+      !BASE64_REGEX.test(str.substring(str.length - 1024))
+    ) {
+      return false
+    }
+  } else {
+    // Basic regex check for character set and padding structure on smaller strings
+    if (!BASE64_REGEX.test(str)) {
+      return false
+    }
   }
 
   // Strict check: Buffer roundtrip to ensure canonicality
