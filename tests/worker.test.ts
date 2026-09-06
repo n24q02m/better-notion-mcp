@@ -289,6 +289,14 @@ describe('KV security (Sentinel)', () => {
     const res = await kvH(new Request('http://kv.internal/better-notion/../secret'), env as never)
     expect(res.status).toBe(403)
   })
+
+  it('allows valid paths that happen to contain .. but are not directory traversal', async () => {
+    const env = fakeEnv()
+    // A path like "better-notion/..name" is perfectly valid since it's just a key starting with ".."
+    const res = await kvH(new Request('http://kv.internal/better-notion/..name'), env as never)
+    // Should get a 404 (not found) instead of a 403 (forbidden)
+    expect(res.status).toBe(404)
+  })
 })
 
 describe('tombstone contract (W4 dehost preparation & drill)', () => {
