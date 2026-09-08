@@ -3,12 +3,11 @@
  * All page operations in one unified interface
  */
 
-import type { NotionBlock } from '../helpers/markdown.js'
-
 import type { Client, PageObjectResponse } from '@notionhq/client'
 import { formatCover } from '../helpers/covers.js'
 import { NotionMCPError, retryWithBackoff, withErrorHandling } from '../helpers/errors.js'
 import { formatIcon } from '../helpers/icons.js'
+import type { NotionBlock } from '../helpers/markdown.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 import { autoPaginate, populateDeepChildren, processBatches } from '../helpers/pagination.js'
 import { convertToNotionProperties, extractPageProperties } from '../helpers/properties.js'

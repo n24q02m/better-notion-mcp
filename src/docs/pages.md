@@ -31,7 +31,7 @@ Pages may contain **image blocks** and **file blocks**. These are returned as ma
 ```json
 {"action": "get", "page_id": "xxx", "content_limit": 20}
 ```
-Returns page properties and markdown content. Use `content_limit` (1–100 blocks) to bound the response. When more blocks remain, `content_truncated` is `true` and `next_cursor` can be passed as `content_cursor` in the next request. Omitting `content_limit` preserves the full-content read.
+Returns all properties including: title, rich_text, select, multi_select, number, checkbox, url, email, phone_number, date, relation, rollup, people, files, formula, created_time, last_edited_time, created_by, last_edited_by, status, unique_id. Use `content_limit` (1–100 blocks) to bound the response. When more blocks remain, `content_truncated` is `true` and `next_cursor` can be passed as `content_cursor` in the next request. Omitting `content_limit` preserves the full-content read.
 
 ### get_property
 Retrieve a single page property item with auto-pagination for large properties.
