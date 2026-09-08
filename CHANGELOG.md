@@ -2,6 +2,12 @@
 
 <!-- version list -->
 
+## Unreleased
+
+### Bug Fixes
+
+- Bound page content reads with continuation cursors and tighten KV traversal checks for legitimate dotted keys.
+
 ## v2.40.1 (2026-08-31)
 
 

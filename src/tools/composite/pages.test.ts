@@ -216,6 +216,48 @@ describe('pages', () => {
       })
     })
 
+    it('bounds content and exposes the continuation cursor', async () => {
+      mockNotion.pages.retrieve.mockResolvedValue({
+        id: 'page-3',
+        url: 'https://notion.so/page-3',
+        created_time: '2024-01-01T00:00:00.000Z',
+        last_edited_time: '2024-01-02T00:00:00.000Z',
+        archived: false,
+        properties: {}
+      })
+      mockNotion.blocks.children.list.mockResolvedValue({
+        results: [{ id: 'block-1', type: 'paragraph' }],
+        next_cursor: 'cursor-2',
+        has_more: true
+      })
+
+      const result = (await pages(mockNotion as any, {
+        action: 'get',
+        page_id: 'page-3',
+        content_limit: 1
+      })) as GetPageResult
+
+      expect(mockNotion.blocks.children.list).toHaveBeenCalledWith({
+        block_id: 'page-3',
+        start_cursor: undefined,
+        page_size: 1
+      })
+      expect(result.content_truncated).toBe(true)
+      expect(result.next_cursor).toBe('cursor-2')
+      expect(result.block_count).toBe(1)
+    })
+
+    it('rejects content limits outside the Notion page-size range', async () => {
+      await expect(
+        pages(mockNotion as any, {
+          action: 'get',
+          page_id: 'page-1',
+          content_limit: 101
+        })
+      ).rejects.toThrow('content_limit must be an integer between 1 and 100')
+      expect(mockNotion.pages.retrieve).not.toHaveBeenCalled()
+    })
+
     it('handles pages with no blocks', async () => {
       mockNotion.pages.retrieve.mockResolvedValue({
         id: 'page-2',

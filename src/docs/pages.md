@@ -29,9 +29,9 @@ Pages may contain **image blocks** and **file blocks**. These are returned as ma
 
 ### get
 ```json
-{"action": "get", "page_id": "xxx"}
+{"action": "get", "page_id": "xxx", "content_limit": 20}
 ```
-Returns all properties including: title, rich_text, select, multi_select, number, checkbox, url, email, phone_number, date, relation, rollup, people, files, formula, created_time, last_edited_time, created_by, last_edited_by, status, unique_id.
+Returns page properties and markdown content. Use `content_limit` (1–100 blocks) to bound the response. When more blocks remain, `content_truncated` is `true` and `next_cursor` can be passed as `content_cursor` in the next request. Omitting `content_limit` preserves the full-content read.
 
 ### get_property
 Retrieve a single page property item with auto-pagination for large properties.
@@ -75,6 +75,8 @@ Move a page to a new parent page.
 - `parent_id` - Parent page or database ID
 - `properties` - Page properties (for database pages)
 - `property_id` - Property ID (required for get_property action)
+- `content_limit` - Maximum number of top-level blocks returned by `get` (1–100)
+- `content_cursor` - Continuation cursor returned by a bounded `get`
 - `icon` - Emoji, external URL (`https://...`), or built-in shorthand (`name:color`, e.g. `document:gray`)
 - `cover` - External URL (`https://...`) or built-in shorthand (e.g. `gradient_1`, `solid_beige`, `nasa_carina_nebula`)
 - `archived` - Archive status (boolean, for update action)

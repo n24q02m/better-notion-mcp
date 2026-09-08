@@ -3,6 +3,8 @@
  * All page operations in one unified interface
  */
 
+import type { NotionBlock } from '../helpers/markdown.js'
+
 import type { Client, PageObjectResponse } from '@notionhq/client'
 import { formatCover } from '../helpers/covers.js'
 import { NotionMCPError, retryWithBackoff, withErrorHandling } from '../helpers/errors.js'
@@ -31,6 +33,36 @@ export interface GetPageResult {
   properties: Record<string, any>
   content: string
   block_count: number
+  content_truncated?: boolean
+  next_cursor?: string | null
+}
+
+export interface PagesInput {
+  action: 'create' | 'get' | 'get_property' | 'update' | 'move' | 'archive' | 'restore' | 'duplicate'
+
+  // Common params
+  page_id?: string
+  page_ids?: string[]
+
+  // Create/Update params
+  title?: string
+  content?: string // Markdown (defaults to append, use replace: true to overwrite)
+  append_content?: string
+  parent_id?: string
+  properties?: Record<string, any>
+  icon?: string
+  cover?: string
+
+  // get_property params
+  property_id?: string
+
+  // get content params
+  content_limit?: number
+  content_cursor?: string
+
+  // Archive/Restore params
+  archived?: boolean
+  replace?: boolean
 }
 
 export interface GetPagePropertyResult {
@@ -39,6 +71,76 @@ export interface GetPagePropertyResult {
   property_id: string
   type: string
   value: any
+}
+
+/**
+ * Get page content as markdown, optionally bounded to one Notion cursor page.
+ * Maps to: GET /v1/pages/{id} + GET /v1/blocks/{id}/children
+ */
+async function getPage(notion: Client, input: PagesInput): Promise<GetPageResult> {
+  if (!input.page_id) {
+    throw new NotionMCPError('page_id is required for get action', 'VALIDATION_ERROR', 'Provide page_id')
+  }
+
+  if (
+    input.content_limit !== undefined &&
+    (!Number.isInteger(input.content_limit) || input.content_limit < 1 || input.content_limit > 100)
+  ) {
+    throw new NotionMCPError(
+      'content_limit must be an integer between 1 and 100',
+      'VALIDATION_ERROR',
+      'Provide a content_limit between 1 and 100'
+    )
+  }
+
+  const page = (await notion.pages.retrieve({ page_id: input.page_id })) as PageObjectResponse
+  const bounded = input.content_limit !== undefined || input.content_cursor !== undefined
+  let blocks: NotionBlock[]
+  let nextCursor: string | null = null
+  let hasMore = false
+
+  if (bounded) {
+    const response = await notion.blocks.children.list({
+      block_id: input.page_id,
+      start_cursor: input.content_cursor,
+      page_size: input.content_limit ?? 100
+    })
+    blocks = response.results as unknown as NotionBlock[]
+    nextCursor = response.next_cursor
+    hasMore = response.has_more
+  } else {
+    blocks = (await autoPaginate((cursor) =>
+      notion.blocks.children.list({
+        block_id: input.page_id!,
+        start_cursor: cursor,
+        page_size: 100
+      })
+    )) as unknown as NotionBlock[]
+  }
+
+  // Recursively fetch children for blocks that need them (tables, toggles, columns)
+  await populateDeepChildren(notion, blocks as unknown as Parameters<typeof populateDeepChildren>[1])
+
+  const result: GetPageResult = {
+    action: 'get',
+    page_id: page.id,
+    url: page.url,
+    created_time: page.created_time,
+    last_edited_time: page.last_edited_time,
+    archived: page.archived,
+    icon: page.icon || null,
+    cover: page.cover || null,
+    properties: extractPageProperties(page.properties),
+    content: blocksToMarkdown(blocks),
+    block_count: blocks.length
+  }
+
+  if (bounded) {
+    result.content_truncated = hasMore
+    result.next_cursor = nextCursor
+  }
+
+  return result
 }
 
 export interface UpdatePageResult {
@@ -74,30 +176,6 @@ export type PagesResult =
   | MovePageResult
   | ArchivePageResult
   | DuplicatePageResult
-
-export interface PagesInput {
-  action: 'create' | 'get' | 'get_property' | 'update' | 'move' | 'archive' | 'restore' | 'duplicate'
-
-  // Common params
-  page_id?: string
-  page_ids?: string[]
-
-  // Create/Update params
-  title?: string
-  content?: string // Markdown (defaults to append, use replace: true to overwrite)
-  append_content?: string
-  parent_id?: string
-  properties?: Record<string, any>
-  icon?: string
-  cover?: string
-
-  // get_property params
-  property_id?: string
-
-  // Archive/Restore params
-  archived?: boolean
-  replace?: boolean
-}
 
 /**
  * Unified pages tool - handles all page operations
@@ -197,49 +275,6 @@ async function createPage(notion: Client, input: PagesInput): Promise<CreatePage
     page_id: page.id,
     url: page.url,
     created: true
-  }
-}
-
-/**
- * Get page with full content as markdown
- * Maps to: GET /v1/pages/{id} + GET /v1/blocks/{id}/children
- */
-async function getPage(notion: Client, input: PagesInput): Promise<GetPageResult> {
-  if (!input.page_id) {
-    throw new NotionMCPError('page_id is required for get action', 'VALIDATION_ERROR', 'Provide page_id')
-  }
-
-  const page = (await notion.pages.retrieve({ page_id: input.page_id })) as PageObjectResponse
-
-  // Get all blocks with auto-pagination
-  const blocks = await autoPaginate((cursor) =>
-    notion.blocks.children.list({
-      block_id: input.page_id!,
-      start_cursor: cursor,
-      page_size: 100
-    })
-  )
-
-  // Recursively fetch children for blocks that need them (tables, toggles, columns)
-  await populateDeepChildren(notion, blocks as any[])
-
-  const markdown = blocksToMarkdown(blocks as any)
-
-  // Extract properties
-  const properties = extractPageProperties(page.properties)
-
-  return {
-    action: 'get',
-    page_id: page.id,
-    url: page.url,
-    created_time: page.created_time,
-    last_edited_time: page.last_edited_time,
-    archived: page.archived,
-    icon: page.icon || null,
-    cover: page.cover || null,
-    properties,
-    content: markdown,
-    block_count: blocks.length
   }
 }
 
