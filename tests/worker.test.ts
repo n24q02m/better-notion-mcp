@@ -289,6 +289,20 @@ describe('KV security (Sentinel)', () => {
     const res = await kvH(new Request('http://kv.internal/better-notion/../secret'), env as never)
     expect(res.status).toBe(403)
   })
+
+  it('allows legitimate keys starting with .. after a slash (false positive check)', async () => {
+    const env = fakeEnv()
+    // Mock the KV store to return null so it returns 404 instead of 403
+    const res = await kvH(new Request('http://kv.internal/better-notion/..legitimate'), env as never)
+    expect(res.status).toBe(404)
+  })
+
+  it('rejects path traversal attempts ending with /.. (403)', async () => {
+    const env = fakeEnv()
+    // Use %2F.. to prevent Request object from normalizing the URL client-side before it hits the handler
+    const res = await kvH(new Request('http://kv.internal/better-notion/foo%2F..'), env as never)
+    expect(res.status).toBe(403)
+  })
 })
 
 describe('tombstone contract (W4 dehost preparation & drill)', () => {
