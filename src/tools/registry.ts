@@ -90,7 +90,7 @@ const TOOLS = [
   {
     name: 'pages',
     description:
-      'Page CRUD for individual pages and database rows.\n\nActions (required params -> optional):\n- create (parent_id -> title, content, properties, icon, cover)\n- get (page_id): returns markdown content\n- get_property (page_id, property_id)\n- update (page_id -> title, content, append_content, properties, icon, cover, archived)\n- move (page_id, parent_id)\n- archive (page_id) / restore (page_id)\n- duplicate (page_id -> parent_id)\n\nUse `databases` instead for querying or bulk row operations. Property format: simple values auto-convert -- string for title/rich_text/select/status, number for number, boolean for checkbox, string[] for multi_select, ISO date "2025-01-15" for date. Example: properties: {"Name": "My Page", "Status": "In Progress", "Tags": ["tag1", "tag2"], "Due": "2025-06-01", "Count": 42, "Done": true}.',
+      'Page CRUD for individual pages and database rows.\n\nActions (required params -> optional):\n- create (parent_id -> title, content, properties, icon, cover)\n- get (page_id -> content_limit, content_cursor): returns markdown content; bounded reads return content_truncated and next_cursor\n- get_property (page_id, property_id)\n- update (page_id -> title, content, append_content, properties, icon, cover, archived)\n- move (page_id, parent_id)\n- archive (page_id) / restore (page_id)\n- duplicate (page_id -> parent_id)\n\nUse `databases` instead for querying or bulk row operations. Property format: simple values auto-convert -- string for title/rich_text/select/status, number for number, boolean for checkbox, string[] for multi_select, ISO date "2025-01-15" for date. Example: properties: {"Name": "My Page", "Status": "In Progress", "Tags": ["urgent", "work"]}',
     annotations: {
       title: 'Pages',
       readOnlyHint: false,
@@ -111,6 +111,13 @@ const TOOLS = [
         title: { type: 'string', description: 'Page title' },
         content: { type: 'string', description: 'Markdown content' },
         append_content: { type: 'string', description: 'Markdown to append' },
+        content_limit: {
+          type: 'number',
+          minimum: 1,
+          maximum: 100,
+          description: 'Max page blocks to return for get; use next_cursor to continue'
+        },
+        content_cursor: { type: 'string', description: 'Cursor from a previous bounded pages get' },
         parent_id: { type: 'string', description: 'Parent page or database ID' },
         properties: {
           type: 'object',
