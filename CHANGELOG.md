@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v2.41.1 (2026-09-11)
+
+### Bug Fixes
+
+- Pin better-semantic-release action to v1.6.1
+  ([#1282](https://github.com/n24q02m/better-notion-mcp/pull/1282),
+  [`35054b7`](https://github.com/n24q02m/better-notion-mcp/commit/35054b75018778d47bd7c34d01ae5fa0081fdcb8))
+
+
 ## v2.41.0 (2026-09-11)
 
 ### Bug Fixes
