@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v2.41.2 (2026-09-11)
+
+### Bug Fixes
+
+- **deps**: Update patch dependencies
+  ([#1284](https://github.com/n24q02m/better-notion-mcp/pull/1284),
+  [`4cecf43`](https://github.com/n24q02m/better-notion-mcp/commit/4cecf4389015ef0ccfbf76603e39c0e2184f768a))
+
+
 ## v2.41.1 (2026-09-11)
 
 ### Bug Fixes
