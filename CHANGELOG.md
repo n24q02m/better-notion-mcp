@@ -2,6 +2,22 @@
 
 <!-- version list -->
 
+## v2.41.5 (2026-09-12)
+
+### Bug Fixes
+
+- **deps**: Update bun to v1.4.2 ([#1290](https://github.com/n24q02m/better-notion-mcp/pull/1290),
+  [`3bc8bb1`](https://github.com/n24q02m/better-notion-mcp/commit/3bc8bb14b2c51ff0479fd031762cdec5f5e8ee54))
+
+### Chores
+
+- **release**: Fix stale two-branch comment (single-main lane)
+  ([`d24dd8d`](https://github.com/n24q02m/better-notion-mcp/commit/d24dd8dfb506855eacea842312871cd3549350ec))
+
+- **release**: Single-main release lane (staging branch retired)
+  ([`6b42d19`](https://github.com/n24q02m/better-notion-mcp/commit/6b42d1910499f962f43cc33d27bbc5213a434e9c))
+
+
 ## v2.41.4 (2026-09-12)
 
 ### Bug Fixes
