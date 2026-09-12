@@ -19,7 +19,7 @@
   "version": "2.41.4",
   "license": "Apache-2.0",
   "type": "module",
-  "packageManager": "bun@1.4.1",
+  "packageManager": "bun@1.4.2",
   "publishConfig": {
     "access": "public"
   },
