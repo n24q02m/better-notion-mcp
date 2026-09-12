@@ -2,6 +2,23 @@
 
 <!-- version list -->
 
+## v2.41.3 (2026-09-12)
+
+### Bug Fixes
+
+- **deps**: Update @cloudflare/workers-types to ^5.20260905.1
+  ([#1285](https://github.com/n24q02m/better-notion-mcp/pull/1285),
+  [`90f8ac7`](https://github.com/n24q02m/better-notion-mcp/commit/90f8ac7bf85100e641d325a6633afbce97b5fbc4))
+
+### Chores
+
+- **rulesets**: Align IaC with repo-bootstrap template
+  ([`2622ad7`](https://github.com/n24q02m/better-notion-mcp/commit/2622ad7460e6e4a4020b582bace83fdcb264768d))
+
+- **rulesets**: Align IaC with repo-bootstrap template
+  ([`a9f2f34`](https://github.com/n24q02m/better-notion-mcp/commit/a9f2f34abfe240d031e9fd9c363a617e7cfaca9a))
+
+
 ## v2.41.2 (2026-09-11)
 
 ### Bug Fixes
