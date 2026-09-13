@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-09-13** — This repository is no longer maintained. Use the official Notion API instead of this MCP server. Existing installations keep working but receive no updates or support.
+
 # Better Notion MCP
 
 mcp-name: io.github.n24q02m/better-notion-mcp
