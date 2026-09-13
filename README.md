@@ -5,6 +5,7 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 **Markdown-first Notion for AI agents -- pages, databases, blocks, and comments in one call.**
 
 <!-- Badge Row 1: Status -->
+[![Mode](https://img.shields.io/badge/mode:-http_remote_oauth_%C2%B7_http_local_relay_%C2%B7_stdio_proxy-5C6BC0)](https://mcp.n24q02m.com/get-started/modes-overview/)
 [![CI](https://github.com/n24q02m/better-notion-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/n24q02m/better-notion-mcp/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/n24q02m/better-notion-mcp/graph/badge.svg?token=D7FSDVVTAN)](https://codecov.io/gh/n24q02m/better-notion-mcp)
 [![npm](https://img.shields.io/npm/v/@n24q02m/better-notion-mcp?logo=npm&logoColor=white)](https://www.npmjs.com/package/@n24q02m/better-notion-mcp)
@@ -102,6 +103,16 @@ Or run the published Docker image (stdio):
 docker run --rm -i -e NOTION_TOKEN=ntn_your_token_here n24q02m/better-notion-mcp:latest
 ```
 
+### Install matrix
+
+| Client | Install |
+|:-------|:--------|
+| Claude Code | `/plugin marketplace add n24q02m/claude-plugins` + `/plugin install better-notion-mcp@n24q02m-plugins` (stdio; prompts for `NOTION_TOKEN`), or an `mcpServers` entry in `.mcp.json` / client settings |
+| Codex CLI | `[mcp_servers.better-notion-mcp]` block in `~/.codex/config.toml` (stdio `command`/`args` or HTTP `type`/`url`) |
+| OpenCode | `mcpServers` block in `opencode.json` |
+| Cursor / Windsurf / Gemini CLI / any MCP client | `mcpServers` JSON in the client's config — same shape as the example above |
+
+Full per-client walkthroughs: [mcp.n24q02m.com/servers/better-notion-mcp/setup/](https://mcp.n24q02m.com/servers/better-notion-mcp/setup/).
 See the [Documentation](#documentation) section for per-client setup (Claude Code, Codex, Gemini CLI, Cursor, Windsurf) and HTTP/OAuth mode.
 
 ## CLI
@@ -245,6 +256,21 @@ docker run -p 8080:8080 \
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/n24q02m/better-notion-mcp)
 
 Run your own multi-user better-notion-mcp serverless on Cloudflare (Worker + Container + KV).
+
+### Deployment (CD-managed)
+
+Managed deployments go through CI, never by hand: the `deploy-cf` job in
+[.github/workflows/cd.yml](.github/workflows/cd.yml) runs after a release,
+checks out the released tag, builds the immutable `http-slim` image at the
+released version, pushes it to the Cloudflare managed registry, deploys, and
+gates on a canary check — a managed instance can therefore only ever run an
+exact release tag. Manual `wrangler deploy` against a managed/operated
+instance is not permitted: it breaks the release-tag ↔ live-image
+correspondence, and the next CD run would overwrite it.
+
+The job is gated by the `CF_HOSTED_ENABLED` repository Actions variable —
+currently `false`, so releases do not publish a hosted endpoint. To run your
+own instance, use the self-host steps below.
 
 **Prerequisites:** a Cloudflare account on the **Workers Paid plan** — required for Containers (the Cloudflare free tier does not include Containers) — and the `wrangler` CLI.
 
