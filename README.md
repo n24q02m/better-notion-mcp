@@ -5,7 +5,7 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 **Markdown-first Notion for AI agents -- pages, databases, blocks, and comments in one call.**
 
 <!-- Badge Row 1: Status -->
-[![Mode](https://img.shields.io/badge/mode:-http_remote_oauth_%C2%B7_http_local_relay_%C2%B7_stdio_proxy-5C6BC0)](https://mcp.n24q02m.com/get-started/modes-overview/)
+[![Mode](https://img.shields.io/badge/mode-http_remote_oauth_%C2%B7_http_local_relay_%C2%B7_stdio_proxy-5C6BC0)](https://mcp.n24q02m.com/get-started/modes-overview/)
 [![CI](https://github.com/n24q02m/better-notion-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/n24q02m/better-notion-mcp/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/n24q02m/better-notion-mcp/graph/badge.svg?token=D7FSDVVTAN)](https://codecov.io/gh/n24q02m/better-notion-mcp)
 [![npm](https://img.shields.io/npm/v/@n24q02m/better-notion-mcp?logo=npm&logoColor=white)](https://www.npmjs.com/package/@n24q02m/better-notion-mcp)
