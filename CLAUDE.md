@@ -1,6 +1,6 @@
 # notion
 
-Ten repo/npm/image: `n24q02m/notion` / `@n24q02m/notion` / `n24q02m/notion` (truoc day la `better-notion-mcp`). CON GIU ten cu co chu dich: registry id `io.github.n24q02m/better-notion-mcp`, bin alias `better-notion-mcp`, storage key `better-notion-mcp` (config.enc `servers.<name>` + PerPluginStore `~/.better-notion-mcp` + env `MCP_BETTER_NOTION_MCP_*`, mcp-core derive tu ten nay; doi can option base-dir o core, hoan sang G3), KV prefix `better-notion` (Worker allowlist), va skret path `/better-notion-mcp/prod`.
+Ten repo/npm/image: `n24q02m/notion` / `@n24q02m/notion` / `n24q02m/notion` (truoc day la `better-notion-mcp`). CON GIU ten cu co chu dich: registry id `io.github.n24q02m/better-notion-mcp`, bin alias `better-notion-mcp`, storage key `better-notion-mcp` (config.enc `servers.<name>` + PerPluginStore `~/.better-notion-mcp` + env `MCP_BETTER_NOTION_MCP_*`, mcp-core derive tu ten nay; doi can option base-dir o core, hoan sang G3), va skret path `/better-notion-mcp/prod`.
 
 TypeScript MCP Server cho Notion API. 11 registered tools = 8 composite (pages, databases, blocks, users, workspace, comments, content_convert, file_uploads) + 3 infra (config, config__open_relay, help), dual-mode stdio/http.
 Xem `AGENTS.md` va `README.md` de hieu architecture va OAuth flow.
@@ -67,7 +67,7 @@ mise run fix                # bun run check:fix
 - CD: workflow_dispatch, chọn beta/stable; versioning qua `n24q02m/better-semantic-release` và publish-action
 - Pipeline: semantic release -> npm publish (`@n24q02m/notion`) -> Docker multi-arch (amd64 + arm64) -> DockerHub + GHCR -> MCP Registry
 - OCI VM deploy: Docker Compose + Watchtower. Prod `:latest` 0.125G, Staging `:beta` 0.0625G
-- The n24q02m Cloudflare Worker/Container host is dehosted. `deploy-cf` is guarded by the repository variable `CF_HOSTED_ENABLED=false`; package, OCI, local stdio and self-host maintenance continue. Do not manually recreate the personal host.
+- There is no n24q02m-hosted HTTP endpoint and no Cloudflare hosting surface. Supported paths are stdio and self-host http via `docker compose -f docker-compose.http.yml up` (published on loopback `127.0.0.1:8081` only; put your own TLS reverse proxy in front). Releases publish multi-arch images to DockerHub + GHCR.
 
 ## Pre-commit hooks
 
