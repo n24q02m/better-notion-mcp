@@ -17,8 +17,8 @@ Thank you for your interest in contributing to Better Notion MCP! This guide wil
 1. **Fork the repository** and clone your fork
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/better-notion-mcp
-cd better-notion-mcp
+git clone https://github.com/YOUR_USERNAME/notion
+cd notion
 ```
 
 2. **Install tools and dependencies**
@@ -196,7 +196,7 @@ bun run test:coverage
 ## Project Structure
 
 ```text
-better-notion-mcp/
+notion/
 ├── src/                    # Source code
 │   ├── init-server.ts     # Server initialization
 │   └── tools/             # Tool implementations

@@ -1,4 +1,4 @@
-# Better Notion MCP
+# notion
 
 mcp-name: io.github.n24q02m/better-notion-mcp
 
@@ -6,11 +6,11 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 
 <!-- Badge Row 1: Status -->
 [![Mode](https://img.shields.io/badge/mode-http_remote_oauth_%C2%B7_http_local_relay_%C2%B7_stdio_proxy-5C6BC0)](https://mcp.n24q02m.com/get-started/modes-overview/)
-[![CI](https://github.com/n24q02m/better-notion-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/n24q02m/better-notion-mcp/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/n24q02m/better-notion-mcp/graph/badge.svg?token=D7FSDVVTAN)](https://codecov.io/gh/n24q02m/better-notion-mcp)
-[![npm](https://img.shields.io/npm/v/@n24q02m/better-notion-mcp?logo=npm&logoColor=white)](https://www.npmjs.com/package/@n24q02m/better-notion-mcp)
-[![Docker](https://img.shields.io/docker/v/n24q02m/better-notion-mcp?label=docker&logo=docker&logoColor=white&sort=semver)](https://hub.docker.com/r/n24q02m/better-notion-mcp)
-[![License: Apache-2.0](https://img.shields.io/github/license/n24q02m/better-notion-mcp)](LICENSE)
+[![CI](https://github.com/n24q02m/notion/actions/workflows/ci.yml/badge.svg)](https://github.com/n24q02m/notion/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/n24q02m/notion/graph/badge.svg?token=D7FSDVVTAN)](https://codecov.io/gh/n24q02m/notion)
+[![npm](https://img.shields.io/npm/v/@n24q02m/notion?logo=npm&logoColor=white)](https://www.npmjs.com/package/@n24q02m/notion)
+[![Docker](https://img.shields.io/docker/v/n24q02m/notion?label=docker&logo=docker&logoColor=white&sort=semver)](https://hub.docker.com/r/n24q02m/notion)
+[![License: Apache-2.0](https://img.shields.io/github/license/n24q02m/notion)](LICENSE)
 
 <!-- Badge Row 2: Tech -->
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](#)
@@ -88,19 +88,24 @@ Run with `npx` (Node.js >= 24) and a Notion integration token from <https://www.
 // MCP client config (e.g. .mcp.json / Claude Code / Cursor)
 {
   "mcpServers": {
-    "better-notion-mcp": {
+    "notion": {
       "command": "npx",
-      "args": ["--yes", "@n24q02m/better-notion-mcp@latest"],
+      "args": ["--yes", "@n24q02m/notion@latest"],
       "env": { "NOTION_TOKEN": "ntn_your_token_here" }
     }
   }
 }
 ```
 
+The package is `@n24q02m/notion` (formerly `@n24q02m/better-notion-mcp`;
+old package receives one final release then freezes). The MCP Registry id stays
+`io.github.n24q02m/better-notion-mcp`, and the legacy `better-notion-mcp`
+command is kept as an alias of `notion`.
+
 Or run the published Docker image (stdio):
 
 ```bash
-docker run --rm -i -e NOTION_TOKEN=ntn_your_token_here n24q02m/better-notion-mcp:latest
+docker run --rm -i -e NOTION_TOKEN=ntn_your_token_here n24q02m/notion:latest
 ```
 
 ### Install matrix
@@ -108,7 +113,7 @@ docker run --rm -i -e NOTION_TOKEN=ntn_your_token_here n24q02m/better-notion-mcp
 | Client | Install |
 |:-------|:--------|
 | Claude Code | `/plugin marketplace add n24q02m/claude-plugins` + `/plugin install better-notion-mcp@n24q02m-plugins` (stdio; prompts for `NOTION_TOKEN`), or an `mcpServers` entry in `.mcp.json` / client settings |
-| Codex CLI | `[mcp_servers.better-notion-mcp]` block in `~/.codex/config.toml` (stdio `command`/`args` or HTTP `type`/`url`) |
+| Codex CLI | `[mcp_servers.notion]` block in `~/.codex/config.toml` (stdio `command`/`args` or HTTP `type`/`url`) |
 | OpenCode | `mcpServers` block in `opencode.json` |
 | Cursor / Windsurf / Gemini CLI / any MCP client | `mcpServers` JSON in the client's config — same shape as the example above |
 
@@ -117,14 +122,14 @@ See the [Documentation](#documentation) section for per-client setup (Claude Cod
 
 ## CLI
 
-Installing the package exposes a `better-notion-mcp` binary (run it with `npx` or after a global install). It has **no subcommands** -- running it starts the MCP server and speaks the protocol over stdin/stdout, so it is normally launched by an MCP client rather than by hand.
+Installing the package exposes a `notion` binary (plus the legacy `better-notion-mcp` alias; run it with `npx` or after a global install). It has **no subcommands** -- running it starts the MCP server and speaks the protocol over stdin/stdout, so it is normally launched by an MCP client rather than by hand.
 
 ```bash
 # Start the stdio server (default transport; requires NOTION_TOKEN)
-NOTION_TOKEN=ntn_your_token_here npx --yes @n24q02m/better-notion-mcp@latest
+NOTION_TOKEN=ntn_your_token_here npx --yes @n24q02m/notion@latest
 
 # Start the remote HTTP server (OAuth 2.1) instead of stdio
-npx --yes @n24q02m/better-notion-mcp@latest --http
+npx --yes @n24q02m/notion@latest --http
 ```
 
 | Argument / env | Effect |
@@ -142,7 +147,7 @@ Deployed with the HTTP transport, the server is a remote endpoint gated by OAuth
 // MCP client config -- remote HTTP (OAuth 2.1)
 {
   "mcpServers": {
-    "better-notion-mcp": {
+    "notion": {
       "type": "http",
       "url": "https://<your-host>/mcp"
     }
@@ -154,7 +159,7 @@ On first connect the client opens Notion's OAuth consent screen; per-user access
 
 ## Smithery
 
-The repo ships a [`smithery.yaml`](smithery.yaml) config for [Smithery](https://smithery.ai). Smithery launches the server over stdio (`npx -y @n24q02m/better-notion-mcp`) and requires no install-time config -- provide your Notion credentials at runtime through the server's own setup flow (`NOTION_TOKEN` env, or the relay form; see [Configuration](#configuration)).
+The repo ships a [`smithery.yaml`](smithery.yaml) config for [Smithery](https://smithery.ai). Smithery launches the server over stdio (`npx -y @n24q02m/notion`) and requires no install-time config -- provide your Notion credentials at runtime through the server's own setup flow (`NOTION_TOKEN` env, or the relay form; see [Configuration](#configuration)).
 
 ## Status
 
@@ -185,7 +190,7 @@ Full docs at **[mcp.n24q02m.com/servers/better-notion-mcp/](https://mcp.n24q02m.
 
 **Install with AI agent** -- paste this to your AI coding agent:
 
-> Install MCP server `better-notion-mcp` following the steps at
+> Install MCP server `notion` following the steps at
 > https://raw.githubusercontent.com/n24q02m/claude-plugins/main/plugins/better-notion-mcp/setup-with-agent.md
 
 ## Tools
@@ -248,7 +253,7 @@ docker run -p 8080:8080 \
   -e PUBLIC_URL=https://your-domain.com \
   -e NOTION_OAUTH_CLIENT_ID=your-client-id \
   -e NOTION_OAUTH_CLIENT_SECRET=your-client-secret \
-  n24q02m/better-notion-mcp:latest
+  n24q02m/notion:latest
 ```
 
 ## Deploy to Cloudflare
@@ -301,9 +306,9 @@ deployment — it collapses all users into a single token bucket.
 
 ## Comparison
 
-How better-notion-mcp stacks up against direct competitors in each pillar:
+How notion stacks up against direct competitors in each pillar:
 
-| Capability | better-notion-mcp | makenotion/notion-mcp-server | suekou/mcp-notion-server | awkoy/notion-mcp-server |
+| Capability | notion | makenotion/notion-mcp-server | suekou/mcp-notion-server | awkoy/notion-mcp-server |
 |---|---|---|---|---|
 | Markdown in / out | Yes (round-trip on pages + blocks) | No (raw Notion JSON) | partial (experimental, append + opt-in convert) | Yes (round-trip + GFM) |
 | Composite tool design | Yes (8 composite tools, 39 actions) | No (22 endpoint-mapped tools) | partial (simplified + raw JSON tools) | Yes (2 dispatch tools, 35+ ops) |
@@ -323,8 +328,8 @@ How better-notion-mcp stacks up against direct competitors in each pillar:
 ## Build from Source
 
 ```bash
-git clone https://github.com/n24q02m/better-notion-mcp.git
-cd better-notion-mcp
+git clone https://github.com/n24q02m/notion.git
+cd notion
 bun install
 bun run dev
 ```

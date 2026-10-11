@@ -1,5 +1,5 @@
 /**
- * Non-blocking credential state management for better-notion-mcp.
+ * Non-blocking credential state management for the notion MCP server.
  *
  * State machine: awaiting_setup -> configured
  * Reset: configured -> awaiting_setup (via reset)
@@ -22,6 +22,11 @@
 import { deleteConfig } from '@n24q02m/mcp-core'
 import { resolveConfig } from '@n24q02m/mcp-core/storage'
 
+// Storage key for mcp-core resolveConfig/deleteConfig. Deliberately NOT renamed
+// with the package/server name: mcp-core derives the PerPluginStore dir
+// (~/.better-notion-mcp), the legacy config.enc `servers.<name>` entry and the
+// MCP_BETTER_NOTION_MCP_* env overrides from it, so changing it would orphan
+// saved credentials. The data-dir move is deferred to the G3 hull rewire.
 const SERVER_NAME = 'better-notion-mcp'
 const CREDENTIAL_KEY = 'NOTION_TOKEN'
 const REQUIRED_FIELDS = [CREDENTIAL_KEY]

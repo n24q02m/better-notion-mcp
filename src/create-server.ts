@@ -30,10 +30,7 @@ function getVersion(): string {
  *   HTTP: returns a per-request client with the user's OAuth token.
  */
 export function createMCPServer(notionClientFactory: () => Client): Server {
-  const server = new Server(
-    { name: '@n24q02m/better-notion-mcp', version: getVersion() },
-    { capabilities: { tools: {}, resources: {} } }
-  )
+  const server = new Server({ name: 'notion', version: getVersion() }, { capabilities: { tools: {}, resources: {} } })
   registerTools(server, notionClientFactory)
   return server
 }

@@ -23,7 +23,7 @@ import { createMCPServer } from '../create-server.js'
 import { resolveCredentialState, setState, setSubjectTokenResolver } from '../credential-state.js'
 import { NotionMCPError } from '../tools/helpers/errors.js'
 
-const SERVER_NAME = 'better-notion-mcp'
+const SERVER_NAME = 'notion'
 
 /**
  * Parse a `--flag=value` argv entry. Used for the BYO OAuth client CLI flags

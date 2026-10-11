@@ -1,5 +1,5 @@
 {
-  "name": "better-notion-mcp",
+  "name": "notion",
   "description": "Markdown-first Notion API integration — 8 composite tools, ~95% coverage",
   "version": "2.41.6",
   "userConfig": {
@@ -15,11 +15,11 @@
     "name": "n24q02m",
     "url": "https://github.com/n24q02m"
   },
-  "homepage": "https://github.com/n24q02m/better-notion-mcp",
+  "homepage": "https://github.com/n24q02m/notion",
   "mcpServers": {
-    "better-notion-mcp": {
+    "notion": {
       "command": "npx",
-      "args": ["--yes", "@n24q02m/better-notion-mcp@latest"],
+      "args": ["--yes", "@n24q02m/notion@latest"],
       "env": {
         "MCP_TRANSPORT": "stdio",
         "NOTION_TOKEN": "${user_config.NOTION_TOKEN}"

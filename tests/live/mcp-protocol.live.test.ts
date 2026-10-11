@@ -54,7 +54,7 @@ describe('MCP Protocol - Live Server (no NOTION_TOKEN)', () => {
     it('should connect and report server info', () => {
       const serverVersion = client.getServerVersion()
       expect(serverVersion).toBeDefined()
-      expect(serverVersion?.name).toBe('@n24q02m/better-notion-mcp')
+      expect(serverVersion?.name).toBe('notion')
       expect(serverVersion?.version).toMatch(/^\d+\.\d+\.\d+/)
     })
 

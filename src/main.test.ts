@@ -265,7 +265,7 @@ describe('main.ts', () => {
       process.env.NOTION_TOKEN = 'ntn_test_token'
       await startServer('stdio')
       expect(stdioServerCtor).toHaveBeenCalledWith(
-        expect.objectContaining({ name: 'better-notion-mcp' }),
+        expect.objectContaining({ name: 'notion' }),
         expect.objectContaining({ capabilities: expect.any(Object) })
       )
       expect(stdioTransportCtor).toHaveBeenCalledOnce()
@@ -462,7 +462,7 @@ describe('main.ts', () => {
       await import(`${pathToFileURL(mainPath).href}?test=${Date.now()}`)
       await vi.waitFor(() => expect(exitSpy).toHaveBeenCalled())
 
-      expect(logSpy).toHaveBeenCalledWith('better-notion-mcp 9.9.9')
+      expect(logSpy).toHaveBeenCalledWith('notion 9.9.9')
       expect(exitSpy).toHaveBeenCalledWith(0)
       expect(stdioConnectMock).not.toHaveBeenCalled()
       logSpy.mockRestore()
@@ -476,7 +476,7 @@ describe('main.ts', () => {
       await import(`${pathToFileURL(mainPath).href}?test=${Date.now()}`)
       await vi.waitFor(() => expect(exitSpy).toHaveBeenCalled())
 
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('better-notion-mcp:'))
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('notion:'))
       expect(stdioConnectMock).not.toHaveBeenCalled()
       logSpy.mockRestore()
     })

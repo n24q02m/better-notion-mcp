@@ -1,6 +1,6 @@
 version: "1"
 default_env: prod
-project: better-notion-mcp
+project: notion
 environments:
   prod:
     provider: aws

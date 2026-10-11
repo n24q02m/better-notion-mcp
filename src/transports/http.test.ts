@@ -374,6 +374,7 @@ describe('startHttp', () => {
     // 2. Verify runHttpServer options
     expect(mcpCore.runHttpServer).toHaveBeenCalled()
     const options = vi.mocked(mcpCore.runHttpServer).mock.calls[0][1] as any
+    expect(options.serverName).toBe('notion')
     const onTokenReceived = options.delegatedOAuth?.onTokenReceived
     const authScope = options.authScope
 

@@ -28,7 +28,7 @@ describe('createMCPServer', () => {
     const factory = vi.fn()
     const server = createMCPServer(factory) as any
 
-    expect(server.serverInfo.name).toBe('@n24q02m/better-notion-mcp')
+    expect(server.serverInfo.name).toBe('notion')
     expect(server.serverInfo.version).toBe('2.14.0')
   })
 

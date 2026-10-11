@@ -10,6 +10,11 @@ on:
         options:
           - beta
           - stable
+      legacy_final_note:
+        description: "One-time: also publish the FINAL @n24q02m/better-notion-mcp release at the same version (rename note) before the old package freezes. Set true only on the first @n24q02m/notion release."
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -19,7 +24,9 @@ permissions:
 env:
   # Release lane: dispatch-only (release_type=beta, then stable); a push never releases.
   RELEASE_TYPE: ${{ inputs.release_type }}
-  DOCKERHUB_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/better-notion-mcp
+  DOCKERHUB_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/notion
+  # Derived from the repository slug, so the rename to n24q02m/notion makes
+  # this ghcr.io/n24q02m/notion with no literal to keep in sync.
   GHCR_IMAGE: ghcr.io/${{ github.repository }}
 
 concurrency:
@@ -106,7 +113,7 @@ jobs:
           COMPUTED_VERSION: ${{ steps.dryrun.outputs.version }}
         run: |
           set -uo pipefail
-          PKG='@n24q02m/better-notion-mcp'
+          PKG='@n24q02m/notion'
           echo "Checking npm for ${PKG}@${COMPUTED_VERSION} before semantic-release tags anything..."
 
           # npm view against the live registry (behaviour verified unauthenticated):
@@ -184,6 +191,60 @@ jobs:
       - run: bun run build
 
       - run: npm publish --provenance --no-git-checks --tag ${{ needs.release.outputs.is_prerelease == 'true' && 'beta' || 'latest' }}
+
+  # ============================================================================
+  # One-time legacy final-note: publish the LAST @n24q02m/better-notion-mcp
+  # release at the same version as the first @n24q02m/notion release, with a
+  # rename note, then the old package freezes. Rebuilds the tarball under the old
+  # package name from the same tag (bin/cli.mjs is identical; only package.json
+  # name + description change). Gated by the legacy_final_note dispatch input so
+  # it runs exactly once. OIDC trusted publishing like publish-npm: no token,
+  # no NODE_AUTH_TOKEN; the old package's trusted publisher must point at this
+  # repo before the dispatch.
+  # ============================================================================
+  publish-npm-legacy-final:
+    name: Publish better-notion-mcp final rename note
+    needs: release
+    if: >-
+      inputs.legacy_final_note
+      && needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Rewrite package name back to better-notion-mcp with rename note
+        run: |
+          node - <<'EOF'
+          const fs = require('node:fs')
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+          if (pkg.name !== '@n24q02m/notion') throw new Error(`expected renamed package, got ${pkg.name}`)
+          if (typeof pkg.description !== 'string') throw new Error('description not found')
+          pkg.name = '@n24q02m/better-notion-mcp'
+          pkg.description += ' [FINAL release under this name: package renamed to @n24q02m/notion -- migrate with: npx @n24q02m/notion]'
+          fs.writeFileSync('package.json', `${JSON.stringify(pkg, null, 2)}\n`)
+          console.log('rewritten')
+          EOF
+          head -8 package.json
+
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - name: Publish final @n24q02m/better-notion-mcp to npm
+        run: npm publish --provenance --access public --no-git-checks --tag latest
 
   # ============================================================================
   # Build Docker (multi-arch)
@@ -378,7 +439,7 @@ jobs:
         run: |
           gh api repos/n24q02m/claude-plugins/dispatches \
             -f event_type=plugin-sync \
-            -f 'client_payload[repo]=better-notion-mcp' \
+            -f 'client_payload[repo]=notion' \
             -f 'client_payload[tag]=${{ needs.release.outputs.tag }}'
 
   deploy-cf:
