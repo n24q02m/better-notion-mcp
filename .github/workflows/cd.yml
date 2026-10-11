@@ -1,9 +1,6 @@
 name: CD
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       release_type:
@@ -20,8 +17,8 @@ permissions:
   id-token: write
 
 env:
-# Release lane: merge to main auto-publishes stable; beta only via manual dispatch (release_type=beta).
-  RELEASE_TYPE: ${{ github.event_name == 'push' && 'stable' || inputs.release_type }}
+  # Release lane: dispatch-only (release_type=beta, then stable); a push never releases.
+  RELEASE_TYPE: ${{ inputs.release_type }}
   DOCKERHUB_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/better-notion-mcp
   GHCR_IMAGE: ghcr.io/${{ github.repository }}
 
