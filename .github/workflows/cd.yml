@@ -35,10 +35,34 @@ concurrency:
 
 jobs:
   # ============================================================================
+  # Gate: README / package / MCP Registry metadata must agree before publish
+  # ============================================================================
+  readme-sync:
+    name: Verify README registry metadata
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Python 3.13
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Verify README registry metadata
+        run: python scripts/repo-bootstrap/verify_readme_sync.py --repo-root=.
+
+  # ============================================================================
   # Release: PSR phân tích commits → bump version → CHANGELOG → tag → Release
   # ============================================================================
   release:
     name: Semantic Release
+    needs: readme-sync
     runs-on: ubuntu-latest
     outputs:
       released: ${{ steps.release.outputs.released }}

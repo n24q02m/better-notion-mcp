@@ -169,13 +169,13 @@ The repo ships a [`smithery.yaml`](smithery.yaml) config for [Smithery](https://
 > Apologies for the instability period. If you encountered issues with prior versions, please update to the latest release and follow the current [Setup guide](https://mcp.n24q02m.com/servers/better-notion-mcp/setup/) -- most prior workarounds are no longer needed.
 >
 > **Related plugins from the same author**:
-> - [wet-mcp](https://github.com/n24q02m/wet-mcp) -- Web search + content extraction
-> - [mnemo-mcp](https://github.com/n24q02m/mnemo-mcp) -- Persistent AI memory
+> - [wet](https://github.com/n24q02m/wet) -- Web search + content extraction
+> - [mnemo](https://github.com/n24q02m/mnemo) -- Persistent AI memory
 > - [imagine-mcp](https://github.com/n24q02m/imagine-mcp) -- Image/video understanding + generation
-> - [better-email-mcp](https://github.com/n24q02m/better-email-mcp) -- Email management
-> - [better-telegram-mcp](https://github.com/n24q02m/better-telegram-mcp) -- Telegram
+> - [email](https://github.com/n24q02m/email) -- Email management
+> - [telegram](https://github.com/n24q02m/telegram) -- Telegram
 > - [better-godot-mcp](https://github.com/n24q02m/better-godot-mcp) -- Godot Engine
-> - [better-code-review-graph](https://github.com/n24q02m/better-code-review-graph) -- Code review knowledge graph
+> - [crg](https://github.com/n24q02m/crg) -- Code review knowledge graph
 >
 > All plugins share the same architecture -- install once, learn pattern transfers.
 

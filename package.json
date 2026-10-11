@@ -74,7 +74,7 @@
     "typescript": "^7.0.2",
     "vitest": "^5.0.0"
   },
-  "description": "Better MCP server for Notion API with composite tools optimized for AI agents",
+  "description": "Markdown-first Notion for AI agents -- pages, databases, blocks, and comments in one call.",
   "main": "build/src/init-server.js",
   "repository": {
     "type": "git",
