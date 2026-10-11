@@ -35,15 +35,13 @@
     "lint:fix": "biome lint --write src",
     "format": "biome format --write .",
     "format:check": "biome format .",
-    "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.worker.json",
+    "type-check": "tsc --noEmit",
     "check": "biome check . && bun run type-check",
     "check:fix": "biome check --write . && bun run type-check",
     "prepublishOnly": "bun run build",
     "docker:build": "docker build -t n24q02m/notion:latest .",
     "docker:push": "docker push n24q02m/notion:latest",
-    "docker:run": "docker run --rm -i -e NOTION_TOKEN n24q02m/notion:latest",
-    "cf:dryrun": "node scripts/cf-deploy.mjs --dry-run",
-    "cf:deploy": "node scripts/cf-deploy.mjs"
+    "docker:run": "docker run --rm -i -e NOTION_TOKEN n24q02m/notion:latest"
   },
   "bin": {
     "notion": "bin/cli.mjs",
@@ -59,7 +57,6 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@cloudflare/containers": "^0.3.7",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@n24q02m/mcp-core": "1.24.3",
     "@notionhq/client": "^5.26.0",
@@ -70,7 +67,6 @@
   ],
   "devDependencies": {
     "@biomejs/biome": "^2.5.12",
-    "@cloudflare/workers-types": "^5.20260905.1",
     "@types/node": "^26.4.1",
     "@vitest/coverage-v8": "^5.0.0",
     "esbuild": "^0.28.2",

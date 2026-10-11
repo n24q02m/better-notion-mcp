@@ -1,13 +1,22 @@
-# HTTP mode overlay — use with:
-# docker compose -f docker-compose.yml -f docker-compose.http.yml up
+# HTTP mode (self-host) -- use with:
+# docker compose -f docker-compose.http.yml up
+# Published on host loopback only; put your own TLS reverse proxy in front.
 services:
   notion:
+    build:
+      context: .
+      target: http
     environment:
-      - TRANSPORT_MODE=http
+      - MCP_TRANSPORT=http
+      - PORT=8080
+      - HOST=0.0.0.0
+      - PUBLIC_URL=${PUBLIC_URL:-http://localhost:8081}
+      - NOTION_OAUTH_CLIENT_ID=${NOTION_OAUTH_CLIENT_ID}
+      - NOTION_OAUTH_CLIENT_SECRET=${NOTION_OAUTH_CLIENT_SECRET}
       - CREDENTIAL_SECRET=${CREDENTIAL_SECRET}
       - MCP_RELAY_PASSWORD=${MCP_RELAY_PASSWORD}
     ports:
-      - "8081:8080"
+      - "127.0.0.1:8081:8080"
     volumes:
       - notion-data:/data
 volumes:

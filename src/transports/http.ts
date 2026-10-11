@@ -14,11 +14,8 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { runHttpServer } from '@n24q02m/mcp-core'
-import { type SessionKv, wrapKvBackendAsSessionKv } from '@n24q02m/mcp-core/auth'
-import { backendFromEnv } from '@n24q02m/mcp-core/storage'
 import { Client } from '@notionhq/client'
-import { NotionTokenStore, type NotionTokenStoreLike } from '../auth/notion-token-store.js'
-import { KvNotionTokenStore, PLUGIN_NAME } from '../auth/notion-token-store-kv.js'
+import { NotionTokenStore } from '../auth/notion-token-store.js'
 import { createMCPServer } from '../create-server.js'
 import { resolveCredentialState, setState, setSubjectTokenResolver } from '../credential-state.js'
 import { NotionMCPError } from '../tools/helpers/errors.js'
@@ -38,36 +35,7 @@ function argFlag(name: string): string | null {
   return found ? found.slice(prefix.length) : null
 }
 
-/**
- * Durable KV for the delegated-OAuth handshake state (pending sessions +
- * issued auth codes), so it survives a container cold-start/restart between
- * /authorize and /callback. Keyed under the SAME `better-notion/` namespace
- * as the token store (`PLUGIN_NAME`) -- the Worker's kv.internal outbound
- * handler allowlists keys by that exact prefix (src/worker.ts); any other
- * prefix is rejected with 403. undefined outside the cf-kv deploy (stdio /
- * local single-process) -- the session store then falls back to an
- * in-process map, correct for that single-request-context case.
- */
-function sessionKvForDeploy(): SessionKv | undefined {
-  if ((process.env.MCP_STORAGE_BACKEND ?? '').toLowerCase() !== 'cf-kv') return undefined
-  return wrapKvBackendAsSessionKv(backendFromEnv(), `${PLUGIN_NAME}/delegated-oauth:`)
-}
-
 export const subjectContext = new AsyncLocalStorage<{ sub: string }>()
-
-/**
- * Select the per-sub Notion token store. The cf-kv backend -> KV write-through
- * (durable across container recreate; the Cloudflare deployment store). Any other
- * backend (stdio / local single-process) -> in-memory store. Read once at
- * startup; on CF, MCP_STORAGE_BACKEND=cf-kv is set by wrangler vars, so the
- * durable KV store is always selected there.
- */
-export function selectTokenStore(): NotionTokenStoreLike {
-  if ((process.env.MCP_STORAGE_BACKEND ?? '').toLowerCase() === 'cf-kv') {
-    return new KvNotionTokenStore()
-  }
-  return new NotionTokenStore()
-}
 
 /**
  * Derive the JWT subject from the upstream Notion token response.
@@ -76,8 +44,8 @@ export function selectTokenStore(): NotionTokenStoreLike {
  * ``owner.user.id`` (user-level integrations) and ALWAYS carries
  * ``workspace_id`` + ``bot_id``. There is NO ``owner_user_id`` field. Prefer the
  * human user id for per-user isolation, then fall back to the workspace, then
- * the bot, so the JWT ``sub`` (and thus the per-sub Durable Object + KV token
- * bucket) is a stable real identity rather than the shared ``'default'`` bucket
+ * the bot, so the JWT ``sub`` (and thus the per-sub token bucket) is a
+ * stable real identity rather than the shared ``'default'`` bucket
  * — collapsing every caller onto ``'default'`` would silently break multi-user
  * isolation. ``'default'`` is reserved for a malformed response only.
  */
@@ -95,24 +63,7 @@ export function deriveSubject(tokens: Record<string, unknown>): string {
 export async function startHttp(): Promise<void> {
   await resolveCredentialState()
 
-  const tokenStore = selectTokenStore()
-
-  // Self-validating deploy: when the durable KV store is selected (Cloudflare),
-  // confirm the container -> Worker `kv.internal` outbound path is wired at
-  // startup. If it is NOT, the fire path of the first token write would vanish
-  // silently and the token would never survive a container recreate. Log the
-  // outcome loudly; non-fatal so /authorize still runs, but a broken outbound
-  // path is now visible in `wrangler tail` instead of being invisible.
-  if (tokenStore.ready) {
-    try {
-      await tokenStore.ready()
-      console.error(`[${SERVER_NAME}] durable KV store reachable at startup`)
-    } catch (err) {
-      console.error(
-        `[${SERVER_NAME}] durable KV store UNREACHABLE at startup: ${err instanceof Error ? err.message : String(err)}`
-      )
-    }
-  }
+  const tokenStore = new NotionTokenStore()
 
   const notionClientFactory = () => {
     const ctx = subjectContext.getStore()
@@ -147,12 +98,11 @@ export async function startHttp(): Promise<void> {
   // separate channel (e.g. NOTION_TOKEN env var resolved by tokenStore default).
   const authDisabled = process.env.MCP_AUTH_DISABLE === '1'
 
-  // CF deploy requirement (P3-03): CREDENTIAL_SECRET MUST be set in the
-  // container env (wrangler secret put). When set, mcp-core's JWTIssuer derives
-  // a deterministic Ed25519 (EdDSA) signing key via HKDF-SHA256 with no disk I/O.
-  // Without it, JWTIssuer falls back to RS256 keys persisted to disk on the
-  // EPHEMERAL container FS, so OAuth identity breaks on every container recreate.
-  // Setting CREDENTIAL_SECRET is the must-do CF fix; no code change is needed
+  // Container deployments should set CREDENTIAL_SECRET in the container env.
+  // When set, mcp-core's JWTIssuer derives a deterministic Ed25519 (EdDSA)
+  // signing key via HKDF-SHA256 with no disk I/O. Without it, JWTIssuer falls
+  // back to RS256 keys persisted to disk, so on an ephemeral container FS the
+  // OAuth identity breaks on every container recreate. No code change is needed
   // here because runHttpServer/createDelegatedOAuthApp already read it from env.
 
   const handle = await runHttpServer(() => createMCPServer(notionClientFactory) as unknown as McpServer, {
@@ -162,7 +112,6 @@ export async function startHttp(): Promise<void> {
     authDisabled,
     delegatedOAuth: {
       flow: 'redirect',
-      sessionKv: sessionKvForDeploy(),
       upstream: {
         authorizeUrl: 'https://api.notion.com/v1/oauth/authorize',
         tokenUrl: 'https://api.notion.com/v1/oauth/token',
@@ -173,14 +122,7 @@ export async function startHttp(): Promise<void> {
       onTokenReceived: async (tokens: Record<string, unknown>) => {
         const accessToken = String(tokens.access_token ?? '')
         const sub = deriveSubject(tokens)
-        // AWAIT the durable write (do not fire-and-forget). The KV store sets
-        // its in-memory cache synchronously before the awaited KV PUT, so the
-        // same-request factory read still hits the warm cache. mcp-core wraps
-        // this callback in try/catch and returns a 500 "Failed to persist
-        // tokens" to the browser if it throws — so a broken KV write surfaces
-        // at auth time instead of silently losing the token once the in-memory
-        // cache evaporates on container recreate.
-        if (accessToken) await tokenStore.save(sub, accessToken)
+        if (accessToken) tokenStore.save(sub, accessToken)
         // Return sub so mcp-core propagates it into the bearer JWT's `sub`
         // claim, which `authScope` below then matches back to the stored token.
         return sub
@@ -190,18 +132,6 @@ export async function startHttp(): Promise<void> {
       // Anonymous caller (auth-disabled mode behind gateway): use 'default'
       // bucket so a single deployment can serve one Notion token via env.
       const sub = claims.anonymous === true ? 'default' : typeof claims.sub === 'string' ? claims.sub : 'default'
-      // Warm the per-sub cache from the durable store (KV) BEFORE the tool
-      // dispatch reads it synchronously via the factory/resolver. After a
-      // container delete+recreate the in-memory cache is empty; without this a
-      // freshly-recreated container would report no token (forcing needless
-      // re-auth) even though the encrypted token is still in KV. No-op for the
-      // in-memory store. A KV read failure is treated as a cache miss (re-auth)
-      // and never blocks the request.
-      try {
-        await tokenStore.getAsync(sub)
-      } catch {
-        // durable read failed -> fall through to cache-miss handling downstream
-      }
       await subjectContext.run({ sub }, next)
     }
   })

@@ -103,9 +103,8 @@ src/
   init-server.ts              # Entry point — imports main.ts (startServer/getTransportMode)
   main.ts                     # Transport selection; stdio (NOTION_TOKEN) handled directly
   create-server.ts            # Shared MCP Server factory
-  auth/                       # Per-JWT-sub Notion access token stores (http mode)
-    notion-token-store.ts     # In-memory per-sub token map + NotionTokenStoreLike iface
-    notion-token-store-kv.ts  # KV write-through token store (Cloudflare deploy)
+  auth/                       # Per-JWT-sub Notion access token store (http mode)
+    notion-token-store.ts     # In-memory per-sub token map
   transports/
     http.ts                   # Remote mode (Express + OAuth 2.1, multi-user)
   docs/                       # Markdown docs served as MCP resources

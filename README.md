@@ -59,7 +59,6 @@ mcp-name: io.github.n24q02m/better-notion-mcp
 - [Documentation](#documentation)
 - [Tools](#tools)
 - [Configuration](#configuration)
-- [Deploy to Cloudflare](#deploy-to-cloudflare)
 - [Comparison](#comparison)
 - [Security](#security)
 - [Build from Source](#build-from-source)
@@ -155,7 +154,7 @@ Deployed with the HTTP transport, the server is a remote endpoint gated by OAuth
 }
 ```
 
-On first connect the client opens Notion's OAuth consent screen; per-user access tokens are held in-process only (see [Trust Model](#trust-model)). To stand up such an instance, see [Self-Hosting (Remote Mode)](#self-hosting-remote-mode) and [Deploy to Cloudflare](#deploy-to-cloudflare).
+On first connect the client opens Notion's OAuth consent screen; per-user access tokens are held in-process only (see [Trust Model](#trust-model)). To stand up such an instance, see [Self-Hosting (Remote Mode)](#self-hosting-remote-mode).
 
 ## Smithery
 
@@ -256,53 +255,23 @@ docker run -p 8080:8080 \
   n24q02m/notion:latest
 ```
 
-## Deploy to Cloudflare
+### Docker Compose (loopback)
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/n24q02m/better-notion-mcp)
+[`docker-compose.http.yml`](docker-compose.http.yml) builds the `http` image target and publishes it on the host loopback interface only (`127.0.0.1:8081`), so the server is never reachable from other machines directly:
 
-Run your own multi-user better-notion-mcp serverless on Cloudflare (Worker + Container + KV).
+```bash
+export NOTION_OAUTH_CLIENT_ID=your-client-id
+export NOTION_OAUTH_CLIENT_SECRET=your-client-secret
+export CREDENTIAL_SECRET=$(openssl rand -hex 32)
+export PUBLIC_URL=https://your-domain.com
+docker compose -f docker-compose.http.yml up
+```
 
-### Deployment (CD-managed)
+The server listens on <http://localhost:8081/mcp>. To expose it, put your own TLS reverse proxy in front of the loopback port and set `PUBLIC_URL` to the public origin (the Notion redirect URI is `<PUBLIC_URL>/callback`). Set `CREDENTIAL_SECRET`: it derives a deterministic OAuth signing key, so user identity survives a container recreate.
 
-Managed deployments go through CI, never by hand: the `deploy-cf` job in
-[.github/workflows/cd.yml](.github/workflows/cd.yml) runs after a release,
-checks out the released tag, builds the immutable `http-slim` image at the
-released version, pushes it to the Cloudflare managed registry, deploys, and
-gates on a canary check — a managed instance can therefore only ever run an
-exact release tag. Manual `wrangler deploy` against a managed/operated
-instance is not permitted: it breaks the release-tag ↔ live-image
-correspondence, and the next CD run would overwrite it.
+Per-user Notion access tokens are held in-process only and are cleared on restart. Do NOT set `MCP_AUTH_DISABLE` on a shared/public deployment -- it collapses all users into a single token bucket.
 
-The job is gated by the `CF_HOSTED_ENABLED` repository Actions variable —
-currently `false`, so releases do not publish a hosted endpoint. To run your
-own instance, use the self-host steps below.
-
-**Prerequisites:** a Cloudflare account on the **Workers Paid plan** — required for Containers (the Cloudflare free tier does not include Containers) — and the `wrangler` CLI.
-
-1. `git clone https://github.com/n24q02m/better-notion-mcp && cd better-notion-mcp`
-2. `wrangler login`
-3. Provision the KV namespace and paste its id into `wrangler.jsonc`:
-   ```
-   wrangler kv namespace create better-notion-kv
-   ```
-4. Set secrets:
-   ```
-   wrangler secret put CREDENTIAL_SECRET
-   wrangler secret put NOTION_OAUTH_CLIENT_ID
-   wrangler secret put NOTION_OAUTH_CLIENT_SECRET
-   ```
-   `CREDENTIAL_SECRET` is REQUIRED: it derives a deterministic OAuth signing key so
-   user identity survives container recreation.
-5. Push the http image to the CF managed registry and deploy:
-   ```
-   wrangler containers push better-notion-mcp:beta
-   wrangler deploy
-   ```
-6. Complete the Notion OAuth flow in the browser at your Worker domain.
-
-Per-user Notion access tokens are encrypted into KV (`MCP_STORAGE_BACKEND=cf-kv`),
-so they survive scale-to-zero. Do NOT set `MCP_AUTH_DISABLE` on a shared/public
-deployment — it collapses all users into a single token bucket.
+Release images are published multi-arch (amd64 + arm64) to Docker Hub (`n24q02m/notion`) and GHCR (`ghcr.io/n24q02m/notion`). There is no n24q02m-hosted HTTP endpoint.
 
 ## Comparison
 
@@ -340,8 +309,7 @@ This plugin implements **TC-NearZK** (in-memory, ephemeral). See [the trust mode
 
 | Mode | Storage | Encryption | Who can read your data? |
 |---|---|---|---|
-| HTTP n24q02m-hosted (default) | In-memory `Map<sub, OAuthToken>` | In-process only | Server process (cleared on restart) |
-| HTTP self-host | Same as hosted | Same | Only you (admin = user) |
+| HTTP self-host | In-memory `Map<sub, OAuthToken>` | In-process only | Server process (cleared on restart); the operator running it |
 | stdio (local) | `config.enc` in the OS config dir (`%APPDATA%\mcp\Config\config.enc` on Windows, `~/.config/mcp/config.enc` on Linux/macOS) | AES-GCM, machine-bound key | Only your OS user |
 
 ## License

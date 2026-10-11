@@ -61,7 +61,7 @@
     },
     {
       "description": "Pin PSR to v10 — block Renovate downgrades",
-      "matchPackagePatterns": ["^python-semantic-release/"],
+      "matchPackageNames": ["/^python-semantic-release\\//"],
       "matchManagers": ["github-actions"],
       "allowedVersions": ">=10.0.0"
     },
@@ -97,6 +97,12 @@
       "matchPackageNames": ["python-semantic-release/python-semantic-release"],
       "minimumReleaseAge": "7 days",
       "enabled": false
+    },
+    {
+      "description": "Run go mod tidy after every Go module update",
+      "matchCategories": ["golang"],
+      "postUpdateOptions": ["gomodTidy"],
+      "minimumReleaseAge": "7 days"
     }
   ],
   "semanticCommits": "enabled",
@@ -104,8 +110,5 @@
   "commitMessageAction": "update",
   "commitMessageTopic": "{{depName}}",
   "semanticCommitType": "fix",
-  "semanticCommitScope": "deps",
-  "golang": {
-    "postUpdateOptions": ["gomodTidy"]
-  }
+  "semanticCommitScope": "deps"
 }
