@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "tier": 1,
+  "description": "Markdown-first Notion for AI agents -- pages, databases, blocks, and comments in one call.",
+  "homepage": "https://mcp.n24q02m.com/servers/better-notion-mcp/",
+  "topics": ["ai-agents", "ai-coding", "claude", "claude-code", "cursor", "docker", "markdown", "mcp", "mcp-server", "model-context-protocol", "notion", "notion-api", "open-source", "typescript"]
+}

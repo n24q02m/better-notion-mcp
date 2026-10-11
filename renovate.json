@@ -85,6 +85,18 @@
       "matchManagers": ["mise"],
       "matchDepNames": ["python", "node", "java"],
       "enabled": false
+    },
+    {
+      "description": "Hold every update for 7 days so a malicious or yanked release is caught before it lands",
+      "matchPackageNames": ["*"],
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "Release runs on the better-semantic-release fork — never let an update swap it back to upstream python-semantic-release",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": ["python-semantic-release/python-semantic-release"],
+      "minimumReleaseAge": "7 days",
+      "enabled": false
     }
   ],
   "semanticCommits": "enabled",
