@@ -124,7 +124,7 @@ describe('HTTP Transport --- Production Server', () => {
     })
 
     it('should have service documentation URL', () => {
-      expect(metadata.service_documentation).toContain('github.com/n24q02m/better-notion-mcp')
+      expect(metadata.service_documentation).toContain('github.com/n24q02m/notion')
     })
   })
 
@@ -357,7 +357,7 @@ describe.skipIf(!NOTION_TOKEN)('Stdio + NOTION_TOKEN --- Real Notion API', () =>
   describe('Server initialization', () => {
     it('should connect with NOTION_TOKEN and report server info', () => {
       const serverVersion = client.getServerVersion()
-      expect(serverVersion?.name).toBe('@n24q02m/better-notion-mcp')
+      expect(serverVersion?.name).toBe('notion')
       expect(serverVersion?.version).toMatch(/^\d+\.\d+\.\d+/)
     })
 

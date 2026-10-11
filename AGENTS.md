@@ -1,4 +1,4 @@
-# AGENTS.md - better-notion-mcp
+# AGENTS.md - notion
 
 MCP Server for Notion API. TypeScript, Node.js >= 24, bun, ESM.
 

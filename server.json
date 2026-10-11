@@ -3,14 +3,14 @@
   "name": "io.github.n24q02m/better-notion-mcp",
   "description": "Markdown-first MCP server for Notion API with 8 composite tools and 39 actions.",
   "repository": {
-    "url": "https://github.com/n24q02m/better-notion-mcp.git",
+    "url": "https://github.com/n24q02m/notion.git",
     "source": "github"
   },
   "version": "2.41.6",
   "packages": [
     {
       "registryType": "npm",
-      "identifier": "@n24q02m/better-notion-mcp",
+      "identifier": "@n24q02m/notion",
       "version": "2.41.6",
       "runtimeHint": "npx",
       "transport": {
@@ -27,7 +27,7 @@
     },
     {
       "registryType": "oci",
-      "identifier": "docker.io/n24q02m/better-notion-mcp:latest",
+      "identifier": "docker.io/n24q02m/notion:latest",
       "runtimeHint": "docker",
       "transport": {
         "type": "stdio"

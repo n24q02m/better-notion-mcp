@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * OAuth 2.1 Live Test for better-notion-mcp HTTP transport.
+ * OAuth 2.1 Live Test for the notion MCP server HTTP transport.
  *
  * Flow:
  * 1. Register client via DCR

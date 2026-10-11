@@ -1,5 +1,5 @@
 /**
- * Unified entry point for Better Notion MCP
+ * Unified entry point for the notion MCP server
  *
  * TRANSPORT_MODE selects the transport:
  *   - "stdio" (default): Local mode with NOTION_TOKEN env var, MCP SDK
@@ -18,7 +18,14 @@ import { Client } from '@notionhq/client'
 import { getNotionToken, resolveCredentialState } from './credential-state.js'
 import { registerTools } from './tools/registry.js'
 
-const SERVER_NAME = 'better-notion-mcp'
+const SERVER_NAME = 'notion'
+
+// Credential namespace handed to buildCli (`config status|delete`, `doctor`).
+// Deliberately NOT renamed with SERVER_NAME: mcp-core derives the on-disk store
+// as ~/.${plugin}-mcp, so 'better-notion' keeps resolving to ~/.better-notion-mcp,
+// the same store credential-state.ts reads via its 'better-notion-mcp' storage key.
+// Renaming it would orphan saved credentials; the data-dir move is deferred to G3.
+const STORE_PLUGIN = 'better-notion'
 
 function getPackageVersion(): string {
   try {
@@ -67,7 +74,7 @@ export function getTransportMode(env: NodeJS.ProcessEnv = process.env, argv: str
  */
 export async function startServer(mode: string): Promise<void> {
   if (process.env.BETTER_NOTION_MCP_BOOTSTRAPPED) {
-    console.error('[better-notion-mcp] Startup aborted: server already running in this process tree.')
+    console.error(`[${SERVER_NAME}] Startup aborted: server already running in this process tree.`)
     return
   }
   process.env.BETTER_NOTION_MCP_BOOTSTRAPPED = 'true'
@@ -82,7 +89,7 @@ export async function startServer(mode: string): Promise<void> {
   // with a clear stderr message instead of starting a server that can't
   // serve any tools. Spec 2026-05-01-stdio-pure-http-multiuser.md §5.2.1.
   if (!process.env.NOTION_TOKEN) {
-    const msg = `[better-notion-mcp] NOTION_TOKEN required for stdio mode but not set.
+    const msg = `[${SERVER_NAME}] NOTION_TOKEN required for stdio mode but not set.
 
 Options:
   1. Set env in plugin config:
@@ -169,7 +176,7 @@ async function serve(): Promise<void> {
 
 // Only execute the CLI if we're the main module and not in a test environment.
 if (isMain(import.meta.url) && process.env.NODE_ENV !== 'test') {
-  buildCli(SERVER_NAME, { serve, version: getPackageVersion() })(process.argv.slice(2)).then((code) =>
-    process.exit(code)
+  buildCli(SERVER_NAME, { serve, version: getPackageVersion(), pluginName: STORE_PLUGIN })(process.argv.slice(2)).then(
+    (code) => process.exit(code)
   )
 }

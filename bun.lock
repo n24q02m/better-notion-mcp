@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@n24q02m/better-notion-mcp",
+      "name": "@n24q02m/notion",
       "dependencies": {
         "@cloudflare/containers": "^0.3.7",
         "@modelcontextprotocol/sdk": "^1.30.0",

@@ -1,7 +1,7 @@
 # HTTP mode overlay — use with:
 # docker compose -f docker-compose.yml -f docker-compose.http.yml up
 services:
-  better-notion-mcp:
+  notion:
     environment:
       - TRANSPORT_MODE=http
       - CREDENTIAL_SECRET=${CREDENTIAL_SECRET}

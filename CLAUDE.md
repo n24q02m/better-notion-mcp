@@ -1,4 +1,6 @@
-# better-notion-mcp
+# notion
+
+Ten repo/npm/image: `n24q02m/notion` / `@n24q02m/notion` / `n24q02m/notion` (truoc day la `better-notion-mcp`). CON GIU ten cu co chu dich: registry id `io.github.n24q02m/better-notion-mcp`, bin alias `better-notion-mcp`, storage key `better-notion-mcp` (config.enc `servers.<name>` + PerPluginStore `~/.better-notion-mcp` + env `MCP_BETTER_NOTION_MCP_*`, mcp-core derive tu ten nay; doi can option base-dir o core, hoan sang G3), KV prefix `better-notion` (Worker allowlist), va skret path `/better-notion-mcp/prod`.
 
 TypeScript MCP Server cho Notion API. 11 registered tools = 8 composite (pages, databases, blocks, users, workspace, comments, content_convert, file_uploads) + 3 infra (config, config__open_relay, help), dual-mode stdio/http.
 Xem `AGENTS.md` va `README.md` de hieu architecture va OAuth flow.
@@ -63,7 +65,7 @@ mise run fix                # bun run check:fix
 
 - Conventional Commits. Tag format: `v{version}` (config: `semantic-release.toml`)
 - CD: workflow_dispatch, chọn beta/stable; versioning qua `n24q02m/better-semantic-release` và publish-action
-- Pipeline: semantic release -> npm publish (`@n24q02m/better-notion-mcp`) -> Docker multi-arch (amd64 + arm64) -> DockerHub + GHCR -> MCP Registry
+- Pipeline: semantic release -> npm publish (`@n24q02m/notion`) -> Docker multi-arch (amd64 + arm64) -> DockerHub + GHCR -> MCP Registry
 - OCI VM deploy: Docker Compose + Watchtower. Prod `:latest` 0.125G, Staging `:beta` 0.0625G
 - The n24q02m Cloudflare Worker/Container host is dehosted. `deploy-cf` is guarded by the repository variable `CF_HOSTED_ENABLED=false`; package, OCI, local stdio and self-host maintenance continue. Do not manually recreate the personal host.
 
@@ -98,7 +100,7 @@ Two transports, selected in `init-server.ts:14-15` (delegated to `main.ts`). The
 
 ## Config storage path
 
-TS servers (gồm better-notion-mcp) dùng `$APPDATA\mcp\Config\config.enc` — single shared encrypted store (`servers.<name>` section, machine-bound key) qua `@n24q02m/mcp-core/storage` `resolveConfig`/`deleteConfig`. Python servers (wet/mnemo/crg/imagine) dùng PerPluginStore `~/.<plugin>-mcp/config.json` (config.enc là legacy). Khi debug reset state, xóa `config.enc` của TS server.
+TS servers (gồm notion; storage key vẫn là `better-notion-mcp`) dùng `$APPDATA\mcp\Config\config.enc` — single shared encrypted store (`servers.<name>` section, machine-bound key) qua `@n24q02m/mcp-core/storage` `resolveConfig`/`deleteConfig`. Python servers (wet/mnemo/crg/imagine) dùng PerPluginStore `~/.<plugin>-mcp/config.json` (config.enc là legacy). Khi debug reset state, xóa `config.enc` của TS server.
 
 ## E2E
 

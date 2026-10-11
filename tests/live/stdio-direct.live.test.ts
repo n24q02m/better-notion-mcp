@@ -76,7 +76,7 @@ describe('stdio direct mode', () => {
       const parsed = JSON.parse(responseLine) as JsonRpcResponse
       expect(parsed.id).toBe(1)
       expect(parsed.result).toBeDefined()
-      expect(parsed.result?.serverInfo.name).toBe('better-notion-mcp')
+      expect(parsed.result?.serverInfo.name).toBe('notion')
     } finally {
       proc.kill('SIGTERM')
       await new Promise<void>((r) => {

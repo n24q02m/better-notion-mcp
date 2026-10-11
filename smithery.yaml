@@ -9,4 +9,4 @@ startCommand:
     properties: {}
     additionalProperties: false
   commandFunction: |-
-    (config) => ({ command: 'npx', args: ['-y', '@n24q02m/better-notion-mcp'] })
+    (config) => ({ command: 'npx', args: ['-y', '@n24q02m/notion'] })

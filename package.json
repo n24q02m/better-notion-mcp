@@ -1,5 +1,5 @@
 {
-  "name": "@n24q02m/better-notion-mcp",
+  "name": "@n24q02m/notion",
   "mcpName": "io.github.n24q02m/better-notion-mcp",
   "keywords": [
     "notion",
@@ -39,13 +39,14 @@
     "check": "biome check . && bun run type-check",
     "check:fix": "biome check --write . && bun run type-check",
     "prepublishOnly": "bun run build",
-    "docker:build": "docker build -t n24q02m/better-notion-mcp:latest .",
-    "docker:push": "docker push n24q02m/better-notion-mcp:latest",
-    "docker:run": "docker run --rm -i -e NOTION_TOKEN n24q02m/better-notion-mcp:latest",
+    "docker:build": "docker build -t n24q02m/notion:latest .",
+    "docker:push": "docker push n24q02m/notion:latest",
+    "docker:run": "docker run --rm -i -e NOTION_TOKEN n24q02m/notion:latest",
     "cf:dryrun": "node scripts/cf-deploy.mjs --dry-run",
     "cf:deploy": "node scripts/cf-deploy.mjs"
   },
   "bin": {
+    "notion": "bin/cli.mjs",
     "better-notion-mcp": "bin/cli.mjs"
   },
   "engines": {
@@ -81,11 +82,11 @@
   "main": "build/src/init-server.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/n24q02m/better-notion-mcp.git"
+    "url": "https://github.com/n24q02m/notion.git"
   },
   "author": "n24q02m",
   "bugs": {
-    "url": "https://github.com/n24q02m/better-notion-mcp/issues"
+    "url": "https://github.com/n24q02m/notion/issues"
   },
-  "homepage": "https://github.com/n24q02m/better-notion-mcp#readme"
+  "homepage": "https://github.com/n24q02m/notion#readme"
 }
